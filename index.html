@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="KnowledgeHub — collaborative knowledge-sharing with an AI Learning Companion." />
+  <title>KnowledgeHub — Your Knowledge, Connected</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAV -->
+  <header class="nav-header" role="banner">
+    <div class="container nav-inner">
+      <a href="#" class="nav-logo" aria-label="KnowledgeHub home">
+        <span class="nav-logo__mark" aria-hidden="true">
+          <span class="logo-node logo-node--a"></span>
+          <span class="logo-node logo-node--b"></span>
+          <span class="logo-node logo-node--c"></span>
+        </span>
+        <span class="nav-logo__wordmark">Knowledge<strong>Hub</strong></span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#" class="nav-link">Home</a>
+        <a href="#features" class="nav-link">Features</a>
+        <a href="#how-it-works" class="nav-link">How It Works</a>
+        <a href="#" class="nav-link">About</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="#" class="nav-link nav-link--signin">Sign In</a>
+        <a href="#" class="btn btn--primary btn--sm">Get Started</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="hero-heading">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <div class="hero-badge">
+            <span class="hero-badge__dot" aria-hidden="true"></span>
+            Your Knowledge, Connected
+          </div>
+          <h1 class="hero-heading" id="hero-heading">
+            Discover, Organize,<br />
+            and <em class="hero-heading__accent">Master</em><br />
+            What Matters Most
+          </h1>
+          <p class="hero-description">
+            KnowledgeHub brings collaborative articles, structured learning paths,
+            and an AI companion that adapts to how you think — so knowledge stays
+            where you need it, when you need it.
+          </p>
+          <div class="hero-actions">
+            <a href="#" class="btn btn--primary">Explore Knowledge</a>
+            <a href="#features" class="btn btn--ghost">Discover Features</a>
+          </div>
+        </div>
+
+        <!-- CSS knowledge-graph illustration -->
+        <div class="hero-illustration" aria-hidden="true">
+          <div class="kg-canvas">
+            <svg class="kg-lines" viewBox="0 0 360 360" xmlns="http://www.w3.org/2000/svg">
+              <line x1="180" y1="180" x2="180" y2="78"  class="kg-line" />
+              <line x1="180" y1="180" x2="292" y2="152" class="kg-line" />
+              <line x1="180" y1="180" x2="264" y2="264" class="kg-line" />
+              <line x1="180" y1="180" x2="96"  y2="264" class="kg-line" />
+              <line x1="180" y1="180" x2="68"  y2="152" class="kg-line" />
+              <line x1="180" y1="78"  x2="292" y2="152" class="kg-line kg-line--secondary" />
+              <line x1="292" y1="152" x2="264" y2="264" class="kg-line kg-line--secondary" />
+              <line x1="96"  y1="264" x2="68"  y2="152" class="kg-line kg-line--secondary" />
+            </svg>
+            <div class="kg-node kg-node--hub"><span class="kg-node__label">Hub</span></div>
+            <div class="kg-node kg-node--sat kg-node--top"><span class="kg-node__label">Articles</span></div>
+            <div class="kg-node kg-node--sat kg-node--right"><span class="kg-node__label">AI</span></div>
+            <div class="kg-node kg-node--sat kg-node--bottom-right"><span class="kg-node__label">Paths</span></div>
+            <div class="kg-node kg-node--sat kg-node--bottom-left"><span class="kg-node__label">Teams</span></div>
+            <div class="kg-node kg-node--sat kg-node--left"><span class="kg-node__label">Tags</span></div>
+            <div class="kg-card kg-card--a">
+              <span class="kg-card__dot"></span><span>3 new articles</span>
+            </div>
+            <div class="kg-card kg-card--b">
+              <span class="kg-card__dot kg-card__dot--green"></span><span>Path 42% done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-bg" aria-hidden="true">
+
+    <!-- FEATURES -->
+    <section class="features" id="features" aria-labelledby="features-heading">
+      <div class="container">
+        <div class="section-header">
+          <p class="section-eyebrow">What you get</p>
+          <h2 class="section-heading" id="features-heading">Everything a serious learner needs</h2>
+          <p class="section-subheading">Four interconnected capabilities designed to transform scattered information into structured, lasting knowledge.</p>
+        </div>
+        <div class="features-grid">
+
+          <article class="feature-card">
+            <div class="feature-icon feature-icon--hub" aria-hidden="true">
+              <div class="fi-hub__ring"></div>
+              <div class="fi-hub__dot"></div>
+              <div class="fi-hub__spoke fi-hub__spoke--a"></div>
+              <div class="fi-hub__spoke fi-hub__spoke--b"></div>
+              <div class="fi-hub__spoke fi-hub__spoke--c"></div>
+            </div>
+            <h3 class="feature-card__title">Knowledge Hub</h3>
+            <p class="feature-card__desc">Organize articles, notes, and resources into a structured, searchable knowledge base. Every insight lives where you can find it.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon feature-icon--collab" aria-hidden="true">
+              <div class="fi-collab__circle fi-collab__circle--a"></div>
+              <div class="fi-collab__circle fi-collab__circle--b"></div>
+              <div class="fi-collab__overlap"></div>
+            </div>
+            <h3 class="feature-card__title">Collaborative Learning</h3>
+            <p class="feature-card__desc">Submit and review articles alongside peers. Editorial workflows keep quality high while collective knowledge grows continuously.</p>
+          </article>
+
+          <article class="feature-card feature-card--accent">
+            <div class="feature-icon feature-icon--ai" aria-hidden="true">
+              <div class="fi-ai__outer"></div>
+              <div class="fi-ai__inner"></div>
+              <div class="fi-ai__pulse"></div>
+            </div>
+            <h3 class="feature-card__title">AI Learning Companion</h3>
+            <p class="feature-card__desc">A conversational AI that remembers your goals, preferences, and progress — offering guidance tailored specifically to your journey.</p>
+          </article>
+
+          <article class="feature-card">
+            <div class="feature-icon feature-icon--path" aria-hidden="true">
+              <div class="fi-path__step fi-path__step--a"></div>
+              <div class="fi-path__line fi-path__line--a"></div>
+              <div class="fi-path__step fi-path__step--b"></div>
+              <div class="fi-path__line fi-path__line--b"></div>
+              <div class="fi-path__step fi-path__step--c"></div>
+            </div>
+            <h3 class="feature-card__title">Learning Paths</h3>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-it-works" id="how-it-works" aria-labelledby="hiw-heading">
+      <div class="container">
+        <div class="section-header">
+          <p class="section-eyebrow">The process</p>
+          <h2 class="section-heading" id="hiw-heading">From curiosity to mastery</h2>
+        </div>
+        <div class="hiw-steps">
+
+          <div class="hiw-step">
+            <div class="hiw-step__number" aria-hidden="true">01</div>
+            <div class="hiw-step__visual" aria-hidden="true">
+              <div class="hiw-icon hiw-icon--discover">
+                <div class="hiw-icon__lens"></div>
+                <div class="hiw-icon__handle"></div>
+              </div>
+            </div>
+            <div class="hiw-step__content">
+              <h3 class="hiw-step__title">Discover Knowledge</h3>
+              <p class="hiw-step__desc">Browse a curated, peer-reviewed library of articles and resources across every domain you care about.</p>
+            </div>
+          </div>
+
+          <div class="hiw-connector" aria-hidden="true">
+            <div class="hiw-connector__line"></div>
+            <div class="hiw-connector__dot"></div>
+          </div>
+
+          <div class="hiw-step">
+            <div class="hiw-step__number" aria-hidden="true">02</div>
+            <div class="hiw-step__visual" aria-hidden="true">
+              <div class="hiw-icon hiw-icon--connect">
+                <div class="hiw-icon__node hiw-icon__node--a"></div>
+                <div class="hiw-icon__node hiw-icon__node--b"></div>
+                <div class="hiw-icon__node hiw-icon__node--c"></div>
+                <div class="hiw-icon__edge hiw-icon__edge--ab"></div>
+                <div class="hiw-icon__edge hiw-icon__edge--bc"></div>
+              </div>
+            </div>
+            <div class="hiw-step__content">
+              <h3 class="hiw-step__title">Connect Ideas</h3>
+              <p class="hiw-step__desc">Tag, categorize, and link concepts across articles. Your AI companion surfaces connections you might not have made on your own.</p>
+            </div>
+          </div>
+
+          <div class="hiw-connector" aria-hidden="true">
+            <div class="hiw-connector__line"></div>
+            <div class="hiw-connector__dot"></div>
+          </div>
+
+          <div class="hiw-step">
+            <div class="hiw-step__number" aria-hidden="true">03</div>
+            <div class="hiw-step__visual" aria-hidden="true">
+              <div class="hiw-icon hiw-icon--build">
+                <div class="hiw-icon__bar hiw-icon__bar--a"></div>
+                <div class="hiw-icon__bar hiw-icon__bar--b"></div>
+                <div class="hiw-icon__bar hiw-icon__bar--c"></div>
+                <div class="hiw-icon__flag"></div>
+              </div>
+            </div>
+            <div class="hiw-step__content">
+              <h3 class="hiw-step__title">Build Your Path</h3>
+
+    <!-- CTA -->
+    <section class="cta-section" aria-labelledby="cta-heading">
+      <div class="container cta-inner">
+        <div class="cta-content">
+          <h2 class="cta-heading" id="cta-heading">Ready to take ownership<br />of your learning?</h2>
+          <p class="cta-desc">Join a community of learners building real, lasting knowledge — one article, one connection, one path at a time.</p>
+          <a href="#" class="btn btn--white btn--lg">Start Exploring for Free</a>
+        </div>
+        <div class="cta-shapes" aria-hidden="true">
+          <div class="cta-shape cta-shape--a"></div>
+          <div class="cta-shape cta-shape--b"></div>
+          <div class="cta-shape cta-shape--c"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo footer-logo" aria-label="KnowledgeHub home">
+          <span class="nav-logo__mark" aria-hidden="true">
+            <span class="logo-node logo-node--a"></span>
+            <span class="logo-node logo-node--b"></span>
+            <span class="logo-node logo-node--c"></span>
+          </span>
+          <span class="nav-logo__wordmark">Knowledge<strong>Hub</strong></span>
+        </a>
+        <p class="footer-brand__desc">A collaborative knowledge platform with an AI learning companion. Built for curious minds who take learning seriously.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Footer navigation">
+        <div class="footer-nav__col">
+          <p class="footer-nav__label">Platform</p>
+          <a href="#" class="footer-nav__link">Explore</a>
+          <a href="#features" class="footer-nav__link">Features</a>
+          <a href="#how-it-works" class="footer-nav__link">How It Works</a>
+        </div>
+        <div class="footer-nav__col">
+          <p class="footer-nav__label">Community</p>
+          <a href="#" class="footer-nav__link">Articles</a>
+          <a href="#" class="footer-nav__link">Contributors</a>
+          <a href="#" class="footer-nav__link">Learning Paths</a>
+        </div>
+        <div class="footer-nav__col">
+          <p class="footer-nav__label">Company</p>
+          <a href="#" class="footer-nav__link">About</a>
+          <a href="#" class="footer-nav__link">Privacy</a>
+          <a href="#" class="footer-nav__link">Terms</a>
+        </div>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <div class="container footer-bottom-inner">
+        <p class="footer-copyright">&copy; 2026 KnowledgeHub. All rights reserved.</p>
+        <p class="footer-tagline">Knowledge worth keeping.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
+
+              <p class="hiw-step__desc">Assemble a personal learning roadmap with milestones, prerequisites, and progress tracking.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+            <p class="feature-card__desc">Build structured, step-by-step roadmaps with prerequisite awareness. Follow a clear progression from concept to mastery.</p>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+        <div class="hero-bg__circle hero-bg__circle--a"></div>
+        <div class="hero-bg__circle hero-bg__circle--b"></div>
+      </div>
+    </section>
