@@ -32,7 +32,7 @@ Design and evolve relational database schemas for KnowledgeHub using PostgreSQL 
 
 1. **Inspect existing schema**
    - Read `docs/DATABASE.md` and `docs/ERD.md`
-   - Check `backend/database/migrations/` for current structure
+   - Check `database/migrations/` for current structure
    - Identify related tables and constraints
 
 2. **Design entity structure**

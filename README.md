@@ -63,13 +63,15 @@ docker compose exec app php artisan test
 ```
 knowledgehub/
 ├── backend/              # Laravel 11 REST API
-│   └── database/
-│       ├── migrations/   # Schema migrations
-│       └── seeders/      # Development data
+├── database/             # Database files (outside backend)
+│   ├── migrations/       # Schema migrations
+│   ├── seeders/          # Development data
+│   └── factories/        # Model factories
 ├── docs/                 # Technical documentation
 │   ├── DATABASE.md       # Schema reference
 │   ├── ERD.md            # Entity relationships
 │   ├── SETUP.md          # Setup guide
+│   ├── validation_tests.sql
 │   └── decisions/        # Architecture decision records
 ├── skills/               # AI agent skills for DB/data work
 │   ├── database-design/

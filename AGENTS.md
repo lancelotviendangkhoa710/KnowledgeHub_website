@@ -75,7 +75,7 @@ docker compose exec app php artisan test
 - `docs/ERD.md` → Entity-relationship diagrams by domain
 - `docs/validation_tests.sql` → Constraint test cases
 - `docs/decisions/` → Architecture decision records (create when needed)
-- `backend/database/migrations/` → Laravel migrations (version-controlled)
+- `database/migrations/` → Laravel migrations (version-controlled)
 
 ## Decision Workflow
 
@@ -109,7 +109,7 @@ Do not treat previous AI suggestions as approved team decisions.
 ## Getting Help
 
 - Detailed documentation: `docs/` directory
-- Existing patterns: `backend/database/migrations/`
+- Existing patterns: `database/migrations/`
 - Skill workflows: `skills/*/skill.md`
 - Project context: `README.md`
 

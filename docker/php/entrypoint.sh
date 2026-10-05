@@ -7,6 +7,8 @@ if [ ! -f /var/www/html/artisan ]; then
     composer create-project laravel/laravel:^11.0 /tmp/laravel --prefer-dist --no-interaction
     cp -a /tmp/laravel/. /var/www/html/
     rm -rf /tmp/laravel
+    # Remove default database/ so the host-mounted volume takes precedence
+    rm -rf /var/www/html/database
     echo "==> Laravel installed."
 fi
 

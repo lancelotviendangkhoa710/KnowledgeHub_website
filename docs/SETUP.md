@@ -95,7 +95,7 @@ Cline automatically discovers skills in `skills/` directory. No additional confi
 # Create migration
 docker compose exec app php artisan make:migration create_new_table
 
-# Edit migration file in backend/database/migrations/
+# Edit migration file in database/migrations/
 
 # Run migration
 docker compose exec app php artisan migrate
@@ -164,7 +164,7 @@ docker compose exec postgres psql -U knowledgehub -c "CREATE DATABASE knowledgeh
 ## Next Steps
 
 1. Read `docs/DATABASE.md` to understand schema design
-2. Review existing migrations in `backend/database/migrations/`
+2. Review existing migrations in `database/migrations/`
 3. Explore skills in `skills/` directory
 4. Check `AGENTS.md` for AI agent collaboration guidelines
 5. Review `docs/ERD.md` for entity relationships
@@ -174,6 +174,6 @@ docker compose exec postgres psql -U knowledgehub -c "CREATE DATABASE knowledgeh
 - **Documentation**: `docs/` directory
 - **AI Assistance**: Use Cline with database skills
 - **Project Context**: `README.md`, `AGENTS.md`
-- **Existing Code**: `backend/database/migrations/` and `backend/database/seeders/`
+- **Existing Code**: `database/migrations/` and `database/seeders/`
 
 Ready to contribute! Start by picking an issue or discussing with team.
