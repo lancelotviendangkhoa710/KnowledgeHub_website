@@ -1,0 +1,157 @@
+name: PR Quality Gate
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  # ─── Job 1: Kiểm tra tên branch đúng convention ───────────────────────────
+  branch-convention:
+    name: Branch Naming Convention
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          echo "Branch: $BRANCH"
+          # Phải bắt đầu bằng p1/, p2/, p3/, hotfix/, release/
+          if [[ ! "$BRANCH" =~ ^(p1|p2|p3|hotfix|release)/.+ ]]; then
+            echo "❌ Branch name '$BRANCH' không đúng convention."
+            echo "✅ Đúng: p1/article-api, p2/login-page, p3/docker-setup"
+            exit 1
+          fi
+          echo "✅ Branch name OK"
+
+  # ─── Job 2: Kiểm tra commit message ──────────────────────────────────────
+  commit-convention:
+    name: Commit Message Convention
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check commit messages
+        run: |
+          # Lấy các commit trong PR (không có trong base branch)
+          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --format="%s")
+          echo "Commits to check:"
+          echo "$COMMITS"
+
+          FAIL=0
+          while IFS= read -r msg; do
+            # Bỏ qua dòng trống
+            [ -z "$msg" ] && continue
+            # Phải bắt đầu bằng p1:, p2:, p3:, docs:, fix:, chore:
+            if [[ ! "$msg" =~ ^(p1|p2|p3|docs|fix|chore|hotfix|release): ]]; then
+              echo "❌ Commit không đúng format: '$msg'"
+              echo "   Cần: 'p1: mô tả' hoặc 'p2: mô tả' hoặc 'docs: mô tả'"
+              FAIL=1
+            else
+              echo "✅ OK: '$msg'"
+            fi
+          done <<< "$COMMITS"
+
+          [ $FAIL -eq 1 ] && exit 1
+          echo "✅ Tất cả commit messages đúng convention"
+
+  # ─── Job 3: Laravel Test ──────────────────────────────────────────────────
+  laravel-test:
+    name: Laravel Tests
+    runs-on: ubuntu-latest
+    # Chỉ chạy nếu PR có thay đổi backend hoặc database
+    if: |
+      contains(github.event.pull_request.title, 'p1') ||
+      contains(github.head_ref, 'p1') ||
+      contains(github.head_ref, 'p3')
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: knowledgehub_test
+          POSTGRES_USER: knowledgehub
+          POSTGRES_PASSWORD: secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: pdo, pdo_pgsql
+          coverage: none
+
+      - name: Install Composer dependencies
+        working-directory: ./backend
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Copy .env
+        working-directory: ./backend
+        run: cp .env.example .env
+
+      - name: Configure test DB
+        working-directory: ./backend
+        run: |
+          php artisan key:generate
+          sed -i 's/DB_DATABASE=.*/DB_DATABASE=knowledgehub_test/' .env
+          sed -i 's/DB_USERNAME=.*/DB_USERNAME=knowledgehub/' .env
+          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=secret/' .env
+          sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+
+      - name: Run migrations
+        working-directory: ./backend
+        run: php artisan migrate --force
+
+      - name: Run tests
+        working-directory: ./backend
+        run: php artisan test --stop-on-failure
+
+  # ─── Job 4: Block merge nếu chưa có CodeRabbit approve ───────────────────
+  coderabbit-approved:
+    name: CodeRabbit Review Required
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CodeRabbit review status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+
+            // Tìm review mới nhất của coderabbitai
+            const coderabbitReviews = reviews.filter(
+              r => r.user.login === 'coderabbitai[bot]'
+            );
+
+            if (coderabbitReviews.length === 0) {
+              core.setFailed(
+                '❌ CodeRabbit chưa review PR này.\n' +
+                'Chờ @coderabbitai[bot] comment tự động, hoặc comment "@coderabbitai review" để trigger thủ công.'
+              );
+              return;
+            }
+
+            // Kiểm tra có summary chưa (không phải chỉ có changes_requested)
+            const latestReview = coderabbitReviews[coderabbitReviews.length - 1];
+            console.log(`CodeRabbit latest review state: ${latestReview.state}`);
+
+            if (latestReview.state === 'CHANGES_REQUESTED') {
+              core.setFailed('❌ CodeRabbit yêu cầu sửa trước khi merge.');
+            } else {
+              console.log('✅ CodeRabbit đã review xong');
+            }

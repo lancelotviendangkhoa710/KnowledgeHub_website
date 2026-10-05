@@ -1,0 +1,69 @@
+# CodeRabbit AI PR Reviewer Configuration
+# Docs: https://docs.coderabbit.ai/configure/coderabbitai-yaml
+
+language: "vi"
+
+reviews:
+  # Tự động review mọi PR
+  auto_review:
+    enabled: true
+    # Chỉ review khi PR vào dev hoặc main
+    base_branches:
+      - "dev"
+      - "main"
+    # Bỏ qua draft PR
+    drafts: false
+
+  # Mức độ review
+  profile: "chill"   # "chill" = nhẹ nhàng | "assertive" = strict
+
+  # Những gì CodeRabbit sẽ check
+  request_changes_workflow: false   # Không block merge, chỉ comment
+
+  poem: false          # Tắt thơ cuối review (mặc định bật, hơi spam)
+  collapse_walkthrough: false
+
+  path_filters:
+    # Bỏ qua file không cần review
+    - "!docs/**"
+    - "!**/*.md"
+    - "!**/*.lock"
+    - "!**/*.json"     # bỏ package-lock.json, composer.lock
+    - "!docker/**"
+
+  path_instructions:
+    # Hướng dẫn riêng cho từng phần codebase
+    - path: "database/migrations/**"
+      instructions: |
+        Review migration files:
+        - UUID primary keys (not integer)
+        - timestampTz for all timestamps (not timestamp)
+        - Explicit foreign key cascade rules defined
+        - Rollback (down method) implemented
+        - No dropping columns/tables without comment explaining why
+
+    - path: "backend/app/Http/Controllers/**"
+      instructions: |
+        Review Laravel controllers:
+        - All queries use parameter binding (no raw SQL string concat)
+        - Soft-delete filter (deleted_at IS NULL) applied where needed
+        - Response format consistent: { data, message, status }
+        - No business logic in controller (delegate to Service/Model)
+
+    - path: "backend/app/Models/**"
+      instructions: |
+        Review Eloquent models:
+        - $fillable or $guarded defined
+        - Relationships defined correctly
+        - Soft deletes trait used where table has deleted_at
+
+    - path: "frontend/src/**"
+      instructions: |
+        Review frontend code:
+        - No hardcoded API URLs (use env variables)
+        - No console.log left in production code
+        - Loading and error states handled in UI components
+
+chat:
+  # Cho phép mention @coderabbitai trong comment để hỏi
+  auto_reply: true
