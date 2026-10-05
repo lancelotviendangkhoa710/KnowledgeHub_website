@@ -114,3 +114,69 @@ Do not treat previous AI suggestions as approved team decisions.
 - Project context: `README.md`
 
 **Priority**: Correctness > Speed. Read existing code, follow patterns, test thoroughly.
+
+---
+
+## Agentic Git Workflow — Agent Tự Tạo PR
+
+Khi hoàn thành task, agent **không merge trực tiếp** — phải tạo PR để team review.
+
+### Bước 1 — Bắt đầu task mới
+
+```powershell
+.\scripts\agent-start-task.ps1 -Branch "p1/ten-task"
+# Tự: checkout dev, pull, tạo branch mới
+```
+
+### Bước 2 — Code, commit thường xuyên
+
+```powershell
+git add .
+git commit -m "p1: mô tả ngắn gọn"
+```
+
+Prefix bắt buộc (robot reject nếu sai):
+- `p1:` Backend agent
+- `p2:` Frontend agent
+- `p3:` Infra agent
+- `docs:` Tài liệu
+- `fix:` Hotfix
+
+### Bước 3 — Tạo PR sau khi xong
+
+```powershell
+.\scripts\create-pr.ps1 -Title "p1: add article store API" -Body "Implements POST /api/v1/articles"
+# Tự: push branch, tạo PR vào dev, in URL ra
+```
+
+Sau khi chạy: **copy URL PR gửi cho team** để họ review.
+
+### Bước 4 — Chờ merge (KHÔNG tự merge)
+
+- CodeRabbit review tự động ~2 phút
+- Thành viên khác approve + merge
+- Agent không được self-merge
+
+### Bước 5 — Sau khi PR merged, làm tiếp
+
+```powershell
+.\scripts\agent-finish-task.ps1
+# Tự: checkout dev, pull, xóa branch cũ
+# Quay lại Bước 1 với task tiếp theo
+```
+
+### Agent KHÔNG được làm
+
+- Push thẳng lên `main` hoặc `dev`
+- Merge PR của chính mình
+- Xóa branch của người khác
+- Commit file `.env`
+- Bỏ qua bước tạo PR dù task nhỏ
+
+### Cài GitHub CLI lần đầu
+
+```powershell
+winget install --id GitHub.cli
+gh auth login
+gh auth status
+```
