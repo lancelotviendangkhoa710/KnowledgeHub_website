@@ -1,8 +1,8 @@
-# AGENTS.md â€” KnowledgeHub AI Agent Constitution
+﻿# AGENTS.md — KnowledgeHub AI Agent Constitution
 
 **Version**: 2.0 | **Date**: 2026-10-06
 **Audience**: All AI coding agents (Cline, Cursor, Copilot, etc.)
-**Scope**: Global â€” applies to every agent in this repository
+**Scope**: Global — applies to every agent in this repository
 
 Child files (`backend/AGENTS.md`) specialize these rules.
 When child rules conflict with this file, **this file wins**.
@@ -21,12 +21,12 @@ KnowledgeHub is a **curated learning platform** with an AI Learning Companion. O
 
 | Layer | Technology | Status |
 |---|---|---|
-| Backend API | Laravel 11 REST API | âœ… Active |
-| Database | PostgreSQL 16 / Amazon Aurora PostgreSQL | âœ… Active |
-| Frontend | Next.js / React | ðŸ”œ Planned (not yet in repo) |
-| Dev Environment | Docker Compose | âœ… Active |
-| AI Service | Python + FastAPI | ðŸ”œ Planned (separate service) |
-| File Storage | Amazon S3 | ðŸ”œ Planned |
+| Backend API | Laravel 11 REST API | ✅ Active |
+| Database | PostgreSQL 16 / Supabase PostgreSQL | ✅ Active |
+| Frontend | Next.js / React | Scaffolded (`frontend/`) |
+| Dev Environment | Docker Compose | ✅ Active |
+| AI Service | Python + FastAPI | ⏳ Planned (separate service) |
+| File Storage | Amazon S3 | ⏳ Planned |
 
 Do NOT introduce technology not in this list without an approved ADR.
 
@@ -42,16 +42,16 @@ Do NOT introduce technology not in this list without an approved ADR.
 5. Domain docs  (docs/DATABASE.md, docs/ERD.md)
 6. This file  (AGENTS.md)
 7. Task-specific instructions
-8. AI suggestions  â† LOWEST â€” never treated as approved architecture
+8. AI suggestions  → LOWEST — never treated as approved architecture
 ```
 
-Contradiction between approved architecture and implementation â†’ report using `ARCHITECTURE_CONFLICT` format (Â§14). Do NOT silently redesign.
+Contradiction between approved architecture and implementation → report using `ARCHITECTURE_CONFLICT` format (§14). Do NOT silently redesign.
 
 ---
 
 ## 4. Business Invariants (Locked)
 
-### Roles â€” exactly 3
+### Roles — exactly 3
 
 | Role | DB value | Description |
 |---|---|---|
@@ -66,9 +66,9 @@ User does NOT auto-upgrade to Contributor. Admin grants explicitly.
 ### Publishing Workflow
 
 ```
-Contributor creates â†’ status=draft
-Contributor (or Admin) publishes â†’ status=published (published_version_id set)
-Admin archives â†’ status=archived
+Contributor creates → status=draft
+Contributor (or Admin) publishes → status=published (published_version_id set)
+Admin archives → status=archived
 ```
 
 No `submitted`, `rejected`, `pending_review`, `approved`, `moderated`. No review step.
@@ -77,15 +77,15 @@ No `submitted`, `rejected`, `pending_review`, `approved`, `moderated`. No review
 
 | Capability | Guest | User | Contributor | Admin |
 |---|:---:|:---:|:---:|:---:|
-| View published content | âœ… | âœ… | âœ… | âœ… |
-| Register / Login | âœ… | â€” | â€” | â€” |
-| Enroll, track progress | âŒ | âœ… | âœ… | âœ… |
-| Bookmark, AI Companion, Roadmap | âŒ | âœ… | âœ… | âœ… |
-| Subscribe to plan | âŒ | âœ… | âœ… | âœ… |
-| Create / edit own courses | âŒ | âŒ | âœ… | âœ… |
-| Publish / archive own content | âŒ | âŒ | âœ… own | âœ… |
-| Manage all courses platform-wide | âŒ | âŒ | âŒ | âœ… |
-| Manage users, roles, plans | âŒ | âŒ | âŒ | âœ… |
+| View published content | ✅ | ✅ | ✅ | ✅ |
+| Register / Login | ✅ | — | — | — |
+| Enroll, track progress | ❌ | ✅ | ✅ | ✅ |
+| Bookmark, AI Companion, Roadmap | ❌ | ✅ | ✅ | ✅ |
+| Subscribe to plan | ❌ | ✅ | ✅ | ✅ |
+| Create / edit own courses | ❌ | ❌ | ✅ | ✅ |
+| Publish / archive own content | ❌ | ❌ | ✅ own | ✅ |
+| Manage all courses platform-wide | ❌ | ❌ | ❌ | ✅ |
+| Manage users, roles, plans | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
@@ -93,16 +93,16 @@ No `submitted`, `rejected`, `pending_review`, `approved`, `moderated`. No review
 
 | Convention | Rule |
 |---|---|
-| Primary keys | UUID v4 â€” every table |
+| Primary keys | UUID v4 — every table |
 | Timestamps | `timestampTz` everywhere |
 | Foreign keys | Explicit FK + explicit cascade rule on every relation |
-| Enumerations | `VARCHAR` + `CHECK` â€” never native PG ENUM |
+| Enumerations | `VARCHAR` + `CHECK` — never native PG ENUM |
 | Monetary | `NUMERIC(12,2)` |
 | Currency | `CHAR(3)` ISO 4217 + regex `[A-Z]{3}` |
 | Flexible data | `JSONB` only where genuinely variable |
-| File binary | S3 only â€” PG stores metadata only |
-| Soft delete | `users` + content tables â€” `deleted_at` column |
-| Secrets | Never stored â€” no plaintext passwords, API keys, card numbers |
+| File binary | S3 only — PG stores metadata only |
+| Soft delete | `users` + content tables — `deleted_at` column |
+| Secrets | Never stored — no plaintext passwords, API keys, card numbers |
 
 ---
 
@@ -110,21 +110,21 @@ No `submitted`, `rejected`, `pending_review`, `approved`, `moderated`. No review
 
 | Domain | Tables |
 |---|---|
-| A â€“ Identity | `users`, `roles`, `user_roles` |
-| B â€“ Content | `categories`, `articles`, `article_versions`, `tags`, `article_tags`, `bookmarks`, `article_attachments` |
-| C â€“ AI Companion | `conversations`, `messages`, `user_memories` |
-| D â€“ Learning | `learning_roadmaps`, `roadmap_items`, `learning_progress`, `roadmap_item_prerequisites` |
-| E â€“ Payment | `plans`, `subscriptions`, `payments`, `webhook_events` |
+| A – Identity | `users`, `roles`, `user_roles` |
+| B – Content | `categories`, `articles`, `article_versions`, `tags`, `article_tags`, `bookmarks`, `article_attachments` |
+| C – AI Companion | `conversations`, `messages`, `user_memories` |
+| D – Learning | `learning_roadmaps`, `roadmap_items`, `learning_progress`, `roadmap_item_prerequisites` |
+| E – Payment | `plans`, `subscriptions`, `payments`, `webhook_events` |
 
-`article_reviews` exists in DB (dormant, old model). No application code may reference it. Pending drop migration â€” requires team approval.
+`article_reviews` exists in DB (dormant, old model). No application code may reference it. Pending drop migration — requires team approval.
 
 ---
 
 ## 7. Development Sequence (Approved)
 
-1. Core platform â€” auth, users, roles
-2. Course / content â€” categories, articles/courses, versions, attachments
-3. AI Companion â€” conversations, messages, memories
+1. Core platform — auth, users, roles
+2. Course / content — categories, articles/courses, versions, attachments
+3. AI Companion — conversations, messages, memories
 4. RAG + long-term memory
 5. AI roadmap generation
 6. Premium / subscription
@@ -150,7 +150,7 @@ Full path-level ownership: `docs/team/OWNERSHIP.md`.
 ## 9. Read Broadly, Write Narrowly
 
 ```
-READ / SEARCH:  entire repository â€” always allowed
+READ / SEARCH:  entire repository — always allowed
 WRITE:          only files within the task's authorized domain
 ```
 
@@ -192,7 +192,7 @@ For all shared files: read freely, write only when the task explicitly requires 
 When a cross-domain change is required, STOP immediately and report:
 
 ```
-BLOCKED â€” CROSS-DOMAIN CHANGE REQUIRED
+BLOCKED — CROSS-DOMAIN CHANGE REQUIRED
 
 Task:     <task ID and name>
 Owner:    <TEAM_MEMBER_X>
@@ -212,31 +212,33 @@ Do not work around ownership boundaries by duplicating logic.
 
 ## 13. Agent Task Execution Protocol
 
-**PHASE 1 â€” ORIENT**
-Read: root AGENTS.md â†’ local AGENTS.md â†’ task spec â†’ ADRs â†’ API docs â†’ DB docs.
+**PHASE 1 — ORIENT**
+Read: root AGENTS.md → local AGENTS.md → task spec → ADRs → API docs → DB docs.
 Inspect: `git status`, current branch, related existing code.
+Apply the matching domain context pack in `docs/team/context-packs/` before planning.
 
-**PHASE 2 â€” SCOPE**
+**PHASE 2 — SCOPE**
 Identify: owner, domain, allowed write paths, forbidden paths, dependencies, shared files touched, API impact, DB impact.
 
-**PHASE 3 â€” PLAN**
+**PHASE 3 — PLAN**
 Internal implementation plan. Identify cross-domain dependencies. Do NOT implement architecture changes silently.
 
-**PHASE 4 â€” IMPLEMENT**
+**PHASE 4 — IMPLEMENT**
 Modify only authorized files. Use existing patterns and conventions. No unrelated refactoring. No unnecessary dependencies.
 
-**PHASE 5 â€” VALIDATE**
+**PHASE 5 — VALIDATE**
 Run tests. Check API contract consistency. Check DB constraints/cascades/soft deletes. Check authorization (all 4 actors). Test edge cases.
 
-**PHASE 6 â€” DIFF AUDIT**
+**PHASE 6 — DIFF AUDIT**
 ```
 git status
 git diff --stat
 git diff
 ```
 Every modified file must be in the task's allowed paths. No secrets added. No unrelated refactoring. No protected files changed without authorization.
+Run `./scripts/test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId` before PR creation.
 
-**PHASE 7 â€” REPORT**
+**PHASE 7 — REPORT**
 Summarize: files changed, behavior implemented, tests run, DB changes, API changes, shared-file changes, remaining risks.
 
 ---
@@ -302,11 +304,11 @@ Action: Request team resolution. Do NOT silently redesign.
 ## 16. Git Workflow
 
 ```
-main  â† production; merge from dev only
- â””â”€â”€ dev  â† integration target for all PRs
-      â”œâ”€â”€ p1/<task>   TEAM_MEMBER_A (Identity/Auth)
-      â”œâ”€â”€ p2/<task>   TEAM_MEMBER_B (Content)
-      â””â”€â”€ p3/<task>   TEAM_MEMBER_C (Learning/Infra)
+main  ▲  production; merge from dev only
+ └── dev  ▲  integration target for all PRs
+      ├── p1/<task>   TEAM_MEMBER_A (Identity/Auth)
+      ├── p2/<task>   TEAM_MEMBER_B (Content)
+      └── p3/<task>   TEAM_MEMBER_C (Learning/Infra)
 ```
 
 One branch = one coherent task. Small branches. Small PRs. Never work on `main` or `dev` directly.
@@ -317,7 +319,7 @@ One branch = one coherent task. Small branches. Small PRs. Never work on `main` 
 .\scripts\agent-finish-task.ps1
 ```
 
-PR must: do one logical thing Â· task ID in title Â· small diff Â· include tests Â· no debug code Â· no `.env` committed.
+PR must: do one logical thing · task ID in title · small diff · include tests · no debug code · no `.env` committed.
 
 ---
 
@@ -349,25 +351,26 @@ Do NOT auto-fix application code. Flag for team review. Each requires a team-app
 
 | # | Issue | Type | Location |
 |---|---|---|---|
-| 1 | `RoleSeeder` seeds `learner`, `reviewer` â€” approved model requires `user`, `contributor`, `admin` | IMPLEMENTATION ISSUE | `database/seeders/RoleSeeder.php` |
-| 2 | `articles_status_check` allows `submitted`, `rejected` â€” approved: `draft`, `published`, `archived` only | IMPLEMENTATION ISSUE | `database/migrations/2026_01_01_000005_create_articles_tables.php` |
+| 1 | `RoleSeeder` seeds `learner`, `reviewer` — approved model requires `user`, `contributor`, `admin` | IMPLEMENTATION ISSUE | `database/seeders/RoleSeeder.php` |
+| 2 | `articles_status_check` allows `submitted`, `rejected` — approved: `draft`, `published`, `archived` only | IMPLEMENTATION ISSUE | `database/migrations/2026_01_01_000005_create_articles_tables.php` |
 | 3 | Migration 000002 comment references old 4-role model | DOCUMENTATION ISSUE | `database/migrations/2026_01_01_000002_create_roles_tables.php` |
-| 4 | Approved architecture ADR says Next.js/React is active; no `frontend/` directory or package manifest exists | ARCHITECTURE DECISION CONFLICT | `docs/decisions/2026-10-06-architecture-techstack-locked.md`, repository root |
+| 4 | Approved architecture ADR says Next.js/React is active; scaffolded in `frontend/` | RESOLVED | `frontend/` |
 | 5 | Database/ERD prose says `article_reviews` was removed conceptually; migration still creates it and ADR correctly calls it dormant | DOCUMENTATION ISSUE | `docs/DATABASE.md`, `docs/ERD.md`, `database/migrations/2026_01_01_000006_create_article_relations_tables.php` |
 
 ---
 
 ## 21. Testing, Skill System, Key Documents
 
-**Testing** â€” do not claim tests passed unless actually executed:
+**Testing** — do not claim tests passed unless actually executed:
 - Authentication: valid login, invalid credentials, unauthorized, token behavior
 - Authorization: guest / user / contributor / admin
 - Content: draft / published / archived; ownership rules
 - Database: constraints, FKs, cascades, soft deletes; `EXPLAIN ANALYZE` where relevant
 
-**Skills**: `skills/database-design` Â· `skills/postgresql-sql` Â· `skills/data-pipelines` Â· `skills/data-quality-testing`
+**Skills**: `skills/database-design` · `skills/postgresql-sql` · `skills/data-pipelines` · `skills/data-quality-testing` · `skills/api-contract-design` · `skills/domain-driven-boundary`
+*Skill Requirement*: Agents must run `scripts/ensure-skills.ps1` before starting work. If any required skill is missing on the machine, the agent must create its directory and `skill.md` definition immediately.
 
-**Key documents**: `docs/ARCHITECTURE.md` Â· `docs/API.md` Â· `docs/DATABASE.md` Â· `docs/ERD.md` Â· `docs/decisions/` Â· `docs/team/OWNERSHIP.md` Â· `docs/team/WORKFLOW.md` Â· `docs/team/FEATURES.md` Â· `docs/team/TASK_TEMPLATE.md` Â· `backend/AGENTS.md`
+**Key documents**: `docs/ARCHITECTURE.md` · `docs/API.md` · `docs/DATABASE.md` · `docs/ERD.md` · `docs/decisions/` · `docs/team/OWNERSHIP.md` · `docs/team/WORKFLOW.md` · `docs/team/FEATURES.md` · `docs/team/TASK_TEMPLATE.md` · `backend/AGENTS.md`
 
 ---
 

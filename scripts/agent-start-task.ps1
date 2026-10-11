@@ -16,6 +16,10 @@ if ($Branch -notmatch '^(p1|p2|p3|hotfix|release)/.+') {
     exit 1
 }
 
+# Tự động đảm bảo tất cả skill bắt buộc có sẵn trên máy
+& "$PSScriptRoot/ensure-skills.ps1"
+
+
 Write-Host "Sync dev mới nhất..."
 git checkout dev
 git pull origin dev

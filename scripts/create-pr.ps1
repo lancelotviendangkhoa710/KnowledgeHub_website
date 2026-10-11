@@ -49,6 +49,14 @@ if ($currentBranch -eq "dev" -or $currentBranch -eq "main") {
 }
 
 # ── 5. Push branch lên remote trước ─────────────────────────────────────────
+Write-Host "Chạy kiến trúc guardrails..."
+git fetch origin $Base --quiet
+& "$PSScriptRoot/test-guardrails.ps1" -BaseRef "origin/$Base" -RequireTaskId
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Guardrails thất bại. Sửa các lỗi trước khi tạo PR."
+    exit 1
+}
+
 Write-Host "Pushing branch lên remote..."
 git push origin $currentBranch
 if ($LASTEXITCODE -ne 0) {
@@ -66,6 +74,8 @@ $commits
 
 ## Checklist
 - [ ] Tests pass
+- [ ] ./scripts/test-guardrails.ps1 passes
+- [ ] Scope, API/DB impact, RBAC matrix completed in PR template
 - [ ] No debug code (dd, console.log)
 - [ ] No .env committed
 - [ ] CodeRabbit review done

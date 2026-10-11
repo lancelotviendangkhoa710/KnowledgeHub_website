@@ -43,6 +43,17 @@ git push origin p1/auth-login
 .\scripts\agent-finish-task.ps1
 ```
 
+Select one context pack before prompting an agent:
+
+```text
+docs/team/context-packs/identity-auth.md
+docs/team/context-packs/content.md
+docs/team/context-packs/learning.md
+docs/team/context-packs/foundation.md
+docs/team/context-packs/ai-companion.md
+docs/team/context-packs/payment.md
+```
+
 ---
 
 ## 4. Commit Message Convention (CI-enforced)
@@ -77,6 +88,7 @@ When backend is ready: replace only the approved mock with the real endpoint.
 - [ ] One logical thing, task ID in title
 - [ ] Small diff, includes tests
 - [ ] CI passes (branch naming + commit convention + Laravel tests)
+- [ ] `./scripts/test-guardrails.ps1` passes
 - [ ] No `dd()`, `var_dump()`, `console.log()`, `.env` committed
 - [ ] States: domain, DB changes, API changes, shared files touched
 - [ ] CodeRabbit reviewed (CI blocks merge until done)
@@ -193,3 +205,23 @@ git add <files> ; git commit -m "p1: desc" ; git push origin p1/auth-login
 # After merge
 .\scripts\agent-finish-task.ps1
 ```
+
+---
+
+## 13. Automated Guardrails
+
+`scripts/test-guardrails.ps1` runs locally before PR creation and in CI. It checks the PR diff for:
+
+- committed `.env` files;
+- edits to existing migrations;
+- likely hard-coded secrets;
+- legacy business terms in executable/current files;
+- commit subject convention.
+
+Run against the integration base:
+
+```powershell
+.\scripts\test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId
+```
+
+The check supplements review. It cannot determine whether every task's allowed paths are correct; task author, reviewer, and PR template remain mandatory controls.

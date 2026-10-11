@@ -117,6 +117,9 @@ Blocked:
 ```
 You are implementing TASK <TASK_ID>: <TASK_TITLE>.
 
+CONTEXT PACK:
+  Read and apply docs/team/context-packs/<foundation|identity-auth|content|learning|ai-companion|payment>.md.
+
 FIRST READ before coding:
   AGENTS.md â†’ backend/AGENTS.md â†’ docs/ARCHITECTURE.md
   â†’ docs/API.md â†’ docs/DATABASE.md â†’ docs/ERD.md
@@ -141,9 +144,10 @@ IF ANOTHER DOMAIN MUST CHANGE: STOP â†’ BLOCKED format.
 
 BEFORE COMPLETION:
   1. Run tests
-  2. git diff --stat / git diff
-  3. Verify every modified file is in allowed paths
-  4. Report STATUS: COMPLETE format
+  2. ./scripts/test-guardrails.ps1
+  3. git diff --check / git diff --stat / git diff
+  4. Verify every modified file is in allowed paths
+  5. Report STATUS: COMPLETE format
 ```
 
 ---

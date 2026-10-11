@@ -1,6 +1,27 @@
 # KnowledgeHub – Database Documentation
 
-> Version: 1.0 | Date: 2026-10-02 | Laravel 11 · PostgreSQL 16 · UUID PKs · timestamptz
+> Version: 2.1 | Date: 2026-10-07 | Laravel 11 · PostgreSQL 16 / Supabase PostgreSQL · UUID PKs · timestamptz
+
+---
+
+## 0. Business Model (read first)
+
+KnowledgeHub is a **curated learning platform**, not a social or user-generated-content platform.
+
+**Roles** (exactly 3):
+
+| Role | DB name | Description |
+|------|---------|-------------|
+| Admin | `admin` | Full platform control: manages users, contributors, courses, categories, plans |
+| Contributor | `contributor` | Internal content-team member: creates, edits, and publishes courses and course content |
+| User | `user` | Discovers and learns from courses; uses AI Companion, Learning Roadmap, bookmarks |
+
+> A normal User does NOT automatically become a Contributor. Admin explicitly grants the Contributor role.
+> There is NO Reviewer role and NO community moderation workflow.
+
+**Content model**: Primary educational unit is a **Course**. A course contains learning materials (articles, videos, documents, external links, etc.). Contributor creates courses. User consumes courses.
+
+**AI Learning Companion**: Learning assistant for Users — conversation history, long-term memory, learning goals, progress tracking, personalized recommendations, roadmap generation.
 
 ---
 
@@ -16,7 +37,7 @@
 | Currency | `CHAR(3)` ISO 4217, regex-validated |
 | Flexible metadata | `JSONB` only where genuinely variable (`messages.metadata`) |
 | File storage | Metadata only in PG; binary files go to S3 |
-| Soft deletion | `users` + `articles` only – downstream records require retention |
+| Soft deletion | `users` + content tables only – downstream records require retention |
 | Secrets | Never stored: no plaintext passwords, API keys, card numbers |
 
 ---
@@ -27,20 +48,29 @@
 | Table | Responsibility |
 |-------|---------------|
 | `users` | Accounts. Soft-deletable. Email unique per active account. |
-| `roles` | Named roles. Seeded: learner, contributor, reviewer, admin. |
+| `roles` | Named roles. Seeded: `user`, `contributor`, `admin`. |
 | `user_roles` | Many-to-many join. Composite PK = uniqueness. |
 
-### B – Knowledge Base
+### B – Course / Content
+
+> **Note**: The current schema uses `articles` and `article_versions` as the learning-content backbone.
+> These represent **course content materials** within a course, not a social article feed.
+> A full Course → Section → Material hierarchy will be designed in a future migration.
+> Until then, `articles` maps conceptually to "course learning material".
+
 | Table | Responsibility |
 |-------|---------------|
 | `categories` | Hierarchical taxonomy via self-referencing parent_id. |
-| `articles` | Stable identity. published_version_id pointer. Soft-deletable. |
-| `article_versions` | Immutable content snapshots. |
+| `articles` | Course content material. Contributor-authored. Soft-deletable. |
+| `article_versions` | Immutable content snapshots. Audit history. |
 | `tags` | Global reusable labels. |
 | `article_tags` | Article ↔ tag join. Composite PK. |
-| `article_reviews` | Editorial decisions per version. |
-| `bookmarks` | User saves article. Composite PK. |
+| `bookmarks` | User saves content. Composite PK. |
 | `article_attachments` | S3 file metadata per version. |
+
+> `article_reviews` table from the old review workflow has been removed conceptually.
+> No Reviewer role, no editorial submission pipeline.
+> Contributor publishes content directly (with Admin oversight).
 
 ### C – AI Companion
 | Table | Responsibility |
@@ -53,7 +83,7 @@
 | Table | Responsibility |
 |-------|---------------|
 | `learning_roadmaps` | Named plan owned by user. |
-| `roadmap_items` | Ordered steps. Optional article link. |
+| `roadmap_items` | Ordered steps. Optional content link. |
 | `learning_progress` | 1:1 progress tracker per item. |
 | `roadmap_item_prerequisites` | DAG prerequisites. Self-ref forbidden by CHECK. |
 
@@ -72,8 +102,10 @@
 **Design:** `articles.published_version_id` (nullable FK to `article_versions.id`).
 
 - NULL = draft, no published version.
-- Approved revision: application sets `published_version_id` + `status = 'published'`.
-- Pending revision: old `published_version_id` unchanged; readers see prior published version.
+- Contributor or Admin sets `published_version_id` + `status = 'published'` when ready to publish.
+- Pending revision: old `published_version_id` unchanged; learners see prior published version.
+
+**No submission-for-review workflow.** Contributor publishes directly. Admin can archive or override.
 
 **Circular FK resolved in migration 5 (3 steps):**
 1. Create `articles` without FK on `published_version_id`.
@@ -92,7 +124,7 @@
 | conversations on user delete | RESTRICT | Application must archive first |
 | user_memories on user delete | RESTRICT | May need GDPR export |
 | subscriptions on user delete | RESTRICT | Financial audit record |
-| Article deleted | Soft delete only | Versions/reviews are audit history |
+| Article deleted | Soft delete only | Versions are audit history |
 | article_versions deleted | RESTRICT | Immutable content history |
 | messages on conversation delete | CASCADE | Belong to conversation |
 | source_message_id deleted | SET NULL on user_memories | Memory survives |
@@ -116,7 +148,6 @@
 | FK indexes | articles | author_id, category_id | Filter queries |
 | Unique PK | article_tags | (article_id, tag_id) | No duplicate tagging |
 | FK index | article_tags | tag_id | Articles by tag |
-| FK indexes | article_reviews | article_version_id, reviewer_id | Review queries |
 | FK index | conversations | user_id | User conversations |
 | Composite | messages | (conversation_id, created_at) | Ordered history |
 | Composite | user_memories | (user_id, status) | Active memories |
@@ -134,8 +165,7 @@
 | Table.column | Allowed Values |
 |--------------|----------------|
 | users.status | active, inactive, banned, pending |
-| articles.status | draft, submitted, published, archived, rejected |
-| article_reviews.decision | approved, rejected, changes_requested |
+| articles.status | draft, published, archived |
 | messages.role | user, assistant, system, tool |
 | user_memories.memory_type | preference, fact, goal, instruction |
 | user_memories.status | active, superseded, expired, deleted |
@@ -180,12 +210,16 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 3 | 000003 | categories |
 | 4 | 000004 | tags |
 | 5 | 000005 | articles, article_versions |
-| 6 | 000006 | article_tags, article_reviews, bookmarks, article_attachments |
+| 6 | 000006 | article_tags, bookmarks, article_attachments |
 | 7 | 000007 | conversations, messages, user_memories |
 | 8 | 000008 | learning_roadmaps, roadmap_items, learning_progress, roadmap_item_prerequisites |
 | 9 | 000009 | plans, subscriptions, payments, webhook_events |
 
-Total: 26 tables
+> `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
+> migration once the team approves the schema cleanup task. Until then it is dormant — no application
+> code should reference it.
+
+Total active conceptual tables: 25 (26 in DB until `article_reviews` is formally dropped)
 
 ---
 
@@ -210,27 +244,4 @@ docker compose exec postgres psql -U knowledgehub -d knowledgehub \
             (gen_random_uuid(),'stripe','evt_001','pending',now());"
 ```
 
-| FK index | learning_roadmaps | user_id | User roadmaps |
-| Unique | roadmap_items | (roadmap_id, position) | Ordered positions |
-| FK indexes | subscriptions | user_id, plan_id | Subscription queries |
-| Unique | payments | (provider, provider_payment_id) | Idempotent ingestion |
-| Unique | webhook_events | (provider, provider_event_id) | Idempotent processing |
-| Composite | webhook_events | (provider, status) | Pending by provider |
 
-
----
-
-## 3. Published Version Strategy
-
-**Design:** `articles.published_version_id` (nullable FK → `article_versions.id`).
-
-- NULL = draft / no published version.
-- Approved → application sets `published_version_id` + `status = 'published'`.
-- Pending revision → old `published_version_id` unchanged; readers see prior version.
-
-**Circular FK resolved in migration 5 (3 steps):**
-1. Create `articles` without FK on `published_version_id`.
-2. Create `article_versions` with FK → `articles.id`.
-3. Add `published_version_id` FK via raw `ALTER TABLE` after both tables exist.
-
-**Limitation:** DB cannot enforce (without trigger) that the referenced version belongs to the same article. Application service must validate `version.article_id == article.id` before assignment.

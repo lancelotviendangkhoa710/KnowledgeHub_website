@@ -1,8 +1,11 @@
 # ERD – KnowledgeHub Database Schema
 
-> Generated: 2026-10-02 | Laravel 11 · PostgreSQL 16 · UUID PKs · timestamptz
+> Version: 2.1 | Generated: 2026-10-07 | Laravel 11 · PostgreSQL 16 / Supabase PostgreSQL · UUID PKs · timestamptz
 
 Diagrams split by domain. See `docs/DATABASE.md` for full constraint details.
+
+**Roles**: `admin` · `contributor` · `user` (3 roles only — no Reviewer)
+**Content model**: Course-based curated learning platform. No social article-feed model.
 
 ---
 
@@ -23,7 +26,7 @@ erDiagram
     }
     roles {
         uuid id PK
-        string name "unique"
+        string name "unique — admin|contributor|user"
         string description
         timestamptz created_at
         timestamptz updated_at
@@ -39,7 +42,12 @@ erDiagram
 
 ---
 
-## Domain B – Knowledge Base
+## Domain B – Course / Content
+
+> Current schema uses `articles` as learning content materials.
+> A full Course → Section → Material hierarchy is planned in a future migration.
+> No `article_reviews` table — no Reviewer role, no editorial submission workflow.
+> Contributor publishes content directly; Admin oversees platform-wide.
 
 ```mermaid
 erDiagram
@@ -53,11 +61,11 @@ erDiagram
     }
     articles {
         uuid id PK
-        uuid author_id FK
+        uuid author_id FK "contributor_id"
         uuid category_id FK "nullable"
         uuid published_version_id FK "nullable"
         string slug "unique"
-        string status "draft|submitted|published|archived|rejected"
+        string status "draft|published|archived"
         timestamptz published_at
         timestamptz created_at
         timestamptz updated_at
@@ -74,14 +82,6 @@ erDiagram
     }
     tags { uuid id PK; string name; string slug "unique"; timestamptz created_at }
     article_tags { uuid article_id PK,FK; uuid tag_id PK,FK }
-    article_reviews {
-        uuid id PK
-        uuid article_version_id FK
-        uuid reviewer_id FK
-        string decision "approved|rejected|changes_requested"
-        text comment
-        timestamptz created_at
-    }
     bookmarks { uuid user_id PK,FK; uuid article_id PK,FK; timestamptz created_at }
     article_attachments {
         uuid id PK
@@ -93,14 +93,20 @@ erDiagram
         timestamptz created_at
     }
     categories ||--o{ categories : "parent_id"
-    users ||--o{ articles : "authors"
+    users ||--o{ articles : "authors (contributors)"
     categories ||--o{ articles : "categorises"
     articles ||--o{ article_versions : "has versions"
     article_versions ||--o| articles : "published_version_id"
     users ||--o{ article_versions : "created_by"
-
+    articles ||--o{ article_tags : "tagged"
+    tags ||--o{ article_tags : "applied"
+    users ||--o{ bookmarks : "bookmarks"
+    articles ||--o{ bookmarks : "bookmarked"
+    article_versions ||--o{ article_attachments : "attachments"
+```
 
 ---
+
 
 ## Domain C – AI Learning Companion
 
@@ -249,8 +255,6 @@ erDiagram
 | created_by | article_versions | users | RESTRICT |
 | article_id | article_tags | articles | RESTRICT |
 | tag_id | article_tags | tags | RESTRICT |
-| article_version_id | article_reviews | article_versions | RESTRICT |
-| reviewer_id | article_reviews | users | RESTRICT |
 | user_id | bookmarks | users | CASCADE |
 | article_id | bookmarks | articles | CASCADE |
 | article_version_id | article_attachments | article_versions | RESTRICT |
@@ -268,11 +272,5 @@ erDiagram
 | plan_id | subscriptions | plans | RESTRICT |
 | subscription_id | payments | subscriptions | RESTRICT |
 
-    articles ||--o{ article_tags : "tagged"
-    tags ||--o{ article_tags : "applied"
-    article_versions ||--o{ article_reviews : "reviewed"
-    users ||--o{ article_reviews : "reviewer"
-    users ||--o{ bookmarks : "bookmarks"
-    articles ||--o{ bookmarks : "bookmarked"
-    article_versions ||--o{ article_attachments : "attachments"
-```
+> Removed: `article_version_id → article_reviews` and `reviewer_id → article_reviews`.
+> The `article_reviews` table is dormant (old model). Pending formal drop migration.

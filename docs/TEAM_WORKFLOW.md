@@ -7,10 +7,10 @@
 ## 1. Phân công Role
 
 | Role | Directory owns | KHÔNG chạm |
-|------|----------------|------------|
+| ------ | ---------------- | ------------ |
 | **P1 — Backend Lead** | `backend/app/`, `backend/routes/`, `database/migrations/` | `frontend/`, `docker/` |
 | **P2 — Frontend Lead** | `frontend/` (pages, components, hooks, store) | `backend/`, `database/migrations/` |
-| **P3 — Infra / Integrator** | `docker/`, `docs/`, `database/seeders/`, `.env.example`, `docker-compose.yml` | Không viết business logic |
+| **P3 — Infra / Integrator** | `docker/`, `docs/`, `database/seeders/`, `.env.example`, `docker-compose.yml` | có đóng góp viết business logic |
 
 > Muốn chạm file người khác → nhắn hỏi trước, không tự ý sửa.
 
@@ -133,6 +133,7 @@ git push origin p1/article-crud-api
 ```
 
 Chuẩn commit message:
+
 ```
 p1: add article store endpoint
 p1: fix validation for article tags
@@ -170,6 +171,7 @@ git push origin p1/article-crud-api --force-with-lease
 ```
 
 Trên GitHub:
+
 1. **Pull Requests** → **New Pull Request**
 2. **base**: `dev` ← **compare**: `p1/article-crud-api`
 3. Mô tả: làm gì, test thế nào
@@ -212,7 +214,7 @@ git checkout -b p1/comment-api
 ## 6. File Nhạy Cảm — Ai Owns Ai
 
 | File | Owner | Người khác muốn sửa |
-|------|-------|---------------------|
+| ------ | ------- | --------------------- |
 | `docker-compose.yml` | P3 | Nhắn P3 |
 | `.env.example` | P3 | Nhắn P3 |
 | `backend/routes/api.php` | P1 | Nhắn P1 |
@@ -221,6 +223,7 @@ git checkout -b p1/comment-api
 | `frontend/package.json` | P2 | Nhắn P2 |
 
 Migration tự tránh conflict vì Laravel generate timestamp unique:
+
 ```powershell
 docker compose exec app php artisan make:migration create_comments_table
 # → 2026_10_05_143022_create_comments_table.php

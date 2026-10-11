@@ -1,14 +1,13 @@
 #!/bin/sh
 set -e
 
-# Bootstrap Laravel if not yet installed
+# Bootstrap tracked Laravel source if not yet installed.
 if [ ! -f /var/www/html/artisan ]; then
     echo "==> Installing Laravel via Composer..."
     composer create-project laravel/laravel:^11.0 /tmp/laravel --prefer-dist --no-interaction
-    cp -a /tmp/laravel/. /var/www/html/
+    # Copy only non-database files to preserve host-mounted database/ volume
+    rsync -a --exclude='database' /tmp/laravel/ /var/www/html/
     rm -rf /tmp/laravel
-    # Remove default database/ so the host-mounted volume takes precedence
-    rm -rf /var/www/html/database
     echo "==> Laravel installed."
 fi
 

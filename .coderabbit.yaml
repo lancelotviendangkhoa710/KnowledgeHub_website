@@ -15,23 +15,30 @@ reviews:
     drafts: false
 
   # Mức độ review
-  profile: "chill"   # "chill" = nhẹ nhàng | "assertive" = strict
+  profile: "assertive"
 
   # Những gì CodeRabbit sẽ check
-  request_changes_workflow: false   # Không block merge, chỉ comment
+  request_changes_workflow: true
 
   poem: false          # Tắt thơ cuối review (mặc định bật, hơi spam)
   collapse_walkthrough: false
 
-  path_filters:
-    # Bỏ qua file không cần review
-    - "!docs/**"
-    - "!**/*.md"
-    - "!**/*.lock"
-    - "!**/*.json"     # bỏ package-lock.json, composer.lock
-    - "!docker/**"
-
   path_instructions:
+    - path: "AGENTS.md"
+      instructions: |
+        Review only for consistency with approved ADRs and ownership boundaries.
+        Flag changes that weaken stop conditions, authorization, security, or scope controls.
+
+    - path: "docs/**"
+      instructions: |
+        Treat approved ADRs as architecture authority. Flag undocumented API/schema changes,
+        conflicts with approved decisions, or planned work presented as implemented.
+
+    - path: ".github/**"
+      instructions: |
+        Review CI and templates as security controls. Flag bypasses of tests, guardrails,
+        review requirements, branch rules, or secret checks.
+
     # Hướng dẫn riêng cho từng phần codebase
     - path: "database/migrations/**"
       instructions: |
@@ -49,6 +56,12 @@ reviews:
         - Soft-delete filter (deleted_at IS NULL) applied where needed
         - Response format consistent: { data, message, status }
         - No business logic in controller (delegate to Service/Model)
+        - Mutating endpoints authorize via Policy/Gate
+
+    - path: "backend/app/Policies/**"
+      instructions: |
+        Test Guest, User, Contributor, and Admin. Contributors access only owned content.
+        Admin retains platform-wide management. No reviewer/learner role or review workflow.
 
     - path: "backend/app/Models/**"
       instructions: |

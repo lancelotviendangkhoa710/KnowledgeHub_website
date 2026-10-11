@@ -25,7 +25,7 @@ Design and evolve relational database schemas for KnowledgeHub using PostgreSQL 
 - Enums: VARCHAR + CHECK constraint (not native ENUM)
 - Money: NUMERIC(12,2)
 - Currency: CHAR(3) ISO 4217
-- Soft deletes: users + articles only
+- Soft deletes: users + content tables only (not junction tables)
 - JSONB: Only when genuinely variable (messages.metadata)
 
 ## Workflow
@@ -61,31 +61,30 @@ Design and evolve relational database schemas for KnowledgeHub using PostgreSQL 
 
 ## Examples
 
-### New table with foreign key
+### New table with foreign key (course enrollment)
 ```php
-Schema::create('article_reviews', function (Blueprint $table) {
+Schema::create('enrollments', function (Blueprint $table) {
     $table->uuid('id')->primary();
-    $table->uuid('article_version_id');
-    $table->uuid('reviewer_id');
-    $table->string('decision'); // pending|approved|rejected|revision_requested
-    $table->text('feedback')->nullable();
-    $table->timestampTz('created_at');
-    $table->timestampTz('updated_at');
-    
-    // Foreign keys with cascade
-    $table->foreign('article_version_id', 'fk_reviews_version')
-          ->references('id')->on('article_versions')
-          ->onDelete('cascade');
-    $table->foreign('reviewer_id', 'fk_reviews_reviewer')
+    $table->uuid('user_id');
+    $table->uuid('course_id');
+    $table->string('status', 20)->default('active');
+    $table->timestampTz('enrolled_at');
+    $table->timestampTz('created_at')->nullable();
+    $table->timestampTz('updated_at')->nullable();
+
+    $table->unique(['user_id', 'course_id']); // one enrollment per user per course
+
+    $table->foreign('user_id', 'fk_enrollments_user')
           ->references('id')->on('users')
-          ->onDelete('restrict'); // Keep review if user deleted
-    
-    // CHECK constraint for decision enum
-    $table->check("decision IN ('pending','approved','rejected','revision_requested')");
-    
-    // Index for queries
-    $table->index('article_version_id');
-    $table->index('reviewer_id');
+          ->onDelete('restrict');
+    $table->foreign('course_id', 'fk_enrollments_course')
+          ->references('id')->on('courses')
+          ->onDelete('restrict');
+
+    $table->check("status IN ('active','completed','dropped')");
+
+    $table->index('user_id');
+    $table->index('course_id');
 });
 ```
 

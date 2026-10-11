@@ -1,4 +1,4 @@
-ï»¿# postgresql-sql
+# postgresql-sql
 
 ## Purpose
 
@@ -89,21 +89,17 @@ GROUP BY c.id, c.name
 ORDER BY article_count DESC;
 ```
 
-### Transaction for data consistency
+### Transaction for data consistency (publish course content)
 ```php
-DB::transaction(function () use ($articleId, $decision) {
-    DB::table(''article_reviews'')->insert([
-        ''id'' => Str::uuid(),
-        ''article_version_id'' => $articleId,
-        ''decision'' => $decision,
-        ''created_at'' => now(),
-    ]);
-    
-    if ($decision === ''approved'') {
-        DB::table(''articles'')
-            ->where(''id'', $articleId)
-            ->update([''status'' => ''published'']);
-    }
+DB::transaction(function () use ($articleId, $versionId) {
+    // Contributor publishes content directly — no review step
+    DB::table(''articles'')
+        ->where(''id'', $articleId)
+        ->update([
+            ''published_version_id'' => $versionId,
+            ''status''               => ''published'',
+            ''published_at''         => now(),
+        ]);
 });
 ```
 

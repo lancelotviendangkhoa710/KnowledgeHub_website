@@ -8,6 +8,18 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
+  guardrails:
+    name: Architecture Guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run repository guardrails
+        shell: pwsh
+        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/${{ github.base_ref }}" -RequireTaskId
+
   # ─── Job 1: Kiểm tra tên branch đúng convention ───────────────────────────
   branch-convention:
     name: Branch Naming Convention
@@ -62,11 +74,8 @@ jobs:
   laravel-test:
     name: Laravel Tests
     runs-on: ubuntu-latest
-    # Chỉ chạy nếu PR có thay đổi backend hoặc database
-    if: |
-      contains(github.event.pull_request.title, 'p1') ||
-      contains(github.head_ref, 'p1') ||
-      contains(github.head_ref, 'p3')
+    # Application source is not tracked until the approved bootstrap task lands.
+    if: hashFiles('backend/composer.json') != ''
 
     services:
       postgres:

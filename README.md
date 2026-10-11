@@ -8,7 +8,7 @@ KnowledgeHub is operated by an internal content team. Contributors create and pu
 
 - **Frontend**: Next.js / React
 - **Backend**: Laravel 11 REST API
-- **Database**: PostgreSQL 16 / Amazon Aurora PostgreSQL
+- **Database**: PostgreSQL 16 / Supabase PostgreSQL (production); Docker PostgreSQL (local)
 - **AI Service**: Python + FastAPI (future)
 - **File Storage**: Amazon S3 (future)
 - **Dev Environment**: Docker Compose
