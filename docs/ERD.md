@@ -4,7 +4,7 @@
 
 Diagrams split by domain. See `docs/DATABASE.md` for full constraint details.
 
-**Roles**: `admin` · `contributor` · `user` (3 roles only — no Reviewer)
+**Roles**: `admin` · `contributor` · `user` (3 roles only; legacy `learner`/`reviewer` assignments normalized by migration)
 **Content model**: Course-based curated learning platform. No social article-feed model.
 
 ---
@@ -46,7 +46,7 @@ erDiagram
 
 > Current schema uses `articles` as learning content materials.
 > A full Course → Section → Material hierarchy is planned in a future migration.
-> No `article_reviews` table — no Reviewer role, no editorial submission workflow.
+> `article_reviews` is dormant legacy schema — no Reviewer role, no editorial submission workflow.
 > Contributor publishes content directly; Admin oversees platform-wide.
 
 ```mermaid

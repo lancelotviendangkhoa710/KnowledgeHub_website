@@ -204,7 +204,7 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 
 | # | File suffix | Tables |
 |---|-------------|--------|
-| 0 | 000000 | migrations |
+| 0 | 000000 | Laravel-managed migrations table |
 | 1 | 000001 | users |
 | 2 | 000002 | roles, user_roles |
 | 3 | 000003 | categories |
@@ -214,6 +214,8 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 7 | 000007 | conversations, messages, user_memories |
 | 8 | 000008 | learning_roadmaps, roadmap_items, learning_progress, roadmap_item_prerequisites |
 | 9 | 000009 | plans, subscriptions, payments, webhook_events |
+| 10 | 2026-10-12-000001 | Normalize article statuses to approved lifecycle |
+| 11 | 2026-10-12-000002 | Normalize legacy role names and assignments |
 
 > `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
 > migration once the team approves the schema cleanup task. Until then it is dormant — no application

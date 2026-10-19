@@ -4,18 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-/**
- * Migration: Identity – Roles and User-Role Assignments
- *
- * roles: Named permission roles. Seeded with: learner, contributor, reviewer, admin.
- * user_roles: Many-to-many join table. A user may hold multiple roles simultaneously.
- *
- * Deletion policy:
- *  - Deleting a role → RESTRICT. Roles should be deactivated rather than deleted to avoid
- *    implicit loss of user permissions. Application must remove assignments before deletion.
- *  - Deleting a user → CASCADE on user_roles (role assignment has no value without user).
- *  - Composite PK on (user_id, role_id) enforces uniqueness of assignments.
- */
+
 return new class extends Migration
 {
     public function up(): void

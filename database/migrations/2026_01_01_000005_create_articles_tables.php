@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Schema;
  *  intentionally omitted to keep the skeleton simple. Documented limitation.
  *
  * ── Article Status ───────────────────────────────────────────────────────────
- *  draft | submitted | published | archived | rejected
+ *  draft | published | archived  (approved model — no review workflow)
  *
  * ── Deletion Policy ──────────────────────────────────────────────────────────
  *  - Articles: soft delete only (deleted_at).

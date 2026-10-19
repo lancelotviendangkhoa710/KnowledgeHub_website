@@ -36,8 +36,10 @@ docker compose exec app php artisan db:seed
 ## Documentation
 
 ### For Developers
+- [`docs/PROJECT-ARCHITECTURE.md`](docs/PROJECT-ARCHITECTURE.md) — Concise project architecture and implementation status
 - [`docs/SETUP.md`](docs/SETUP.md) â€“ Complete development environment setup guide
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) â€“ System architecture, components, domain boundaries
+- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Deployment guide and production checklist
 - [`docs/DATABASE.md`](docs/DATABASE.md) â€“ Schema design, constraints, deletion policies
 - [`docs/ERD.md`](docs/ERD.md) â€“ Entity-relationship diagrams by domain
 - [`docs/API.md`](docs/API.md) â€“ API contract reference (contract-first boundary)

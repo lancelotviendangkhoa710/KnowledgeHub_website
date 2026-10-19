@@ -1,10 +1,26 @@
 # Team Workflow — Nhóm 3 Người Vibe Code
 
-**Dự án**: KnowledgeHub | **Cập nhật**: 2026-10-05
+**Dự án**: KnowledgeHub | **Cập nhật**: 2026-10-12
+
+> ⚠️ **DEPRECATED** — Tài liệu này là phiên bản cũ, phân chia team theo layer (Backend Lead / Frontend Lead / Infra).
+> Mô hình đã được thay thế bằng phân chia theo **cụm tính năng (feature/domain ownership)**.
+>
+> **Tài liệu chính thức hiện tại**: [`docs/team/WORKFLOW.md`](team/WORKFLOW.md) + [`docs/team/OWNERSHIP.md`](team/OWNERSHIP.md)
+>
+> | Owner | Domain sở hữu | Branch prefix |
+> |---|---|---|
+> | TEAM_MEMBER_A | Identity / Auth (users, roles, user_roles) | `p1/` |
+> | TEAM_MEMBER_B | Content (categories, articles, tags, bookmarks, attachments) | `p2/` |
+> | TEAM_MEMBER_C | Learning / Engagement + Infrastructure | `p3/` |
+>
+> Mỗi người sở hữu **backend + frontend + DB + tests** cho domain của mình.
+> Không chia theo layer (backend lead / frontend lead).
+>
+> Chi tiết đầy đủ: xem `docs/team/WORKFLOW.md`, `docs/team/OWNERSHIP.md`, `docs/team/FEATURES.md`.
 
 ---
 
-## 1. Phân công Role
+## ~~1. Phân công Role~~ (OBSOLETE — xem bảng trên)
 
 | Role | Directory owns | KHÔNG chạm |
 | ------ | ---------------- | ------------ |

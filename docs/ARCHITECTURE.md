@@ -168,9 +168,9 @@ See `docs/team/WORKFLOW.md` for conflict-minimization rules.
 
 | # | Discrepancy | Type |
 |---|---|---|
-| 1 | `RoleSeeder` seeds `learner`, `reviewer` -- approved model: `user`, `contributor`, `admin` only | IMPLEMENTATION ISSUE |
-| 2 | `articles_status_check` allows `submitted`, `rejected` -- approved: `draft`, `published`, `archived` | IMPLEMENTATION ISSUE |
-| 3 | Migration 000002 comment references old 4-role model | DOCUMENTATION ISSUE |
+| 1 | Role seeding and existing role data normalized to `user`, `contributor`, `admin` | RESOLVED by RoleSeeder + migration 000002 |
+| 2 | `articles_status_check` restricted to `draft`, `published`, `archived` | RESOLVED by migration 000001 |
+| 3 | Migration 000002 comment aligned with approved 3-role model | RESOLVED |
 | ~~4~~ | ~~Approved ADR lists Next.js/React as active, but no `frontend/` directory/package manifest exists~~ — RESOLVED: `frontend/` scaffolded | ~~ARCHITECTURE DECISION CONFLICT~~ |
 | 5 | Database/ERD prose says `article_reviews` was removed conceptually; migration still creates it; ADR correctly calls it dormant | DOCUMENTATION ISSUE |
 

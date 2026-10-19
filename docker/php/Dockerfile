@@ -1,4 +1,4 @@
-FROM php:8.2-fpm-alpine
+FROM php:8.2.28-fpm-alpine3.21
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -24,7 +24,7 @@ RUN docker-php-ext-install \
     zip
 
 # Install Composer
-COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.7.9 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 

@@ -9,11 +9,13 @@ use Illuminate\Support\Str;
 /**
  * RoleSeeder – Development-only seed data.
  *
- * Seeds the four initial roles for KnowledgeHub:
- *   learner     – default role for registered users; can read and bookmark content
- *   contributor – can create and submit articles for review
- *   reviewer    – can review and approve/reject submitted article versions
+ * Seeds the three approved roles for KnowledgeHub:
+ *   user        – default role for registered users; can read, bookmark, learn, use AI companion
+ *   contributor – internal content-team member; creates, edits, publishes courses (assigned by Admin)
  *   admin       – full platform administration access
+ *
+ * Authority: ADR 2026-10-05-business-model-correction.md
+ *            ADR 2026-10-06-architecture-techstack-locked.md
  *
  * NEVER include real credentials, tokens, or production secrets in seeders.
  * This seeder is safe for development and CI environments only.
@@ -27,29 +29,22 @@ class RoleSeeder extends Seeder
         $roles = [
             [
                 'id'          => Str::uuid()->toString(),
-                'name'        => 'learner',
-                'description' => 'Default role. Can read, bookmark, and use AI companion.',
+                'name'        => 'user',
+                'description' => 'Default role. Discovers courses, learns, bookmarks, uses AI companion and roadmaps.',
                 'created_at'  => $now,
                 'updated_at'  => $now,
             ],
             [
                 'id'          => Str::uuid()->toString(),
                 'name'        => 'contributor',
-                'description' => 'Can create articles and submit them for editorial review.',
-                'created_at'  => $now,
-                'updated_at'  => $now,
-            ],
-            [
-                'id'          => Str::uuid()->toString(),
-                'name'        => 'reviewer',
-                'description' => 'Can review submitted article versions and record decisions.',
+                'description' => 'Internal content-team member. Creates, edits, and publishes courses. Assigned by Admin only.',
                 'created_at'  => $now,
                 'updated_at'  => $now,
             ],
             [
                 'id'          => Str::uuid()->toString(),
                 'name'        => 'admin',
-                'description' => 'Full platform administration: users, roles, categories, plans.',
+                'description' => 'Full platform administration: users, roles, categories, plans, system configuration.',
                 'created_at'  => $now,
                 'updated_at'  => $now,
             ],
@@ -63,6 +58,6 @@ class RoleSeeder extends Seeder
             );
         }
 
-        $this->command->info('Roles seeded: learner, contributor, reviewer, admin');
+        $this->command->info('Roles seeded: user, contributor, admin');
     }
 }

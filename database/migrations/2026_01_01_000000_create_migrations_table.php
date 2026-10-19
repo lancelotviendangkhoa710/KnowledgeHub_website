@@ -13,11 +13,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('migrations', function (Blueprint $table) {
-            $table->id();
-            $table->string('migration');
-            $table->integer('batch');
-        });
+        // Laravel manages its own migrations table internally.
+        // This migration exists only for documentation completeness.
+        // Skip creation if the table already exists (created by migrate:install).
+        if (!Schema::hasTable('migrations')) {
+            Schema::create('migrations', function (Blueprint $table) {
+                $table->id();
+                $table->string('migration');
+                $table->integer('batch');
+            });
+        }
     }
 
     public function down(): void

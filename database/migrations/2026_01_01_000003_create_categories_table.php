@@ -37,13 +37,16 @@ return new class extends Migration
             $table->timestampTz('created_at')->nullable();
             $table->timestampTz('updated_at')->nullable();
 
-            // Self-referencing FK – RESTRICT to prevent orphaning children.
+            // Index parent_id for tree traversal queries.
+            $table->index('parent_id');
+        });
+
+        // Add self-referencing FK after table/primary key creation. PostgreSQL
+        // requires the referenced unique constraint to exist before adding this FK.
+        Schema::table('categories', function (Blueprint $table) {
             $table->foreign('parent_id')
                 ->references('id')->on('categories')
                 ->restrictOnDelete();
-
-            // Index parent_id for tree traversal queries.
-            $table->index('parent_id');
         });
     }
 
