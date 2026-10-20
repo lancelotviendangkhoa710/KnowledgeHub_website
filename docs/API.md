@@ -54,7 +54,7 @@ No endpoints are currently documented as implemented, approved, or proposed.
 | Domain | Owner | Implemented | Approved contract | Notes |
 |---|---|---:|---:|---|
 | Identity/Auth | TEAM_MEMBER_A | 0 | 0 | App source absent |
-| Content | TEAM_MEMBER_B | 0 | 0 | App source absent |
+| Content | TEAM_MEMBER_B | 12 | 12 | Implemented in routes/api/content.php |
 | Learning/Engagement | TEAM_MEMBER_C | 0 | 0 | App source absent |
 | AI Companion | TBD | 0 | 0 | AI service not in repository |
 | Payment | TBD | 0 | 0 | Payment implementation absent |

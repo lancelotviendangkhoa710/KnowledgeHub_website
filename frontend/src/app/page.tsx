@@ -1,101 +1,144 @@
 import Link from 'next/link';
+import { fetchArticles } from '@/lib/contentClient';
+import CourseCard from '@/components/content/CourseCard';
 
-const topics = [
-  { name: 'Programming', description: 'Languages, software, and engineering' },
-  { name: 'Data & AI', description: 'Data science and artificial intelligence' },
-  { name: 'Business', description: 'Strategy, management, and finance' },
-  { name: 'Design', description: 'Visual design and user experience' },
-  { name: 'Communication', description: 'Writing, presentation, and languages' },
-  { name: 'Personal development', description: 'Build skills for work and life' },
-];
+export default async function HomePage() {
+  const articles = await fetchArticles();
+  const featured = articles.slice(0, 3);
 
-export default function HomePage() {
   return (
-    <div className="page-shell">
-      <section className="discovery-hero" aria-labelledby="home-title">
-        <div className="content-container discovery-hero__inner">
-          <p className="eyebrow">Knowledge worth keeping</p>
-          <h1 id="home-title">Find the knowledge you need to move forward.</h1>
-          <p className="discovery-hero__description">
-            Explore curated learning resources, follow ideas, and build a path that works for you.
+    <div>
+      {/* Hero Section */}
+      <section style={{ padding: '5rem 0 4rem 0', position: 'relative', overflow: 'hidden' }}>
+        <div className="container" style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
+            <span className="badge badge-gold">
+              Curated Internal Knowledge Platform
+            </span>
+          </div>
+
+          <h1 style={{ maxWidth: 860, margin: '0 auto 1.5rem auto', fontSize: 'clamp(2.4rem, 5vw, 4rem)', letterSpacing: '-0.03em' }}>
+            Engineering Rigor. Curated Pedagogy. <br />
+            <span style={{ background: 'linear-gradient(135deg, #f59e0b, #fbbf24)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              Zero Social Noise.
+            </span>
+          </h1>
+
+          <p style={{ maxWidth: 660, margin: '0 auto 2.5rem auto', fontSize: '1.2rem', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+            KnowledgeHub is a closed-loop learning platform operated by internal domain specialists. Peer-crafted curricula with immutable version snapshots and dedicated AI Companion guidance.
           </p>
-          <form action="/courses" method="get" className="search-form" role="search">
-            <label className="visually-hidden" htmlFor="knowledge-search">Search learning resources</label>
-            <input
-              id="knowledge-search"
-              name="q"
-              type="search"
-              placeholder="Search topics, articles, and courses"
-            />
-            <button type="submit">Search</button>
-          </form>
-          <Link className="text-link" href="/courses">Browse all learning resources</Link>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <Link href="/courses" className="btn btn-primary" style={{ padding: '0.85rem 1.85rem', fontSize: '1.05rem' }}>
+              Explore Curricula &rarr;
+            </Link>
+            <Link href="/courses/create" className="btn btn-secondary" style={{ padding: '0.85rem 1.85rem', fontSize: '1.05rem' }}>
+              Contributor Studio
+            </Link>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div
+            style={{
+              marginTop: '4rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '1.5rem',
+              maxWidth: 900,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              padding: '1.75rem',
+              background: 'var(--bg-glass-card)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: 'var(--radius-lg)',
+              backdropFilter: 'blur(16px)',
+            }}
+          >
+            <div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-gold)' }}>100%</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Internal Staff Verified</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>v1 &rarr; vN</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Immutable Versioning</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.85rem', fontWeight: 800, color: 'var(--accent-emerald)' }}>Zero</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>UGC or Social Distractions</div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <div className="content-container home-content">
-        <section className="content-section" aria-labelledby="topics-title">
-          <div className="section-heading-row">
+      {/* Featured Courses Grid */}
+      <section style={{ padding: '3rem 0 5rem 0' }}>
+        <div className="container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem' }}>
             <div>
-              <p className="eyebrow">Explore by subject</p>
-              <h2 id="topics-title">Knowledge topics</h2>
-              <p className="section-description">Choose a subject to focus your next discovery.</p>
+              <span className="badge badge-gold" style={{ marginBottom: '0.5rem' }}>
+                Core Curricula
+              </span>
+              <h2>Featured Engineering Deep Dives</h2>
             </div>
-            <Link className="text-link" href="/courses">Browse resources</Link>
+            <Link href="/courses" style={{ color: 'var(--accent-gold)', fontWeight: 600, fontSize: '0.95rem' }}>
+              View All Courses &rarr;
+            </Link>
           </div>
-          <ul className="topic-grid">
-            {topics.map((topic) => (
-              <li key={topic.name}>
-                <Link className="topic-link" href={`/courses?topic=${encodeURIComponent(topic.name)}`}>
-                  <span className="topic-link__name">{topic.name}</span>
-                  <span className="topic-link__description">{topic.description}</span>
-                  <span className="topic-link__arrow" aria-hidden="true">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
 
-        <section className="content-section resources-section" aria-labelledby="resources-title">
-          <div className="section-heading-row">
-            <div>
-              <p className="eyebrow">A place to continue</p>
-              <h2 id="resources-title">Learning resources</h2>
-              <p className="section-description">
-                Browse published materials and narrow your search by subject or resource type.
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+              gap: '1.75rem',
+            }}
+          >
+            {featured.map((article) => (
+              <CourseCard key={article.id} article={article} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Core Architectural Pillars */}
+      <section style={{ padding: '4rem 0 6rem 0', background: 'rgba(16, 21, 34, 0.5)', borderTop: '1px solid var(--border-subtle)' }}>
+        <div className="container">
+          <div style={{ textAlign: 'center', maxWidth: 640, margin: '0 auto 3.5rem auto' }}>
+            <span className="badge badge-cyan" style={{ marginBottom: '0.75rem' }}>
+              Architectural Pillars
+            </span>
+            <h2>Built for Technical Mastery</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>
+              How KnowledgeHub differs fundamentally from general social learning platforms.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
+            <div style={{ background: 'var(--bg-surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--accent-gold)' }}>🛡️</div>
+              <h3 style={{ marginBottom: '0.75rem' }}>Curated Internal Operations</h3>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                No unvetted user-generated posts. Only designated contributors and admins produce, refine, and maintain course content.
               </p>
             </div>
-            <Link className="text-link" href="/courses">View all resources</Link>
-          </div>
-          <div className="resource-filters" aria-label="Resource types">
-            <span className="filter-label">Resource types</span>
-            <span className="filter-chip">Articles</span>
-            <span className="filter-chip">Documents</span>
-            <span className="filter-chip">Videos</span>
-            <span className="filter-chip">External links</span>
-          </div>
-          <div className="empty-state">
-            <h3>Resources will appear here</h3>
-            <p>Published learning resources are not connected yet. Visit the courses area to continue.</p>
-            <Link className="button button--secondary" href="/courses">Open courses</Link>
-          </div>
-        </section>
 
-        <section className="learning-tools" aria-label="Learning tools">
-          <article className="learning-tool">
-            <p className="eyebrow">Plan your learning</p>
-            <h2>Learning roadmaps</h2>
-            <p>Organize the next steps in your learning journey.</p>
-            <span className="feature-status">Roadmaps are not available yet</span>
-          </article>
-          <article className="learning-tool">
-            <p className="eyebrow">Learn with support</p>
-            <h2>AI learning companion</h2>
-            <p>Get personalized guidance as you explore and learn.</p>
-            <span className="feature-status">Coming in a future release</span>
-          </article>
-        </section>
-      </div>
+            <div style={{ background: 'var(--bg-surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--accent-cyan)' }}>📜</div>
+              <h3 style={{ marginBottom: '0.75rem' }}>Immutable Version Snapshots</h3>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                Every edit generates a distinct revision snapshot. Educational citations, code examples, and bookmarks never rot.
+              </p>
+            </div>
+
+            <div style={{ background: 'var(--bg-surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--accent-emerald)' }}>🤖</div>
+              <h3 style={{ marginBottom: '0.75rem' }}>AI Learning Companion</h3>
+              <p style={{ fontSize: '0.95rem', color: 'var(--text-secondary)' }}>
+                Context-aware AI partner grounded in verified curricula, offering Socratic questioning, progress tracking, and personalized roadmaps.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

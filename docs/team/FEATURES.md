@@ -37,11 +37,11 @@ backend/app/Services/Auth/
 
 | Feature | ID | Status | DB Tables | API Endpoints | Notes |
 |---|---|---|---|---|---|
-| Category management | TBD | PLANNED | `categories` | TBD | Contract and implementation absent |
-| Content lifecycle | TBD | PLANNED | `articles`, `article_versions` | TBD | Preserve draft/published/archived workflow |
-| Tags / bookmarks | TBD | PLANNED | `tags`, `article_tags`, `bookmarks` | TBD | Bookmarks are content-owned in current schema |
-| Attachments | TBD | PLANNED | `article_attachments` | TBD | Requires approved S3 integration |
-| Search | TBD | PLANNED | `articles` | TBD | Full-text design requires approval |
+| Category management | CONTENT-01 | IMPLEMENTED | `categories` | `GET /api/categories`, `POST/PUT/DELETE /api/categories` | Tree traversal, parent validation |
+| Content lifecycle | CONTENT-02 | IMPLEMENTED | `articles`, `article_versions` | `GET/POST /api/articles`, `PUT/publish/archive` | Immutable version snapshots |
+| Tags / bookmarks | CONTENT-03 | IMPLEMENTED | `tags`, `article_tags`, `bookmarks` | `GET /api/tags`, `GET/POST /api/bookmarks` | Saved library and tag relationships |
+| Attachments | CONTENT-04 | PLANNED | `article_attachments` | TBD | S3 upload pending team infrastructure |
+| Search | CONTENT-05 | IMPLEMENTED | `articles` | `GET /api/articles?search=` | Text search across title and version content |
 
 **DB tables owned**: `categories`, `articles`, `article_versions`, `tags`, `article_tags`, `bookmarks`, `article_attachments`
 

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
-import SiteFooter from '@/components/layout/SiteFooter';
-import SiteHeader from '@/components/layout/SiteHeader';
 import './globals.css';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
 export const metadata: Metadata = {
-  title: 'KnowledgeHub',
-  description: 'Curated Learning Platform with AI Companion',
+  title: 'KnowledgeHub — Curated Engineering & Science Learning Platform',
+  description: 'Curated deep-dive courses and educational materials crafted by internal technical contributors with AI companion integration.',
 };
 
 export default function RootLayout({
@@ -14,15 +14,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-      <html lang="en">
+    <html lang="en">
       <body>
-          <header id="app-header" className="site-header">
-            <SiteHeader />
-          </header>
-          <main id="app-main" className="app-main">{children}</main>
-          <footer id="app-footer" className="site-footer">
-            <SiteFooter />
-          </footer>
+        <Navbar />
+        <main id="app-main" className="app-main" style={{ flex: 1, paddingBottom: '4rem' }}>
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
