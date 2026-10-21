@@ -1,7 +1,7 @@
-# docs/API.md â€” KnowledgeHub API Contract
+# docs/API.md  KnowledgeHub API Contract
 
-**Version**: 0.1 | **Date**: 2026-10-06
-**Status**: API inventory empty. No route files, controllers, or API implementation are tracked in this workspace.
+**Version**: 0.2 | **Date**: 2026-10-21
+**Status**: Learning progress contract approved and implemented. Other inventory entries remain evidence-based.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -12,7 +12,7 @@
 ## 1. Evidence Audited
 
 | Evidence | Result |
-|---|---|
+| --- | --- |
 | `backend/routes/` | Absent |
 | `backend/app/` | Absent |
 | `backend/composer.json` | Absent |
@@ -28,7 +28,7 @@ Docker bootstrap can create a Laravel project at runtime (`docker/php/entrypoint
 For each approved endpoint, record:
 
 | Field | Required information |
-|---|---|
+| --- | --- |
 | Status | `PROPOSED`, `APPROVED`, or `IMPLEMENTED` |
 | Method and path | Exact HTTP method + versioned path |
 | Owner/domain | Domain owner from `docs/team/OWNERSHIP.md` |
@@ -40,6 +40,7 @@ For each approved endpoint, record:
 | Tests | Contract and authorization coverage |
 
 Rules:
+
 - Do not mark a contract `IMPLEMENTED` until route/controller tests run.
 - Do not change an existing method, path, request, or response without cross-domain coordination.
 - Do not infer token format, auth package, response envelope, or resource shape before approved implementation.
@@ -49,13 +50,13 @@ Rules:
 
 ## 3. API Inventory
 
-No endpoints are currently documented as implemented, approved, or proposed.
+Learning progress endpoints are documented below. Other domains remain evidence-based.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
-|---|---|---:|---:|---|
+| --- | --- | ---: | ---: | --- |
 | Identity/Auth | TEAM_MEMBER_A | 0 | 0 | App source absent |
 | Content | TEAM_MEMBER_B | 12 | 12 | Implemented in routes/api/content.php |
-| Learning/Engagement | TEAM_MEMBER_C | 0 | 0 | App source absent |
+| Learning/Engagement | TEAM_MEMBER_C | 2 | 2 | Roadmap-item progress only |
 | AI Companion | TBD | 0 | 0 | AI service not in repository |
 | Payment | TBD | 0 | 0 | Payment implementation absent |
 
@@ -93,8 +94,64 @@ Copy this block only after feature approval:
 
 ---
 
-## 5. Change Log
+## 5. Learning / Engagement
+
+### IMPLEMENTED — GET `/api/learning/roadmap-items/{item}/progress`
+
+**Owner**: `TEAM_MEMBER_C`
+**Authentication**: Laravel `auth` middleware. Owner of the parent roadmap or Admin only. The frontend includes a stored Bearer token when one is provided by the future Identity/Auth runtime; this repository has no Bearer-token issuer or guard.
+
+**Success — 200**
+
+```json
+{
+  "status": "success",
+  "data": {
+    "id": "uuid",
+    "roadmap_item_id": "uuid",
+    "status": "in_progress",
+    "started_at": "2026-10-21T10:00:00.000000Z",
+    "completed_at": null,
+    "updated_at": "2026-10-21T10:00:00.000000Z"
+  }
+}
+```
+
+`data` is `null` when no tracker exists. GET never creates a tracker.
+
+**Errors**: `401` unauthenticated; `403` foreign item; `404` absent item. No foreign tracker data is exposed.
+
+### IMPLEMENTED — PATCH `/api/learning/roadmap-items/{item}/progress`
+
+**Owner**: `TEAM_MEMBER_C`
+**Authentication**: same as GET.
+
+**Request**
+
+```json
+{ "status": "pending|in_progress|completed|skipped" }
+```
+
+**Success — 200**: standard `{ "status": "success", "message": "...", "data": { ...progress } }` envelope.
+
+**Errors**: `401` unauthenticated; `403` foreign item; `404` absent item; `422` missing or invalid `status`.
+
+**Progress decision (OQ-05)**:
+
+- `learning_progress.status` is authoritative. This endpoint never writes `roadmap_items.status`.
+- All transitions among `pending`, `in_progress`, `completed`, `skipped` are allowed.
+- Entering `in_progress` sets `started_at` only if it is null. It is never reset by this endpoint.
+- Entering `completed` sets `completed_at`; every non-completed status clears it.
+- A database transaction locks the parent item before find-or-create. The unique `roadmap_item_id` constraint remains the final 1:1 guard. Same-status retry returns one canonical tracker row.
+- No enrollment, course progress, time spent, bookmark sync, or roadmap auto-completion occurs.
+
+**Tests**: `backend/tests/Feature/Learning/RoadmapProgressTest.php`.
+
+---
+
+## 6. Change Log
 
 | Version | Date | Change |
-|---|---|---|
+| --- | --- | --- |
+| 0.2 | 2026-10-21 | Approved/implemented LRN-002 roadmap-item progress contract |
 | 0.1 | 2026-10-06 | Created evidence-based empty API inventory and endpoint template |
