@@ -12,7 +12,7 @@ class RoadmapItem extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['roadmap_id', 'article_id', 'title', 'description', 'position', 'status'];
+    protected $fillable = ['roadmap_id', 'article_id', 'title', 'description', 'position'];
 
     public function roadmap(): BelongsTo
     {

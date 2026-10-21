@@ -118,6 +118,47 @@ class RoadmapProgressTest extends TestCase
         $this->assertSame('pending', $item->fresh()->status);
     }
 
+    public function test_progress_status_updates_item_status_mirror(): void
+    {
+        $owner = $this->user();
+        $item = $this->itemFor($owner);
+
+        foreach (['in_progress', 'completed', 'skipped', 'pending'] as $status) {
+            $this->actingAs($owner)
+                ->patchJson("/api/learning/roadmap-items/{$item->id}/progress", ['status' => $status])
+                ->assertOk();
+            $this->assertSame($status, $item->fresh()->status);
+        }
+
+        $this->actingAs($owner)
+            ->getJson("/api/learning/roadmaps/{$item->roadmap_id}")
+            ->assertOk()
+            ->assertJsonPath('data.items.0.status', 'pending');
+    }
+
+    public function test_item_endpoints_cannot_write_status(): void
+    {
+        $owner = $this->user();
+        $item = $this->itemFor($owner);
+
+        $this->actingAs($owner)
+            ->postJson("/api/learning/roadmaps/{$item->roadmap_id}/items", [
+                'title' => 'Direct status',
+                'position' => 2,
+                'status' => 'completed',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->actingAs($owner)
+            ->putJson("/api/learning/roadmaps/{$item->roadmap_id}/items/{$item->id}", ['status' => 'completed'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+
+        $this->assertSame('pending', $item->fresh()->status);
+        $this->assertDatabaseMissing('roadmap_items', ['title' => 'Direct status']);
+    }
+
     public function test_progress_is_isolated_per_roadmap_item(): void
     {
         $owner = $this->user();

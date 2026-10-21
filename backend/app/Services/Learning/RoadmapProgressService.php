@@ -52,6 +52,13 @@ class RoadmapProgressService
             $progress->fill($attributes);
             $progress->save();
 
+            // roadmap_items.status is a denormalized mirror used by roadmap
+            // reads. learning_progress.status remains authoritative.
+            if ($lockedItem->status !== $status) {
+                $lockedItem->status = $status;
+                $lockedItem->save();
+            }
+
             return $progress->fresh();
         });
     }

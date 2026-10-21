@@ -1,7 +1,9 @@
 # LRN-002 — Theo dõi tiến độ roadmap item
 
 **Nguồn:** `D:\Web\docs\features\learning\LEARN-02-progress.md`  
-**Owner:** `TEAM_MEMBER_C`; trạng thái: nghiệp vụ chưa chốt ở status semantics/API. Đọc `00-overview.md`.
+**Owner:** `TEAM_MEMBER_C`; trạng thái: OQ-05 đã chốt ngày 2026-10-22. Đọc `00-overview.md`.
+
+> **RESOLVED — OQ-05 (2026-10-22):** `learning_progress.status` là nguồn chuẩn duy nhất. `roadmap_items.status` chỉ là mirror đọc, được service cập nhật trong cùng transaction sau khi khóa item; item create/update từ chối field `status`; dữ liệu cũ được backfill bằng migration `2026_10_22_000001_sync_roadmap_item_status_with_progress.php`. Chi tiết: `docs/decisions/2026-10-22-learning-progress-authority.md` và `docs/API.md` v0.4.
 
 ## 1. Mục tiêu, actor, phạm vi
 
@@ -22,8 +24,8 @@ Theo dõi trạng thái học **trên mỗi `roadmap_item` thuộc roadmap cá n
 | R-102 | `learning_progress.status`: `pending`, `in_progress`, `completed`, `skipped`; default pending; CHECK | CONFIRMED schema |
 | R-103 | `started_at`, `completed_at` nullable; `updated_at`; không có `created_at` | CONFIRMED schema |
 | R-104 | Owner policy qua item→roadmap; Guest denied | CONFIRMED context pack |
-| R-105 | Completed semantics, timestamps, skipped/in-progress, reopen/reset, auto-completion chưa định nghĩa | OPEN QUESTION, blocker |
-| R-106 | `roadmap_items.status` cũng có cùng status enum song song progress | CONFIRMED; source-of-truth chưa định nghĩa |
+| R-105 | Completed semantics, timestamps, skipped/in-progress, reopen/reset, auto-completion | RESOLVED 2026-10-22: timestamps theo `docs/API.md` v0.4; không auto-complete |
+| R-106 | `roadmap_items.status` cũng có cùng status enum song song progress | RESOLVED 2026-10-22: `learning_progress.status` là authority; item status là mirror |
 | S-101 | `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` |
 | S-102 | `backend/AGENTS.md`, `backend/routes/api.php`, `docs/API.md`; Learning app/API chưa tồn tại |
 | S-103 | `frontend/src/lib/api.ts`, `frontend/src/app/(app)/layout.tsx`; chưa có Learning UI |
@@ -36,14 +38,14 @@ Theo dõi trạng thái học **trên mỗi `roadmap_item` thuộc roadmap cá n
 | BR-101 | Mọi progress access phải authorize item→roadmap; actor client không thể chọn tracker của user khác. | Không tồn tại hoặc foreign item: deny, không reveal resource. | CONFIRMED |
 | BR-102 | Tối đa một `learning_progress` per `roadmap_item_id`; DB unique là final guard. | Concurrent create: không được tạo duplicate; use atomic upsert/transaction/unique handling sau khi API decision duyệt. | CONFIRMED schema; implementation strategy đề xuất |
 | BR-103 | Status nhận đúng bốn giá trị CHECK; client validation không thay server validation. | Unknown status → reject, không ghi dữ liệu. | CONFIRMED |
-| BR-104 | `roadmap_items.status` và `learning_progress.status` đều có status; không được ghi cả hai theo suy đoán. | Nếu chọn một source, field còn lại phải có consistency/migration decision riêng; schema alteration không nằm scope tự động. | OPEN QUESTION / blocker |
-| BR-105 | Semantics của `started_at`/`completed_at`, skipped, reopen/reset, timestamp update chưa được xác định. | Không tự set timestamp/clear timestamp cho status transition. | OPEN QUESTION / blocker |
+| BR-104 | `learning_progress.status` là authority; `roadmap_items.status` là mirror được cập nhật trong cùng transaction. | Item endpoints từ chối `status`; direct DB writes phải tuân ADR. | RESOLVED 2026-10-22 |
+| BR-105 | Timestamps: `started_at` set một lần khi vào `in_progress`; `completed_at` set khi `completed`, giữ nguyên khi retry, clear khi non-completed. | Không reset `started_at`; không auto-complete roadmap. | RESOLVED 2026-10-22 |
 | BR-106 | Tracker tồn tại không chứng minh người học enrollment hay hoàn thành course. | Không trả course-level completion. | CONFIRMED |
 | BR-107 | Delete item cascade xóa progress; không báo success nếu item/tracker không được update theo semantics API đã duyệt. | Delete behavior/UI xác nhận cùng roadmap CRUD. | CONFIRMED schema; response handling OPEN QUESTION |
 
 ### State transition
 
-DB cho phép `pending|in_progress|completed|skipped`; đây là tập hợp hợp lệ, **không phải** transition matrix. Không định nghĩa completed timestamp, started timestamp, reopening, skipped semantics, roadmap auto-completion. `roadmap_items.status` trùng enum `learning_progress.status`; phải xác định authoritative field trước implementation (OQ-05). Đây là **blocker**, không chỉ chi tiết kỹ thuật.
+DB cho phép `pending|in_progress|completed|skipped`; đây là tập hợp hợp lệ. OQ-05 đã chốt: `learning_progress.status` là authority; `roadmap_items.status` là mirror; timestamps theo `docs/API.md` v0.4; không auto-complete roadmap.
 
 ## 4. Luồng chi tiết
 
@@ -56,14 +58,14 @@ DB cho phép `pending|in_progress|completed|skipped`; đây là tập hợp hợ
 5. Tracker có: trả trạng thái duy nhất theo unique item ID.
 6. UI render status/timestamps theo semantics được duyệt. Missing item/foreign owner/server error đi nhánh lỗi; không fallback mock.
 
-### 4.2 Cập nhật trạng thái (blocked đến khi OQ-05 chốt)
+### 4.2 Cập nhật trạng thái (OQ-05 đã chốt)
 
-1. User chọn trạng thái từ tập transition đã duyệt; UI hiển thị state hiện tại, Pending submit và disable thao tác lặp.
+1. User chọn trạng thái trong tập `pending|in_progress|completed|skipped`; UI hiển thị state hiện tại, Pending submit và disable thao tác lặp.
 2. Client gửi status allowlist; không cho client gán `roadmap_item_id` ngoài path, user ID, timestamps server-managed.
-3. Backend auth → resolve item + roadmap → Policy → Form Request validate allowed status/transition → service.
-4. Service atomic upsert theo unique `roadmap_item_id`; nếu state rule yêu cầu đồng thời update `roadmap_items.status`, làm trong transaction sau khi authority/consistency được duyệt.
-5. Timestamp do server derive theo rule được duyệt; currently unspecified—không implement default transition behavior.
-6. Success trả canonical progress; UI cập nhật từ response. Duplicate request phải idempotent: repeated same status không nhân row/time; timestamp behavior phụ thuộc approved rule.
+3. Backend auth → resolve item + roadmap → Policy → Form Request validate status → service.
+4. Service atomic upsert theo unique `roadmap_item_id`, đồng thời cập nhật `roadmap_items.status` mirror trong cùng transaction sau khi khóa item.
+5. Timestamp do server derive theo `docs/API.md` v0.4.
+6. Success trả canonical progress; UI cập nhật từ response. Duplicate request idempotent: repeated same status không nhân row; `completed_at` giữ nguyên.
 7. Concurrent conflicting updates: optimistic versioning chưa có schema; phải chốt last-write/lock/reject policy. Không silently overwrite; unresolved conflict trả error + refresh.
 8. 422 giữ lựa chọn/form và hiển thị lỗi cụ thể; 401 auth flow; 403/404 no leak; 5xx/network hiển thị trạng thái chưa xác định và yêu cầu reload trước retry nếu write có thể đã commit.
 
@@ -158,34 +160,34 @@ Schema hiện tại đủ chứa tracker/status/timestamps, nhưng không đủ 
 | T-104 | R-102 | Concurrent integration | parallel create same item | one row, deterministic response | Integration |
 | T-105 | R-104 | Feature | two items same `article_id` in distinct roadmaps | target-only update | Integration |
 | T-106 | R-107 | DB integration | delete parent item | cascade removes tracker | Integration |
-| T-107 | R-105 | Feature | all approved transitions/timestamps | exact state + timestamp rule | Integration, blocked until OQ-05 |
-| T-108 | R-106 | Unit/Integration | update status where duplicate column present | consistency exactly per approved authority | Integration, blocked |
+| T-107 | R-105 | Feature | all approved transitions/timestamps | exact state + timestamp rule | Integration, covered (OQ-05 resolved) |
+| T-108 | R-106 | Unit/Integration | update status where duplicate column present | consistency exactly per approved authority | Integration, covered |
 | T-109 | R-104 | End-to-end | user change status then refresh | canonical persisted state shown | E2E, after UI |
 
-Mở rộng `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**`; frontend test framework hiện chưa có trong `package.json`; không tự thêm dependency. Backend command docs: `docker compose exec app php artisan test`; chưa xác minh runtime testability.
+Mở rộng `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**`; frontend test framework hiện chưa có trong `package.json`; không tự thêm dependency. Backend command docs: `docker compose exec app php artisan test`; đã xác minh runtime ngày 2026-10-22.
 
 ## 11. Source mapping và tasks
 
 | Module/file | Trạng thái | Thay đổi dự kiến | Req |
 |---|---|---|---|
 | Migration `000008` | Hiện hữu | Reuse; không edit | R-101–107 |
-| `LearningProgress` model, `RoadmapItem` relationship | Chưa tồn tại tracked | Tạo theo convention nếu bootstrap/task cho phép | R-101–107 |
-| `RoadmapPolicy`, Learning service/request/controller/routes | Chưa tồn tại | Tạo theo approved API | R-104 |
+| `LearningProgress` model, `RoadmapItem` relationship | Đã tracked | Scoped access, mirror update | R-101–107 |
+| `RoadmapPolicy`, Learning service/request/controller/routes | Đã tracked | Auth, validation, transaction | R-104 |
 | `frontend/src/lib/api.ts` | Hiện hữu | Reuse; feature calls không mock fallback | R-101 |
-| Learning component/page | Chưa tồn tại | Tạo sau contract/UI decision | R-101 |
-| Tests Learning | Chưa tồn tại | Unit/feature + concurrency DB tests | R-101–107 |
-| `docs/API.md` | API inventory Learning 0 | Cập nhật sau approval | R-101 |
+| Learning component/page | Một phần (roadmap list/create/delete) | Cần UI item/progress/prerequisite + auth issuer | R-101 |
+| Tests Learning | Đã tracked | Unit/feature + concurrency DB tests | R-101–107 |
+| `docs/API.md` | v0.4, 12 Learning routes | Đã cập nhật | R-101 |
 
 | Task | Dependency | Files dự kiến | Kết quả/steps | Test + DONE |
 |---|---|---|---|---|
-| LRN-002-T0 | Roadmap item contract; quyết OQ-05/OQ-08 | Docs/API sau approval | Chốt authority, transition/timestamps, response, conflict policy; xác nhận không enrollment | Product/API signoff; DONE có decision record |
-| LRN-002-T1 | T0 + bootstrap | Learning model/policy/service/requests | Scoped access, atomic one-to-one write/upsert, timestamp behavior | Unit/Feature/concurrency; DONE AC-01–08 pass |
-| LRN-002-T2 | T1 + API contract | Learning route/controller/API docs coordination | Implement read/update, errors, auth | API tests; DONE contract/status cases pass |
-| LRN-002-T3 | T2 + approved UI design | Learning UI components/page | Indicator, control, loading/error/conflict refresh | E2E; DONE AC-09 equivalent verified |
+| LRN-002-T0 | Roadmap item contract; quyết OQ-05/OQ-08 | Docs/API sau approval | Chốt authority, transition/timestamps, response, conflict policy; xác nhận không enrollment | DONE 2026-10-22 có decision record (OQ-08 auth issuer còn open) |
+| LRN-002-T1 | T0 + bootstrap | Learning model/policy/service/requests | Scoped access, atomic one-to-one write/upsert, timestamp behavior | DONE — tests pass |
+| LRN-002-T2 | T1 + API contract | Learning route/controller/API docs coordination | Implement read/update, errors, auth | DONE — API tests pass |
+| LRN-002-T3 | T2 + approved UI design | Learning UI components/page | Indicator, control, loading/error/conflict refresh | PENDING — UI/auth issuer |
 
 ## 12. Assumptions, open questions, blockers
 
 - **ASSUMPTION A-101:** tracker absent may be represented as `pending` for display; do not write row on GET unless approved.
-- **OPEN QUESTION OQ-05:** `roadmap_items.status` vs `learning_progress.status` authority, transitions, timestamps, skipped/reopen/reset, auto-completion. **Implementation blocker.**
-- **OPEN QUESTION OQ-08:** route/auth/response/error contract and runtime auth. **Integration blocker.**
-- **BLOCKER:** do not implement status writes or timestamps before OQ-05 is decided; do not broaden to enrollment/course completion.
+- **RESOLVED OQ-05 (2026-10-22):** `learning_progress.status` is authoritative; `roadmap_items.status` is a transactional mirror; item endpoints reject `status`; timestamps follow `docs/API.md` v0.4. See `docs/decisions/2026-10-22-learning-progress-authority.md`.
+- **OPEN QUESTION OQ-08:** route/auth/response/error contract and runtime auth. **Integration blocker** (token issuer owned by Identity/Auth).
+- **REMAINING BOUNDARY:** do not broaden to enrollment/course completion; UI for progress remains pending an approved design/auth issuer.

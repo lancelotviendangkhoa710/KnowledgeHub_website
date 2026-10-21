@@ -23,7 +23,9 @@ class StoreRoadmapItemRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'position' => ['required', 'integer', 'min:0', 'max:65535'],
-            'status' => ['sometimes', 'string', 'in:pending,in_progress,completed,skipped'],
+            // Item status mirrors learning_progress.status. Only PATCH progress
+            // may change it.
+            'status' => ['prohibited'],
         ];
     }
 }

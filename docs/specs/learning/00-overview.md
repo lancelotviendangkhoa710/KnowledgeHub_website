@@ -31,24 +31,24 @@
 | V-01 | Có ba chức năng nguồn, đúng tên như trên | CONFIRMED | Ba file trong `docs/features/learning/` |
 | V-02 | Stack Laravel 11, PostgreSQL 16, Next.js/React/TypeScript | CONFIRMED | `AGENTS.md`, `docs/ARCHITECTURE.md`, `frontend/package.json` |
 | V-03 | Schema bốn bảng Learning đã có migration; không có migration mới được giả định | CONFIRMED | migration `000008` |
-| V-04 | Backend app Learning chưa tracked; API inventory Learning = 0 | CONFIRMED | `backend/AGENTS.md`, `docs/API.md`, khảo sát `backend/app`, `backend/routes`, `backend/tests` |
-| V-05 | Frontend có App Router, `api.ts`, content pages; không có Learning page/component | CONFIRMED | `frontend/src` |
-| V-06 | Auth token ở `localStorage` trong client, `api.ts` gửi Bearer; cơ chế backend thực tế chưa xác nhận | CONFIRMED / OPEN QUESTION | `frontend/src/lib/api.ts`; backend Auth chưa có |
+| V-04 | Backend app Learning đã tracked; 12 route Learning đã đăng ký | CONFIRMED 2026-10-22 | `backend/app`, `backend/routes/api/learning.php`, `docs/API.md` v0.4 |
+| V-05 | Frontend có trang roadmap list/create/delete; chưa có UI item/progress/prerequisite | PARTIAL | `frontend/src` |
+| V-06 | Backend dùng `auth:sanctum`; token UUID hoạt động; chưa có endpoint phát token | CONFIRMED / OPEN QUESTION (p1) | `backend/app/Providers/AppServiceProvider.php`, `frontend/src/lib/api.ts` |
 | V-07 | Roadmap owner/Admin; item position unique; progress item-scoped; DAG cycle check service | CONFIRMED theo context/schema | `context-packs/learning.md`, migration, `docs/DATABASE.md` |
-| V-08 | Quy tắc state, CRUD, article visibility, cross-roadmap prerequisite, concurrency strategy chưa chốt | OPEN QUESTION | Ba feature specs nguồn |
+| V-08 | OQ-05 đã chốt; state/CRUD/article visibility/cross-roadmap prerequisite/concurrency strategy còn mở | PARTIAL | Ba feature specs nguồn, ADR `2026-10-22-learning-progress-authority` |
 
 ## 2. Kiến trúc Learning hiện tại
 
-Thực tế hiện có là **schema/migration và thiết kế domain**, không phải luồng runtime hoàn chỉnh:
+Thực tế hiện có là schema, backend Learning đã tracked và một phần frontend:
 
 ```text
-Next.js App Router (scaffold, chưa có Learning UI)
+Next.js App Router (trang roadmap list/create/delete; chưa có UI item/progress/prerequisite)
     → frontend/src/lib/api.ts (generic fetch client; Bearer localStorage)
-    → Laravel REST API (runtime bootstrap; Learning controllers/services/routes chưa tracked)
-    → PostgreSQL (migration 000008: roadmap, items, progress, prerequisite edges)
+    → Laravel REST API (12 route Learning; auth:sanctum; service/policy/request)
+    → PostgreSQL (migration 000008 + data backfill OQ-05)
 ```
 
-Không mô tả `Policy`, `Form Request`, `Service`, `Model`, route Learning như đã tồn tại. Chúng là cấu trúc dự kiến trong `backend/AGENTS.md` và context pack. Content route hiện có là pattern tham khảo, không phải contract Learning. `docs/API.md` cấm suy ra endpoint, response, auth mechanism hay pagination khi chưa được duyệt.
+`Policy`, `Form Request`, `Service`, `Model`, route và test Learning đã tồn tại. Content route là pattern tham khảo. `docs/API.md` v0.4 là contract hiện hành cho 12 route Learning.
 
 ### Thành phần nên tái sử dụng / phạm vi có khả năng tác động
 
@@ -57,29 +57,29 @@ Không mô tả `Policy`, `Form Request`, `Service`, `Model`, route Learning nh�
 | `frontend/src/lib/api.ts` | Generic API client; reuse, không tự thêm auth/refresh semantics. |
 | `frontend/src/app/(app)/layout.tsx`, `components/layout/SiteHeader.tsx` | Shell dùng chung; chỉ tích hợp navigation nếu được duyệt. |
 | `frontend/src/app/(app)/courses/page.tsx`, `components/content/CourseCard.tsx` | UI/content pattern tham khảo; article không được đồng nhất với course mới. |
-| `backend/routes/api.php` | Registry shared hotspot; dự kiến include `routes/api/learning.php` nếu bootstrap/runtime routing phù hợp; phối hợp trước khi sửa. |
-| `backend/routes/api/learning.php` | Chưa tồn tại; có thể tạo theo convention trong registry sau khi contract duyệt. |
-| `backend/app/Http/Controllers/Learning/**`, `Requests/Learning/**`, `Models/{LearningRoadmap,RoadmapItem,LearningProgress}.php`, `Policies/RoadmapPolicy.php`, `Services/Learning/**` | Đường dẫn dự kiến theo ownership; chưa tồn tại. |
-| `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` | Schema có sẵn; không chỉnh migration cũ. Chưa có căn cứ cần migration mới. |
-| `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**` | Convention đích theo ownership; chưa có test Learning. |
-| `frontend/src/app/(app)/learning/**`, `frontend/src/components/learning/**` | Chỉ là vị trí tạo mới đề xuất nếu UI được xác nhận; không phải file hiện hữu. |
+| `backend/routes/api.php` | Registry shared hotspot; đã include `routes/api/learning.php`. |
+| `backend/routes/api/learning.php` | Đã tồn tại; 12 route, `whereUuid` constraints. |
+| `backend/app/Http/Controllers/Learning/**`, `Requests/Learning/**`, `Models/{LearningRoadmap,RoadmapItem,LearningProgress}.php`, `Policies/RoadmapPolicy.php`, `Services/Learning/**` | Đã tracked; progress authoritative, item status mirror. |
+| `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` | Schema có sẵn; không chỉnh. Có migration data `2026_10_22_000001` backfill OQ-05. |
+| `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**` | Đã có test; 41 test backend pass ngày 2026-10-22. |
+| `frontend/src/app/(app)/learning/**`, `frontend/src/components/learning/**` | Đã có trang roadmap cơ bản; UI item/progress/prerequisite còn thiếu. |
 
 ### Convention / giới hạn
 
 - UUID v4; `timestampTz`; enum là `VARCHAR + CHECK`; quan hệ FK có cascade được migration quy định.
-- Backend thiết kế: thin controller → authorize/validate → service; `Policy/Gate`, `Form Request`; transaction cho multi-step write (context pack). Đây là convention yêu cầu cho implementation, code hiện tại Learning chưa có.
-- API response convention trong backend instructions: `{data, message, status}`; `docs/API.md` vẫn yêu cầu contract endpoint được duyệt trước. Không coi response shape chi tiết là contract đã được duyệt.
+- Backend: thin controller → authorize/validate → service; `Policy/Gate`, `Form Request`; transaction cho multi-step write. Đã triển khai cho Learning.
+- API response convention: `{data, message, status}`; `docs/API.md` v0.4 là contract hiện hành cho 12 route Learning.
 - User chỉ đọc/sửa roadmap của mình; Admin có quyền theo context pack. Guest bị từ chối. Contributor dùng quyền User để học; quyền Contributor không tự cấp quyền xem roadmap người khác.
 - Progress gắn `roadmap_item_id` 1:1; không có user_id trực tiếp trong progress, ownership phải suy ra qua item→roadmap.
 - `roadmap_items.article_id` nullable, FK `ON DELETE SET NULL`; link đến `articles` là domain Content, không được sửa schema/semantics Content tùy ý.
-- Repo `git status` sạch ở discovery; runtime backend-generated source không tracked. Test backend hiện không thể chọn lệnh chạy nếu runtime chưa được khởi tạo.
+- Repo tracked backend Learning; test chạy được bằng `docker compose exec app php artisan test` (đã xác minh 2026-10-22).
 
 ## 3. Quan hệ và thứ tự triển khai
 
 | Chức năng | Phụ thuộc | Thành phần dùng chung | Thứ tự triển khai | Rủi ro tích hợp |
 |---|---|---|---|---|
 | `LRN-001` Roadmaps | Schema `learning_roadmaps`, `roadmap_items`; auth/ownership; contract Article nếu link content | Roadmap policy, API client, shell, shared Roadmap/Item models/services | Nền tảng trước; cần chốt CRUD/state/position/content link trước implementation | Cao: state/CRUD chưa duyệt; Article là domain Content; transaction reorder, schema unique |
-| `LRN-002` Progress | Roadmap item tồn tại; ownership kiểm tra qua roadmap; `learning_progress` 1:1 | Roadmap policy, item model, progress service/API client/UI detail | Sau contract item ownership và định nghĩa status/timestamps; có thể phát triển song song chỉ khi interface ổn định | Cao: status duplicative ở `roadmap_items` và `learning_progress`; semantics chưa duyệt; race upsert |
+| `LRN-002` Progress | Roadmap item tồn tại; ownership kiểm tra qua roadmap; `learning_progress` 1:1 | Roadmap policy, item model, progress service/API client/UI detail | OQ-05 đã chốt: progress status authoritative, item status mirror; còn UI/auth issuer | Trung bình: đã có transaction/upsert và timestamp test; UI chưa có |
 | `LRN-003` Prerequisites | Hai roadmap items và roadmap scope được xác định; service graph check | Roadmap policy, item model/service, transaction, cùng roadmap UI | Sau quyết định cùng/cross-roadmap và concurrency/locking; triển khai cuối hoặc trước đó chỉ test graph pure | Rất cao: scope chưa duyệt; concurrent cycle; DB chỉ cấm self-reference, không cấm cycle |
 
 **Độc lập/phụ thuộc:** ba feature dùng chung `roadmap_items`; LRN-002/003 không thể thao tác nếu chưa có item và quyền truy cập của LRN-001. Chúng không cần phụ thuộc nhau về nghiệp vụ đã xác nhận. Tích hợp progress vào readiness/prerequisite behavior chưa được xác định; không được tự chặn item vì progress. Cùng roadmap cho prerequisite là OPEN QUESTION, không suy ra chỉ do graph nằm trong roadmap.
@@ -101,7 +101,7 @@ Không mô tả `Policy`, `Form Request`, `Service`, `Model`, route Learning nh�
 | OQ-02 | Chuyển trạng thái roadmap hợp lệ, archived editability, auto-complete | Blocker nghiệp vụ | LRN-001 | Product xác nhận transition matrix |
 | OQ-03 | Admin visibility: có quyền xem mọi roadmap hay chỉ sửa/quản lý theo capability | Blocker bảo mật | Tất cả | Owner/PM phê duyệt authorization matrix; mặc định an toàn trong thiết kế là không suy rộng quyền |
 | OQ-04 | Khi nào article được gắn; published/archived/deleted behavior; version snapshot | Blocker cross-domain | LRN-001 | Content owner xác nhận read/visibility contract; không đổi Content schema |
-| OQ-05 | Status source of truth giữa `roadmap_items.status` và `learning_progress.status`; ý nghĩa timestamps, skipped/reopen | Blocker dữ liệu | LRN-002 | Product chọn single source/consistency rule và transition matrix |
+| OQ-05 | Status source of truth giữa `roadmap_items.status` và `learning_progress.status`; ý nghĩa timestamps, skipped/reopen | **RESOLVED 2026-10-22** | LRN-002 | `learning_progress.status` authoritative; item status là mirror transaction; item endpoints reject `status`; xem `docs/decisions/2026-10-22-learning-progress-authority.md` |
 | OQ-06 | Scope prerequisite cùng roadmap hay cross-roadmap; semantics completed/skipped | Blocker nghiệp vụ/bảo mật | LRN-003 | Product quyết định; tránh truy cập graph ngoài owner scope |
 | OQ-07 | Chống race tạo cycle đồng thời; serialization/lock/isolation | Blocker tính đúng đắn | LRN-003 | Backend/DB owner thiết kế, test concurrent transaction |
 | OQ-08 | Endpoint, auth runtime/backend token, response/error/pagination | Blocker integration | Tất cả | Chốt contract sau khi bootstrap/backend auth có thể xác minh; cập nhật `docs/API.md` |

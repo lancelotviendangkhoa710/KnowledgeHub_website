@@ -1,7 +1,7 @@
 # docs/API.md  KnowledgeHub API Contract
 
-**Version**: 0.3 | **Date**: 2026-10-22
-**Status**: Learning routes implemented and documented. Open product decisions are called out below; other inventory entries remain evidence-based.
+**Version**: 0.4 | **Date**: 2026-10-22
+**Status**: Learning routes implemented and documented. OQ-05 is resolved: `learning_progress.status` is authoritative and `roadmap_items.status` is its transactionally-maintained mirror. Other inventory entries remain evidence-based.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -100,7 +100,7 @@ Copy this block only after feature approval:
 
 **Common success envelope**: `{ "status": "success", "data": ... }`. Prerequisite mutation errors use `{ "status": "error", "message": "..." }`; Laravel validation errors use `{ "message": "...", "errors": { ... } }`.
 
-**Open decisions**: see OQ-01..OQ-08 in `docs/specs/learning/`. In particular, item `status` is currently writable through item endpoints while progress `status` is documented as authoritative; this inconsistency is tracked in `docs/specs/learning/02-progress.md` (OQ-05).
+**Open decisions**: see OQ-01..OQ-08 in `docs/specs/learning/`. OQ-05 is resolved (see the progress section and `docs/decisions/2026-10-22-learning-progress-authority.md`); the remaining OQs still need Product/API approval.
 
 ### IMPLEMENTED — Roadmaps
 
@@ -118,11 +118,11 @@ Copy this block only after feature approval:
 
 | Method | Path | Request | Success | Main errors |
 |---|---|---|---|---|
-| POST | `/api/learning/roadmaps/{roadmap}/items` | `title` required, `position` required integer 0..65535, optional `article_id`/`description`/`status` | 201, `data` item | 401, 404 foreign roadmap, 422 validation/position conflict |
-| PUT | `/api/learning/roadmaps/{roadmap}/items/{item}` | partial same fields | 200, `data` item | 401, 404 foreign/mismatched item, 422 validation/position conflict |
+| POST | `/api/learning/roadmaps/{roadmap}/items` | `title` required, `position` required integer 0..65535, optional `article_id`/`description`; `status` must be omitted | 201, `data` item (status defaults to `pending`) | 401, 404 foreign roadmap, 422 validation/position conflict/status supplied |
+| PUT | `/api/learning/roadmaps/{roadmap}/items/{item}` | partial `title`/`description`/`article_id`/`position`; `status` must be omitted | 200, `data` item | 401, 404 foreign/mismatched item, 422 validation/position conflict/status supplied |
 | DELETE | `/api/learning/roadmaps/{roadmap}/items/{item}` | — | 200, `{ "status": "success" }`; cascades progress/edges | 401, 404 |
 
-Position uniqueness is enforced by `(roadmap_id, position)`; the application maps a concurrent unique violation to a 422 `position` validation error rather than a 500. `article_id` must reference a non-soft-deleted article; published/draft/visibility rules remain OQ-04. Item status authority remains OQ-05.
+Position uniqueness is enforced by `(roadmap_id, position)`; the application maps a concurrent unique violation to a 422 `position` validation error rather than a 500. `article_id` must reference a non-soft-deleted article; published/draft/visibility rules remain OQ-04. Item `status` is read-only through this API: it mirrors `learning_progress.status` and is written only by the progress endpoint. Sending `status` to an item endpoint returns 422.
 
 ### IMPLEMENTED — Prerequisites
 
@@ -175,7 +175,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 **Progress decision (OQ-05)**:
 
-- `learning_progress.status` is authoritative. This endpoint never writes `roadmap_items.status`.
+- `learning_progress.status` is authoritative. In the same transaction this endpoint also updates `roadmap_items.status` as a denormalized mirror for roadmap reads. Item create/update endpoints reject `status`.
 - All transitions among `pending`, `in_progress`, `completed`, `skipped` are allowed.
 - Entering `in_progress` sets `started_at` only if it is null. It is never reset by this endpoint.
 - Entering `completed` sets `completed_at`; every non-completed status clears it.
@@ -183,7 +183,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 - A database transaction locks the parent item before find-or-create. The unique `roadmap_item_id` constraint remains the final 1:1 guard. Same-status retry returns one canonical tracker row.
 - No enrollment, course progress, time spent, bookmark sync, or roadmap auto-completion occurs.
 
-> **Approval note**: this section records the implemented decision. `docs/specs/learning/02-progress.md` still lists OQ-05 (status authority and timestamp semantics) as open; Product sign-off must be recorded before treating this as an approved contract.
+> **Resolution**: OQ-05 was resolved on 2026-10-22 by explicit user authorization. See `docs/decisions/2026-10-22-learning-progress-authority.md`. The data migration `2026_10_22_000001_sync_roadmap_item_status_with_progress.php` backfills item statuses from progress rows and normalizes items without progress to `pending`.
 
 **Tests**: `backend/tests/Feature/Learning/RoadmapProgressTest.php`.
 
@@ -193,6 +193,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.4 | 2026-10-22 | Resolved OQ-05: progress status authoritative; item status mirror; item endpoints reject `status`; data backfill migration |
 | 0.3 | 2026-10-22 | Documented all 12 Learning routes; corrected inventory/evidence; noted OQ-05 approval gap |
 | 0.2 | 2026-10-21 | Approved/implemented LRN-002 roadmap-item progress contract |
 | 0.1 | 2026-10-06 | Created evidence-based empty API inventory and endpoint template |
