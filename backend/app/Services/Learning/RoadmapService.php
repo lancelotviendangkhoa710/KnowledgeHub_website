@@ -7,7 +7,9 @@ use App\Models\RoadmapItem;
 use App\Models\User;
 use App\Policies\RoadmapPolicy;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class RoadmapService
 {
@@ -56,7 +58,13 @@ class RoadmapService
 
     public function createItem(LearningRoadmap $roadmap, array $attributes): RoadmapItem
     {
-        return DB::transaction(fn (): RoadmapItem => $roadmap->items()->create($attributes));
+        try {
+            return DB::transaction(fn (): RoadmapItem => $roadmap->items()->create($attributes));
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages([
+                'position' => 'The position has already been taken.',
+            ]);
+        }
     }
 
     public function findItem(LearningRoadmap $roadmap, string $itemId): RoadmapItem
@@ -66,10 +74,16 @@ class RoadmapService
 
     public function updateItem(RoadmapItem $item, array $attributes): RoadmapItem
     {
-        return DB::transaction(function () use ($item, $attributes): RoadmapItem {
-            $item->update($attributes);
-            return $item->fresh();
-        });
+        try {
+            return DB::transaction(function () use ($item, $attributes): RoadmapItem {
+                $item->update($attributes);
+                return $item->fresh();
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw ValidationException::withMessages([
+                'position' => 'The position has already been taken.',
+            ]);
+        }
     }
 
     public function deleteItem(RoadmapItem $item): void

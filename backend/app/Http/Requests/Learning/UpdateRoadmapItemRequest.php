@@ -15,15 +15,15 @@ class UpdateRoadmapItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'article_id' => ['sometimes', 'nullable', 'uuid', 'exists:articles,id'],
+            'article_id' => [
+                'sometimes',
+                'nullable',
+                'uuid',
+                Rule::exists('articles', 'id')->whereNull('deleted_at'),
+            ],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
-            'position' => [
-                'sometimes', 'integer', 'min:0', 'max:65535',
-                Rule::unique('roadmap_items', 'position')
-                    ->where('roadmap_id', $this->route('roadmap'))
-                    ->ignore($this->route('item')),
-            ],
+            'position' => ['sometimes', 'integer', 'min:0', 'max:65535'],
             'status' => ['sometimes', 'string', 'in:pending,in_progress,completed,skipped'],
         ];
     }

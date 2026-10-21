@@ -15,13 +15,14 @@ class StoreRoadmapItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'article_id' => ['nullable', 'uuid', 'exists:articles,id'],
+            'article_id' => [
+                'nullable',
+                'uuid',
+                Rule::exists('articles', 'id')->whereNull('deleted_at'),
+            ],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'position' => [
-                'required', 'integer', 'min:0', 'max:65535',
-                Rule::unique('roadmap_items', 'position')->where('roadmap_id', $this->route('roadmap')),
-            ],
+            'position' => ['required', 'integer', 'min:0', 'max:65535'],
             'status' => ['sometimes', 'string', 'in:pending,in_progress,completed,skipped'],
         ];
     }

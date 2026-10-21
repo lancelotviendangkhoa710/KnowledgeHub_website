@@ -1,7 +1,7 @@
 # docs/API.md  KnowledgeHub API Contract
 
-**Version**: 0.2 | **Date**: 2026-10-21
-**Status**: Learning progress contract approved and implemented. Other inventory entries remain evidence-based.
+**Version**: 0.3 | **Date**: 2026-10-22
+**Status**: Learning routes implemented and documented. Open product decisions are called out below; other inventory entries remain evidence-based.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -13,13 +13,13 @@
 
 | Evidence | Result |
 | --- | --- |
-| `backend/routes/` | Absent |
-| `backend/app/` | Absent |
-| `backend/composer.json` | Absent |
-| `backend/tests/` | Absent |
-| Tracked endpoint definitions | None found |
+| `backend/routes/` | Present: `content.php`, `learning.php` |
+| `backend/app/` | Present: Content and Learning controllers/services |
+| `backend/composer.json` | Present; `laravel/sanctum` added for Learning auth |
+| `backend/tests/` | Present: Content and Learning feature/unit tests |
+| Tracked endpoint definitions | Content + 12 Learning routes |
 
-Docker bootstrap can create a Laravel project at runtime (`docker/php/entrypoint.sh`), but generated application files are not tracked. Therefore no implemented API can be documented from repository evidence.
+Backend source and tests are tracked. The Learning routes are implemented; roadmap, item, and prerequisite business rules listed as OPEN QUESTION in `docs/specs/learning/` still require Product/API approval.
 
 ---
 
@@ -56,7 +56,7 @@ Learning progress endpoints are documented below. Other domains remain evidence-
 | --- | --- | ---: | ---: | --- |
 | Identity/Auth | TEAM_MEMBER_A | 0 | 0 | App source absent |
 | Content | TEAM_MEMBER_B | 12 | 12 | Implemented in routes/api/content.php |
-| Learning/Engagement | TEAM_MEMBER_C | 2 | 2 | Roadmap-item progress only |
+| Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 0 | 0 | AI service not in repository |
 | Payment | TBD | 0 | 0 | Payment implementation absent |
 
@@ -96,10 +96,47 @@ Copy this block only after feature approval:
 
 ## 5. Learning / Engagement
 
+**Common authentication**: all routes below use `auth:sanctum` Bearer tokens. Owner of the parent roadmap or an Admin may access. Token issuance/login is owned by Identity/Auth and is **not yet implemented** in this repository; Learning tests use Sanctum test authentication and a real token regression test.
+
+**Common success envelope**: `{ "status": "success", "data": ... }`. Prerequisite mutation errors use `{ "status": "error", "message": "..." }`; Laravel validation errors use `{ "message": "...", "errors": { ... } }`.
+
+**Open decisions**: see OQ-01..OQ-08 in `docs/specs/learning/`. In particular, item `status` is currently writable through item endpoints while progress `status` is documented as authoritative; this inconsistency is tracked in `docs/specs/learning/02-progress.md` (OQ-05).
+
+### IMPLEMENTED — Roadmaps
+
+| Method | Path | Request | Success | Main errors |
+|---|---|---|---|---|
+| GET | `/api/learning/roadmaps` | — | 200, `data` array; owner sees own, Admin sees all; items ordered by `position` | 401 |
+| POST | `/api/learning/roadmaps` | `title` required, `goal` required, `status` optional enum | 201, `data` roadmap with `items` | 401, 422 |
+| GET | `/api/learning/roadmaps/{roadmap}` | UUID path | 200, `data` roadmap with items | 401, 404 foreign/unknown |
+| PUT | `/api/learning/roadmaps/{roadmap}` | partial `title`, `goal`, `status` | 200, `data` roadmap | 401, 404, 422 |
+| DELETE | `/api/learning/roadmaps/{roadmap}` | — | 200, `{ "status": "success" }`; cascades items/progress/prerequisite edges | 401, 404 |
+
+`user_id` is derived from the authenticated actor and is never accepted from the payload. Invalid/non-UUID path values return 404 before any database query. Create/update state transitions, quota, and archived-edit rules remain OQ-01/OQ-02.
+
+### IMPLEMENTED — Roadmap items
+
+| Method | Path | Request | Success | Main errors |
+|---|---|---|---|---|
+| POST | `/api/learning/roadmaps/{roadmap}/items` | `title` required, `position` required integer 0..65535, optional `article_id`/`description`/`status` | 201, `data` item | 401, 404 foreign roadmap, 422 validation/position conflict |
+| PUT | `/api/learning/roadmaps/{roadmap}/items/{item}` | partial same fields | 200, `data` item | 401, 404 foreign/mismatched item, 422 validation/position conflict |
+| DELETE | `/api/learning/roadmaps/{roadmap}/items/{item}` | — | 200, `{ "status": "success" }`; cascades progress/edges | 401, 404 |
+
+Position uniqueness is enforced by `(roadmap_id, position)`; the application maps a concurrent unique violation to a 422 `position` validation error rather than a 500. `article_id` must reference a non-soft-deleted article; published/draft/visibility rules remain OQ-04. Item status authority remains OQ-05.
+
+### IMPLEMENTED — Prerequisites
+
+| Method | Path | Request | Success | Main errors |
+|---|---|---|---|---|
+| POST | `/api/learning/roadmap-items/{item}/prerequisites` | `prerequisite_item_id` required UUID | 201, `data: { roadmap_item_id, prerequisite_item_id }` | 401, 403 foreign item, 404 missing/foreign prerequisite, 409 duplicate, 422 self/cycle |
+| DELETE | `/api/learning/roadmap-items/{item}/prerequisites/{prerequisite}` | UUID paths | 200, `{ "status": "success" }` | 401, 403 foreign item, 404 missing/foreign prerequisite/edge |
+
+The full graph for the roadmap is validated before insert. Concurrent edge additions are serialized by locking the roadmap's items; a cycle created by two simultaneous requests is rejected by the second transaction. Cross-roadmap prerequisites are rejected in the current implementation; whether cross-roadmap should be allowed remains OQ-06. Batch endpoints are not implemented.
+
 ### IMPLEMENTED — GET `/api/learning/roadmap-items/{item}/progress`
 
 **Owner**: `TEAM_MEMBER_C`
-**Authentication**: Laravel `auth` middleware. Owner of the parent roadmap or Admin only. The frontend includes a stored Bearer token when one is provided by the future Identity/Auth runtime; this repository has no Bearer-token issuer or guard.
+**Authentication**: `auth:sanctum` Bearer token. Owner of the parent roadmap or Admin only. Token issuance/login is not yet implemented; see the common authentication note above.
 
 **Success — 200**
 
@@ -142,8 +179,11 @@ Copy this block only after feature approval:
 - All transitions among `pending`, `in_progress`, `completed`, `skipped` are allowed.
 - Entering `in_progress` sets `started_at` only if it is null. It is never reset by this endpoint.
 - Entering `completed` sets `completed_at`; every non-completed status clears it.
+- Same-status `completed` retry keeps the original `completed_at`; every non-completed status clears it.
 - A database transaction locks the parent item before find-or-create. The unique `roadmap_item_id` constraint remains the final 1:1 guard. Same-status retry returns one canonical tracker row.
 - No enrollment, course progress, time spent, bookmark sync, or roadmap auto-completion occurs.
+
+> **Approval note**: this section records the implemented decision. `docs/specs/learning/02-progress.md` still lists OQ-05 (status authority and timestamp semantics) as open; Product sign-off must be recorded before treating this as an approved contract.
 
 **Tests**: `backend/tests/Feature/Learning/RoadmapProgressTest.php`.
 
@@ -153,5 +193,6 @@ Copy this block only after feature approval:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.3 | 2026-10-22 | Documented all 12 Learning routes; corrected inventory/evidence; noted OQ-05 approval gap |
 | 0.2 | 2026-10-21 | Approved/implemented LRN-002 roadmap-item progress contract |
 | 0.1 | 2026-10-06 | Created evidence-based empty API inventory and endpoint template |

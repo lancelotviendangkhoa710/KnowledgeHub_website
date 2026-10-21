@@ -65,6 +65,22 @@ class RoadmapItemPrerequisiteTest extends TestCase
             ->assertCreated();
     }
 
+    public function test_foreign_owner_cannot_delete_a_prerequisite_edge(): void
+    {
+        $owner = $this->user();
+        [$item, $prerequisite] = $this->itemsFor($owner);
+        $this->add($owner, $item, $prerequisite)->assertCreated();
+
+        $this->actingAs($this->user())
+            ->deleteJson($this->path($item)."/{$prerequisite->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('roadmap_item_prerequisites', [
+            'roadmap_item_id' => $item->id,
+            'prerequisite_item_id' => $prerequisite->id,
+        ]);
+    }
+
     public function test_missing_prerequisite_is_not_found(): void
     {
         [$item] = $this->itemsFor($this->user());
@@ -74,7 +90,7 @@ class RoadmapItemPrerequisiteTest extends TestCase
             ->assertNotFound();
     }
 
-    public function test_cross_roadmap_prerequisite_is_rejected(): void
+    public function test_cross_roadmap_prerequisite_is_not_disclosed(): void
     {
         $owner = $this->user();
         [$item] = $this->itemsFor($owner);
@@ -82,7 +98,7 @@ class RoadmapItemPrerequisiteTest extends TestCase
 
         $this->actingAs($owner)
             ->postJson($this->path($item), ['prerequisite_item_id' => $foreignPrerequisite->id])
-            ->assertUnprocessable();
+            ->assertNotFound();
     }
 
     public function test_duplicate_and_cycle_edges_are_rejected(): void

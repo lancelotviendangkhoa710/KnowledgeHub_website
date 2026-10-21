@@ -76,12 +76,8 @@ class RoadmapItemPrerequisiteService
     /** @param array<string, RoadmapItem> $lockedItems */
     private function assertPrerequisiteInRoadmap(array $lockedItems, string $prerequisiteId): void
     {
-        if (! RoadmapItem::query()->whereKey($prerequisiteId)->exists()) {
-            throw (new ModelNotFoundException())->setModel(RoadmapItem::class, [$prerequisiteId]);
-        }
-
         if (! isset($lockedItems[$prerequisiteId])) {
-            throw new PrerequisiteException('Prerequisite item must belong to the same roadmap.', 422);
+            throw (new ModelNotFoundException())->setModel(RoadmapItem::class, [$prerequisiteId]);
         }
     }
 

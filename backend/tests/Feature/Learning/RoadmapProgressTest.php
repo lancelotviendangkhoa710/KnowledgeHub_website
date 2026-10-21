@@ -104,6 +104,12 @@ class RoadmapProgressTest extends TestCase
             ->patchJson("/api/learning/roadmap-items/{$item->id}/progress", ['status' => 'completed'])
             ->assertOk();
         $this->assertNotNull($first->fresh()->completed_at);
+        $firstCompletedAt = $first->fresh()->completed_at;
+        $this->travel(5)->seconds();
+        $this->actingAs($owner)
+            ->patchJson("/api/learning/roadmap-items/{$item->id}/progress", ['status' => 'completed'])
+            ->assertOk();
+        $this->assertEquals($firstCompletedAt, $first->fresh()->completed_at);
 
         $this->actingAs($owner)
             ->patchJson("/api/learning/roadmap-items/{$item->id}/progress", ['status' => 'pending'])

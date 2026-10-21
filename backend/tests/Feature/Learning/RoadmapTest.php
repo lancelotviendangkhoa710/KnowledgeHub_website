@@ -5,9 +5,11 @@ namespace Tests\Feature\Learning;
 use App\Models\LearningRoadmap;
 use App\Models\RoadmapItem;
 use App\Models\User;
+use App\Services\Learning\RoadmapService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -104,9 +106,123 @@ class RoadmapTest extends TestCase
         $this->assertDatabaseMissing('roadmap_items', ['id' => $item->id]);
     }
 
+    public function test_bearer_token_authenticates_learning_routes(): void
+    {
+        $owner = $this->user();
+        $this->roadmapFor($owner);
+        $token = $owner->createToken('learning-test')->plainTextToken;
+
+        $this->withHeader('Authorization', 'Bearer '.$token)
+            ->getJson('/api/learning/roadmaps')
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonCount(1, 'data');
+
+        $this->assertDatabaseHas('personal_access_tokens', [
+            'tokenable_id' => $owner->id,
+            'name' => 'learning-test',
+        ]);
+    }
+
+    public function test_invalid_uuid_paths_return_not_found_instead_of_server_error(): void
+    {
+        $owner = $this->user();
+        $roadmap = $this->roadmapFor($owner);
+        $item = $this->itemFor($roadmap, 1, 'Existing');
+        Sanctum::actingAs($owner);
+
+        $this->getJson('/api/learning/roadmaps/not-a-uuid')->assertNotFound();
+        $this->putJson('/api/learning/roadmaps/not-a-uuid', ['title' => 'Changed'])->assertNotFound();
+        $this->deleteJson('/api/learning/roadmaps/not-a-uuid')->assertNotFound();
+        $this->postJson('/api/learning/roadmaps/not-a-uuid/items', ['title' => 'New', 'position' => 1])->assertNotFound();
+        $this->putJson("/api/learning/roadmaps/{$roadmap->id}/items/not-a-uuid", ['title' => 'Changed'])->assertNotFound();
+        $this->deleteJson("/api/learning/roadmaps/{$roadmap->id}/items/not-a-uuid")->assertNotFound();
+        $this->deleteJson("/api/learning/roadmap-items/{$item->id}/prerequisites/not-a-uuid")->assertNotFound();
+    }
+
+    public function test_position_collision_is_reported_as_validation_error_after_race(): void
+    {
+        $owner = $this->user();
+        $roadmap = $this->roadmapFor($owner);
+        $this->itemFor($roadmap, 1, 'Existing');
+        $service = app(RoadmapService::class);
+
+        try {
+            $service->createItem($roadmap, ['title' => 'Racing create', 'position' => 1]);
+            $this->fail('Expected a position validation error.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('position', $exception->errors());
+        }
+
+        $second = $this->itemFor($roadmap, 2, 'Second');
+
+        try {
+            $service->updateItem($second, ['position' => 1]);
+            $this->fail('Expected a position validation error.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('position', $exception->errors());
+        }
+    }
+
+    public function test_foreign_roadmap_positions_are_not_disclosed_before_authorization(): void
+    {
+        $foreignRoadmap = $this->roadmapFor($this->user());
+        $this->itemFor($foreignRoadmap, 1, 'Occupied');
+        Sanctum::actingAs($this->user());
+
+        $this->postJson("/api/learning/roadmaps/{$foreignRoadmap->id}/items", ['title' => 'Probe occupied', 'position' => 1])
+            ->assertNotFound();
+        $this->postJson("/api/learning/roadmaps/{$foreignRoadmap->id}/items", ['title' => 'Probe free', 'position' => 99])
+            ->assertNotFound();
+    }
+
+    public function test_soft_deleted_article_cannot_be_linked_to_an_item(): void
+    {
+        $owner = $this->user();
+        $roadmap = $this->roadmapFor($owner);
+        $articleId = (string) Str::uuid();
+        DB::table('articles')->insert([
+            'id' => $articleId,
+            'author_id' => $owner->id,
+            'slug' => 'deleted-article-'.Str::lower(Str::random(8)),
+            'status' => 'published',
+            'created_at' => now(),
+            'updated_at' => now(),
+            'deleted_at' => now(),
+        ]);
+        Sanctum::actingAs($owner);
+
+        $this->postJson("/api/learning/roadmaps/{$roadmap->id}/items", [
+            'title' => 'Deleted article',
+            'position' => 1,
+            'article_id' => $articleId,
+        ])->assertUnprocessable()->assertJsonValidationErrors('article_id');
+    }
+
+    public function test_roadmap_delete_cascades_items_progress_and_prerequisites(): void
+    {
+        $owner = $this->user();
+        $roadmap = $this->roadmapFor($owner);
+        $first = $this->itemFor($roadmap, 1, 'First');
+        $second = $this->itemFor($roadmap, 2, 'Second');
+        DB::table('roadmap_item_prerequisites')->insert([
+            'roadmap_item_id' => $second->id,
+            'prerequisite_item_id' => $first->id,
+        ]);
+        app(\App\Services\Learning\RoadmapProgressService::class)->update($first, 'completed');
+        Sanctum::actingAs($owner);
+
+        $this->deleteJson("/api/learning/roadmaps/{$roadmap->id}")->assertOk();
+
+        $this->assertDatabaseMissing('learning_roadmaps', ['id' => $roadmap->id]);
+        $this->assertDatabaseMissing('roadmap_items', ['id' => $first->id]);
+        $this->assertDatabaseMissing('learning_progress', ['roadmap_item_id' => $first->id]);
+        $this->assertDatabaseMissing('roadmap_item_prerequisites', ['roadmap_item_id' => $second->id]);
+    }
+
     private function user(): User
     {
-        $user = new User(['name' => 'Learner', 'email' => fake()->unique()->safeEmail(), 'password' => 'password', 'status' => 'active']);
+        $user = new User(['name' => 'Audit User', 'email' => fake()->unique()->safeEmail(), 'password' => 'password', 'status' => 'active']);
         $user->id = (string) Str::uuid();
         $user->save();
 

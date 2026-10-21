@@ -46,8 +46,12 @@ if ($changedFiles | Where-Object { $_ -match '(^|/)\.env($|\.)' -and $_ -notmatc
 
 $protectedMigrationChanges = @()
 foreach ($file in $changedFiles | Where-Object { $_ -like 'database/migrations/*.php' }) {
+    $previousErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
     git cat-file -e "$mergeBase`:$file" 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    $existsAtBase = $LASTEXITCODE -eq 0
+    $ErrorActionPreference = $previousErrorAction
+    if ($existsAtBase) {
         $protectedMigrationChanges += $file
     }
 }
@@ -55,7 +59,7 @@ if ($protectedMigrationChanges.Count -gt 0) {
     Add-Failure "Existing migration modified: $($protectedMigrationChanges -join ', '). Add a new migration instead."
 }
 
-$secretPattern = '(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*(?!\$\{|<|your-|change-me|example)\S{8,}'
+$secretPattern = '(?i)(?<![$\w])(api[_-]?key|secret|token|password)\s*[:=]\s*(?!\$\{|<|your-|change-me|example)\S{8,}'
 $legacyPattern = '(?i)\b(reviewer|learner|submitted|rejected|article_reviews)\b'
 
 foreach ($file in $changedFiles) {

@@ -37,7 +37,10 @@ class RoadmapProgressService
             }
 
             if ($status === 'completed') {
-                $attributes['completed_at'] = $now;
+                // Preserve the first completion time on idempotent retries.
+                if (! $progress || $progress->completed_at === null) {
+                    $attributes['completed_at'] = $now;
+                }
             } elseif ($progress && $progress->completed_at !== null) {
                 $attributes['completed_at'] = null;
             }
