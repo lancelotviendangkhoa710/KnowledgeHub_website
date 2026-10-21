@@ -19,6 +19,9 @@ borders, compact radii, and content-led spacing.
 - `frontend/src/app/landing-source.css` is an exact copy of root `style.css`,
   because Docker builds the frontend from `frontend/` and cannot resolve files
   outside that build context.
+- `frontend/src/app/shared-source.css` preserves the pre-existing application
+  shell and course selectors used by non-landing routes; it is kept separate so
+  the approved landing source can remain an exact copy.
 - The landing route uses that source stylesheet directly so the Next.js render
   does not drift from the approved landing page. Feature-specific additions
   live under `frontend/`.
@@ -48,5 +51,10 @@ borders, compact radii, and content-led spacing.
   copy, class names, and stylesheet instead of recreating the visual design.
 - When root `style.css` changes, update the frontend copy together and verify
   both files have the same hash before committing.
+- The landing route is isolated from application/auth route groups; those groups
+  render the existing shared header, main wrapper, and footer without duplicating
+  the landing page shell.
+- Shared application selectors remain available after the UX migration; this
+  follow-up restores them from `origin/dev` rather than redesigning those routes.
 - Auth forms add only the minimum form styles needed to use the same source
   tokens; their behavior remains outside this UX branch.

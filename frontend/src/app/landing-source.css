@@ -143,6 +143,24 @@ button { cursor: pointer; border: none; background: none; font: inherit; }
   letter-spacing: 0.01em;
 }
 
+.btn--sm {
+  padding: 0.5rem 1rem;
+  font-size: var(--text-xs);
+}
+.btn--lg {
+  padding: 0.875rem 1.5rem;
+  font-size: var(--text-base);
+}
+.btn--white {
+  background-color: var(--color-white);
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-white);
+}
+.btn--white:hover {
+  background-color: var(--color-primary-faint);
+  color: var(--color-primary-dark);
+}
+
 .btn--primary {
   background-color: var(--color-primary);
   color: var(--color-white);
@@ -584,6 +602,33 @@ button { cursor: pointer; border: none; background: none; font: inherit; }
 .hiw-icon__edge--bc { width: 24px; bottom: 17px; left: 24px; }
 
 /* Build â€” progress bars */
+.hiw-icon--build {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.35rem;
+  width: 64px;
+  height: 64px;
+  padding: 0.75rem;
+}
+.hiw-icon__bar {
+  width: 0.45rem;
+  background-color: var(--color-primary);
+  border-radius: 0.15rem 0.15rem 0 0;
+}
+.hiw-icon__bar--a { height: 0.9rem; }
+.hiw-icon__bar--b { height: 1.5rem; }
+.hiw-icon__bar--c { height: 2.15rem; }
+.hiw-icon__flag {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.2rem;
+  width: 0;
+  height: 0;
+  border-top: 0.35rem solid transparent;
+  border-bottom: 0.35rem solid transparent;
+  border-left: 0.65rem solid var(--color-primary);
+}
 
 /* â”€â”€ 12. CTA SECTION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .cta-section {

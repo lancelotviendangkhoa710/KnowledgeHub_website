@@ -1,3 +1,6 @@
+/* Preserve the existing application shell/course styles alongside UX-01. */
+@import "./shared-source.css";
+
 /* The root landing page stylesheet is the approved visual source for UX-01. */
 @import "./landing-source.css";
 
