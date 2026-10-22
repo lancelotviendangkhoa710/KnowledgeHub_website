@@ -1,7 +1,7 @@
 # docs/API.md  KnowledgeHub API Contract
 
-**Version**: 0.4 | **Date**: 2026-10-22
-**Status**: Learning routes implemented and documented. OQ-05 is resolved: `learning_progress.status` is authoritative and `roadmap_items.status` is its transactionally-maintained mirror. Other inventory entries remain evidence-based.
+**Version**: 0.5 | **Date**: 2026-10-23
+**Status**: AUTH-01 and Learning routes are implemented and documented. OQ-05 is resolved: `learning_progress.status` is authoritative and `roadmap_items.status` is its transactionally-maintained mirror. Other inventory entries remain evidence-based.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -13,13 +13,13 @@
 
 | Evidence | Result |
 | --- | --- |
-| `backend/routes/` | Present: `content.php`, `learning.php` |
-| `backend/app/` | Present: Content and Learning controllers/services |
-| `backend/composer.json` | Present; `laravel/sanctum` added for Learning auth |
-| `backend/tests/` | Present: Content and Learning feature/unit tests |
-| Tracked endpoint definitions | Content + 12 Learning routes |
+| `backend/routes/` | Present: `auth.php`, `content.php`, `learning.php` |
+| `backend/app/` | Present: Auth, Content and Learning controllers/services |
+| `backend/composer.json` | Present; `laravel/sanctum` provides bearer-token auth |
+| `backend/tests/` | Present: Auth, Content and Learning feature/unit tests |
+| Tracked endpoint definitions | Auth + Content + 12 Learning routes |
 
-Backend source and tests are tracked. The Learning routes are implemented; roadmap, item, and prerequisite business rules listed as OPEN QUESTION in `docs/specs/learning/` still require Product/API approval.
+Backend source and tests are tracked. AUTH-01 uses Sanctum bearer tokens; registration creates a pending user and does not activate or issue a token. The Learning routes are implemented; roadmap, item, and prerequisite business rules listed as OPEN QUESTION in `docs/specs/learning/` still require Product/API approval.
 
 ---
 
@@ -50,11 +50,11 @@ Rules:
 
 ## 3. API Inventory
 
-Learning progress endpoints are documented below. Other domains remain evidence-based.
+Identity/Auth and Learning progress endpoints are documented below. Other domains remain evidence-based.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
 | --- | --- | ---: | ---: | --- |
-| Identity/Auth | TEAM_MEMBER_A | 0 | 0 | App source absent |
+| Identity/Auth | TEAM_MEMBER_A | 3 | 3 | AUTH-01 registration, login and logout; activation and account management are deferred |
 | Content | TEAM_MEMBER_B | 12 | 12 | Implemented in routes/api/content.php |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 0 | 0 | AI service not in repository |
@@ -62,7 +62,42 @@ Learning progress endpoints are documented below. Other domains remain evidence-
 
 ---
 
-## 4. Endpoint Template
+## 4. Identity / Auth
+
+**Owner**: `TEAM_MEMBER_A`
+**Authentication**: Laravel Sanctum personal access tokens in `Authorization: Bearer <token>`.
+
+### IMPLEMENTED - POST `/api/auth/register`
+
+Guest-only registration accepts `name`, `email`, `password`, and
+`password_confirmation`. Email is trimmed and lowercased before validation. A
+successful request returns `201` with `data.user` containing `id`, `name`,
+`email`, `status`, and `roles`; the new account has `status=pending` and only
+the `user` role. No token is issued. Validation failures return `422` with
+Laravel's `errors` object, including duplicate active emails.
+
+### IMPLEMENTED - POST `/api/auth/login`
+
+Guest login accepts `email` and `password`. Only a non-deleted user with
+`status=active` and a matching password receives `200` with `data.user` and a
+one-time plain token in `data.token`; the stored token is hashed. Invalid
+credentials and non-active accounts return `422` with a generic credentials
+error. Login throttling, token expiration, and activation delivery are
+deferred decisions.
+
+### IMPLEMENTED - POST `/api/auth/logout`
+
+Requires a valid Sanctum bearer token. The current token is deleted and the
+endpoint returns `200` with `data: null`. Missing, invalid, or revoked tokens
+return `401`; other tokens belonging to the same user remain valid.
+
+**Tests**: `backend/tests/Feature/Auth/AuthTest.php` covers registration,
+normalization, duplicate and soft-deleted email behavior, pending-login
+rejection, token issuance, and current-token-only revocation.
+
+---
+
+## 5. Endpoint Template
 
 Copy this block only after feature approval:
 
@@ -94,9 +129,9 @@ Copy this block only after feature approval:
 
 ---
 
-## 5. Learning / Engagement
+## 6. Learning / Engagement
 
-**Common authentication**: all routes below use `auth:sanctum` Bearer tokens. Owner of the parent roadmap or an Admin may access. Token issuance/login is owned by Identity/Auth and is **not yet implemented** in this repository; Learning tests use Sanctum test authentication and a real token regression test.
+**Common authentication**: all routes below use `auth:sanctum` Bearer tokens. Owner of the parent roadmap or an Admin may access. Token issuance/login is implemented by Identity/Auth AUTH-01; Learning tests use Sanctum test authentication and a real token regression test.
 
 **Common success envelope**: `{ "status": "success", "data": ... }`. Prerequisite mutation errors use `{ "status": "error", "message": "..." }`; Laravel validation errors use `{ "message": "...", "errors": { ... } }`.
 
@@ -189,10 +224,11 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ---
 
-## 6. Change Log
+## 7. Change Log
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.5 | 2026-10-23 | Implemented AUTH-01 registration, login, logout, Sanctum bearer-token contract, and feature coverage; activation/throttling/token lifetime remain deferred |
 | 0.4 | 2026-10-22 | Resolved OQ-05: progress status authoritative; item status mirror; item endpoints reject `status`; data backfill migration |
 | 0.3 | 2026-10-22 | Documented all 12 Learning routes; corrected inventory/evidence; noted OQ-05 approval gap |
 | 0.2 | 2026-10-21 | Approved/implemented LRN-002 roadmap-item progress contract |

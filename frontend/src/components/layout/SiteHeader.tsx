@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AuthActions from '@/components/auth/AuthActions';
 
 export default function SiteHeader() {
   return (
@@ -10,7 +11,7 @@ export default function SiteHeader() {
         <Link href="/">Discover</Link>
         <Link href="/courses">Courses</Link>
       </nav>
-      <Link className="button button--primary site-header__action" href="/login">Sign in</Link>
+      <AuthActions />
     </div>
   );
 }
