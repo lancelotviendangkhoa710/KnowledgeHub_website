@@ -47,25 +47,21 @@ if ($changedFiles | Where-Object { $_ -match '(^|/)\.env($|\.)' -and $_ -notmatc
 
 $protectedMigrationChanges = @()
 foreach ($file in $changedFiles | Where-Object { $_ -like 'database/migrations/*.php' }) {
-    # cmd's `2>nul` discards stderr so PowerShell does not turn git's fatal message
-    # into a terminating error, while the exit code still tells us why it failed.
-    # `git cat-file -e` prints nothing on success and a message on failure, so the
-    # exit code plus an explicit object probe distinguish "new file" from a real
-    # git failure. `git ls-tree` is used because it returns a listed path on success
-    # and an empty string when the path is absent at that revision.
+    # `git ls-tree --name-only <rev>: -- <path>` prints the path when it exists at
+    # that revision and prints nothing (exit 0) when it does not. That makes the
+    # "is this a new migration?" question answerable without parsing git's error
+    # text, and lets a genuine git failure (non-zero exit) abort the check instead
+    # of being mistaken for "new file" and silently waving a protected edit through.
     $treeEntry = @(git ls-tree --name-only "${mergeBase}:" -- $file 2>$null)
     $treeExit = $LASTEXITCODE
-
-    if ($treeExit -eq 0 -and $treeEntry.Count -gt 0) {
-        $protectedMigrationChanges += $file
-        continue
-    }
 
     if ($treeExit -ne 0) {
         throw "git ls-tree failed for ${mergeBase} (exit ${treeExit}). Refusing to classify migration ${file}."
     }
 
-    # Exit 0 with no matching entry: the migration is new at this revision.
+    if ($treeEntry.Count -gt 0) {
+        $protectedMigrationChanges += $file
+    }
 }
 if ($protectedMigrationChanges.Count -gt 0) {
     Add-Failure "Existing migration modified: $($protectedMigrationChanges -join ', '). Add a new migration instead."
