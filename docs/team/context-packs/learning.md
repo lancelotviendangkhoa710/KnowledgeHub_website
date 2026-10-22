@@ -7,7 +7,7 @@ Implement only the supplied Learning task.
 
 Before editing, report: requirement; allowed files; forbidden files; API/DB impact; Guest/User/Contributor/Admin outcomes; tests; blockers.
 
-Preserve: roadmaps are user-owned. Only owner or Admin may read/mutate them. Roadmap item positions are unique per roadmap. Prerequisites cannot self-reference or form cycles; validate the full graph in the service layer. Progress is currently roadmap-item scoped, not global course progress. Use Policy/Gate, Form Requests, services, transactions for multi-step writes.
+Preserve: roadmaps are user-owned. Only owner or Admin may read/mutate them. Roadmap item positions are unique per roadmap. Prerequisites cannot self-reference or form cycles; validate the full graph in the service layer. Progress is roadmap-item scoped, not global course progress. `learning_progress.status` is authoritative; `roadmap_items.status` is a transactional mirror; item endpoints reject `status` (see ADR `2026-10-22-learning-progress-authority`). Use Policy/Gate, Form Requests, services, transactions for multi-step writes.
 
 STOP for enrollment/course progress, Course→Section→Material redesign, roadmap target refactor, AI generation, global middleware/provider/bootstrap change, unapproved API/schema change, or another domain change.
 

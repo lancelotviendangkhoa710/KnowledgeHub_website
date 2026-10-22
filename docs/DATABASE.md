@@ -84,8 +84,10 @@ KnowledgeHub is a **curated learning platform**, not a social or user-generated-
 |-------|---------------|
 | `learning_roadmaps` | Named plan owned by user. |
 | `roadmap_items` | Ordered steps. Optional content link. |
-| `learning_progress` | 1:1 progress tracker per item. |
+| `learning_progress` | 1:1 progress tracker per item; `status` is the authoritative learning status. |
 | `roadmap_item_prerequisites` | DAG prerequisites. Self-ref forbidden by CHECK. |
+
+> **Status authority (2026-10-22):** `learning_progress.status` is authoritative. `roadmap_items.status` is a denormalized mirror updated in the same transaction by the progress service; item create/update endpoints reject `status`. The ADR `docs/decisions/2026-10-22-learning-progress-authority.md` is implemented but still **Proposed** pending Product/PM approval.
 
 ### E – Payment
 | Table | Responsibility |
@@ -216,6 +218,8 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 9 | 000009 | plans, subscriptions, payments, webhook_events |
 | 10 | 2026-10-12-000001 | Normalize article statuses to approved lifecycle |
 | 11 | 2026-10-12-000002 | Normalize legacy role names and assignments |
+| 12 | 2026-10-21-000001 | `personal_access_tokens` (Sanctum, UUID PK) |
+| 13 | 2026-10-22-000001 | Backfill `roadmap_items.status` from `learning_progress.status` (OQ-05) |
 
 > `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
 > migration once the team approves the schema cleanup task. Until then it is dormant — no application

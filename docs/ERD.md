@@ -148,6 +148,8 @@ erDiagram
 
 ## Domain D – Learning Roadmap
 
+> **Status authority (2026-10-22):** `learning_progress.status` is authoritative; `roadmap_items.status` is a transactional mirror for roadmap reads. See `docs/decisions/2026-10-22-learning-progress-authority.md`.
+
 ```mermaid
 erDiagram
     learning_roadmaps {
