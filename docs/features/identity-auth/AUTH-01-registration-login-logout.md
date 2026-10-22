@@ -13,11 +13,15 @@ Cho Guest tạo tài khoản, xác thực để vào trạng thái đã đăng n
 - Role hợp lệ duy nhất: `user`, `contributor`, `admin`; đăng ký công khai không tự nâng quyền.
 - Context pack Auth ghi đăng ký mặc định tạo user `pending`, sau xác minh mới thành `active`.
 - Mật khẩu phải được hash. Không tiết lộ chi tiết giúp phân biệt email/tài khoản tồn tại khi đăng nhập thất bại.
-- API inventory hiện rỗng; chưa có route/controller/backend application được track.
+- AUTH-01 đã có route, controller, service và contract được ghi nhận trong `docs/API.md`.
 
-## Chờ chủ sản phẩm duyệt
+## Quyết định baseline
 
-**Chờ duyệt:** cơ chế xác thực/session/token, thời hạn và thu hồi, endpoint/response, định dạng email/chuẩn hóa, luồng và kênh xác minh, hành vi đăng nhập tài khoản `pending`/`inactive`/`banned`, giới hạn thử đăng nhập. Không suy ra các quyết định này từ Laravel mặc định.
+AUTH-01 dùng Laravel Sanctum personal access tokens. Frontend gửi bearer token,
+logout thu hồi token hiện tại, và token chỉ xuất hiện trong response login.
+Registration tạo `pending` + role `user`; email verification thật nằm ngoài
+scope nên tài khoản `pending` không được login. Email được normalize lowercase.
+Login dùng thông báo credential chung cho sai mật khẩu và tài khoản không active.
 
 ## Actor và thành phần
 
@@ -55,12 +59,14 @@ Cho Guest tạo tài khoản, xác thực để vào trạng thái đã đăng n
 
 ## Gate triển khai
 
-Không triển khai endpoint hay chọn auth package/session/token trước khi quyết định được ghi vào API contract/ADR/task được duyệt. Kiểm tra migration/index email và trạng thái thực tế trước khi code; không giả định schema nhất quán chỉ dựa trên docs.
+Contract đã được ghi tại `docs/API.md`; Sanctum là package đã được chọn trong
+baseline của task. Kiểm tra migration/index email và trạng thái thực tế trước
+khi chạy test; không giả định schema nhất quán chỉ dựa trên docs.
 
 ## Hoàn tất và commit
 
-- [ ] Luồng đăng ký/đăng nhập/đăng xuất khớp quyết định được duyệt.
-- [ ] Test input sai, quyền/trạng thái tài khoản, thu hồi credential, lỗi ghi.
-- [ ] Rà soát không lộ secret; staged diff chỉ chứa file task.
-- [ ] Test liên quan chạy và kết quả được ghi.
+- [x] Luồng đăng ký/đăng nhập/đăng xuất khớp quyết định được duyệt.
+- [x] Test input sai, trạng thái tài khoản, thu hồi credential, lỗi ghi.
+- [x] Rà soát không lộ secret; staged diff chỉ chứa file task.
+- [x] Test liên quan chạy và kết quả được ghi.
 - [ ] Đủ điều kiện mới commit đúng message: `p1: implement registration login and logout`.

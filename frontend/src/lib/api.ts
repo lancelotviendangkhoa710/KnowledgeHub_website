@@ -23,7 +23,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, options);
+  let response: Response;
+
+  try {
+    response = await fetch(`${BASE_URL}${path}`, options);
+  } catch {
+    throw {
+      message: 'Unable to reach the KnowledgeHub API. Check that Docker and the API service are running.',
+    };
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw { status: response.status, ...error };

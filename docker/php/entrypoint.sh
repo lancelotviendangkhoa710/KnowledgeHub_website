@@ -1,4 +1,5 @@
 #!/bin/sh
+# Docker entrypoint for the Laravel PHP-FPM container.
 set -e
 
 # Bootstrap tracked Laravel source if not yet installed.

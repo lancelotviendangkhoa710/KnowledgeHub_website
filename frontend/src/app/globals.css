@@ -30,8 +30,7 @@
   line-height: 1.05;
 }
 
-.auth-lead,
-.auth-switch {
+.auth-lead {
   color: var(--color-gray);
 }
 
@@ -64,7 +63,16 @@
   color: var(--color-primary-light);
 }
 
-.auth-message,
+.auth-message {
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-charcoal);
+  background: var(--color-off-white);
+  line-height: var(--leading-relaxed);
+}
+
 .auth-error {
   padding: 0.7rem 0.85rem;
   border-left: 3px solid var(--color-primary);
