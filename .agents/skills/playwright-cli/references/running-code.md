@@ -41,7 +41,10 @@ playwright-cli run-code "async page => {
 }"
 
 # Clear geolocation override
+# setGeolocation(null) makes the position unavailable; clearPermissions() only
+# clears permission overrides and does not reset the configured position.
 playwright-cli run-code "async page => {
+  await page.context().setGeolocation(null);
   await page.context().clearPermissions();
 }"
 ```
@@ -153,8 +156,11 @@ playwright-cli run-code "async page => {
   return await page.evaluate(() => navigator.clipboard.readText());
 }"
 
-# Write to clipboard
+# Write to clipboard (requires permission)
+# navigator.clipboard requires a secure context (https or localhost) and
+# grantPermissions support varies between browsers.
 playwright-cli run-code "async page => {
+  await page.context().grantPermissions(['clipboard-write']);
   await page.evaluate(text => navigator.clipboard.writeText(text), 'Hello clipboard!');
 }"
 ```

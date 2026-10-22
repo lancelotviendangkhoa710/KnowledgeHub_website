@@ -26,10 +26,10 @@ Theo dõi trạng thái học **trên mỗi `roadmap_item` thuộc roadmap cá n
 | R-104 | Owner policy qua item→roadmap; Guest denied | CONFIRMED context pack |
 | R-105 | Completed semantics, timestamps, skipped/in-progress, reopen/reset, auto-completion | RESOLVED 2026-10-22: timestamps theo `docs/API.md` v0.4; không auto-complete |
 | R-106 | `roadmap_items.status` cũng có cùng status enum song song progress | RESOLVED 2026-10-22: `learning_progress.status` là authority; item status là mirror |
-| S-101 | `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` |
-| S-102 | `backend/AGENTS.md`, `backend/routes/api.php`, `docs/API.md`; Learning app/API chưa tồn tại |
-| S-103 | `frontend/src/lib/api.ts`, `frontend/src/app/(app)/layout.tsx`; chưa có Learning UI |
-| S-104 | `docs/DATABASE.md`, `docs/ERD.md`, `docs/team/context-packs/learning.md` |
+| S-101 | `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` | CONFIRMED |
+| S-102 | `backend/AGENTS.md`, `backend/routes/api.php`, `docs/API.md`; 12 Learning route đã triển khai | IMPLEMENTED 2026-10-22 |
+| S-103 | `frontend/src/lib/api.ts`, `frontend/src/app/(app)/layout.tsx`; có roadmap UI, chưa có progress UI | PARTIAL |
+| S-104 | `docs/DATABASE.md`, `docs/ERD.md`, `docs/team/context-packs/learning.md` | CONFIRMED |
 
 ## 3. Business rules
 
@@ -104,9 +104,9 @@ Không có label, control (menu/button), color, date format hay text được y�
 | Field | Kiểu | Bắt buộc | Validation/normalize | Biên | Nguồn |
 |---|---|---:|---|---|---|
 | `roadmap_item_id` | UUID FK unique | DB required | Server lấy từ authorized route/context; client không gửi ID chéo | item phải tồn tại | migration |
-| `status` | VARCHAR(20) | non-null; default pending | allowlist + transition (transition TBD), server validate | 4 enum values | migration |
-| `started_at` | TIMESTAMPTZ nullable | Không | Server-managed; set/clear policy TBD | timezone aware | migration |
-| `completed_at` | TIMESTAMPTZ nullable | Không | Server-managed; set/clear policy TBD | timezone aware | migration |
+| `status` | VARCHAR(20) | non-null; default pending | allowlist bốn giá trị, mọi transition giữa bốn giá trị được phép; server validate | 4 enum values | migration + `docs/API.md` v0.4 |
+| `started_at` | TIMESTAMPTZ nullable | Không | Server-managed; set một lần khi vào `in_progress`, không reset | timezone aware | `docs/API.md` v0.4 |
+| `completed_at` | TIMESTAMPTZ nullable | Không | Server-managed; set khi vào `completed`, giữ nguyên khi retry, clear khi sang status khác | timezone aware | `docs/API.md` v0.4 |
 | `updated_at` | TIMESTAMPTZ nullable | Không (schema nullable) | server-managed | timezone aware | migration |
 | `id` | UUID PK | yes | server generated | UUID v4 project rule | migration/AGENTS |
 
@@ -114,9 +114,16 @@ Không có `user_id` ở progress: mọi authorization phải join qua `roadmap_
 
 ## 7. API/database contract
 
-**Implemented API: none.** `docs/API.md` ghi Learning 0 endpoint. Path/method/request/response/error đều chưa duyệt. Candidate operation có thể là GET status và PUT/PATCH status nested dưới item, nhưng đây chỉ là **RECOMMENDATION**, không phải endpoint thực tế; không chép vào code mà chưa duyệt. Không bịa JSON response/envelope.
+**Implemented API: 2 route** (`docs/API.md` v0.4, mục Learning):
 
-Schema hiện tại đủ chứa tracker/status/timestamps, nhưng không đủ chứng minh consistency giữa hai status column. Không đề xuất migration tự động. Nếu Product chọn source-of-truth yêu cầu bỏ/sync field, cần schema/API decision và migration mới được duyệt riêng. Upsert phải dựa unique index; multi-table write transaction. Delete item cascade progress; transaction integration với prerequisite edge theo DB FK.
+| Method | Path |
+|---|---|
+| `GET` | `/api/learning/roadmap-items/{item}/progress` |
+| `PATCH` | `/api/learning/roadmap-items/{item}/progress` |
+
+Envelope `{status, message, data}`; `data` là `null` khi chưa có tracker (GET không tạo tracker). Lỗi: 401 unauthenticated, 403 foreign item, 404 item không tồn tại, 422 status sai. Timestamp theo BR-105. Còn mở: token/login issuer thuộc Identity/Auth, và OQ-08 về contract tổng thể.
+
+Schema hiện tại đủ chứa tracker/status/timestamps. OQ-05 đã chốt `learning_progress.status` là authority và `roadmap_items.status` là mirror cùng transaction (xem ADR `2026-10-22-learning-progress-authority.md`), kèm migration backfill `2026_10_22_000001`. Upsert dựa unique index; multi-table write transaction. Delete item cascade progress.
 
 ## 8. Ma trận lỗi
 

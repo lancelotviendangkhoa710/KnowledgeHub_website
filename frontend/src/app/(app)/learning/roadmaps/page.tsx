@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { LearningRoadmap } from '@/types/learning';
 import { roadmapClient } from '@/lib/roadmapClient';
 
@@ -11,6 +11,10 @@ export default function RoadmapsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Guards against a double click sending two DELETE requests: the ref blocks
+  // re-entry synchronously, the state drives the disabled attribute.
+  const deletingRef = useRef<Set<string>>(new Set());
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -43,12 +47,18 @@ export default function RoadmapsPage() {
   };
 
   const remove = async (id: string) => {
+    if (deletingRef.current.has(id)) return;
+    deletingRef.current.add(id);
+    setDeletingIds([...deletingRef.current]);
     setError(null);
     try {
       await roadmapClient.remove(id);
       setRoadmaps((current) => current.filter((roadmap) => roadmap.id !== id));
     } catch {
       setError('Unable to delete roadmap. Retry after reloading.');
+    } finally {
+      deletingRef.current.delete(id);
+      setDeletingIds([...deletingRef.current]);
     }
   };
 
@@ -68,7 +78,14 @@ export default function RoadmapsPage() {
             <article key={roadmap.id} style={{ padding: '1.25rem', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-lg)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                 <div><h2>{roadmap.title}</h2><p>{roadmap.goal}</p><small>{roadmap.items.length} items · {roadmap.status}</small></div>
-                <button className="btn btn-secondary" onClick={() => void remove(roadmap.id)}>Delete</button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={deletingIds.includes(roadmap.id)}
+                  onClick={() => void remove(roadmap.id)}
+                >
+                  {deletingIds.includes(roadmap.id) ? 'Deleting…' : 'Delete'}
+                </button>
               </div>
             </article>
           ))}

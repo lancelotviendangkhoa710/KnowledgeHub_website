@@ -41,6 +41,12 @@ When you start tracing, Playwright creates a `.playwright-cli/traces/` directory
 - Resource sizes
 - Failed requests and errors
 
+> ⚠️ **A trace is a secret-bearing artifact.** Because request and response headers
+> and bodies are captured verbatim, a trace can contain cookies, bearer tokens,
+> API keys, session identifiers, PII and payment data. Always drive the browser
+> with synthetic test data — never real credentials, card numbers or CVV — and
+> inspect a trace before committing or uploading it.
+
 ### `resources/`
 
 **Resources directory** - Cached resources:

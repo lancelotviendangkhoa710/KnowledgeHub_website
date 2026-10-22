@@ -42,7 +42,7 @@ The two disabled servers ship with placeholder values (`YOUR_GITHUB_PAT`, `YOUR_
     "postgres": {
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-postgres@0.6.2",
-               "postgresql://mcp_readonly:mcp_readonly_local_only@localhost:5432/knowledgehub"],
+               "postgresql://mcp_readonly:<MCP_READONLY_PASSWORD>@localhost:5432/knowledgehub"],
       "disabled": false
     },
     "context7": {
@@ -86,13 +86,18 @@ The terminal-side browser CLI is already available globally as `playwright-cli`,
 
 ## 5. PostgreSQL read-only role
 
-Created against the local Docker database:
+> **Never commit the role password.** Generate your own value and keep it only in
+> the machine-local MCP settings file or an environment variable. The repository
+> documents the placeholder `<MCP_READONLY_PASSWORD>` and nothing else.
+
+Create the role against the local Docker database, replacing the placeholder with
+your own password:
 
 ```sql
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'mcp_readonly') THEN
-    CREATE ROLE mcp_readonly LOGIN PASSWORD 'mcp_readonly_local_only';
+    CREATE ROLE mcp_readonly LOGIN PASSWORD '<MCP_READONLY_PASSWORD>';
   END IF;
 END $$;
 GRANT CONNECT ON DATABASE knowledgehub TO mcp_readonly;
@@ -114,7 +119,9 @@ docker compose exec postgres psql -U knowledgehub -d knowledgehub
 # then paste the SQL above
 ```
 
-> The password is a local-only throwaway value. Any environment with real data must use a different secret supplied through the MCP client's environment, not the repository.
+> The role password is machine-local by definition. Generate your own, keep it in the
+> MCP settings file or an environment variable, and never commit it. Any environment
+> with real data must use a different secret supplied through the MCP client's environment.
 
 ## 6. How it was verified
 

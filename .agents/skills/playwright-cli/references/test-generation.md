@@ -402,7 +402,7 @@ Rehearse the corrected interaction with `playwright-cli` — the generated code 
 
 Edit the test file: update the locator, assertion, step order, or inputs to match the corrected behaviour. Stop the background debug run. Rerun the single test to confirm green.
 
-Never skip hooks or add sleeps as a fix. Never use `networkidle`.
+Never skip hooks or add sleeps as a fix. Never use `networkidle` as a workaround to mask flakiness — `page.waitForLoadState('networkidle')` is permitted as an explicit wait strategy (see [running-code.md](running-code.md)), but it must not be added to make a flaky test pass.
 
 ### 3.4 Reconcile with the spec
 

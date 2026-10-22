@@ -2,7 +2,7 @@
 
 **Trạng thái:** Phân tích dựa trên source hiện tại; chưa phải phê duyệt API hay nghiệp vụ chưa chốt.  
 **Owner:** `TEAM_MEMBER_C` (`docs/team/OWNERSHIP.md`).  
-**Nguồn code:** repository `D:\Web` tại thời điểm khảo sát; backend Learning chưa có application code.
+**Nguồn code:** repository `D:\Web` tại thời điểm khảo sát; backend Learning đã triển khai (12 route, xem §2).
 
 ## 1. Mục tiêu, phạm vi, căn cứ
 

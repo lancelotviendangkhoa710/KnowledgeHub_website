@@ -15,6 +15,11 @@ class RoadmapItemPrerequisiteService
     /** @return array{roadmap_item_id: string, prerequisite_item_id: string} */
     public function add(RoadmapItem $item, string $prerequisiteId): array
     {
+        // Laravel's `uuid` rule accepts upper-case UUIDs while PostgreSQL returns
+        // lower-case primary keys. Normalise before any string comparison so that
+        // `isset($lockedItems[...])` and the duplicate-edge check both work.
+        $prerequisiteId = strtolower($prerequisiteId);
+
         return $this->withinLockedRoadmap($item, function (array $lockedItems) use ($item, $prerequisiteId): array {
             $this->assertPrerequisiteInRoadmap($lockedItems, $prerequisiteId);
 
@@ -39,6 +44,8 @@ class RoadmapItemPrerequisiteService
 
     public function remove(RoadmapItem $item, string $prerequisiteId): void
     {
+        $prerequisiteId = strtolower($prerequisiteId);
+
         $this->withinLockedRoadmap($item, function (array $lockedItems) use ($item, $prerequisiteId): void {
             $this->assertPrerequisiteInRoadmap($lockedItems, $prerequisiteId);
 
@@ -65,7 +72,8 @@ class RoadmapItemPrerequisiteService
                 ->keyBy('id')
                 ->all();
 
-            if (! isset($lockedItems[$item->id])) {
+            $itemKey = strtolower($item->id);
+            if (! isset($lockedItems[$itemKey])) {
                 throw (new ModelNotFoundException())->setModel(RoadmapItem::class, [$item->id]);
             }
 
@@ -76,7 +84,7 @@ class RoadmapItemPrerequisiteService
     /** @param array<string, RoadmapItem> $lockedItems */
     private function assertPrerequisiteInRoadmap(array $lockedItems, string $prerequisiteId): void
     {
-        if (! isset($lockedItems[$prerequisiteId])) {
+        if (! isset($lockedItems[strtolower($prerequisiteId)])) {
             throw (new ModelNotFoundException())->setModel(RoadmapItem::class, [$prerequisiteId]);
         }
     }

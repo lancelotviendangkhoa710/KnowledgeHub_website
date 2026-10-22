@@ -26,5 +26,6 @@ export interface LearningRoadmap {
 
 export interface LearningResponse<T> {
   status: 'success';
+  message?: string;
   data: T;
 }

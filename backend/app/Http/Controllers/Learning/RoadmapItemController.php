@@ -15,25 +15,41 @@ class RoadmapItemController extends Controller
 
     public function store(StoreRoadmapItemRequest $request, string $roadmap): JsonResponse
     {
+        // find() still filters by owner so a foreign roadmap stays a 404 and its
+        // existence is never disclosed; the Gate then enforces the policy rule.
         $model = $this->roadmaps->find($request->user(), $roadmap);
+        $this->authorize('update', $model);
+
         $item = $this->roadmaps->createItem($model, $request->validated());
 
-        return response()->json(['status' => 'success', 'data' => $item], 201);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Roadmap item created successfully.',
+            'data' => $item,
+        ], 201);
     }
 
     public function update(UpdateRoadmapItemRequest $request, string $roadmap, string $item): JsonResponse
     {
         $model = $this->roadmaps->find($request->user(), $roadmap);
         $roadmapItem = $this->roadmaps->findItem($model, $item);
+        $this->authorize('manageItem', $roadmapItem);
 
-        return response()->json(['status' => 'success', 'data' => $this->roadmaps->updateItem($roadmapItem, $request->validated())]);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Roadmap item updated successfully.',
+            'data' => $this->roadmaps->updateItem($roadmapItem, $request->validated()),
+        ]);
     }
 
     public function destroy(Request $request, string $roadmap, string $item): JsonResponse
     {
         $model = $this->roadmaps->find($request->user(), $roadmap);
-        $this->roadmaps->deleteItem($this->roadmaps->findItem($model, $item));
+        $roadmapItem = $this->roadmaps->findItem($model, $item);
+        $this->authorize('manageItem', $roadmapItem);
 
-        return response()->json(['status' => 'success']);
+        $this->roadmaps->deleteItem($roadmapItem);
+
+        return response()->json(['status' => 'success', 'message' => 'Roadmap item deleted successfully.']);
     }
 }

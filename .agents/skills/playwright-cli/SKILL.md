@@ -1,7 +1,7 @@
 ---
 name: playwright-cli
 description: Automate browser interactions, test web pages and work with Playwright tests.
-allowed-tools: Bash(playwright-cli:*) Bash(npx playwright:*) Bash(npx --no-install playwright:*)
+allowed-tools: Bash(playwright-cli:*) Bash(npx --no-install playwright:*)
 ---
 
 # Browser Automation with playwright-cli
@@ -405,11 +405,13 @@ If global `playwright-cli` command is not available, try a local version via `np
 npx --no-install playwright --version
 ```
 
-When local version is available, use `npx playwright cli` in all commands. Otherwise, install `playwright-cli` as a global command:
+When local version is available, use `npx --no-install playwright cli` in all commands. Otherwise, install a pinned `playwright-cli` as a global command — pin an exact version rather than relying on `latest`, so a compromised upstream release cannot change the tool behind an unchanged skill:
 
 ```bash
-npm install -g @playwright/cli@latest
+npm install -g @playwright/cli@<pinned-version>
 ```
+
+Always use `npx --no-install` for local invocations: bare `npx playwright` will download a fresh copy from the registry when the package is absent, which is a supply-chain risk in an agent context that may run arbitrary commands.
 
 ## Example: Form submission
 

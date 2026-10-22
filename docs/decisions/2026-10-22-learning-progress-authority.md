@@ -1,9 +1,14 @@
 # Decision: Learning progress status authority
 
-**Status**: Implemented  
+**Status**: Proposed — implemented in code, awaiting Product/PM approval  
 **Date**: 2026-10-22  
-**Author**: AI agent (p3), explicitly authorized by the user  
+**Author**: AI agent (p3), directed to resolve OQ-05 by the repository owner; no named Product/PM approver recorded yet  
 **Related**: LRN-002, OQ-05, `docs/API.md` v0.4
+
+> The decision is implemented and covered by tests, but until a Product/PM owner
+> records approval it must be read as **Proposed**. `docs/DATABASE.md` and
+> `docs/ERD.md` cite this file, so treating it as ratified would propagate an
+> unapproved business rule into the architecture reference.
 
 ## Context
 

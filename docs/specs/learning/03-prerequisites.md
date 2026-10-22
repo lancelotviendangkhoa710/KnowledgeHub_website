@@ -22,10 +22,10 @@ Biểu diễn quan hệ prerequisite giữa các `roadmap_items` bằng cạnh c
 | R-203 | Service phải validate full graph trước ghi | CONFIRMED context pack/DB docs |
 | R-204 | Roadmap owner/Admin authorization | CONFIRMED context pack, Admin scope detail TBD |
 | R-205 | Same-roadmap vs cross-roadmap; completed/skipped meaning; in-progress edge edits; item delete behavior; concurrent serialization chưa duyệt | OPEN QUESTION source |
-| S-201 | `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` |
-| S-202 | `docs/DATABASE.md`, `docs/ERD.md`, `docs/team/context-packs/learning.md` |
-| S-203 | `backend/AGENTS.md`; Learning service/routes/tests chưa tracked |
-| S-204 | `frontend/src/lib/api.ts`; UI Learning chưa tồn tại |
+| S-201 | `database/migrations/2026_01_01_000008_create_learning_roadmap_tables.php` | CONFIRMED |
+| S-202 | `docs/DATABASE.md`, `docs/ERD.md`, `docs/team/context-packs/learning.md` | CONFIRMED |
+| S-203 | `backend/AGENTS.md`; Learning service/routes/tests đã tracked | IMPLEMENTED 2026-10-22 |
+| S-204 | `frontend/src/lib/api.ts`; có trang roadmap, chưa có UI prerequisite | PARTIAL |
 
 ## 3. Quy tắc nghiệp vụ
 
@@ -104,13 +104,24 @@ Không tự ẩn item theo prerequisite/status; không có design system/test fr
 | `prerequisite_item_id` | UUID FK, PK composite | yes | item tồn tại, khác dependent, authorized; không tạo cycle | không null | migration |
 | Composite pair | unique PK | yes | duplicate không insert lần hai; response semantics TBD | UUID pair | migration |
 
-DB cascade delete cho cả FK. DB bảo vệ self-reference/duplicate/existence; **không** bảo護 indirect cycle, ownership, same-roadmap. Backend service validate all. Batch/maximum graph size/pagination chưa có căn cứ. UUID normalization/route binding phải consistent.
+DB cascade delete cho cả FK. DB bảo vệ self-reference/duplicate/existence; **không** bảo vệ indirect cycle, ownership, same-roadmap. Backend service validate all. Batch/maximum graph size/pagination chưa có căn cứ. UUID normalization/route binding phải consistent.
 
 ## 7. API/database
 
-Learning endpoint chưa có; `docs/API.md` inventory 0. Chỉ **PROPOSED**, không phải API contract: nested mutation có thể là `PUT/DELETE /learning/roadmaps/{roadmap}/items/{item}/prerequisites/{prerequisite}` hoặc batch endpoint; chưa chọn path/verb/payload/response/error. Không tạo JSON example vì field names/direction/batch semantics chưa duyệt. Auth, version prefix, error envelope, idempotency đều TBD.
+Learning endpoint đã triển khai (`docs/API.md` v0.4):
 
-DB hiện có đủ lưu edge; không tự thêm schema. Full graph read + check + write phải bảo đảm atomic/concurrency. Transaction không tự bảo vệ check-then-insert khỏi hai concurrent transaction tạo cycle; cần phương án lock/serialize/isolation được DB/backend owner duyệt trước khi implementation. Không tự thay isolation/database architecture. FK cascade item deletion có thể xóa edge đồng thời; stale endpoint phải reject/rollback.
+| Method | Path | Hành vi |
+|---|---|---|
+| `POST` | `/api/learning/roadmap-items/{item}/prerequisites` | 201; body `{prerequisite_item_id}`; full-graph DAG check trước insert |
+| `DELETE` | `/api/learning/roadmap-items/{item}/prerequisites/{prerequisite}` | 200; xóa edge |
+
+Mã lỗi: 401 unauthenticated; 403 item không thuộc owner; 404 prerequisite không tồn tại/khác roadmap (không lộ tồn tại); 409 duplicate edge; 422 self-reference hoặc cycle. Envelope `{status, message, data}`; lỗi dùng `{status: 'error', message}`. Batch endpoint **chưa** triển khai. UUID được chuẩn hóa về chữ thường trước khi so khớp.
+
+Chiến lược concurrency hiện dùng: `PrerequisiteGraphValidator` đọc full graph trong transaction, các item của roadmap bị `lockForUpdate` theo thứ tự `id` để serialize hai request đồng thời; request thứ hai recheck và bị reject nếu tạo cycle. Graph luôn là DAG sau mọi thao tác.
+
+Giới hạn đã biết: `lockForUpdate` chỉ có hiệu lực trong một transaction; nếu hai roadmap khác nhau chia sẻ item (không xảy ra vì edge bị giới hạn trong cùng roadmap) thì sẽ cần khóa rộng hơn. Cross-roadmap prerequisite hiện bị từ chối — mở lại nếu OQ-06 chốt cho phép.
+
+DB hiện có đủ lưu edge; không tự thêm schema. FK cascade item deletion xóa edge tương ứng.
 
 ## 8. Ma trận lỗi
 

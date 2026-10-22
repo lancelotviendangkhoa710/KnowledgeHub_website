@@ -49,12 +49,11 @@ steps:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     run: |
-      files=$(find test-results -name '*.png' -o -name '*.webm' | head -20)
-      if [ -n "$files" ]; then
+      while IFS= read -r -d '' file; do
         gh pr comment ${{ github.event.pull_request.number }} \
-          --body "Failure screenshots and videos from run ${{ github.run_id }}." \
-          $(printf -- '--attach %s ' $files)
-      fi
+          --body "Failure screenshot or video from run ${{ github.run_id }}: $(basename "$file")" \
+          --attach "$file"
+      done < <(find test-results \( -name '*.png' -o -name '*.webm' \) -print0 | head -z -n 20)
 ```
 
 For a polished walkthrough of a new feature, record a hero script as described in [video-recording.md](video-recording.md) and attach the resulting WebM the same way.

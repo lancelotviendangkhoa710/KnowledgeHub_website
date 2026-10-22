@@ -175,20 +175,20 @@ Authentication backend mechanism, exact path/base URL, response/error status, fi
 | T-08 | R-004 | DB integration | delete article vật lý có FK | item link null, item tồn tại | Integration |
 | T-09 | R-005 | Regression | roadmap paused/completed/archived | chỉ transition đã duyệt được phép | Integration, blocked until OQ-02 |
 
-Mở rộng `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**`; convention PHPUnit/Laravel theo `backend/tests/Feature/Content/ArticleTest.php`. Không tìm thấy test runner manifest `backend/composer.json`; sau bootstrap dùng `docker compose exec app php artisan test` theo README nếu container sẵn sàng. Đây là command được docs dự án nêu, runtime chưa được chạy/xác minh trong task tài liệu.
+Mở rộng `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**`; convention PHPUnit/Laravel theo `backend/tests/Feature/Content/ArticleTest.php`. Chạy bằng `docker compose exec app php artisan test`; đã xác minh ngày 2026-10-22: 41 test pass (137 assertions) cho toàn bộ suite backend.
 
 ## 11. Ánh xạ source và triển khai
 
 | File/module | Hiện trạng | Thay đổi dự kiến | Req |
 |---|---|---|---|
 | Migration `000008` | Schema đúng domain | Tái sử dụng; không sửa | R-002–004 |
-| `routes/api.php` | Shared registry, include file nếu tồn tại | Chỉ thêm include/domain integration có coordination | R-001 |
-| `routes/api/learning.php` | Chưa có | Có thể tạo sau API approval | R-001 |
-| Learning Controller/Requests/Models/Policy/Services | Chưa có | Tạo theo backend conventions, subject to source/bootstrap check | R-001–004 |
+| `routes/api.php` | Shared registry, đã include Learning domain | Không cần thay đổi thêm | R-001 |
+| `routes/api/learning.php` | Đã có: 5 route roadmap + 3 route item | Duy trì; bổ sung khi contract mới được duyệt | R-001 |
+| Learning Controller/Requests/Models/Policy/Services | Đã có đầy đủ theo backend conventions | Duy trì; Policy đăng ký qua `Gate::policy` trong `AppServiceProvider` | R-001–004 |
 | `frontend/src/lib/api.ts` | Generic fetch/Bearer client | Reuse; không đổi auth global mặc định | R-001 |
-| Learning page/components | Chưa có | Tạo sau UI/API approval | R-001 |
-| Learning Feature/Unit tests | Chưa có | Tạo theo ownership convention | R-001–004 |
-| `docs/API.md` | Learning 0 endpoint | Cập nhật chỉ khi endpoint contract được phê duyệt | API |
+| Learning page/components | Đã có trang list/create/delete roadmap; chưa có UI item | Bổ sung UI item sau UI/API approval | R-001 |
+| Learning Feature/Unit tests | Đã có 4 file test | Mở rộng khi có rule mới | R-001–004 |
+| `docs/API.md` | Learning: 12 route IMPLEMENTED, v0.4 | Cập nhật khi contract thay đổi | API |
 
 ### Task plan (thực hiện sau khi unblock)
 
@@ -199,7 +199,7 @@ Mở rộng `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**
 | LRN-001-T2 | CRUD API; T1 | Learning Requests/Controllers, `routes/api/learning.php`, registry coordination | List/detail/create/update theo contract, transaction | Feature RBAC/validation; DONE contract tests pass |
 | LRN-001-T3 | UI; T0/T2 | `frontend/src/app/(app)/learning/**`, `components/learning/**` | list/detail/form states, use `api.ts`, no mock fallback | Component/e2e; DONE AC-01–08 cover |
 
-**Blockers:** OQ-01–05, OQ-08. Những phần khác không được coi là đã quyết định.
+**Blockers:** OQ-01, OQ-02, OQ-03, OQ-04, OQ-08. OQ-05 đã chốt ngày 2026-10-22 (`learning_progress.status` là authority, `roadmap_items.status` là mirror; xem ADR `2026-10-22-learning-progress-authority.md`). Những phần khác không được coi là đã quyết định.
 
 ## 12. Assumptions, open questions, blockers
 
@@ -208,4 +208,4 @@ Mở rộng `backend/tests/Feature/Learning/**`, `backend/tests/Unit/Learning/**
 - **OPEN QUESTION OQ-02:** state transition, archive edit, auto-complete; blocker business correctness.
 - **OPEN QUESTION OQ-03:** Admin có quyền visibility/manage toàn cục đến đâu; blocker security.
 - **OPEN QUESTION OQ-04:** article published/archived/soft-deleted/version behavior; blocker cross-domain, cần Content owner.
-- **IMPLEMENTATION BLOCKER:** không triển khai state-changing/API behavior trước khi OQ-01–04 + OQ-08 được duyệt; không tự tạo migration hay thay Content model.
+- **IMPLEMENTATION BLOCKER:** không mở rộng state-changing/API behavior ngoài contract hiện hành trước khi OQ-01–04 + OQ-08 được duyệt; không tự tạo migration hay thay Content model.
