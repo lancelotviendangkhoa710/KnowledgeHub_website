@@ -18,7 +18,8 @@ function Test-AllowedLegacyPath([string]$Path) {
     return $Path -like 'docs/*' -or
         $Path -eq '.coderabbit.yaml' -or
         $Path -eq 'improtant_task.md' -or
-        $Path -eq 'docs/TEAM_WORKFLOW.md'
+        $Path -eq 'docs/TEAM_WORKFLOW.md' -or
+        $Path -like '.agents/skills/*'
 }
 
 if (-not $BaseRef) {
