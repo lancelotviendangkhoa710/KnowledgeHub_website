@@ -7,6 +7,7 @@
 ## Mục tiêu và luồng activity
 
 User tạo và quản lý roadmap thuộc chính mình. Schema: `learning_roadmaps` + `roadmap_items`; roadmap có trạng thái `active`, `completed`, `archived`, `paused`; item có vị trí unique theo roadmap, optional `article_id`. Roadmap là user-owned; owner hoặc Admin đọc/sửa theo Policy; Guest không truy cập.
+Có roadmap theo từng vị trí
 
 User gửi yêu cầu tạo/sửa → API xác thực → Policy xác minh owner/Admin → validate tên/trạng thái/IDs/vị trí → service transaction ghi roadmap/items → trả resource riêng của owner. List/get luôn lọc ownership, không chỉ ẩn trên frontend.
 

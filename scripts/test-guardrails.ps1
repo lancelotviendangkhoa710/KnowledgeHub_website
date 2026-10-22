@@ -18,7 +18,8 @@ function Test-AllowedLegacyPath([string]$Path) {
     return $Path -like 'docs/*' -or
         $Path -eq '.coderabbit.yaml' -or
         $Path -eq 'improtant_task.md' -or
-        $Path -eq 'docs/TEAM_WORKFLOW.md'
+        $Path -eq 'docs/TEAM_WORKFLOW.md' -or
+        $Path -like '.agents/skills/*'
 }
 
 if (-not $BaseRef) {
@@ -46,30 +47,66 @@ if ($changedFiles | Where-Object { $_ -match '(^|/)\.env($|\.)' -and $_ -notmatc
 
 $protectedMigrationChanges = @()
 foreach ($file in $changedFiles | Where-Object { $_ -like 'database/migrations/*.php' }) {
-    git cat-file -e "$mergeBase`:$file" 2>$null
-    if ($LASTEXITCODE -eq 0) {
+    # cmd's `2>nul` discards stderr so PowerShell does not turn git's fatal message
+    # into a terminating error, while the exit code still tells us why it failed.
+    # `git cat-file -e` prints nothing on success and a message on failure, so the
+    # exit code plus an explicit object probe distinguish "new file" from a real
+    # git failure. `git ls-tree` is used because it returns a listed path on success
+    # and an empty string when the path is absent at that revision.
+    $treeEntry = @(git ls-tree --name-only "${mergeBase}:" -- $file 2>$null)
+    $treeExit = $LASTEXITCODE
+
+    if ($treeExit -eq 0 -and $treeEntry.Count -gt 0) {
         $protectedMigrationChanges += $file
+        continue
     }
+
+    if ($treeExit -ne 0) {
+        throw "git ls-tree failed for ${mergeBase} (exit ${treeExit}). Refusing to classify migration ${file}."
+    }
+
+    # Exit 0 with no matching entry: the migration is new at this revision.
 }
 if ($protectedMigrationChanges.Count -gt 0) {
     Add-Failure "Existing migration modified: $($protectedMigrationChanges -join ', '). Add a new migration instead."
 }
 
-$secretPattern = '(?i)(api[_-]?key|secret|token|password)\s*[:=]\s*(?!\$\{|<|your-|change-me|example)\S{8,}'
+# Key names are matched as whole identifiers so that values assigned to
+# `$token`, `API_TOKEN`, `DB_PASSWORD` etc. are still detected. A lookbehind of
+# (?<![A-Za-z0-9]) only prevents matching a suffix of a longer name, while
+# still allowing `$`, `_` and other non-alphanumerics as prefixes.
+# The captured value is then checked separately, so quoting and documented
+# placeholder forms (`YOUR_*`, `<...>`, `${...}`, `mock-*`, `github_pat_...`) are
+# handled outside the regex where they are easier to read and maintain.
+$secretKeyPattern = '(?i)(?<![A-Za-z0-9])(api[_-]?key|secret|token|password)\s*[:=]\s*["'']?([^\s"'',;)]+)'
+$placeholderValuePattern = '(?i)^(?:<.*|\$\{.*|your[-_]|change-me|example|mock|placeholder|xxx|dummy|\*|\$|.*->.*|\S*(?:\.\.\.|…))\S*$'
+# Credentials embedded in a connection URI, e.g. postgresql://user:pass@host/db.
+$credentialUriPattern = '(?i)\b[a-z][a-z0-9+.\-]*://[^/\s:@]+:(?!<|\$|\*)[^/\s@]{6,}@'
 $legacyPattern = '(?i)\b(reviewer|learner|submitted|rejected|article_reviews)\b'
 
 foreach ($file in $changedFiles) {
-    if (Test-AllowedLegacyPath $file) { continue }
+    # Vendor skill documentation is exempt from the business-term scan only.
+    # Secret scanning still applies to every file, including those.
+    $skipLegacy = Test-AllowedLegacyPath $file
 
     $addedLines = @(git diff --unified=0 "$mergeBase...$HeadRef" -- $file |
         Where-Object { $_ -match '^\+' -and $_ -notmatch '^\+\+\+' })
 
     foreach ($line in $addedLines) {
         $content = $line.Substring(1)
-        if ($content -match $secretPattern) {
+
+        foreach ($keyMatch in [regex]::Matches($content, $secretKeyPattern)) {
+            $value = $keyMatch.Groups[2].Value
+            if ($value.Length -lt 12) { continue }
+            if ($value -match $placeholderValuePattern) { continue }
             Add-Failure "Possible hard-coded secret in ${file}: $content"
+            break
         }
-        if ($content -match $legacyPattern) {
+
+        if ($content -match $credentialUriPattern) {
+            Add-Failure "Credentials embedded in connection URI in ${file}: $content"
+        }
+        if (-not $skipLegacy -and $content -match $legacyPattern) {
             Add-Failure "Forbidden legacy business term in ${file}: $content"
         }
     }

@@ -87,6 +87,12 @@ Cline automatically discovers skills in `skills/` directory. No additional confi
 
 **Usage**: When working on database tasks, Cline will automatically use relevant skills for guidance.
 
+### MCP servers
+
+Browser automation, database inspection, docs lookup and GitHub tools are wired through MCP.
+See [`docs/MCP-SETUP.md`](MCP-SETUP.md) for the full install/verify guide, the read-only
+PostgreSQL role, and the write-vs-disabled status of each server.
+
 ## Development Workflow
 
 ### Database Schema Changes

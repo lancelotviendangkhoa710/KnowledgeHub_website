@@ -10,6 +10,8 @@ return new class extends Migration
     {
         Schema::create('personal_access_tokens', function (Blueprint $table) {
             $table->uuid('id')->primary();
+            // uuidMorphs() creates tokenable_type (string) + tokenable_id (uuid)
+            // and the composite index the two explicit columns on dev added by hand.
             $table->uuidMorphs('tokenable');
             $table->string('name');
             $table->string('token', 64)->unique();
