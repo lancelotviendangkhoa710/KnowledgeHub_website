@@ -12,6 +12,7 @@ export default function SiteFooter() {
       <nav className="site-footer__nav" aria-label="Footer navigation">
         <Link href="/courses">Explore courses</Link>
         <Link href="/login">Sign in</Link>
+        <Link href="/register">Create an account</Link>
       </nav>
     </div>
   );

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category } from '@/types/content';
 import { fetchCategories } from '@/lib/contentClient';
+import { getAccessToken } from '@/lib/authToken';
 
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
@@ -70,13 +71,13 @@ List the mathematical or operational guarantees enforced by this architecture.
 
     // Call API or simulate contributor creation
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const bearerToken = getAccessToken();
       const res = await fetch('http://localhost:8080/api/articles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
         },
         body: JSON.stringify({
           title,
@@ -96,7 +97,7 @@ List the mathematical or operational guarantees enforced by this architecture.
             headers: {
               'Content-Type': 'application/json',
               Accept: 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
             },
           });
         }

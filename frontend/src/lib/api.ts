@@ -5,6 +5,8 @@
  * All endpoints defined in docs/API.md.
  */
 
+import { getAccessToken } from '@/lib/authToken';
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -13,9 +15,9 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     'Accept': 'application/json',
   };
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  const bearerToken = getAccessToken();
+  if (bearerToken) {
+    headers['Authorization'] = `Bearer ${bearerToken}`;
   }
 
   const options: RequestInit = { method, headers };
@@ -23,7 +25,15 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, options);
+  let response: Response;
+
+  try {
+    response = await fetch(`${BASE_URL}${path}`, options);
+  } catch {
+    throw {
+      message: 'Unable to reach the KnowledgeHub API. Check that the API service is running.',
+    };
+  }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw { status: response.status, ...error };
