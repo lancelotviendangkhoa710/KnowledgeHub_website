@@ -2,6 +2,9 @@
 
 namespace App\Http\Requests\Learning;
 
+use App\Models\RoadmapItem;
+use App\Models\User;
+use App\Policies\RoadmapPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -9,7 +12,11 @@ class UpdateRoadmapItemRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $item = $this->route('item');
+
+        return $this->user() instanceof User
+            && $item instanceof RoadmapItem
+            && app(RoadmapPolicy::class)->manageItem($this->user(), $item->loadMissing('roadmap'));
     }
 
     public function rules(): array

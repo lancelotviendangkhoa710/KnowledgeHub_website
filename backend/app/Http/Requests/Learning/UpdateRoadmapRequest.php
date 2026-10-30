@@ -2,13 +2,20 @@
 
 namespace App\Http\Requests\Learning;
 
+use App\Models\LearningRoadmap;
+use App\Models\User;
+use App\Policies\RoadmapPolicy;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateRoadmapRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        $roadmap = $this->route('roadmap');
+
+        return $this->user() instanceof User
+            && $roadmap instanceof LearningRoadmap
+            && app(RoadmapPolicy::class)->update($this->user(), $roadmap);
     }
 
     public function rules(): array
