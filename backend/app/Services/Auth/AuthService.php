@@ -10,6 +10,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Hashing\HashManager;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
+use RuntimeException;
 
 class AuthService
 {
@@ -30,7 +31,17 @@ class AuthService
                 $user->status = 'pending';
                 $user->save();
 
-                $role = Role::query()->where('name', 'user')->firstOrFail();
+                $role = Role::query()->where('name', 'user')->first();
+
+                // Roles are reference data seeded by RoleSeeder, not created on
+                // the fly. Fail loudly (and roll the transaction back) instead
+                // of returning a misleading 404 when the seed step was skipped.
+                if ($role === null) {
+                    throw new RuntimeException(
+                        'The default "user" role is missing. Seed the approved roles before enabling registration.'
+                    );
+                }
+
                 $user->roles()->attach($role->getKey());
 
                 return $user->load('roles');

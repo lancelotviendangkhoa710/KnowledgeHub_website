@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { setAccessToken } from '@/lib/authToken';
 
 export type AuthUser = {
   id: string;
@@ -17,6 +18,8 @@ type AuthResponse = {
   status: 'success' | 'error';
 };
 
+let currentUser: AuthUser | null = null;
+
 export async function register(input: {
   name: string;
   email: string;
@@ -30,8 +33,8 @@ export async function login(input: { email: string; password: string }): Promise
   const response = await api.post<AuthResponse>('/auth/login', input);
 
   if (response.data.token) {
-    localStorage.setItem('auth_token', response.data.token);
-    localStorage.setItem('auth_user', JSON.stringify(response.data.user));
+    setAccessToken(response.data.token);
+    currentUser = response.data.user;
   }
 
   return response;
@@ -40,17 +43,19 @@ export async function login(input: { email: string; password: string }): Promise
 export async function logout(): Promise<void> {
   try {
     await api.post('/auth/logout', {});
-  } finally {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+  } catch (error) {
+    // A 401 means the server no longer recognises the token, so the local
+    // credential must be dropped as well. Any other failure keeps the token so
+    // the caller can show the error and retry the revocation.
+    if ((error as { status?: number }).status !== 401) {
+      throw error;
+    }
   }
+
+  setAccessToken(null);
+  currentUser = null;
 }
 
-export function getStoredUser(): AuthUser | null {
-  try {
-    const stored = localStorage.getItem('auth_user');
-    return stored ? (JSON.parse(stored) as AuthUser) : null;
-  } catch {
-    return null;
-  }
+export function getCurrentUser(): AuthUser | null {
+  return currentUser;
 }

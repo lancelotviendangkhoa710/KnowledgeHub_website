@@ -121,6 +121,49 @@ class AuthTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_authenticated_user_cannot_register_through_the_public_endpoint(): void
+    {
+        $user = $this->createUser('signed-in@example.com', 'active');
+
+        $this->actingAs($user)->postJson('/api/auth/register', [
+            'name' => 'Second Account',
+            'email' => 'second@example.com',
+            'password' => 'password-123',
+            'password_confirmation' => 'password-123',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_authenticated_user_cannot_login_again_through_the_public_endpoint(): void
+    {
+        $user = $this->createUser('signed-in@example.com', 'active');
+
+        $this->actingAs($user)->postJson('/api/auth/login', [
+            'email' => 'signed-in@example.com',
+            'password' => 'password-123',
+        ])->assertForbidden();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_login_is_throttled_per_account_and_source(): void
+    {
+        $this->createUser('throttled@example.com', 'active');
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/auth/login', [
+                'email' => 'throttled@example.com',
+                'password' => 'wrong-password',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/auth/login', [
+            'email' => 'throttled@example.com',
+            'password' => 'wrong-password',
+        ])->assertStatus(429);
+    }
+
     private function createUser(string $email, string $status): User
     {
         $user = new User([

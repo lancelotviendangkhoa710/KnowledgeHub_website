@@ -2,14 +2,16 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return Gate::allows('register', User::class);
     }
 
     protected function prepareForValidation(): void

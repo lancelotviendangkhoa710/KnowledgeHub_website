@@ -2,23 +2,27 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getStoredUser, logout } from '@/lib/auth';
+import { getCurrentUser, logout } from '@/lib/auth';
 
 export default function AuthActions() {
   const [userName, setUserName] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
-    setUserName(getStoredUser()?.name ?? null);
+    setUserName(getCurrentUser()?.name ?? null);
   }, []);
 
   async function handleLogout() {
     setLoggingOut(true);
+    setLogoutError(null);
 
     try {
       await logout();
-    } finally {
       setUserName(null);
+    } catch {
+      setLogoutError('Could not sign out. Please try again.');
+    } finally {
       setLoggingOut(false);
     }
   }
@@ -38,6 +42,7 @@ export default function AuthActions() {
       <button type="button" className="button button--secondary" onClick={handleLogout} disabled={loggingOut}>
         {loggingOut ? 'Signing out...' : 'Sign out'}
       </button>
+      {logoutError && <span role="alert">{logoutError}</span>}
     </div>
   );
 }

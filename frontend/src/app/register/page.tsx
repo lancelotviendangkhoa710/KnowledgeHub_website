@@ -35,7 +35,7 @@ export default function RegisterPage() {
     <section className="auth-page content-container">
       <div className="auth-card">
         <h1>Create your account</h1>
-        <p className="auth-lead">Create a learner account for KnowledgeHub.</p>
+        <p className="auth-lead">Create a user account for KnowledgeHub.</p>
         {message && <p className="auth-message" role="status">{message}</p>}
         <form onSubmit={handleSubmit} noValidate>
           <label className="auth-field">Name<input name="name" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} autoComplete="name" required />{errors.name?.[0] && <small>{errors.name[0]}</small>}</label>

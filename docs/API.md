@@ -1,7 +1,7 @@
 # docs/API.md  KnowledgeHub API Contract
 
-**Version**: 0.5 | **Date**: 2026-10-23
-**Status**: AUTH-01 and Learning routes are implemented and documented. OQ-05 is resolved: `learning_progress.status` is authoritative and `roadmap_items.status` is its transactionally-maintained mirror. Other inventory entries remain evidence-based.
+**Version**: 0.6 | **Date**: 2026-10-30
+**Status**: AUTH-01 and Learning routes are implemented and documented. AUTH-01 enforces guest-only authorization through `UserPolicy` and throttles login. OQ-05 is resolved: `learning_progress.status` is authoritative and `roadmap_items.status` is its transactionally-maintained mirror. Other inventory entries remain evidence-based.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -73,8 +73,9 @@ Guest-only registration accepts `name`, `email`, `password`, and
 `password_confirmation`. Email is trimmed and lowercased before validation. A
 successful request returns `201` with `data.user` containing `id`, `name`,
 `email`, `status`, and `roles`; the new account has `status=pending` and only
-the `user` role. No token is issued. Validation failures return `422` with
-Laravel's `errors` object, including duplicate active emails.
+the `user` role. No token is issued. Requests that already carry an
+authenticated credential are rejected with `403`. Validation failures return
+`422` with Laravel's `errors` object, including duplicate active emails.
 
 ### IMPLEMENTED - POST `/api/auth/login`
 
@@ -82,8 +83,10 @@ Guest login accepts `email` and `password`. Only a non-deleted user with
 `status=active` and a matching password receives `200` with `data.user` and a
 one-time plain token in `data.token`; the stored token is hashed. Invalid
 credentials and non-active accounts return `422` with a generic credentials
-error. Login throttling, token expiration, and activation delivery are
-deferred decisions.
+error. Login is throttled: five attempts per minute per email + source IP pair,
+and twenty-five attempts per minute per source IP; a throttled request returns
+`429`. Requests that already carry an authenticated credential are rejected
+with `403`. Token expiration and activation delivery remain deferred decisions.
 
 ### IMPLEMENTED - POST `/api/auth/logout`
 
@@ -93,7 +96,8 @@ return `401`; other tokens belonging to the same user remain valid.
 
 **Tests**: `backend/tests/Feature/Auth/AuthTest.php` covers registration,
 normalization, duplicate and soft-deleted email behavior, pending-login
-rejection, token issuance, and current-token-only revocation.
+rejection, guest-only authorization failures, login throttling, token issuance,
+and current-token-only revocation.
 
 ---
 
@@ -228,6 +232,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.6 | 2026-10-30 | AUTH-01 authorization and login hardening: guest-only `UserPolicy` checks on register/login/logout, `429` login throttling, explicit failure when the seeded `user` role is missing; frontend keeps the bearer token in memory instead of web storage |
 | 0.5 | 2026-10-23 | Implemented AUTH-01 registration, login, logout, Sanctum bearer-token contract, and feature coverage; activation/throttling/token lifetime remain deferred |
 | 0.4 | 2026-10-22 | Resolved OQ-05: progress status authoritative; item status mirror; item endpoints reject `status`; data backfill migration |
 | 0.3 | 2026-10-22 | Documented all 12 Learning routes; corrected inventory/evidence; noted OQ-05 approval gap |

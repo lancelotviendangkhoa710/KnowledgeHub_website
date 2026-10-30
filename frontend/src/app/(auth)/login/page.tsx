@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { login } from '@/lib/auth';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
@@ -17,7 +19,9 @@ export default function LoginPage() {
 
     try {
       await login({ email, password });
-      window.location.href = '/courses';
+      // Client-side navigation keeps the in-memory bearer token (lib/authToken.ts)
+      // available for the next page; a full reload would drop the session.
+      router.push('/courses');
     } catch (error) {
       const response = error as { message?: string; errors?: Record<string, string[]> };
       setMessage(response.errors?.email?.[0] ?? response.message ?? 'Unable to sign in. Check your credentials and account status.');
