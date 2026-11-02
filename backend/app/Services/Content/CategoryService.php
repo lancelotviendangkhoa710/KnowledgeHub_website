@@ -9,14 +9,11 @@ use Illuminate\Support\Str;
 class CategoryService
 {
     /**
-     * Get root categories with their nested children for navigation trees.
-     *
-     * @return Collection<int, Category>
+     * Get full category hierarchy (roots with eager-loaded children).
      */
-    public function getCategoryTree(): Collection
+    public function getTree(): Collection
     {
-        return Category::query()
-            ->whereNull('parent_id')
+        return Category::whereNull('parent_id')
             ->with(['children' => function ($query) {
                 $query->withCount('articles');
             }])
@@ -26,80 +23,94 @@ class CategoryService
     }
 
     /**
-     * Get all categories as a flat list.
-     *
-     * @return Collection<int, Category>
+     * Get flat list of all categories.
      */
-    public function getAllFlat(): Collection
+    public function getAll(): Collection
     {
-        return Category::query()
-            ->with('parent:id,name,slug')
-            ->withCount('articles')
-            ->orderBy('name')
-            ->get();
+        return Category::orderBy('name')->get();
     }
 
     /**
-     * Find category by slug with published articles.
+     * Find category by slug.
      */
-    public function getBySlug(string $slug): ?Category
+    public function findBySlug(string $slug): ?Category
     {
-        return Category::query()
-            ->where('slug', $slug)
-            ->with(['children', 'parent'])
+        return Category::where('slug', $slug)
+            ->with(['parent', 'children'])
             ->withCount('articles')
             ->first();
     }
 
     /**
      * Create a new category.
-     *
-     * @param array{name: string, slug?: ?string, parent_id?: ?string} $data
      */
-    public function createCategory(array $data): Category
+    public function create(array $data): Category
     {
-        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
+        if (empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['name']);
+        }
+
+        // Ensure unique slug
+        $baseSlug = $data['slug'];
+        $counter = 1;
+        while (Category::where('slug', $data['slug'])->exists()) {
+            $data['slug'] = "{$baseSlug}-{$counter}";
+            $counter++;
+        }
 
         return Category::create([
             'name' => $data['name'],
-            'slug' => $slug,
+            'slug' => $data['slug'],
             'parent_id' => $data['parent_id'] ?? null,
         ]);
     }
 
     /**
      * Update an existing category.
-     *
-     * @param array{name: string, slug?: ?string, parent_id?: ?string} $data
      */
-    public function updateCategory(Category $category, array $data): Category
+    public function update(Category $category, array $data): Category
     {
-        $slug = ! empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($data['name']);
+        if (isset($data['parent_id']) && $data['parent_id'] === $category->id) {
+            throw new \InvalidArgumentException('A category cannot be its own parent.');
+        }
 
-        $category->update([
-            'name' => $data['name'],
-            'slug' => $slug,
-            'parent_id' => $data['parent_id'] ?? $category->parent_id,
-        ]);
+        if (isset($data['name']) && empty($data['slug'])) {
+            $data['slug'] = Str::slug($data['name']);
+        }
 
-        return $category->fresh(['parent', 'children']);
+        if (isset($data['slug']) && $data['slug'] !== $category->slug) {
+            $baseSlug = $data['slug'];
+            $counter = 1;
+            while (Category::where('slug', $data['slug'])->where('id', '!=', $category->id)->exists()) {
+                $data['slug'] = "{$baseSlug}-{$counter}";
+                $counter++;
+            }
+        }
+
+        $category->update(array_filter([
+            'name' => $data['name'] ?? $category->name,
+            'slug' => $data['slug'] ?? $category->slug,
+            'parent_id' => array_key_exists('parent_id', $data) ? $data['parent_id'] : $category->parent_id,
+        ], fn ($val) => $val !== null || array_key_exists('parent_id', $data)));
+
+        return $category->fresh();
     }
 
     /**
-     * Delete a category. Validates restrict constraints.
-     *
-     * @throws \DomainException
+     * Delete a category.
+     * Respects database RESTRICT constraints on children and articles.
      */
-    public function deleteCategory(Category $category): bool
+    public function delete(Category $category): void
     {
         if ($category->children()->exists()) {
-            throw new \DomainException('Cannot delete category with active subcategories. Reassign or delete subcategories first.');
+            throw new \RuntimeException('Cannot delete category with existing child categories.');
         }
 
         if ($category->articles()->exists()) {
-            throw new \DomainException('Cannot delete category with associated articles. Reassign articles first.');
+            throw new \RuntimeException('Cannot delete category with associated articles.');
         }
 
-        return (bool) $category->delete();
+        $category->delete();
     }
 }
+

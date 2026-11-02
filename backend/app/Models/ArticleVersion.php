@@ -12,9 +12,9 @@ class ArticleVersion extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $table = 'article_versions';
+    public const UPDATED_AT = null;
 
-    const UPDATED_AT = null;
+    protected $table = 'article_versions';
 
     protected $fillable = [
         'article_id',
@@ -24,8 +24,16 @@ class ArticleVersion extends Model
         'created_by',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'version_no' => 'integer',
+            'created_at' => 'datetime',
+        ];
+    }
+
     /**
-     * Parent article for this snapshot.
+     * Parent article this version snapshot belongs to.
      */
     public function article(): BelongsTo
     {
@@ -33,15 +41,25 @@ class ArticleVersion extends Model
     }
 
     /**
-     * Author/contributor who created this version.
+     * User who authored this version snapshot.
      */
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        $related = new User();
+        $related->setKeyType('string');
+        $related->incrementing = false;
+
+        return $this->newBelongsTo(
+            $related->newQuery(),
+            $this,
+            'created_by',
+            'id',
+            'creator'
+        );
     }
 
     /**
-     * File attachments for this version.
+     * File attachments linked to this article version snapshot.
      */
     public function attachments(): HasMany
     {
