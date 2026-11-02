@@ -3,51 +3,41 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
-use App\Models\Tag;
+use App\Http\Requests\Content\CreateTagRequest;
+use App\Services\Content\TagService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class TagController extends Controller
 {
-    /**
-     * Display a listing of all tags.
-     */
-    public function index(): JsonResponse
-    {
-        $tags = Tag::query()
-            ->withCount(['articles' => function ($query) {
-                $query->published();
-            }])
-            ->orderBy('name')
-            ->get();
+    public function __construct(
+        protected TagService $tagService
+    ) {}
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $tags,
-        ]);
+    /**
+     * List all tags.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->query('per_page', 50);
+        $tags = $this->tagService->getAll($perPage);
+
+        return response()->json($tags);
     }
 
     /**
-     * Display the specified tag by slug with associated published articles.
+     * Create a new tag (Contributor or Admin).
      */
-    public function show(string $slug): JsonResponse
+    public function store(CreateTagRequest $request): JsonResponse
     {
-        $tag = Tag::query()
-            ->where('slug', $slug)
-            ->with(['articles' => function ($query) {
-                $query->published()->with(['author:id,name', 'category', 'publishedVersion']);
-            }])
-            ->first();
-
-        if (! $tag) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Tag not found.',
-            ], 404);
-        }
+        $tag = $this->tagService->create($request->validated());
 
         return response()->json([
             'status' => 'success',
+            'message' => 'Tag created successfully.',
             'data' => $tag,
-        ]);
+        ], Response::HTTP_CREATED);
     }
 }
+

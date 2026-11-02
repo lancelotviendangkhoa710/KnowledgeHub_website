@@ -11,9 +11,9 @@ class ArticleAttachment extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $table = 'article_attachments';
+    public const UPDATED_AT = null;
 
-    const UPDATED_AT = null;
+    protected $table = 'article_attachments';
 
     protected $fillable = [
         'article_version_id',
@@ -23,15 +23,20 @@ class ArticleAttachment extends Model
         'size_bytes',
     ];
 
-    protected $casts = [
-        'size_bytes' => 'integer',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'size_bytes' => 'integer',
+            'created_at' => 'datetime',
+        ];
+    }
 
     /**
-     * The article version this attachment belongs to.
+     * Article version snapshot this attachment is attached to.
      */
     public function version(): BelongsTo
     {
         return $this->belongsTo(ArticleVersion::class, 'article_version_id');
     }
 }
+

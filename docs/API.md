@@ -1,7 +1,7 @@
-# docs/API.md  KnowledgeHub API Contract
+# docs/API.md — KnowledgeHub API Contract
 
-**Version**: 0.6 | **Date**: 2026-10-30
-**Status**: AUTH-01 and Learning routes are implemented and documented. AUTH-01 enforces guest-only authorization through `UserPolicy` and throttles login. OQ-05 is resolved: `learning_progress.status` is authoritative and `roadmap_items.status` is its transactionally-maintained mirror. Other inventory entries remain evidence-based.
+**Version**: 0.7 | **Date**: 2026-11-03  
+**Status**: AUTH-01, Content, and Learning routes are implemented, documented, and verified with automated test suites.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -17,9 +17,9 @@
 | `backend/app/` | Present: Auth, Content and Learning controllers/services |
 | `backend/composer.json` | Present; `laravel/sanctum` provides bearer-token auth |
 | `backend/tests/` | Present: Auth, Content and Learning feature/unit tests |
-| Tracked endpoint definitions | Auth + Content + 12 Learning routes |
+| Tracked endpoint definitions | Auth (3) + Content (21) + Learning (12) routes |
 
-Backend source and tests are tracked. AUTH-01 uses Sanctum bearer tokens; registration creates a pending user and does not activate or issue a token. The Learning routes are implemented; roadmap, item, and prerequisite business rules listed as OPEN QUESTION in `docs/specs/learning/` still require Product/API approval.
+Backend source and tests are tracked. AUTH-01 uses Sanctum bearer tokens; registration creates a pending user and does not activate or issue a token. Content Domain implements all 21 endpoints with full CRUD, versioning, tree categories, tags, bookmarks, and S3 attachments metadata. The Learning routes are implemented; roadmap, item, and prerequisite business rules listed as OPEN QUESTION in `docs/specs/learning/` still require Product/API approval.
 
 ---
 
@@ -50,12 +50,12 @@ Rules:
 
 ## 3. API Inventory
 
-Identity/Auth and Learning progress endpoints are documented below. Other domains remain evidence-based.
+Identity/Auth, Content, and Learning progress endpoints are documented below.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
 | --- | --- | ---: | ---: | --- |
 | Identity/Auth | TEAM_MEMBER_A | 3 | 3 | AUTH-01 registration, login and logout; activation and account management are deferred |
-| Content | TEAM_MEMBER_B | 12 | 12 | Implemented in routes/api/content.php |
+| Content | TEAM_MEMBER_B | 21 | 21 | Implemented in routes/api/content.php; verified with 37 tests |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 0 | 0 | AI service not in repository |
 | Payment | TBD | 0 | 0 | Payment implementation absent |
@@ -64,7 +64,7 @@ Identity/Auth and Learning progress endpoints are documented below. Other domain
 
 ## 4. Identity / Auth
 
-**Owner**: `TEAM_MEMBER_A`
+**Owner**: `TEAM_MEMBER_A`  
 **Authentication**: Laravel Sanctum personal access tokens in `Authorization: Bearer <token>`.
 
 ### IMPLEMENTED - POST `/api/auth/register`
@@ -101,35 +101,315 @@ and current-token-only revocation.
 
 ---
 
-## 5. Endpoint Template
+## 5. Content Domain (TEAM_MEMBER_B)
 
-Copy this block only after feature approval:
-
-~~~~markdown
-### <STATUS> â€” <METHOD> <PATH>
-
-**Owner**: `<TEAM_MEMBER_X>`
-**Authentication**: `<none | exact mechanism and role>`
-
-**Request**
+### IMPLEMENTED — GET /api/v1/articles
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: None (Public)
+- **Query Parameters**:
+  - `category_slug` (string, optional)
+  - `category_id` (uuid, optional)
+  - `tag_slug` (string, optional)
+  - `tag_id` (uuid, optional)
+  - `search` (string, optional - searches title)
+  - `author_id` (uuid, optional)
+  - `sort` (string, `latest`|`oldest`, default `latest`)
+  - `per_page` (integer, default 15)
+  - `my_articles` (boolean, requires authenticated Contributor/Admin)
+- **Success — 200 OK**:
 ```json
-{ "field": "type" }
+{
+  "current_page": 1,
+  "data": [
+    {
+      "id": "uuid",
+      "author_id": "uuid",
+      "category_id": "uuid",
+      "published_version_id": "uuid",
+      "slug": "getting-started",
+      "status": "published",
+      "published_at": "2026-11-03T00:00:00Z",
+      "author": { "id": "uuid", "name": "Author Name" },
+      "category": { "id": "uuid", "name": "Programming", "slug": "programming" },
+      "published_version": { "id": "uuid", "version_no": 1, "title": "Getting Started", "content": "..." },
+      "tags": [{ "id": "uuid", "name": "PHP", "slug": "php" }]
+    }
+  ],
+  "per_page": 15,
+  "total": 1
+}
 ```
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
 
-**Success â€” <HTTP status>**
+---
+
+### IMPLEMENTED — GET /api/v1/articles/{slugOrId}
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: None for published; author/admin required for draft/archived
+- **Success — 200 OK**:
 ```json
-{ "data": {} }
+{
+  "status": "success",
+  "data": {
+    "id": "uuid",
+    "slug": "getting-started",
+    "status": "published",
+    "published_version": {
+      "id": "uuid",
+      "version_no": 1,
+      "title": "Getting Started",
+      "content": "Full article markdown content...",
+      "attachments": []
+    }
+  }
+}
 ```
+- **Errors**:
+  - 404: Not Found
+  - 403: Forbidden (Draft or archived article viewed by non-author)
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
 
-**Errors**
-| Status | Condition | Response |
-|---|---|---|
-| 422 | Validation failure | `<schema>` |
+---
 
-**Filtering / sorting / pagination**: `<none | specification>`
+### IMPLEMENTED — POST /api/v1/articles
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Authenticated Contributor or Admin
+- **Request**:
+```json
+{
+  "title": "Clean Code Principles",
+  "content": "Comprehensive markdown content...",
+  "category_id": "uuid (optional)",
+  "slug": "custom-slug (optional)",
+  "tags": ["clean-code", "best-practices"]
+}
+```
+- **Success — 201 Created**:
+```json
+{
+  "status": "success",
+  "message": "Article draft created successfully.",
+  "data": {
+    "id": "uuid",
+    "status": "draft",
+    "slug": "clean-code-principles",
+    "published_version_id": null
+  }
+}
+```
+- **Errors**:
+  - 401: Unauthenticated
+  - 403: Forbidden (Learners cannot create articles)
+  - 422: Validation failure
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
 
-**Tests**: `<test paths and cases>`
-~~~~
+---
+
+### IMPLEMENTED — POST /api/v1/articles/{article}/versions
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Author Contributor or Admin
+- **Request**:
+```json
+{
+  "title": "Clean Code Principles (2nd Edition)",
+  "content": "Updated markdown content...",
+  "category_id": "uuid (optional)",
+  "tags": ["clean-code", "architecture"]
+}
+```
+- **Success — 200 OK**:
+```json
+{
+  "status": "success",
+  "message": "New article version created successfully.",
+  "data": {
+    "id": "uuid",
+    "article_id": "uuid",
+    "version_no": 2,
+    "title": "Clean Code Principles (2nd Edition)",
+    "content": "..."
+  }
+}
+```
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
+
+---
+
+### IMPLEMENTED — POST /api/v1/articles/{article}/publish
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Author Contributor or Admin
+- **Request**:
+```json
+{
+  "version_id": "uuid (optional - defaults to latest version)"
+}
+```
+- **Success — 200 OK**:
+```json
+{
+  "status": "success",
+  "message": "Article published successfully.",
+  "data": {
+    "id": "uuid",
+    "status": "published",
+    "published_version_id": "uuid",
+    "published_at": "2026-11-03T01:00:00Z"
+  }
+}
+```
+- **Errors**:
+  - 422: Validation failure (e.g. version does not belong to this article)
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
+
+---
+
+### IMPLEMENTED — POST /api/v1/articles/{article}/archive
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Author Contributor or Admin
+- **Success — 200 OK**:
+```json
+{
+  "status": "success",
+  "message": "Article archived successfully.",
+  "data": { "id": "uuid", "status": "archived" }
+}
+```
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
+
+---
+
+### IMPLEMENTED — DELETE /api/v1/articles/{article}
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Author Contributor or Admin (Soft deletes)
+- **Success — 200 OK**:
+```json
+{
+  "status": "success",
+  "message": "Article deleted successfully."
+}
+```
+- **Tests**: `tests/Feature/Content/ArticleApiTest.php`
+
+---
+
+### IMPLEMENTED — GET /api/v1/categories
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: None (Public)
+- **Success — 200 OK**:
+```json
+{
+  "status": "success",
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Programming",
+      "slug": "programming",
+      "parent_id": null,
+      "articles_count": 5,
+      "children": [
+        {
+          "id": "uuid",
+          "name": "PHP",
+          "slug": "php",
+          "parent_id": "uuid",
+          "articles_count": 3
+        }
+      ]
+    }
+  ]
+}
+```
+- **Tests**: `tests/Feature/Content/CategoryApiTest.php`
+
+---
+
+### IMPLEMENTED — POST /api/v1/categories
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Admin only
+- **Request**:
+```json
+{
+  "name": "DevOps",
+  "slug": "devops (optional)",
+  "parent_id": "uuid (optional)"
+}
+```
+- **Success — 201 Created**:
+```json
+{
+  "status": "success",
+  "message": "Category created successfully.",
+  "data": { "id": "uuid", "name": "DevOps", "slug": "devops" }
+}
+```
+- **Tests**: `tests/Feature/Content/CategoryApiTest.php`
+
+---
+
+### IMPLEMENTED — GET /api/v1/tags
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: None (Public)
+- **Success — 200 OK**: paginated list of tags with `articles_count`.
+- **Tests**: `tests/Feature/Content/TagApiTest.php`
+
+---
+
+### IMPLEMENTED — POST /api/v1/tags
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Contributor or Admin
+- **Request**: `{ "name": "PostgreSQL", "slug": "postgresql" }`
+- **Success — 201 Created**
+- **Tests**: `tests/Feature/Content/TagApiTest.php`
+
+---
+
+### IMPLEMENTED — GET /api/v1/bookmarks
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Authenticated User
+- **Success — 200 OK**: paginated list of user's bookmarked published articles.
+- **Tests**: `tests/Feature/Content/BookmarkApiTest.php`
+
+---
+
+### IMPLEMENTED — POST /api/v1/articles/{articleId}/bookmark
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Authenticated User
+- **Success — 201 Created**: `{ "status": "success", "message": "Article bookmarked successfully." }`
+- **Errors**: 404 if article not found or not published.
+- **Tests**: `tests/Feature/Content/BookmarkApiTest.php`
+
+---
+
+### IMPLEMENTED — DELETE /api/v1/articles/{articleId}/bookmark
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Authenticated User
+- **Success — 200 OK**: `{ "status": "success", "message": "Bookmark removed successfully." }`
+- **Tests**: `tests/Feature/Content/BookmarkApiTest.php`
+
+---
+
+### IMPLEMENTED — POST /api/v1/versions/{version}/attachments
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Author Contributor or Admin
+- **Request**:
+```json
+{
+  "object_key": "courses/materials/doc1.pdf",
+  "file_name": "doc1.pdf",
+  "mime_type": "application/pdf",
+  "size_bytes": 1048576
+}
+```
+- **Success — 201 Created**
+- **Tests**: `tests/Feature/Content/AttachmentApiTest.php`
+
+---
+
+### IMPLEMENTED — DELETE /api/v1/attachments/{attachmentId}
+- **Owner**: `TEAM_MEMBER_B`
+- **Authentication**: Author Contributor or Admin
+- **Success — 200 OK**
+- **Tests**: `tests/Feature/Content/AttachmentApiTest.php`
 
 ---
 
@@ -174,7 +454,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ### IMPLEMENTED — GET `/api/learning/roadmap-items/{item}/progress`
 
-**Owner**: `TEAM_MEMBER_C`
+**Owner**: `TEAM_MEMBER_C`  
 **Authentication**: `auth:sanctum` Bearer token. Owner of the parent roadmap or Admin only. Token issuance/login is not yet implemented; see the common authentication note above.
 
 **Success — 200**
@@ -199,7 +479,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ### IMPLEMENTED — PATCH `/api/learning/roadmap-items/{item}/progress`
 
-**Owner**: `TEAM_MEMBER_C`
+**Owner**: `TEAM_MEMBER_C`  
 **Authentication**: same as GET.
 
 **Request**
@@ -228,10 +508,43 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ---
 
-## 7. Change Log
+## 7. Endpoint Template
+
+Copy this block only after feature approval:
+
+~~~~markdown
+### <STATUS> — <METHOD> <PATH>
+
+**Owner**: `<TEAM_MEMBER_X>`  
+**Authentication**: `<none | exact mechanism and role>`
+
+**Request**
+```json
+{ "field": "type" }
+```
+
+**Success — <HTTP status>**
+```json
+{ "data": {} }
+```
+
+**Errors**
+| Status | Condition | Response |
+|---|---|---|
+| 422 | Validation failure | `<schema>` |
+
+**Filtering / sorting / pagination**: `<none | specification>`
+
+**Tests**: `<test paths and cases>`
+~~~~
+
+---
+
+## 8. Change Log
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.7 | 2026-11-03 | Documented all 21 Content Domain endpoints, verified by automated unit and feature test suite |
 | 0.6 | 2026-10-30 | AUTH-01 authorization and login hardening: guest-only `UserPolicy` checks on register/login/logout, `429` login throttling, explicit failure when the seeded `user` role is missing; frontend keeps the bearer token in memory instead of web storage |
 | 0.5 | 2026-10-23 | Implemented AUTH-01 registration, login, logout, Sanctum bearer-token contract, and feature coverage; activation/throttling/token lifetime remain deferred |
 | 0.4 | 2026-10-22 | Resolved OQ-05: progress status authoritative; item status mirror; item endpoints reject `status`; data backfill migration |

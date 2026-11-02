@@ -9,18 +9,17 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Article extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;
 
-    protected $table = 'articles';
-
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PUBLISHED = 'published';
     public const STATUS_ARCHIVED = 'archived';
+
+    protected $table = 'articles';
 
     protected $fillable = [
         'author_id',
@@ -31,20 +30,60 @@ class Article extends Model
         'published_at',
     ];
 
-    protected $casts = [
-        'published_at' => 'datetime',
-    ];
-
-    /**
-     * Author / Contributor who owns this article.
-     */
-    public function author(): BelongsTo
+    protected function casts(): array
     {
-        return $this->belongsTo(User::class, 'author_id');
+        return [
+            'published_at' => 'datetime',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
+        ];
     }
 
     /**
-     * Category this article belongs to.
+     * Scope to query only published articles that have a published version.
+     */
+    public function scopePublished(Builder $query): Builder
+    {
+        return $query->where('status', self::STATUS_PUBLISHED)
+            ->whereNotNull('published_version_id');
+    }
+
+    public function isPublished(): bool
+    {
+        return $this->status === self::STATUS_PUBLISHED && !empty($this->published_version_id);
+    }
+
+    public function isDraft(): bool
+    {
+        return $this->status === self::STATUS_DRAFT;
+    }
+
+    public function isArchived(): bool
+    {
+        return $this->status === self::STATUS_ARCHIVED;
+    }
+
+    /**
+     * Author of the article (Contributor or Admin).
+     */
+    public function author(): BelongsTo
+    {
+        $related = new User();
+        $related->setKeyType('string');
+        $related->incrementing = false;
+
+        return $this->newBelongsTo(
+            $related->newQuery(),
+            $this,
+            'author_id',
+            'id',
+            'author'
+        );
+    }
+
+    /**
+     * Category the article belongs to.
      */
     public function category(): BelongsTo
     {
@@ -52,7 +91,7 @@ class Article extends Model
     }
 
     /**
-     * Currently active published version.
+     * Currently active published version snapshot.
      */
     public function publishedVersion(): BelongsTo
     {
@@ -60,19 +99,11 @@ class Article extends Model
     }
 
     /**
-     * All versions/history of this article.
+     * All historical version snapshots for this article.
      */
     public function versions(): HasMany
     {
         return $this->hasMany(ArticleVersion::class, 'article_id')->orderBy('version_no', 'desc');
-    }
-
-    /**
-     * Latest version of this article.
-     */
-    public function latestVersion(): HasOne
-    {
-        return $this->hasOne(ArticleVersion::class, 'article_id')->latestOfMany('version_no');
     }
 
     /**
@@ -84,7 +115,7 @@ class Article extends Model
     }
 
     /**
-     * Bookmarks for this article.
+     * Bookmarks created for this article.
      */
     public function bookmarks(): HasMany
     {
@@ -92,43 +123,10 @@ class Article extends Model
     }
 
     /**
-     * Scope query to published articles only.
+     * Users who have bookmarked this article.
      */
-    public function scopePublished(Builder $query): Builder
+    public function bookmarkedBy(): BelongsToMany
     {
-        return $query->where('status', self::STATUS_PUBLISHED)
-                     ->whereNotNull('published_version_id');
-    }
-
-    /**
-     * Scope query to draft articles.
-     */
-    public function scopeDraft(Builder $query): Builder
-    {
-        return $query->where('status', self::STATUS_DRAFT);
-    }
-
-    /**
-     * Scope query to archived articles.
-     */
-    public function scopeArchived(Builder $query): Builder
-    {
-        return $query->where('status', self::STATUS_ARCHIVED);
-    }
-
-    /**
-     * Scope query by category.
-     */
-    public function scopeByCategory(Builder $query, string $categoryId): Builder
-    {
-        return $query->where('category_id', $categoryId);
-    }
-
-    /**
-     * Scope query by author.
-     */
-    public function scopeByAuthor(Builder $query, string $authorId): Builder
-    {
-        return $query->where('author_id', $authorId);
+        return $this->belongsToMany(User::class, 'bookmarks', 'article_id', 'user_id');
     }
 }
