@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AdminUserController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -17,4 +18,11 @@ Route::middleware('auth:sanctum')->prefix('me')->group(function () {
     Route::patch('/', [ProfileController::class, 'update']);
     Route::delete('/', [ProfileController::class, 'destroy'])->middleware('throttle:6,1');
     Route::put('/password', [ProfileController::class, 'changePassword'])->middleware('throttle:6,1');
+});
+
+// Identity/Auth - TEAM_MEMBER_A (AUTH-02 admin user management)
+Route::middleware('auth:sanctum')->prefix('admin/users')->group(function () {
+    Route::get('/', [AdminUserController::class, 'index']);
+    Route::get('/{user}', [AdminUserController::class, 'show'])->whereUuid('user');
+    Route::patch('/{user}/status', [AdminUserController::class, 'updateStatus'])->whereUuid('user');
 });
