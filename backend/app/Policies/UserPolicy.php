@@ -29,4 +29,13 @@ class UserPolicy
     {
         return $user->currentAccessToken() !== null;
     }
+
+    /**
+     * Any authenticated user may read and edit their own profile; the profile
+     * endpoints never take a user id, so ownership is implicit.
+     */
+    public function viewProfile(User $user): bool
+    {
+        return true;
+    }
 }
