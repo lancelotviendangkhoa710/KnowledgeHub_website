@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { accountClient, errorMessage } from '@/lib/accountClient';
 import { getCurrentUser, logout, setCurrentUser } from '@/lib/auth';
 
@@ -52,6 +52,9 @@ export default function AccountPage() {
       </section>
     );
   }
+
+  const pwField = (key: keyof typeof pw) => (event: ChangeEvent<HTMLInputElement>) =>
+    setPw((current) => ({ ...current, [key]: event.target.value }));
 
   async function saveProfile(event: FormEvent) {
     event.preventDefault();
@@ -128,14 +131,14 @@ export default function AccountPage() {
         <NoticeLine notice={pwNotice} />
         <form onSubmit={changePassword} noValidate>
           <label className="auth-field">Current password
-            <input type="password" value={pw.current_password} onChange={(event) => setPw({ ...pw, current_password: event.target.value })} autoComplete="current-password" required />
+            <input type="password" value={pw.current_password} onChange={pwField('current_password')} autoComplete="current-password" required />
           </label>
           <label className="auth-field">New password
-            <input type="password" value={pw.password} onChange={(event) => setPw({ ...pw, password: event.target.value })} autoComplete="new-password" minLength={8} required />
+            <input type="password" value={pw.password} onChange={pwField('password')} autoComplete="new-password" minLength={8} required />
             <small className="account-hint">At least 8 characters.</small>
           </label>
           <label className="auth-field">Confirm new password
-            <input type="password" value={pw.password_confirmation} onChange={(event) => setPw({ ...pw, password_confirmation: event.target.value })} autoComplete="new-password" required />
+            <input type="password" value={pw.password_confirmation} onChange={pwField('password_confirmation')} autoComplete="new-password" required />
           </label>
           <button className="button button--primary account-submit" type="submit" disabled={savingPw}>
             {savingPw ? 'Updating...' : 'Update password'}
