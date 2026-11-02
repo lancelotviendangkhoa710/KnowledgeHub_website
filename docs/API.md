@@ -150,8 +150,20 @@ malformed ids return `404`.
 Admin only. Body: `status` in `active|inactive|banned`; other keys are
 rejected with `422`. Moving a user away from `active` revokes all their tokens.
 A `pending` account can only be moved to `active` (this is how accounts are
-activated). An admin cannot change their own status (`403`). Role assignment
-is not part of this endpoint (AUTH-03).
+activated). An admin cannot change their own status (`403`). Roles are changed
+through the endpoint below.
+
+### IMPLEMENTED - PUT `/api/admin/users/{id}/role`
+
+Admin only (`403` otherwise; an admin cannot change their own role). Body:
+`role` in `user|contributor|admin` and optional `current_password`; other keys
+are rejected with `422`. Each user has exactly one role; this call replaces it
+(same role again is a no-op). Granting or revoking `admin` requires the acting
+admin's `current_password`. Fails with `422` when the target is `pending` or
+`banned`, or when it would remove the last active admin; soft-deleted or
+malformed ids return `404`. A change revokes all of the target's tokens. The
+change is logged to the application log (actor, target, old and new role); no
+audit table exists yet. Returns `data.user`.
 
 **AUTH-02 tests**: `ProfileTest.php` (ownership, mass-assignment, password,
 deletion, last-admin guard) and `AdminUserTest.php` (RBAC for all four actors,

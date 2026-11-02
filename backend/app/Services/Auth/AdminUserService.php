@@ -2,14 +2,16 @@
 
 namespace App\Services\Auth;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AdminUserService
 {
-    public function __construct(private DatabaseManager $database) {}
+    public function __construct(private DatabaseManager $database, private ProfileService $profiles) {}
 
     public function list(array $filters): LengthAwarePaginator
     {
@@ -59,6 +61,46 @@ class AdminUserService
             if ($status !== 'active') {
                 $locked->tokens()->delete();
             }
+        });
+
+        return $target->refresh()->load('roles');
+    }
+
+    /**
+     * Replace the target's single role (AUTH-03). Granting or revoking `admin`
+     * needs the acting admin's password; the platform always keeps one active
+     * admin; the target's tokens are revoked so the old role stops working.
+     */
+    public function changeRole(User $actor, User $target, string $role, ?string $password): User
+    {
+        $this->database->transaction(function () use ($actor, $target, $role, $password): void {
+            // Lock every admin row (stable order) so concurrent role changes serialize.
+            $admins = User::query()->whereHas('roles', fn ($q) => $q->where('name', 'admin'))
+                ->orderBy('id')->lockForUpdate()->get();
+            $locked = User::query()->whereKey($target->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! in_array($locked->status, ['active', 'inactive'], true)) {
+                throw ValidationException::withMessages(['role' => ['Only active or inactive accounts can change role.']]);
+            }
+
+            $old = $locked->roles()->value('name');
+            if ($old === $role) {
+                return;
+            }
+
+            if ($old === 'admin' || $role === 'admin') {
+                $this->profiles->assertPassword($actor, (string) $password);
+            }
+
+            if ($old === 'admin' && $admins->where('status', 'active')->whereNotIn('id', [$locked->id])->isEmpty()) {
+                throw ValidationException::withMessages(['role' => ['The last administrator cannot lose the admin role.']]);
+            }
+
+            $locked->roles()->sync([Role::where('name', $role)->value('id')]);
+            $locked->tokens()->delete();
+
+            // shortcut: app log instead of an audit table, until the team approves one.
+            Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $old, 'to' => $role]);
         });
 
         return $target->refresh()->load('roles');
