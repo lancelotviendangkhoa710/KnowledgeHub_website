@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
+use App\Http\Requests\Auth\DeleteAccountRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -51,6 +52,17 @@ class ProfileController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Password changed. Other sessions were signed out.',
+            'data' => null,
+        ]);
+    }
+
+    public function destroy(DeleteAccountRequest $request): JsonResponse
+    {
+        $this->profileService->deleteAccount($request->user(), $request->validated('current_password'));
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account deleted.',
             'data' => null,
         ]);
     }

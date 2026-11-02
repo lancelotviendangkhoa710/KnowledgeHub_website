@@ -139,6 +139,70 @@ class ProfileTest extends TestCase
         $this->withToken($current)->getJson('/api/me')->assertOk();
     }
 
+    public function test_delete_account_requires_current_password(): void
+    {
+        $user = $this->createUser('me@example.com');
+        $token = $user->createToken('t')->plainTextToken;
+
+        $this->withToken($token)->deleteJson('/api/me', ['current_password' => 'wrong'])
+            ->assertUnprocessable()->assertJsonValidationErrors('current_password');
+        $this->withToken($token)->deleteJson('/api/me')->assertUnprocessable();
+
+        $this->assertNotSoftDeleted('users', ['id' => $user->id]);
+        $this->assertSame(1, $user->tokens()->count());
+    }
+
+    public function test_deleting_account_soft_deletes_revokes_tokens_and_blocks_login(): void
+    {
+        $user = $this->createUser('me@example.com');
+        $token = $user->createToken('a')->plainTextToken;
+        $user->createToken('b');
+
+        $this->withToken($token)->deleteJson('/api/me', ['current_password' => 'password-123'])
+            ->assertOk()->assertJsonPath('data', null);
+
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertDatabaseCount('user_roles', 1);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson('/api/me')->assertUnauthorized();
+        $this->postJson('/api/auth/login', ['email' => 'me@example.com', 'password' => 'password-123'])
+            ->assertUnprocessable();
+    }
+
+    public function test_deleted_email_can_register_again(): void
+    {
+        $user = $this->createUser('me@example.com');
+        $this->withToken($user->createToken('t')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])->assertOk();
+        $this->app['auth']->forgetGuards();
+        $this->flushHeaders();
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Again', 'email' => 'me@example.com',
+            'password' => 'password-123', 'password_confirmation' => 'password-123',
+        ])->assertCreated();
+    }
+
+    public function test_last_active_admin_cannot_delete_their_account(): void
+    {
+        $admin = $this->createUser('admin@example.com');
+        $admin->roles()->attach(Role::where('name', 'admin')->value('id'));
+
+        $this->withToken($admin->createToken('t')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])
+            ->assertUnprocessable();
+
+        $this->assertNotSoftDeleted('users', ['id' => $admin->id]);
+
+        $second = $this->createUser('admin2@example.com');
+        $second->roles()->attach(Role::where('name', 'admin')->value('id'));
+        $this->app['auth']->forgetGuards();
+
+        $this->withToken($admin->createToken('t2')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])->assertOk();
+    }
+
     private function createUser(string $email, string $status = 'active'): User
     {
         $user = new User(['name' => 'Test User', 'email' => $email, 'password' => Hash::make('password-123')]);

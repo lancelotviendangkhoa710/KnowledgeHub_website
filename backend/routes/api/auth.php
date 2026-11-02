@@ -15,5 +15,6 @@ Route::post('/auth/logout', [AuthController::class, 'logout'])
 Route::middleware('auth:sanctum')->prefix('me')->group(function () {
     Route::get('/', [ProfileController::class, 'show']);
     Route::patch('/', [ProfileController::class, 'update']);
+    Route::delete('/', [ProfileController::class, 'destroy'])->middleware('throttle:6,1');
     Route::put('/password', [ProfileController::class, 'changePassword'])->middleware('throttle:6,1');
 });
