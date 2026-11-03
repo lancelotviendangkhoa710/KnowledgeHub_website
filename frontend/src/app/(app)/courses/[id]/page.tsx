@@ -53,7 +53,7 @@ export default function CourseDetailPage() {
 
   if (loading) {
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--text-muted)' }}>
+      <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
         Loading course curriculum...
       </div>
     );
@@ -62,8 +62,8 @@ export default function CourseDetailPage() {
   if (!article) {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '6rem 0' }}>
-        <h2 style={{ marginBottom: '1rem' }}>Course Material Not Found</h2>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+        <h2 style={{ marginBottom: '1rem', color: 'var(--color-charcoal)' }}>Course Material Not Found</h2>
+        <p style={{ color: 'var(--color-gray)', marginBottom: '2rem' }}>
           The requested course material does not exist or has been archived.
         </p>
         <Link href="/courses" className="btn btn-primary">
@@ -91,7 +91,7 @@ export default function CourseDetailPage() {
         } else {
           inCodeBlock = false;
           elements.push(
-            <pre key={`code-${idx}`}>
+            <pre key={`code-${idx}`} style={{ background: 'var(--color-charcoal)', color: '#F8FAFC', padding: '1.25rem', borderRadius: 'var(--radius-md)', margin: '1.5rem 0', overflowX: 'auto', border: '1px solid var(--color-border)' }}>
               <code>{codeBuffer.join('\n')}</code>
             </pre>
           );
@@ -105,17 +105,17 @@ export default function CourseDetailPage() {
       }
 
       if (line.startsWith('## ')) {
-        elements.push(<h2 key={idx}>{line.replace('## ', '')}</h2>);
+        elements.push(<h2 key={idx} style={{ color: 'var(--color-charcoal)', marginTop: '2.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', fontSize: '1.75rem', fontWeight: 700 }}>{line.replace('## ', '')}</h2>);
       } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={idx}>{line.replace('### ', '')}</h3>);
+        elements.push(<h3 key={idx} style={{ color: 'var(--color-charcoal)', marginTop: '1.75rem', marginBottom: '0.75rem', fontSize: '1.35rem', fontWeight: 600 }}>{line.replace('### ', '')}</h3>);
       } else if (line.startsWith('> ')) {
-        elements.push(<blockquote key={idx}>{line.replace('> ', '')}</blockquote>);
+        elements.push(<blockquote key={idx} style={{ borderLeft: '3px solid var(--color-primary)', background: 'var(--color-primary-faint)', padding: '1rem 1.5rem', borderRadius: '0 var(--radius-md) var(--radius-md) 0', margin: '1.5rem 0', color: 'var(--color-charcoal)', fontStyle: 'italic' }}>{line.replace('> ', '')}</blockquote>);
       } else if (line.startsWith('* ') || line.startsWith('- ')) {
-        elements.push(<li key={idx} style={{ marginLeft: '1.25rem' }}>{line.replace(/^[*\-]\s+/, '')}</li>);
+        elements.push(<li key={idx} style={{ marginLeft: '1.25rem', color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>{line.replace(/^[*\-]\s+/, '')}</li>);
       } else if (line.trim() === '---') {
-        elements.push(<hr key={idx} style={{ borderColor: 'var(--border-subtle)', margin: '2rem 0' }} />);
+        elements.push(<hr key={idx} style={{ borderColor: 'var(--color-border)', margin: '2rem 0' }} />);
       } else if (line.trim().length > 0) {
-        elements.push(<p key={idx}>{line}</p>);
+        elements.push(<p key={idx} style={{ color: 'var(--color-charcoal)', marginBottom: '1.25rem', lineHeight: 1.8, fontSize: '1.05rem' }}>{line}</p>);
       }
     });
 
@@ -123,62 +123,86 @@ export default function CourseDetailPage() {
   };
 
   return (
-    <div className="container" style={{ paddingTop: '2rem' }}>
+    <div className="container" style={{ paddingTop: '2.5rem' }}>
       {/* Breadcrumbs */}
-      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-        <Link href="/courses" style={{ color: 'var(--text-muted)' }}>
+      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-gray)', marginBottom: '1.75rem' }}>
+        <Link href="/courses" style={{ color: 'var(--color-gray)', transition: 'color var(--transition-fast)' }}>
           Courses
         </Link>
-        <span>/</span>
+        <span style={{ color: 'var(--color-gray-light)' }}>/</span>
         {article.category && (
           <>
-            <span style={{ color: 'var(--text-secondary)' }}>{article.category.name}</span>
-            <span>/</span>
+            <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{article.category.name}</span>
+            <span style={{ color: 'var(--color-gray-light)' }}>/</span>
           </>
         )}
-        <span style={{ color: 'var(--accent-gold)' }}>Current Course</span>
+        <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Current Course</span>
       </nav>
 
       {/* Reader Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '3rem', alignItems: 'start' }}>
         {/* Main Content Column */}
-        <article style={{ maxWidth: 'var(--max-w-reader)' }}>
-          <header style={{ marginBottom: '2.5rem', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '2rem' }}>
+        <article style={{ maxWidth: 'var(--max-w-reader)', background: 'var(--color-white)', padding: '2.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xs)' }}>
+          <header style={{ marginBottom: '2.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <span className="badge badge-gold">
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: 'var(--color-primary-pale)',
+                  color: 'var(--color-primary)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
                 Version {version?.version_no || 1}.0
               </span>
-              <span className="badge badge-status-published">
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: '#EBF5EE',
+                  color: '#1B6E34',
+                  border: '1px solid #D2EBD9',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
                 Verified Curriculum
               </span>
             </div>
 
-            <h1 style={{ marginBottom: '1.25rem', lineHeight: 1.2 }}>
+            <h1 style={{ marginBottom: '1.25rem', lineHeight: 1.2, color: 'var(--color-charcoal)', fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800 }}>
               {version?.title}
             </h1>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', color: 'var(--color-gray)', fontSize: '0.9rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div
                   style={{
                     width: 36,
                     height: 36,
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #38bdf8, #6366f1)',
+                    background: 'var(--color-primary-pale)',
+                    border: '1px solid var(--color-border)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#fff',
+                    color: 'var(--color-primary)',
                     fontWeight: 700,
+                    fontSize: '0.85rem',
                   }}
                 >
                   {article.author?.name ? article.author.name[0] : 'C'}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
                     {article.author?.name || 'Staff Engineer'}
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)' }}>
                     Published on {article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Recent'}
                   </div>
                 </div>
@@ -187,6 +211,7 @@ export default function CourseDetailPage() {
               {/* Actions */}
               <div style={{ display: 'flex', gap: '0.65rem' }}>
                 <button
+                  type="button"
                   onClick={toggleBookmark}
                   className="btn btn-secondary"
                   style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
@@ -198,6 +223,7 @@ export default function CourseDetailPage() {
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleShare}
                   className="btn btn-outline"
                   style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
@@ -218,27 +244,32 @@ export default function CourseDetailPage() {
         <aside style={{ position: 'sticky', top: 'calc(var(--header-height) + 1.5rem)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div
             style={{
-              background: 'var(--bg-glass-card)',
-              border: '1px solid var(--border-subtle)',
+              background: 'var(--color-white)',
+              border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-lg)',
               padding: '1.5rem',
+              boxShadow: 'var(--shadow-xs)',
             }}
           >
-            <h4 style={{ marginBottom: '1rem', color: 'var(--text-primary)' }}>Course Information</h4>
+            <h4 style={{ marginBottom: '1rem', color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '1.1rem' }}>
+              Course Information
+            </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
+              {article.category && (
+                <div>
+                  <span style={{ color: 'var(--color-gray)' }}>Domain: </span>
+                  <span style={{ color: 'var(--color-charcoal)', fontWeight: 600 }}>{article.category.name}</span>
+                </div>
+              )}
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>Domain: </span>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{article.category?.name}</span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--text-muted)' }}>Snapshot ID: </span>
-                <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  {version?.id}
+                <span style={{ color: 'var(--color-gray)' }}>Snapshot ID: </span>
+                <span style={{ color: 'var(--color-charcoal)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
+                  {version?.id || 'Draft (No Snapshot)'}
                 </span>
               </div>
               <div>
-                <span style={{ color: 'var(--text-muted)' }}>Peer Review: </span>
-                <span style={{ color: 'var(--accent-emerald)', fontWeight: 600 }}>Internal Core Approved</span>
+                <span style={{ color: 'var(--color-gray)' }}>Peer Review: </span>
+                <span style={{ color: '#1B6E34', fontWeight: 600 }}>Internal Core Approved</span>
               </div>
             </div>
           </div>
@@ -246,17 +277,33 @@ export default function CourseDetailPage() {
           {/* Contributor revision box */}
           <div
             style={{
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-medium)',
+              background: 'var(--color-primary-faint)',
+              border: '1px solid var(--color-primary-pale)',
               borderRadius: 'var(--radius-lg)',
               padding: '1.5rem',
+              boxShadow: 'var(--shadow-xs)',
             }}
           >
-            <span className="badge badge-gold" style={{ marginBottom: '0.5rem' }}>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: 'var(--color-primary-pale)',
+                color: 'var(--color-primary)',
+                border: '1px solid var(--color-border)',
+                marginBottom: '0.5rem',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                padding: '0.2rem 0.65rem',
+                borderRadius: 'var(--radius-full)',
+                display: 'inline-flex',
+              }}
+            >
               Author Actions
             </span>
-            <h4 style={{ marginBottom: '0.5rem' }}>Update Curriculum</h4>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+            <h4 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 600 }}>
+              Update Curriculum
+            </h4>
+            <p style={{ fontSize: '0.85rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.5 }}>
               Need to add sections or fix technical details? Create an immutable Version {(version?.version_no || 1) + 1}.
             </p>
             <Link

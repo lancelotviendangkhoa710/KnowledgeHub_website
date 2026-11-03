@@ -42,30 +42,81 @@ export default function CourseCard({ article }: CourseCardProps) {
     : 'In-depth peer-reviewed course material.';
 
   return (
-    <article className="course-card">
+    <article
+      className="course-card"
+      style={{
+        backgroundColor: 'var(--color-white)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '1.75rem',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        boxShadow: 'var(--shadow-xs)',
+        transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)',
+      }}
+    >
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             {article.category && (
-              <span className="badge badge-gold">
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: 'var(--color-primary-pale)',
+                  color: 'var(--color-primary)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
                 {article.category.name}
               </span>
             )}
             {article.status === 'draft' ? (
-              <span className="badge badge-status-draft">Draft</span>
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: 'var(--color-primary-pale)',
+                  color: 'var(--color-primary)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                Draft
+              </span>
             ) : (
-              <span className="badge badge-status-published">Verified</span>
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: '#EBF5EE',
+                  color: '#1B6E34',
+                  border: '1px solid #D2EBD9',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                Verified
+              </span>
             )}
           </div>
 
           <button
+            type="button"
             onClick={toggleBookmark}
             aria-label={bookmarked ? 'Remove from saved library' : 'Save course'}
             style={{
-              background: bookmarked ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+              background: bookmarked ? 'var(--color-primary-pale)' : 'var(--color-white)',
               border: '1px solid',
-              borderColor: bookmarked ? 'var(--accent-gold)' : 'var(--border-subtle)',
-              color: bookmarked ? 'var(--accent-gold)' : 'var(--text-muted)',
+              borderColor: bookmarked ? 'var(--color-primary)' : 'var(--color-border)',
+              color: bookmarked ? 'var(--color-primary)' : 'var(--color-gray)',
               width: 34,
               height: 34,
               borderRadius: 'var(--radius-sm)',
@@ -83,12 +134,21 @@ export default function CourseCard({ article }: CourseCardProps) {
         </div>
 
         <Link href={`/courses/${article.slug || article.id}`}>
-          <h3 style={{ marginBottom: '0.75rem', color: 'var(--text-primary)', transition: 'color var(--transition-fast)' }}>
+          <h3
+            style={{
+              marginBottom: '0.75rem',
+              color: 'var(--color-charcoal)',
+              fontSize: '1.2rem',
+              fontWeight: 600,
+              lineHeight: 1.3,
+              transition: 'color var(--transition-fast)',
+            }}
+          >
             {title}
           </h3>
         </Link>
 
-        <p style={{ fontSize: '0.92rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '0.92rem', color: 'var(--color-gray)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
           {excerpt}
         </p>
       </div>
@@ -101,11 +161,12 @@ export default function CourseCard({ article }: CourseCardProps) {
                 key={tag.id}
                 style={{
                   fontSize: '0.75rem',
-                  color: 'var(--text-muted)',
-                  background: 'rgba(255, 255, 255, 0.04)',
-                  padding: '0.15rem 0.5rem',
+                  color: 'var(--color-gray)',
+                  background: 'var(--color-off-white)',
+                  padding: '0.2rem 0.55rem',
                   borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--border-subtle)',
+                  border: '1px solid var(--color-border-light)',
+                  fontWeight: 500,
                 }}
               >
                 #{tag.name}
@@ -114,25 +175,26 @@ export default function CourseCard({ article }: CourseCardProps) {
           </div>
         )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <div
               style={{
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #38bdf8, #6366f1)',
+                background: 'var(--color-primary-pale)',
+                border: '1px solid var(--color-border)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#fff',
+                color: 'var(--color-primary)',
                 fontSize: '0.75rem',
                 fontWeight: 700,
               }}
             >
               {article.author?.name ? article.author.name[0] : 'C'}
             </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-charcoal)' }}>
               {article.author?.name || 'Contributor'}
             </span>
           </div>
@@ -142,10 +204,11 @@ export default function CourseCard({ article }: CourseCardProps) {
             style={{
               fontSize: '0.85rem',
               fontWeight: 600,
-              color: 'var(--accent-gold)',
+              color: 'var(--color-primary)',
               display: 'flex',
               alignItems: 'center',
               gap: '0.25rem',
+              transition: 'color var(--transition-fast)',
             }}
           >
             Study Course &rarr;

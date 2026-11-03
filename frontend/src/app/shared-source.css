@@ -2,45 +2,45 @@
 
 :root {
   /* Legacy/Layout tokens for backwards compatibility */
-  --color-primary: #f59e0b;
-  --color-primary-dark: #d97706;
-  --color-primary-light: #fbbf24;
-  --color-primary-pale: rgba(245, 158, 11, 0.15);
-  --color-primary-faint: rgba(245, 158, 11, 0.08);
+  --color-primary: #8B0000;
+  --color-primary-dark: #650000;
+  --color-primary-light: #B22222;
+  --color-primary-pale: #F3E5E5;
+  --color-primary-faint: #FBF0F0;
   --color-white: #ffffff;
-  --color-bg: #090c13;
-  --color-text: #f8fafc;
-  --color-muted: #94a3b8;
-  --color-gray-light: #64748b;
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-light: rgba(255, 255, 255, 0.05);
+  --color-bg: #FAF7F5;
+  --color-text: #242124;
+  --color-muted: #706B6B;
+  --color-gray-light: #9E9898;
+  --color-border: #E8DEDC;
+  --color-border-light: #F0E8E8;
   --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --content-width: 1240px;
   --radius: 12px;
   --shadow-subtle: 0 2px 12px rgba(0, 0, 0, 0.3);
 
   /* Color Palette -- Deep Editorial Obsidian & Warm Amber Illumination */
-  --bg-canvas: #090c13;
-  --bg-surface: #101522;
-  --bg-surface-elevated: #161c2e;
-  --bg-glass: rgba(22, 28, 46, 0.7);
-  --bg-glass-card: rgba(16, 21, 34, 0.75);
+  --bg-canvas: #FAF7F5;
+  --bg-surface: #FFFFFF;
+  --bg-surface-elevated: #FFFFFF;
+  --bg-glass: rgba(255, 255, 255, 0.9);
+  --bg-glass-card: #FFFFFF;
 
-  --border-subtle: rgba(255, 255, 255, 0.07);
-  --border-medium: rgba(255, 255, 255, 0.12);
+  --border-subtle: #F0E8E8;
+  --border-medium: #E8DEDC;
   --border-glow: rgba(245, 158, 11, 0.35);
 
-  --accent-gold: #f59e0b;
-  --accent-gold-light: #fef3c7;
-  --accent-gold-glow: rgba(245, 158, 11, 0.18);
+  --accent-gold: #8B0000;
+  --accent-gold-light: #F3E5E5;
+  --accent-gold-glow: rgba(139, 0, 0, 0.10);
   --accent-indigo: #6366f1;
   --accent-cyan: #38bdf8;
   --accent-emerald: #10b981;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
-  --text-faint: #64748b;
+  --text-primary: #242124;
+  --text-secondary: #706B6B;
+  --text-muted: #706B6B;
+  --text-faint: #9E9898;
 
   /* Typography */
   --font-display: 'Outfit', sans-serif;

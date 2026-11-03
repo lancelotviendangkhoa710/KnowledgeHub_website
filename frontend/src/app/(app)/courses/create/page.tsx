@@ -124,10 +124,23 @@ List the mathematical or operational guarantees enforced by this architecture.
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-            <span className="badge badge-gold">Contributor Studio</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>— Internal Publishing Workflow</span>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: 'var(--color-primary-pale)',
+                color: 'var(--color-primary)',
+                border: '1px solid var(--color-border)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                padding: '0.2rem 0.65rem',
+                borderRadius: 'var(--radius-full)',
+              }}
+            >
+              Contributor Studio
+            </span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>— Internal Publishing Workflow</span>
           </div>
-          <h1>Author Course Material</h1>
+          <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800 }}>Author Course Material</h1>
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -145,11 +158,11 @@ List the mathematical or operational guarantees enforced by this architecture.
       {successMessage && (
         <div
           style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
+            background: '#EBF5EE',
+            border: '1px solid #D2EBD9',
             borderRadius: 'var(--radius-md)',
             padding: '1rem 1.5rem',
-            color: 'var(--accent-emerald)',
+            color: '#1B6E34',
             marginBottom: '1.5rem',
             fontWeight: 600,
           }}
@@ -159,10 +172,18 @@ List the mathematical or operational guarantees enforced by this architecture.
       )}
 
       {/* Editor Form */}
-      <div style={{ background: 'var(--bg-glass-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-lg)', padding: '2rem' }}>
+      <div
+        style={{
+          background: 'var(--color-white)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '2.5rem',
+          boxShadow: 'var(--shadow-sm)',
+        }}
+      >
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
               Course Title *
             </label>
             <input
@@ -174,9 +195,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                 width: '100%',
                 padding: '0.75rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-medium)',
-                color: 'var(--text-primary)',
+                background: 'var(--color-white)',
+                border: '1.5px solid var(--color-border)',
+                color: 'var(--color-charcoal)',
                 fontSize: '1rem',
                 outline: 'none',
               }}
@@ -184,7 +205,7 @@ List the mathematical or operational guarantees enforced by this architecture.
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
               Domain Category *
             </label>
             <select
@@ -194,9 +215,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                 width: '100%',
                 padding: '0.75rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-medium)',
-                color: 'var(--text-primary)',
+                background: 'var(--color-white)',
+                border: '1.5px solid var(--color-border)',
+                color: 'var(--color-charcoal)',
                 fontSize: '0.95rem',
                 outline: 'none',
               }}
@@ -212,7 +233,7 @@ List the mathematical or operational guarantees enforced by this architecture.
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
               Canonical Slug URL
             </label>
             <input
@@ -224,18 +245,18 @@ List the mathematical or operational guarantees enforced by this architecture.
                 width: '100%',
                 padding: '0.75rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-medium)',
-                color: 'var(--text-muted)',
+                background: 'var(--color-white)',
+                border: '1.5px solid var(--color-border)',
+                color: 'var(--color-gray)',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '0.85rem',
+                fontSize: '0.875rem',
                 outline: 'none',
               }}
             />
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
               Tags (comma separated)
             </label>
             <input
@@ -247,9 +268,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                 width: '100%',
                 padding: '0.75rem 1rem',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-medium)',
-                color: 'var(--text-primary)',
+                background: 'var(--color-white)',
+                border: '1.5px solid var(--color-border)',
+                color: 'var(--color-charcoal)',
                 fontSize: '0.95rem',
                 outline: 'none',
               }}
@@ -259,7 +280,7 @@ List the mathematical or operational guarantees enforced by this architecture.
 
         {/* Content Body Editor or Preview */}
         <div style={{ marginBottom: '2rem' }}>
-          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
             Curriculum Body (Markdown & Code Supported) *
           </label>
 
@@ -269,13 +290,13 @@ List the mathematical or operational guarantees enforced by this architecture.
               style={{
                 minHeight: 380,
                 padding: '1.5rem',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-medium)',
+                background: 'var(--color-off-white)',
+                border: '1.5px solid var(--color-border)',
                 borderRadius: 'var(--radius-md)',
               }}
             >
-              <h2>{title || 'Untitled Course'}</h2>
-              <pre>
+              <h2 style={{ color: 'var(--color-charcoal)', marginTop: 0 }}>{title || 'Untitled Course'}</h2>
+              <pre style={{ background: 'var(--color-charcoal)', color: '#F8FAFC', padding: '1.25rem', borderRadius: 'var(--radius-md)' }}>
                 <code>{content}</code>
               </pre>
             </div>
@@ -288,9 +309,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                 width: '100%',
                 padding: '1.25rem',
                 borderRadius: 'var(--radius-md)',
-                background: 'var(--bg-surface-elevated)',
-                border: '1px solid var(--border-medium)',
-                color: 'var(--text-primary)',
+                background: 'var(--color-white)',
+                border: '1.5px solid var(--color-border)',
+                color: 'var(--color-charcoal)',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.95rem',
                 lineHeight: 1.6,
@@ -302,7 +323,7 @@ List the mathematical or operational guarantees enforced by this architecture.
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-subtle)', paddingTop: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border-light)', paddingTop: '1.5rem' }}>
           <Link href="/courses" className="btn btn-outline" style={{ fontSize: '0.875rem' }}>
             Cancel
           </Link>
