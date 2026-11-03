@@ -15,6 +15,8 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // One request at a time: while busy, role selects, Confirm and Cancel are all disabled, so a stale
+  // response can never close another account's confirmation or race a second change.
   const [busyId, setBusyId] = useState<string | null>(null);
   // A role change that touches `admin` waits here for the acting admin's password.
   const [roleChange, setRoleChange] = useState<{ user: AccountUser; role: AssignableRole } | null>(null);
@@ -112,8 +114,8 @@ export default function AdminUsersPage() {
         >
           <p className="auth-lead">Change {roleChange.user.name} to <strong>{roleChange.role}</strong>? Enter your password to confirm.</p>
           <input type="password" aria-label="Your password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-          <button className="button button--primary" type="submit" disabled={busyId === roleChange.user.id}>Confirm</button>
-          <button className="button button--secondary" type="button" onClick={() => { setRoleChange(null); setPassword(''); }}>Cancel</button>
+          <button className="button button--primary" type="submit" disabled={busyId !== null}>Confirm</button>
+          <button className="button button--secondary" type="button" disabled={busyId !== null} onClick={() => { setRoleChange(null); setPassword(''); }}>Cancel</button>
         </form>
       )}
 
@@ -161,7 +163,7 @@ export default function AdminUsersPage() {
                         <select
                           aria-label={`Change role of ${user.name}`}
                           value={user.roles.length === 1 ? user.roles[0] : ''}
-                          disabled={busyId === user.id}
+                          disabled={busyId !== null}
                           onChange={(event) => chooseRole(user, event.target.value as AssignableRole)}
                         >
                           {user.roles.length !== 1 && <option value="" disabled>{user.roles.join(', ') || 'no role'}</option>}
@@ -174,12 +176,12 @@ export default function AdminUsersPage() {
                       {self ? (
                         <small className="account-hint">You</small>
                       ) : user.status === 'pending' ? (
-                        <button className="button button--primary users-action" disabled={busyId === user.id} onClick={() => void changeStatus(user, 'active')}>Activate</button>
+                        <button className="button button--primary users-action" disabled={busyId !== null} onClick={() => void changeStatus(user, 'active')}>Activate</button>
                       ) : (
                         <select
                           aria-label={`Change status of ${user.name}`}
                           value={user.status}
-                          disabled={busyId === user.id}
+                          disabled={busyId !== null}
                           onChange={(event) => void changeStatus(user, event.target.value as Exclude<UserStatus, 'pending'>)}
                         >
                           <option value="active">active</option>
