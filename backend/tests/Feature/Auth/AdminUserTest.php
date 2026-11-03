@@ -41,6 +41,29 @@ class AdminUserTest extends TestCase
         $this->assertDatabaseHas('users', ['id' => $target->id, 'status' => 'active']);
     }
 
+    public function test_authorization_is_checked_before_validation(): void
+    {
+        $user = $this->createUser('u@example.com');
+        $admin = $this->createUser('admin@example.com', 'active', 'admin');
+        $userToken = $user->createToken('t')->plainTextToken;
+        $adminToken = $admin->createToken('t')->plainTextToken;
+
+        $this->withToken($userToken)->getJson('/api/admin/users?status=bogus')->assertForbidden();
+        $this->withToken($userToken)->patchJson("/api/admin/users/{$admin->id}/status", ['status' => 'bogus'])->assertForbidden();
+        $this->withToken($adminToken)->patchJson("/api/admin/users/{$admin->id}/status", ['status' => 'bogus'])->assertForbidden();
+    }
+
+    public function test_last_active_admin_cannot_be_deactivated(): void
+    {
+        $actor = $this->createUser('actor@example.com', 'active', 'admin');
+        $target = $this->createUser('target@example.com', 'active', 'admin');
+        $token = $actor->createToken('t')->plainTextToken;
+        $actor->forceFill(['status' => 'inactive'])->save();
+
+        $this->withToken($token)->patchJson("/api/admin/users/{$target->id}/status", ['status' => 'banned'])->assertUnprocessable();
+        $this->assertDatabaseHas('users', ['id' => $target->id, 'status' => 'active']);
+    }
+
     public function test_admin_lists_filters_and_paginates_without_secrets(): void
     {
         $admin = $this->createUser('admin@example.com', 'active', 'admin');

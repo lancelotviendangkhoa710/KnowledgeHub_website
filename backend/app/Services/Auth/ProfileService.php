@@ -30,12 +30,14 @@ class ProfileService
     {
         $this->assertPassword($user, $currentPassword);
 
-        $user->update(['password' => $newPassword]);
+        $this->database->transaction(function () use ($user, $newPassword): void {
+            $user->update(['password' => $newPassword]);
 
-        $current = $user->currentAccessToken();
-        $user->tokens()
-            ->when($current instanceof PersonalAccessToken, fn ($q) => $q->where('id', '!=', $current->getKey()))
-            ->delete();
+            $current = $user->currentAccessToken();
+            $user->tokens()
+                ->when($current instanceof PersonalAccessToken, fn ($q) => $q->where('id', '!=', $current->getKey()))
+                ->delete();
+        });
     }
 
     /**
@@ -45,9 +47,12 @@ class ProfileService
      */
     public function deleteAccount(User $user, string $currentPassword): void
     {
-        $this->assertPassword($user, $currentPassword);
+        $this->database->transaction(function () use ($user, $currentPassword): void {
+            // Same lock order as changeStatus: admin role row first, then the user row.
+            $this->database->table('roles')->where('name', 'admin')->lockForUpdate()->value('id');
+            $locked = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertPassword($locked, $currentPassword);
 
-        $this->database->transaction(function () use ($user): void {
             // The last admin cannot leave the platform without an administrator.
             if ($user->roles()->where('name', 'admin')->exists() && $this->otherActiveAdmins($user) === 0) {
                 throw ValidationException::withMessages([

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { accountClient, errorMessage } from '@/lib/accountClient';
-import { getCurrentUser, logout, setCurrentUser } from '@/lib/auth';
+import { getCurrentUser, setCurrentUser, subscribeCurrentUser } from '@/lib/auth';
+import { setAccessToken } from '@/lib/authToken';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -32,12 +33,22 @@ export default function AccountPage() {
   const [deleteNotice, setDeleteNotice] = useState<Notice>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Follow sign-out / sign-in done elsewhere (e.g. the header).
+  useEffect(() => subscribeCurrentUser(() => setUser(getCurrentUser())), []);
+
   useEffect(() => {
     if (!getCurrentUser()) return;
     accountClient.me().then((response) => {
       setUser(response.data.user);
-      setName(response.data.user.name);
-    }).catch(() => undefined);
+      // Keep what the user already typed while /me was loading.
+      setName((current) => (current === (getCurrentUser()?.name ?? '') ? response.data.user.name : current));
+    }).catch((error: { status?: number }) => {
+      // Token revoked: drop the local session so the page shows signed-out state.
+      if (error?.status === 401) {
+        setAccessToken(null);
+        setCurrentUser(null);
+      }
+    });
   }, []);
 
   if (!user) {
@@ -62,8 +73,11 @@ export default function AccountPage() {
     setProfileNotice(null);
     try {
       const updated = (await accountClient.updateName(name.trim())).data.user;
-      setUser(updated);
-      setCurrentUser(updated);
+      // Skip if the user signed out while the request was in flight.
+      if (getCurrentUser()?.id === updated.id) {
+        setUser(updated);
+        setCurrentUser(updated);
+      }
       setProfileNotice({ kind: 'ok', text: 'Profile updated.' });
     } catch (error) {
       setProfileNotice({ kind: 'error', text: errorMessage(error, 'Unable to update your profile.') });
@@ -93,9 +107,9 @@ export default function AccountPage() {
     setDeleteNotice(null);
     try {
       await accountClient.deleteAccount(deletePassword);
-      // The server already revoked every token; logout() clears local state
-      // (its 401 is expected and handled).
-      await logout();
+      // The server already revoked every token, so clear local state directly.
+      setAccessToken(null);
+      setCurrentUser(null);
       router.push('/');
     } catch (error) {
       setDeleteNotice({ kind: 'error', text: errorMessage(error, 'Unable to delete your account.') });

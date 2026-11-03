@@ -186,7 +186,8 @@
 @media (max-width: 640px) {
   .account-page { width: min(100% - 2rem, 40rem); padding: 2.5rem 0; }
   .account-card { padding: 1.25rem; }
-  .users-table thead { display: none; }
+  /* Visually hidden, not display:none, so screen readers keep the column headers. */
+  .users-table thead { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .users-table td { display: flex; justify-content: space-between; gap: 1rem; }
   .users-table td::before { content: attr(data-label); color: var(--color-gray); font-weight: var(--weight-semibold); }
 }

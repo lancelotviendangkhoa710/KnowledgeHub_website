@@ -60,18 +60,21 @@ class AuthService
     /** @return array{user: User, token: NewAccessToken} */
     public function login(string $email, string $password): array
     {
-        $user = User::query()->where('email', $email)->first();
+        // Lock the row so a concurrent status change cannot leave a fresh token behind.
+        return $this->database->transaction(function () use ($email, $password): array {
+            $user = User::query()->where('email', $email)->lockForUpdate()->first();
 
-        if (! $user || $user->status !== 'active' || ! $this->hash->check($password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are invalid.'],
-            ]);
-        }
+            if (! $user || $user->status !== 'active' || ! $this->hash->check($password, $user->password)) {
+                throw ValidationException::withMessages([
+                    'email' => ['The provided credentials are invalid.'],
+                ]);
+            }
 
-        return [
-            'user' => $user->load('roles'),
-            'token' => $user->createToken('web'),
-        ];
+            return [
+                'user' => $user->load('roles'),
+                'token' => $user->createToken('web'),
+            ];
+        });
     }
 
     public function logout(User $user, ?string $plainToken = null): void

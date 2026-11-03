@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccountUser, AdminUserFilters, adminUserClient, errorMessage, UserStatus } from '@/lib/accountClient';
 import { getCurrentUser } from '@/lib/auth';
 
@@ -17,23 +17,28 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const latestRequest = useRef(0);
+
   const load = useCallback(async () => {
+    const requestId = ++latestRequest.current;
     setLoading(true);
     setError(null);
     try {
       const response = await adminUserClient.list(filters);
+      if (requestId !== latestRequest.current) return; // a newer request superseded this one
       setUsers(response.data);
       setMeta(response.meta);
     } catch (e) {
-      setError(errorMessage(e, 'Unable to load users.'));
+      if (requestId === latestRequest.current) setError(errorMessage(e, 'Unable to load users.'));
     } finally {
-      setLoading(false);
+      if (requestId === latestRequest.current) setLoading(false);
     }
   }, [filters]);
 
   useEffect(() => {
     if (me) void load();
-  }, [me, load]);
+  }, [me, load, refreshVersion]);
 
   if (!me) {
     return (
@@ -52,8 +57,9 @@ export default function AdminUsersPage() {
     setBusyId(user.id);
     setError(null);
     try {
-      const updated = (await adminUserClient.setStatus(user.id, status)).data.user;
-      setUsers((current) => current.map((u) => (u.id === updated.id ? updated : u)));
+      await adminUserClient.setStatus(user.id, status);
+      // Reload with the current filters so the row, total and pages stay correct.
+      setRefreshVersion((version) => version + 1);
     } catch (e) {
       setError(errorMessage(e, 'Unable to update this user.'));
     } finally {
