@@ -170,7 +170,8 @@ audit table exists yet. Returns `data.user`.
 
 **AUTH-03 tests**: `backend/tests/Feature/Auth/AdminUserRoleTest.php` (RBAC for
 all four actors, own-role guard, password confirmation, last-admin guard,
-legacy multi-role targets, missing role row, throttling, token revocation).
+legacy multi-role targets, missing role row, throttling, token revocation; the
+last-admin guard is tested at service level only, as the API cannot reach it).
 
 **AUTH-02 tests**: `ProfileTest.php` (ownership, mass-assignment, password,
 deletion, last-admin guard) and `AdminUserTest.php` (RBAC for all four actors,

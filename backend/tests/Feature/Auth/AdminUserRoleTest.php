@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class AdminUserRoleTest extends TestCase
@@ -129,6 +130,30 @@ class AdminUserRoleTest extends TestCase
 
         $service->changeRole($admin, $target, 'contributor', null);
         Log::shouldHaveReceived('info')->once();
+    }
+
+    public function test_last_active_admin_guard_blocks_removing_the_admin_role(): void
+    {
+        $only = $this->createUser('only@example.com', 'active', 'admin');
+
+        // Unreachable through the API (the policy blocks self-change); called on the service directly.
+        $this->expectException(ValidationException::class);
+        try {
+            app(AdminUserService::class)->changeRole($only, $only, 'user', 'password-123');
+        } finally {
+            $this->assertSame(['admin'], $this->roles($only));
+        }
+    }
+
+    public function test_logging_failure_after_commit_does_not_break_the_role_change(): void
+    {
+        $admin = $this->createUser('admin@example.com', 'active', 'admin');
+        $target = $this->createUser('t@example.com');
+        Log::shouldReceive('info')->andThrow(new \RuntimeException('log down'));
+
+        app(AdminUserService::class)->changeRole($admin, $target, 'contributor', null);
+
+        $this->assertSame(['contributor'], $this->roles($target));
     }
 
     public function test_missing_role_row_is_a_validation_error(): void

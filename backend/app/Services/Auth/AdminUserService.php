@@ -120,7 +120,13 @@ class AdminUserService
             $locked->tokens()->delete();
 
             // shortcut: app log instead of an audit table, until the team approves one.
-            $this->database->afterCommit(fn () => Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $current, 'to' => $role]));
+            // Best effort: the role is already committed, so a logging failure must not turn into a 500.
+            $this->database->afterCommit(function () use ($actor, $locked, $current, $role): void {
+                try {
+                    Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $current, 'to' => $role]);
+                } catch (\Throwable) {
+                }
+            });
         });
 
         return $target->refresh()->load('roles');
