@@ -79,17 +79,17 @@ class AdminUserRoleTest extends TestCase
         $this->assertSame(['admin'], $this->roles($admin));
     }
 
-    public function test_last_active_admin_cannot_lose_the_role(): void
+    public function test_actor_deactivated_after_authentication_cannot_change_roles(): void
     {
         $actor = $this->createUser('actor@example.com', 'active', 'admin');
         $target = $this->createUser('target@example.com', 'active', 'admin');
         $token = $actor->createToken('t')->plainTextToken;
 
-        // The actor stops being an active admin, leaving the target as the only one.
+        // Deactivated while the token is still held (e.g. mid-request); the service re-checks under lock.
         $actor->forceFill(['status' => 'inactive'])->save();
 
         $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'user', 'current_password' => 'password-123'])
-            ->assertUnprocessable();
+            ->assertForbidden();
         $this->assertSame(['admin'], $this->roles($target));
     }
 

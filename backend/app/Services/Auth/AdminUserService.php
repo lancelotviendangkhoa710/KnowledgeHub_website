@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -83,7 +84,10 @@ class AdminUserService
             $locked = $rows->get($target->getKey());
 
             // The policy ran before this transaction; the actor may have been demoted since.
-            if ($lockedActor === null || $locked === null || ! $lockedActor->roles()->where('name', 'admin')->exists()) {
+            if ($locked === null) {
+                throw (new ModelNotFoundException)->setModel(User::class, [$target->getKey()]);
+            }
+            if ($lockedActor === null || $lockedActor->status !== 'active' || ! $lockedActor->roles()->where('name', 'admin')->exists()) {
                 throw new AuthorizationException;
             }
 
@@ -116,7 +120,7 @@ class AdminUserService
             $locked->tokens()->delete();
 
             // shortcut: app log instead of an audit table, until the team approves one.
-            Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $current, 'to' => $role]);
+            $this->database->afterCommit(fn () => Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $current, 'to' => $role]));
         });
 
         return $target->refresh()->load('roles');

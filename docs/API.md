@@ -158,13 +158,19 @@ through the endpoint below.
 Admin only (`401` for Guest, `403` for User/Contributor; an admin cannot change
 their own role). Throttled to 6 requests per minute (`429`). Body:
 `role` in `user|contributor|admin` and optional `current_password`; other keys
-are rejected with `422`. Each user has exactly one role; this call replaces it
-(same role again is a no-op). Granting or revoking `admin` requires the acting
+are rejected with `422`. New accounts have exactly one role; legacy accounts
+may hold several rows in `user_roles` (`data.user.roles` is an array), and this
+call replaces all of them with the requested role (same single role again is a
+no-op). Granting or revoking `admin` requires the acting
 admin's `current_password`. Fails with `422` when the target is `pending` or
 `banned`, or when it would remove the last active admin; soft-deleted or
 malformed ids return `404`. A change revokes all of the target's tokens. The
 change is logged to the application log (actor, target, old and new role); no
 audit table exists yet. Returns `data.user`.
+
+**AUTH-03 tests**: `backend/tests/Feature/Auth/AdminUserRoleTest.php` (RBAC for
+all four actors, own-role guard, password confirmation, last-admin guard,
+legacy multi-role targets, missing role row, throttling, token revocation).
 
 **AUTH-02 tests**: `ProfileTest.php` (ownership, mass-assignment, password,
 deletion, last-admin guard) and `AdminUserTest.php` (RBAC for all four actors,
