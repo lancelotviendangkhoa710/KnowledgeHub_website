@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getCurrentUser, logout } from '@/lib/auth';
+import { getCurrentUser, logout, subscribeCurrentUser } from '@/lib/auth';
 
 export default function AuthActions() {
-  const [userName, setUserName] = useState<string | null>(null);
+  const [user, setUser] = useState(getCurrentUser);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
-    setUserName(getCurrentUser()?.name ?? null);
+    setUser(getCurrentUser());
+    return subscribeCurrentUser(() => setUser(getCurrentUser()));
   }, []);
 
   async function handleLogout() {
@@ -19,7 +20,6 @@ export default function AuthActions() {
 
     try {
       await logout();
-      setUserName(null);
     } catch {
       setLogoutError('Could not sign out. Please try again.');
     } finally {
@@ -27,7 +27,7 @@ export default function AuthActions() {
     }
   }
 
-  if (!userName) {
+  if (!user) {
     return (
       <div className="site-header__actions">
         <Link className="site-header__action" href="/login">Sign in</Link>
@@ -38,7 +38,8 @@ export default function AuthActions() {
 
   return (
     <div className="site-header__actions">
-      <span aria-label={`Signed in as ${userName}`}>{userName}</span>
+      {user.roles.includes('admin') && <Link href="/admin/users">Users</Link>}
+      <Link href="/account" aria-label={`Account of ${user.name}`}>{user.name}</Link>
       <button type="button" className="button button--secondary" onClick={handleLogout} disabled={loggingOut}>
         {loggingOut ? 'Signing out...' : 'Sign out'}
       </button>

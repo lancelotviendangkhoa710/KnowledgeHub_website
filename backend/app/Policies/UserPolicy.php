@@ -29,4 +29,34 @@ class UserPolicy
     {
         return $user->currentAccessToken() !== null;
     }
+
+    /**
+     * Any authenticated user may read and edit their own profile; the profile
+     * endpoints never take a user id, so ownership is implicit.
+     */
+    public function viewProfile(User $user): bool
+    {
+        return true;
+    }
+
+    public function viewAny(User $user): bool
+    {
+        return $this->isAdmin($user);
+    }
+
+    public function view(User $user, User $target): bool
+    {
+        return $this->isAdmin($user);
+    }
+
+    /** Admins manage other accounts; nobody changes their own status. */
+    public function updateStatus(User $user, User $target): bool
+    {
+        return $this->isAdmin($user) && $user->getKey() !== $target->getKey();
+    }
+
+    private function isAdmin(User $user): bool
+    {
+        return $user->roles()->where('name', 'admin')->exists();
+    }
 }
