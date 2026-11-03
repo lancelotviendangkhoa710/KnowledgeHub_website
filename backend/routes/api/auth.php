@@ -25,4 +25,6 @@ Route::middleware('auth:sanctum')->prefix('admin/users')->group(function () {
     Route::get('/', [AdminUserController::class, 'index']);
     Route::get('/{user}', [AdminUserController::class, 'show'])->whereUuid('user');
     Route::patch('/{user}/status', [AdminUserController::class, 'updateStatus'])->whereUuid('user');
+    // Granting/revoking admin checks the actor's password, so cap guessing like PUT /me/password.
+    Route::put('/{user}/role', [AdminUserController::class, 'updateRole'])->whereUuid('user')->middleware('throttle:6,1');
 });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ListUsersRequest;
+use App\Http\Requests\Auth\UpdateUserRoleRequest;
 use App\Http\Requests\Auth\UpdateUserStatusRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -52,6 +53,21 @@ class AdminUserController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'User status updated.',
+            'data' => ['user' => new UserResource($updated)],
+        ]);
+    }
+
+    public function updateRole(UpdateUserRoleRequest $request, User $user): JsonResponse
+    {
+        $this->authorize('updateRole', $user);
+
+        $updated = $this->service->changeRole(
+            $request->user(), $user, $request->validated('role'), $request->validated('current_password'),
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User role updated.',
             'data' => ['user' => new UserResource($updated)],
         ]);
     }

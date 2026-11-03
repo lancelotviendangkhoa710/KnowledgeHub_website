@@ -55,6 +55,12 @@ class UserPolicy
         return $this->isAdmin($user) && $user->getKey() !== $target->getKey();
     }
 
+    /** Admins assign roles to other accounts; nobody changes their own role. */
+    public function updateRole(User $user, User $target): bool
+    {
+        return $this->updateStatus($user, $target);
+    }
+
     private function isAdmin(User $user): bool
     {
         return $user->roles()->where('name', 'admin')->exists();
