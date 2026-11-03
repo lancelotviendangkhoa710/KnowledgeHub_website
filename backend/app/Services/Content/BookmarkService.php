@@ -4,58 +4,67 @@ namespace App\Services\Content;
 
 use App\Models\Article;
 use App\Models\Bookmark;
-use App\Models\User;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class BookmarkService
 {
     /**
-     * Get paginated articles bookmarked by the user.
+     * Get paginated published articles bookmarked by user.
      */
-    public function getUserBookmarks(User $user, int $perPage = 15): LengthAwarePaginator
+    public function getUserBookmarks(string $userId, int $perPage = 15): LengthAwarePaginator
     {
-        return Article::query()
-            ->whereHas('bookmarks', function ($query) use ($user) {
-                $query->where('user_id', $user->id);
+        return Article::published()
+            ->whereHas('bookmarks', function ($query) use ($userId) {
+                $query->where('user_id', $userId);
             })
-            ->with(['author:id,name', 'category:id,name,slug', 'publishedVersion', 'tags:id,name,slug'])
-            ->published()
-            ->latest('created_at')
+            ->with(['author', 'category', 'publishedVersion', 'tags'])
+            ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     /**
-     * Toggle bookmark state for a given user and article.
-     *
-     * @return array{bookmarked: bool}
+     * Bookmark an article for a user.
      */
-    public function toggleBookmark(User $user, string $articleId): array
+    public function bookmark(string $userId, string $articleId): Bookmark
     {
-        $existing = Bookmark::where('user_id', $user->id)
+        $article = Article::published()->find($articleId);
+        if (!$article) {
+            throw new \InvalidArgumentException('Article not found or not published.');
+        }
+
+        $bookmark = Bookmark::where('user_id', $userId)
             ->where('article_id', $articleId)
             ->first();
 
-        if ($existing) {
-            $existing->delete();
-            return ['bookmarked' => false];
+        if ($bookmark) {
+            return $bookmark;
         }
 
-        Bookmark::create([
-            'user_id' => $user->id,
+        return Bookmark::create([
+            'user_id' => $userId,
             'article_id' => $articleId,
             'created_at' => now(),
         ]);
-
-        return ['bookmarked' => true];
     }
 
     /**
-     * Check if user has bookmarked a specific article.
+     * Remove a bookmark.
      */
-    public function isBookmarked(User $user, string $articleId): bool
+    public function unbookmark(string $userId, string $articleId): bool
     {
-        return Bookmark::where('user_id', $user->id)
+        return Bookmark::where('user_id', $userId)
+            ->where('article_id', $articleId)
+            ->delete() > 0;
+    }
+
+    /**
+     * Check if an article is bookmarked by a user.
+     */
+    public function isBookmarked(string $userId, string $articleId): bool
+    {
+        return Bookmark::where('user_id', $userId)
             ->where('article_id', $articleId)
             ->exists();
     }
 }
+

@@ -20,8 +20,16 @@ class Category extends Model
         'parent_id',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+        ];
+    }
+
     /**
-     * Parent category in the tree.
+     * Parent category in hierarchy (self-referencing FK).
      */
     public function parent(): BelongsTo
     {
@@ -29,7 +37,7 @@ class Category extends Model
     }
 
     /**
-     * Subcategories of this category.
+     * Child categories in hierarchy.
      */
     public function children(): HasMany
     {
@@ -37,10 +45,11 @@ class Category extends Model
     }
 
     /**
-     * Articles / courses in this category.
+     * Articles assigned to this category.
      */
     public function articles(): HasMany
     {
         return $this->hasMany(Article::class, 'category_id');
     }
 }
+

@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Content\CreateArticleRequest;
+use App\Http\Requests\Content\PublishArticleRequest;
 use App\Http\Requests\Content\UpdateArticleRequest;
 use App\Models\Article;
 use App\Services\Content\ArticleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
@@ -16,55 +20,71 @@ class ArticleController extends Controller
         protected ArticleService $articleService
     ) {}
 
+    protected function getUserId(?Request $request): ?string
+    {
+        $user = $request?->user();
+        if (!$user) {
+            return null;
+        }
+
+        return (string) ($user->getRawOriginal('id') ?: ($user->getAttributes()['id'] ?? $user->getKey()));
+    }
+
     /**
-     * Display a listing of articles/courses.
+     * List published articles (or author's articles if requested by authenticated user).
      */
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['category_id', 'tag_slug', 'search', 'status']);
         $perPage = (int) $request->query('per_page', 15);
+        $userId = $this->getUserId($request);
 
-        $articles = $this->articleService->getArticles($filters, $request->user(), $perPage);
+        if ($request->boolean('my_articles') && $userId) {
+            $articles = $this->articleService->listAuthorArticles(
+                $userId,
+                $request->only(['status']),
+                $perPage
+            );
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $articles->items(),
-            'meta' => [
-                'current_page' => $articles->currentPage(),
-                'per_page' => $articles->perPage(),
-                'total' => $articles->total(),
-                'last_page' => $articles->lastPage(),
-            ],
-        ]);
+            return response()->json($articles);
+        }
+
+        $filters = $request->only(['category_id', 'category_slug', 'tag_id', 'tag_slug', 'author_id', 'search', 'sort']);
+        $articles = $this->articleService->listPublished($filters, $perPage);
+
+        return response()->json($articles);
     }
 
     /**
-     * Display a single article/course by ID or slug.
+     * Show a published article by slug or ID (or own draft/archived for authorized user).
      */
-    public function show(Request $request, string $identifier): JsonResponse
+    public function show(Request $request, string $slugOrId): JsonResponse
     {
-        $article = $this->articleService->getArticleBySlugOrId($identifier, $request->user());
+        $article = $this->articleService->getPublishedBySlug($slugOrId);
 
-        if (! $article) {
+        if (!$article) {
+            if (Str::isUuid($slugOrId)) {
+                $article = $this->articleService->getById($slugOrId);
+            } else {
+                $article = $this->articleService->getBySlug($slugOrId);
+            }
+        }
+
+        if (!$article) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Article not found.',
-            ], 404);
+            ], Response::HTTP_NOT_FOUND);
         }
 
-        // Authorize access according to ArticlePolicy
-        if ($request->user()) {
-            if (! $request->user()->can('view', $article)) {
+        if (!$article->isPublished()) {
+            if (!$request->user()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Unauthorized to view this draft or archived article.',
-                ], 403);
+                    'message' => 'This action is unauthorized.',
+                ], Response::HTTP_FORBIDDEN);
             }
-        } elseif ($article->status !== Article::STATUS_PUBLISHED) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized to view unpublished article.',
-            ], 401);
+
+            Gate::authorize('view', $article);
         }
 
         return response()->json([
@@ -74,65 +94,51 @@ class ArticleController extends Controller
     }
 
     /**
-     * Store a newly created course / article with initial version (v1).
+     * Create a new article with initial version 1 (status: draft).
      */
     public function store(CreateArticleRequest $request): JsonResponse
     {
-        $article = $this->articleService->createArticle(
-            $request->user(),
-            $request->validated()
-        );
+        $article = $this->articleService->create($request->validated(), $request->user());
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Course draft created successfully with Version 1.',
+            'message' => 'Article draft created successfully.',
             'data' => $article,
-        ], 201);
+        ], Response::HTTP_CREATED);
     }
 
     /**
-     * Update an article, creating a new immutable version.
+     * Update an article by creating a new version snapshot.
      */
     public function update(UpdateArticleRequest $request, Article $article): JsonResponse
     {
-        $updatedArticle = $this->articleService->updateArticle(
-            $article,
-            $request->user(),
-            $request->validated()
-        );
+        $version = $this->articleService->createVersion($article, $request->validated(), $request->user());
 
         return response()->json([
             'status' => 'success',
-            'message' => 'New version created and saved successfully.',
-            'data' => $updatedArticle,
+            'message' => 'New article version created successfully.',
+            'data' => $version,
         ]);
     }
 
     /**
-     * Publish an article directly (Contributor or Admin).
+     * Publish an article (setting published_version_id and status=published).
      */
-    public function publish(Request $request, Article $article): JsonResponse
+    public function publish(PublishArticleRequest $request, Article $article): JsonResponse
     {
-        if (! $request->user() || ! $request->user()->can('publish', $article)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized to publish this article.',
-            ], 403);
-        }
-
         try {
-            $publishedArticle = $this->articleService->publishArticle($article);
+            $published = $this->articleService->publish($article, $request->validated('version_id'));
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Article published successfully.',
-                'data' => $publishedArticle,
+                'data' => $published,
             ]);
-        } catch (\RuntimeException $e) {
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 
@@ -141,39 +147,42 @@ class ArticleController extends Controller
      */
     public function archive(Request $request, Article $article): JsonResponse
     {
-        if (! $request->user() || ! $request->user()->can('archive', $article)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized to archive this article.',
-            ], 403);
-        }
+        Gate::authorize('archive', $article);
 
-        $archivedArticle = $this->articleService->archiveArticle($article);
+        $archived = $this->articleService->archive($article);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Article archived successfully.',
-            'data' => $archivedArticle,
+            'data' => $archived,
         ]);
     }
 
     /**
-     * Soft-delete an article.
+     * Soft delete an article.
      */
     public function destroy(Request $request, Article $article): JsonResponse
     {
-        if (! $request->user() || ! $request->user()->can('delete', $article)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized to delete this article.',
-            ], 403);
-        }
+        Gate::authorize('delete', $article);
 
-        $this->articleService->deleteArticle($article);
+        $this->articleService->delete($article);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Article deleted successfully.',
+        ]);
+    }
+
+    /**
+     * List all versions of an article.
+     */
+    public function versions(Request $request, Article $article): JsonResponse
+    {
+        Gate::authorize('view', $article);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $article->versions()->with('creator')->get(),
         ]);
     }
 }

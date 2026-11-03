@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
-use App\Models\Article;
 use App\Services\Content\BookmarkService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class BookmarkController extends Controller
 {
@@ -15,60 +15,55 @@ class BookmarkController extends Controller
     ) {}
 
     /**
-     * Display a listing of bookmarked articles for the authenticated user.
+     * List bookmarked articles for the current user.
      */
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
-        if (! $user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthenticated.',
-            ], 401);
-        }
-
         $perPage = (int) $request->query('per_page', 15);
-        $bookmarks = $this->bookmarkService->getUserBookmarks($user, $perPage);
+        $bookmarks = $this->bookmarkService->getUserBookmarks($request->user()->id, $perPage);
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $bookmarks->items(),
-            'meta' => [
-                'current_page' => $bookmarks->currentPage(),
-                'per_page' => $bookmarks->perPage(),
-                'total' => $bookmarks->total(),
-                'last_page' => $bookmarks->lastPage(),
-            ],
-        ]);
+        return response()->json($bookmarks);
     }
 
     /**
-     * Toggle bookmark status for an article.
+     * Bookmark an article.
      */
-    public function toggle(Request $request, string $articleId): JsonResponse
+    public function store(Request $request, string $articleId): JsonResponse
     {
-        $user = $request->user();
-        if (! $user) {
+        try {
+            $bookmark = $this->bookmarkService->bookmark($request->user()->id, $articleId);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Article bookmarked successfully.',
+                'data' => $bookmark,
+            ], Response::HTTP_CREATED);
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthenticated.',
-            ], 401);
+                'message' => $e->getMessage(),
+            ], Response::HTTP_NOT_FOUND);
         }
+    }
 
-        $article = Article::find($articleId);
-        if (! $article) {
+    /**
+     * Remove a bookmark.
+     */
+    public function destroy(Request $request, string $articleId): JsonResponse
+    {
+        $removed = $this->bookmarkService->unbookmark($request->user()->id, $articleId);
+
+        if (!$removed) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Article not found.',
-            ], 404);
+                'message' => 'Bookmark not found.',
+            ], Response::HTTP_NOT_FOUND);
         }
-
-        $result = $this->bookmarkService->toggleBookmark($user, $articleId);
 
         return response()->json([
             'status' => 'success',
-            'message' => $result['bookmarked'] ? 'Article bookmarked.' : 'Bookmark removed.',
-            'data' => $result,
+            'message' => 'Bookmark removed successfully.',
         ]);
     }
 }
+

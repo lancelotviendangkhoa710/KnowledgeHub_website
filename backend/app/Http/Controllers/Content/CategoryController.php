@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Content;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Content\CategoryRequest;
+use App\Http\Requests\Content\CreateCategoryRequest;
+use App\Http\Requests\Content\UpdateCategoryRequest;
 use App\Models\Category;
 use App\Services\Content\CategoryService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class CategoryController extends Controller
 {
@@ -15,11 +18,11 @@ class CategoryController extends Controller
     ) {}
 
     /**
-     * Display a tree listing of categories.
+     * Get category tree hierarchy.
      */
     public function index(): JsonResponse
     {
-        $categories = $this->categoryService->getCategoryTree();
+        $categories = $this->categoryService->getTree();
 
         return response()->json([
             'status' => 'success',
@@ -28,17 +31,17 @@ class CategoryController extends Controller
     }
 
     /**
-     * Display the specified category by slug.
+     * Get a specific category by slug.
      */
     public function show(string $slug): JsonResponse
     {
-        $category = $this->categoryService->getBySlug($slug);
+        $category = $this->categoryService->findBySlug($slug);
 
-        if (! $category) {
+        if (!$category) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Category not found.',
-            ], 404);
+            ], Response::HTTP_NOT_FOUND);
         }
 
         return response()->json([
@@ -48,50 +51,82 @@ class CategoryController extends Controller
     }
 
     /**
-     * Store a newly created category (Admin only).
+     * Create a new category (Admin only).
      */
-    public function store(CategoryRequest $request): JsonResponse
+    public function store(CreateCategoryRequest $request): JsonResponse
     {
-        $category = $this->categoryService->createCategory($request->validated());
+        $category = $this->categoryService->create($request->validated());
 
         return response()->json([
             'status' => 'success',
             'message' => 'Category created successfully.',
             'data' => $category,
-        ], 201);
+        ], Response::HTTP_CREATED);
     }
 
     /**
-     * Update the specified category (Admin only).
+     * Update an existing category (Admin only).
      */
-    public function update(CategoryRequest $request, Category $category): JsonResponse
-    {
-        $updatedCategory = $this->categoryService->updateCategory($category, $request->validated());
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Category updated successfully.',
-            'data' => $updatedCategory,
-        ]);
-    }
-
-    /**
-     * Remove the specified category (Admin only, enforces RESTRICT constraints).
-     */
-    public function destroy(Category $category): JsonResponse
+    public function update(UpdateCategoryRequest $request, Category $category): JsonResponse
     {
         try {
-            $this->categoryService->deleteCategory($category);
+            $updated = $this->categoryService->update($category, $request->validated());
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Category updated successfully.',
+                'data' => $updated,
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+    }
+
+    /**
+     * Delete a category (Admin only).
+     */
+    public function destroy(Request $request, Category $category): JsonResponse
+    {
+        // Admin authorization check
+        $user = $request->user();
+        $isAdmin = false;
+        if ($user) {
+            if (isset($user->role) && $user->role === 'admin') {
+                $isAdmin = true;
+            } elseif (method_exists($user, 'hasRole') && $user->hasRole('admin')) {
+                $isAdmin = true;
+            } else {
+                $isAdmin = \Illuminate\Support\Facades\DB::table('user_roles')
+                    ->join('roles', 'roles.id', '=', 'user_roles.role_id')
+                    ->where('user_roles.user_id', $user->id)
+                    ->where('roles.name', 'admin')
+                    ->exists();
+            }
+        }
+
+        if (!$isAdmin) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'This action is unauthorized.',
+            ], Response::HTTP_FORBIDDEN);
+        }
+
+        try {
+            $this->categoryService->delete($category);
 
             return response()->json([
                 'status' => 'success',
                 'message' => 'Category deleted successfully.',
             ]);
-        } catch (\DomainException $e) {
+        } catch (\RuntimeException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
     }
 }
+

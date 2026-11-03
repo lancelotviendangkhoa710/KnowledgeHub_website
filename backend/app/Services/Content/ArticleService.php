@@ -4,239 +4,248 @@ namespace App\Services\Content;
 
 use App\Models\Article;
 use App\Models\ArticleVersion;
+use App\Models\Category;
 use App\Models\Tag;
 use App\Models\User;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ArticleService
 {
+    public function __construct(
+        protected TagService $tagService
+    ) {}
+
     /**
-     * Get paginated articles with filtering for public or management views.
-     *
-     * @param array<string, mixed> $filters
+     * Safely resolve the UUID string of a user model instance.
      */
-    public function getArticles(array $filters = [], ?User $user = null, int $perPage = 15): LengthAwarePaginator
+    protected function resolveUserId(User $user): string
     {
-        $query = Article::query()
-            ->with(['author:id,name,email', 'category:id,name,slug', 'publishedVersion', 'tags:id,name,slug']);
+        return (string) ($user->getRawOriginal('id') ?: ($user->getAttributes()['id'] ?? $user->getKey()));
+    }
 
-        $isAdmin = $user && method_exists($user, 'roles') && $user->roles()->where('name', 'admin')->exists();
+    /**
+     * List published articles with optional filtering and pagination.
+     */
+    public function listPublished(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    {
+        $query = Article::published()
+            ->with(['author', 'category', 'publishedVersion', 'tags']);
 
-        // If user is guest or normal user, strictly only show published
-        if (! $user || (! $isAdmin && ! ($user->roles && $user->roles()->where('name', 'contributor')->exists()))) {
-            $query->published();
-        } else {
-            // Contributor can see their own drafts + all published
-            if (! $isAdmin) {
-                $query->where(function (Builder $q) use ($user) {
-                    $q->published()->orWhere('author_id', $user->id);
-                });
-            }
-
-            // Apply explicit status filter if authorized
-            if (! empty($filters['status'])) {
-                $query->where('status', $filters['status']);
-            }
+        if (!empty($filters['category_slug'])) {
+            $query->whereHas('category', function ($q) use ($filters) {
+                $q->where('slug', $filters['category_slug']);
+            });
+        } elseif (!empty($filters['category_id'])) {
+            $query->where('category_id', $filters['category_id']);
         }
 
-        if (! empty($filters['category_id'])) {
-            $query->byCategory($filters['category_id']);
-        }
-
-        if (! empty($filters['tag_slug'])) {
-            $query->whereHas('tags', function (Builder $q) use ($filters) {
+        if (!empty($filters['tag_slug'])) {
+            $query->whereHas('tags', function ($q) use ($filters) {
                 $q->where('slug', $filters['tag_slug']);
             });
-        }
-
-        if (! empty($filters['search'])) {
-            $search = $filters['search'];
-            $query->whereHas('publishedVersion', function (Builder $q) use ($search) {
-                $q->where('title', 'ilike', "%{$search}%")
-                  ->orWhere('content', 'ilike', "%{$search}%");
+        } elseif (!empty($filters['tag_id'])) {
+            $query->whereHas('tags', function ($q) use ($filters) {
+                $q->where('tags.id', $filters['tag_id']);
             });
         }
 
-        return $query->latest('created_at')->paginate($perPage);
-    }
-
-    /**
-     * Get a single article by ID or slug.
-     */
-    public function getArticleBySlugOrId(string $identifier, ?User $user = null): ?Article
-    {
-        $query = Article::query()
-            ->with([
-                'author:id,name,email',
-                'category:id,name,slug',
-                'publishedVersion',
-                'latestVersion',
-                'tags:id,name,slug',
-            ])
-            ->where(function (Builder $q) use ($identifier) {
-                $q->where('id', $identifier)
-                  ->orWhere('slug', $identifier);
-            });
-
-        $article = $query->first();
-        if (! $article) {
-            return null;
+        if (!empty($filters['author_id'])) {
+            $query->where('author_id', $filters['author_id']);
         }
 
-        return $article;
+        if (!empty($filters['search'])) {
+            $search = '%' . strtolower($filters['search']) . '%';
+            $query->whereHas('publishedVersion', function ($q) use ($search) {
+                $q->whereRaw('LOWER(title) LIKE ?', [$search]);
+            });
+        }
+
+        $sort = $filters['sort'] ?? 'latest';
+        if ($sort === 'oldest') {
+            $query->orderBy('published_at', 'asc');
+        } else {
+            $query->orderBy('published_at', 'desc');
+        }
+
+        return $query->paginate($perPage);
     }
 
     /**
-     * Create a new article with an initial version (v1) in a transaction.
-     *
-     * @param array{
-     *     title: string,
-     *     content: string,
-     *     category_id?: ?string,
-     *     slug?: ?string,
-     *     tags?: array<string>
-     * } $data
+     * List articles authored by a user (including drafts and archived).
      */
-    public function createArticle(User $author, array $data): Article
+    public function listAuthorArticles(string $authorId, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        return DB::transaction(function () use ($author, $data) {
-            $slug = ! empty($data['slug'])
-                ? Str::slug($data['slug'])
-                : Str::slug($data['title']) . '-' . Str::lower(Str::random(6));
+        $query = Article::where('author_id', $authorId)
+            ->with(['category', 'publishedVersion', 'tags', 'versions']);
+
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        return $query->orderBy('updated_at', 'desc')->paginate($perPage);
+    }
+
+    /**
+     * Find a published article by slug.
+     */
+    public function getPublishedBySlug(string $slug): ?Article
+    {
+        return Article::published()
+            ->where('slug', $slug)
+            ->with(['author', 'category', 'publishedVersion.attachments', 'tags'])
+            ->first();
+    }
+
+    /**
+     * Find any article by slug (including drafts/archived for authorized users).
+     */
+    public function getBySlug(string $slug): ?Article
+    {
+        return Article::where('slug', $slug)
+            ->with(['author', 'category', 'publishedVersion.attachments', 'tags', 'versions'])
+            ->first();
+    }
+
+    /**
+     * Find an article by ID.
+     */
+    public function getById(string $id): ?Article
+    {
+        return Article::with(['author', 'category', 'publishedVersion.attachments', 'tags', 'versions'])
+            ->find($id);
+    }
+
+    /**
+     * Create a new article with initial version (version 1) in draft status.
+     * Wrapped in DB::transaction() for atomicity.
+     */
+    public function create(array $data, User $author): Article
+    {
+        return DB::transaction(function () use ($data, $author) {
+            $title = $data['title'];
+            $slug = !empty($data['slug']) ? Str::slug($data['slug']) : Str::slug($title);
+
+            // Ensure unique slug
+            $baseSlug = $slug;
+            $counter = 1;
+            while (Article::where('slug', $slug)->exists()) {
+                $slug = "{$baseSlug}-{$counter}";
+                $counter++;
+            }
+
+            $authorId = $this->resolveUserId($author);
 
             $article = Article::create([
-                'author_id' => $author->id,
+                'author_id' => $authorId,
                 'category_id' => $data['category_id'] ?? null,
                 'slug' => $slug,
                 'status' => Article::STATUS_DRAFT,
+                'published_version_id' => null,
+                'published_at' => null,
             ]);
 
-            // Version 1 snapshot
+            // Create initial version 1
             $version = ArticleVersion::create([
                 'article_id' => $article->id,
                 'version_no' => 1,
-                'title' => $data['title'],
+                'title' => $title,
                 'content' => $data['content'],
-                'created_by' => $author->id,
+                'created_by' => $authorId,
             ]);
 
-            // Sync tags
-            if (! empty($data['tags'])) {
-                $this->syncTags($article, $data['tags']);
+            if (!empty($data['tags']) && is_array($data['tags'])) {
+                $this->tagService->syncArticleTags($article, $data['tags']);
             }
 
-            return $article->load(['category', 'tags', 'latestVersion']);
+            return $article->load(['category', 'tags', 'versions']);
         });
     }
 
     /**
-     * Create a new version for an existing article (immutable versioning).
-     *
-     * @param array{
-     *     title: string,
-     *     content: string,
-     *     category_id?: ?string,
-     *     tags?: array<string>
-     * } $data
+     * Create a new version snapshot for an existing article.
+     * Wrapped in DB::transaction() for concurrency safety.
      */
-    public function updateArticle(Article $article, User $editor, array $data): Article
+    public function createVersion(Article $article, array $data, User $creator): ArticleVersion
     {
-        return DB::transaction(function () use ($article, $editor, $data) {
-            // Update mutable fields on article root
-            if (array_key_exists('category_id', $data)) {
-                $article->category_id = $data['category_id'];
-                $article->save();
-            }
+        return DB::transaction(function () use ($article, $data, $creator) {
+            $nextVersionNo = ((int) $article->versions()->max('version_no')) + 1;
+            $creatorId = $this->resolveUserId($creator);
 
-            // Calculate next version number
-            $latestVersionNo = (int) $article->versions()->max('version_no');
-            $nextVersionNo = $latestVersionNo + 1;
-
-            ArticleVersion::create([
+            $version = ArticleVersion::create([
                 'article_id' => $article->id,
                 'version_no' => $nextVersionNo,
                 'title' => $data['title'],
                 'content' => $data['content'],
-                'created_by' => $editor->id,
+                'created_by' => $creatorId,
             ]);
 
-            // Sync tags if provided
-            if (isset($data['tags'])) {
-                $this->syncTags($article, $data['tags']);
+            if (isset($data['category_id'])) {
+                $article->category_id = $data['category_id'];
             }
 
-            return $article->fresh(['category', 'tags', 'publishedVersion', 'latestVersion']);
+            if (!empty($data['tags']) && is_array($data['tags'])) {
+                $this->tagService->syncArticleTags($article, $data['tags']);
+            }
+
+            $article->touch();
+
+            return $version;
         });
     }
 
     /**
-     * Publish an article: marks status as published, sets published_version_id
-     * to the latest version, and timestamps published_at.
+     * Publish an article with a specific version or its latest version.
+     * Validates that the version belongs to this article!
      */
-    public function publishArticle(Article $article): Article
+    public function publish(Article $article, ?string $versionId = null): Article
     {
-        return DB::transaction(function () use ($article) {
-            $latestVersion = $article->latestVersion()->first();
-            if (! $latestVersion) {
-                throw new \RuntimeException('Cannot publish an article without at least one version.');
+        return DB::transaction(function () use ($article, $versionId) {
+            $version = null;
+
+            if ($versionId) {
+                $version = ArticleVersion::find($versionId);
+                if (!$version) {
+                    throw new \InvalidArgumentException('Specified version not found.');
+                }
+
+                // Strict invariant check: version must belong to this article!
+                if ($version->article_id !== $article->id) {
+                    throw new \InvalidArgumentException('Cannot publish version: version does not belong to this article.');
+                }
+            } else {
+                $version = $article->versions()->orderBy('version_no', 'desc')->first();
+                if (!$version) {
+                    throw new \RuntimeException('Cannot publish article without any content versions.');
+                }
             }
 
-            $article->update([
-                'status' => Article::STATUS_PUBLISHED,
-                'published_version_id' => $latestVersion->id,
-                'published_at' => now(),
-            ]);
+            $article->published_version_id = $version->id;
+            $article->status = Article::STATUS_PUBLISHED;
+            $article->published_at = now();
+            $article->save();
 
-            return $article->fresh(['publishedVersion', 'category', 'tags']);
+            return $article->fresh(['publishedVersion', 'category', 'tags', 'author']);
         });
     }
 
     /**
      * Archive an article.
      */
-    public function archiveArticle(Article $article): Article
+    public function archive(Article $article): Article
     {
-        $article->update([
-            'status' => Article::STATUS_ARCHIVED,
-        ]);
+        $article->status = Article::STATUS_ARCHIVED;
+        $article->save();
 
         return $article->fresh();
     }
 
     /**
-     * Soft-delete an article.
+     * Soft delete an article.
      */
-    public function deleteArticle(Article $article): bool
+    public function delete(Article $article): void
     {
-        return (bool) $article->delete();
-    }
-
-    /**
-     * Sync string tag names with article_tags join table.
-     *
-     * @param array<string> $tagNames
-     */
-    protected function syncTags(Article $article, array $tagNames): void
-    {
-        $tagIds = [];
-        foreach ($tagNames as $name) {
-            $cleanName = trim($name);
-            if (empty($cleanName)) {
-                continue;
-            }
-
-            $slug = Str::slug($cleanName);
-            $tag = Tag::firstOrCreate(
-                ['slug' => $slug],
-                ['name' => $cleanName]
-            );
-
-            $tagIds[] = $tag->id;
-        }
-
-        $article->tags()->sync($tagIds);
+        $article->delete();
     }
 }

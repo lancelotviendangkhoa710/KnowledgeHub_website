@@ -11,14 +11,21 @@ class Tag extends Model
 {
     use HasFactory, HasUuids;
 
-    protected $table = 'tags';
+    public const UPDATED_AT = null;
 
-    const UPDATED_AT = null;
+    protected $table = 'tags';
 
     protected $fillable = [
         'name',
         'slug',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'created_at' => 'datetime',
+        ];
+    }
 
     /**
      * Articles associated with this tag.
@@ -28,3 +35,4 @@ class Tag extends Model
         return $this->belongsToMany(Article::class, 'article_tags', 'tag_id', 'article_id');
     }
 }
+
