@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccountUser, AdminUserFilters, adminUserClient, errorMessage, UserStatus } from '@/lib/accountClient';
+import { AccountUser, AdminUserFilters, adminUserClient, AssignableRole, ASSIGNABLE_ROLES, errorMessage, UserStatus } from '@/lib/accountClient';
 import { getCurrentUser } from '@/lib/auth';
 
 const STATUSES: UserStatus[] = ['active', 'pending', 'inactive', 'banned'];
@@ -16,6 +16,9 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // A role change that touches `admin` waits here for the acting admin's password.
+  const [roleChange, setRoleChange] = useState<{ user: AccountUser; role: AssignableRole } | null>(null);
+  const [password, setPassword] = useState('');
 
   const [refreshVersion, setRefreshVersion] = useState(0);
   const latestRequest = useRef(0);
@@ -72,11 +75,47 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function submitRole(user: AccountUser, role: AssignableRole, currentPassword?: string) {
+    setBusyId(user.id);
+    setError(null);
+    try {
+      await adminUserClient.setRole(user.id, role, currentPassword);
+      setRoleChange(null);
+      setPassword('');
+      setRefreshVersion((version) => version + 1);
+    } catch (e) {
+      setError(errorMessage(e, 'Unable to change this role.'));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function chooseRole(user: AccountUser, role: AssignableRole) {
+    if (user.roles.length === 1 && user.roles[0] === role) return;
+    setError(null);
+    setPassword('');
+    // Granting or revoking admin needs the acting admin's password (the API enforces it too).
+    if (role === 'admin' || user.roles.includes('admin')) setRoleChange({ user, role });
+    else void submitRole(user, role);
+  }
+
   return (
     <section className="account-page account-page--wide content-container">
       <p className="eyebrow">Admin</p>
       <h1>Users</h1>
-      <p className="auth-lead">{meta.total} account{meta.total === 1 ? '' : 's'}. Role assignment is managed separately.</p>
+      <p className="auth-lead">{meta.total} account{meta.total === 1 ? '' : 's'}. Each account has one role; changing it signs that user out.</p>
+
+      {roleChange && (
+        <form
+          className="users-filters"
+          onSubmit={(event) => { event.preventDefault(); void submitRole(roleChange.user, roleChange.role, password); }}
+        >
+          <p className="auth-lead">Change {roleChange.user.name} to <strong>{roleChange.role}</strong>? Enter your password to confirm.</p>
+          <input type="password" aria-label="Your password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          <button className="button button--primary" type="submit" disabled={busyId === roleChange.user.id}>Confirm</button>
+          <button className="button button--secondary" type="button" onClick={() => { setRoleChange(null); setPassword(''); }}>Cancel</button>
+        </form>
+      )}
 
       <form
         className="users-filters"
@@ -115,7 +154,21 @@ export default function AdminUsersPage() {
                   <tr key={user.id}>
                     <td data-label="Name">{user.name}</td>
                     <td data-label="Email">{user.email}</td>
-                    <td data-label="Roles">{user.roles.join(', ')}</td>
+                    <td data-label="Roles">
+                      {self || user.status === 'pending' || user.status === 'banned' ? (
+                        user.roles.join(', ')
+                      ) : (
+                        <select
+                          aria-label={`Change role of ${user.name}`}
+                          value={user.roles.length === 1 ? user.roles[0] : ''}
+                          disabled={busyId === user.id}
+                          onChange={(event) => chooseRole(user, event.target.value as AssignableRole)}
+                        >
+                          {user.roles.length !== 1 && <option value="" disabled>{user.roles.join(', ') || 'no role'}</option>}
+                          {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                      )}
+                    </td>
                     <td data-label="Status"><span className={`users-status users-status--${user.status}`}>{user.status}</span></td>
                     <td data-label="Action">
                       {self ? (
