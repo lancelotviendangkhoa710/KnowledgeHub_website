@@ -262,7 +262,7 @@ export default function CourseDetailPage() {
               <div>
                 <span style={{ color: 'var(--color-gray)' }}>Snapshot ID: </span>
                 <span style={{ color: 'var(--color-charcoal)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  {version?.id || article.id}
+                  {version?.id || 'Draft (No Snapshot)'}
                 </span>
               </div>
               <div>

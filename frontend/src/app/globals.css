@@ -77,6 +77,18 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-family) !important;
 }
 
+/* Inverted text exceptions for dark/primary surfaces (UX-01 Invariants) */
+.cta-heading,
+.cta-section h1,
+.cta-section h2,
+.cta-section h3,
+.site-footer h1,
+.site-footer h2,
+.site-footer h3,
+.site-footer h4 {
+  color: var(--color-white) !important;
+}
+
 p {
   color: var(--color-gray);
 }
