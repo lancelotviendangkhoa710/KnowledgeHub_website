@@ -155,7 +155,8 @@ through the endpoint below.
 
 ### IMPLEMENTED - PUT `/api/admin/users/{id}/role`
 
-Admin only (`403` otherwise; an admin cannot change their own role). Body:
+Admin only (`401` for Guest, `403` for User/Contributor; an admin cannot change
+their own role). Throttled to 6 requests per minute (`429`). Body:
 `role` in `user|contributor|admin` and optional `current_password`; other keys
 are rejected with `422`. Each user has exactly one role; this call replaces it
 (same role again is a no-op). Granting or revoking `admin` requires the acting

@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Support\Facades\Log;
@@ -76,31 +77,46 @@ class AdminUserService
         $this->database->transaction(function () use ($actor, $target, $role, $password): void {
             // Same lock order as changeStatus/deleteAccount: admin role row first, then the user row.
             $this->database->table('roles')->where('name', 'admin')->lockForUpdate()->value('id');
-            $locked = User::query()->whereKey($target->getKey())->lockForUpdate()->firstOrFail();
+            // Lock actor and target together in id order so two admins acting on each other cannot deadlock.
+            $rows = User::query()->whereIn('id', [$actor->getKey(), $target->getKey()])->orderBy('id')->lockForUpdate()->get()->keyBy('id');
+            $lockedActor = $rows->get($actor->getKey());
+            $locked = $rows->get($target->getKey());
+
+            // The policy ran before this transaction; the actor may have been demoted since.
+            if ($lockedActor === null || $locked === null || ! $lockedActor->roles()->where('name', 'admin')->exists()) {
+                throw new AuthorizationException;
+            }
 
             if (! in_array($locked->status, ['active', 'inactive'], true)) {
                 throw ValidationException::withMessages(['role' => ['Only active or inactive accounts can change role.']]);
             }
 
-            $old = $locked->roles()->value('name');
-            if ($old === $role) {
+            // user_roles can hold several rows for legacy accounts, so read them all.
+            $current = $locked->roles()->pluck('name')->all();
+            if ($current === [$role]) {
                 return;
             }
+            $hadAdmin = in_array('admin', $current, true);
 
-            if ($old === 'admin' || $role === 'admin') {
-                $this->profiles->assertPassword($actor, (string) $password);
+            $roleId = Role::where('name', $role)->value('id');
+            if ($roleId === null) {
+                throw ValidationException::withMessages(['role' => ['The selected role is not available.']]);
             }
 
-            if ($old === 'admin' && ! User::query()->where('status', 'active')->whereKeyNot($locked->getKey())
+            if ($hadAdmin || $role === 'admin') {
+                $this->profiles->assertPassword($lockedActor, (string) $password);
+            }
+
+            if ($hadAdmin && $role !== 'admin' && ! User::query()->where('status', 'active')->whereKeyNot($locked->getKey())
                 ->whereHas('roles', fn ($q) => $q->where('name', 'admin'))->exists()) {
                 throw ValidationException::withMessages(['role' => ['The last administrator cannot lose the admin role.']]);
             }
 
-            $locked->roles()->sync([Role::where('name', $role)->value('id')]);
+            $locked->roles()->sync([$roleId]);
             $locked->tokens()->delete();
 
             // shortcut: app log instead of an audit table, until the team approves one.
-            Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $old, 'to' => $role]);
+            Log::info('user role changed', ['actor' => $actor->id, 'target' => $locked->id, 'from' => $current, 'to' => $role]);
         });
 
         return $target->refresh()->load('roles');

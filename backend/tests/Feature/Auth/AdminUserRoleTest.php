@@ -93,8 +93,44 @@ class AdminUserRoleTest extends TestCase
         $this->assertSame(['admin'], $this->roles($target));
     }
 
+    public function test_legacy_target_with_several_roles_is_checked_against_every_role(): void
+    {
+        $token = $this->createUser('admin@example.com', 'active', 'admin')->createToken('t')->plainTextToken;
+        $target = $this->createUser('t@example.com');
+        $target->roles()->attach(Role::where('name', 'admin')->value('id'));
+
+        $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'contributor'])->assertUnprocessable();
+        $this->assertEqualsCanonicalizing(['user', 'admin'], $this->roles($target));
+
+        $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'contributor', 'current_password' => 'password-123'])->assertOk();
+        $this->assertSame(['contributor'], $this->roles($target));
+    }
+
+    public function test_missing_role_row_is_a_validation_error(): void
+    {
+        $token = $this->createUser('admin@example.com', 'active', 'admin')->createToken('t')->plainTextToken;
+        $target = $this->createUser('t@example.com');
+        Role::where('name', 'contributor')->delete();
+
+        $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'contributor'])->assertUnprocessable();
+    }
+
+    public function test_role_changes_are_throttled(): void
+    {
+        $token = $this->createUser('admin@example.com', 'active', 'admin')->createToken('t')->plainTextToken;
+        $target = $this->createUser('t@example.com');
+
+        foreach (range(1, 6) as $_) {
+            $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'admin', 'current_password' => 'wrong'])->assertUnprocessable();
+        }
+        $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'admin', 'current_password' => 'password-123'])->assertStatus(429);
+        $this->assertSame(['user'], $this->roles($target));
+    }
+
     public function test_banned_pending_deleted_and_invalid_targets_or_roles_are_rejected(): void
     {
+        // This test sends more than 6 requests; throttling has its own test.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         $token = $this->createUser('admin@example.com', 'active', 'admin')->createToken('t')->plainTextToken;
         $banned = $this->createUser('b@example.com', 'banned');
         $pending = $this->createUser('p@example.com', 'pending');
