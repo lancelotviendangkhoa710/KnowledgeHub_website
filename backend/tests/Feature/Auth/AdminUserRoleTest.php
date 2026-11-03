@@ -110,7 +110,7 @@ class AdminUserRoleTest extends TestCase
         $this->withToken($token)->putJson("/api/admin/users/{$gone->id}/role", ['role' => 'contributor'])->assertNotFound();
         $this->withToken($token)->putJson('/api/admin/users/not-a-uuid/role', ['role' => 'contributor'])->assertNotFound();
 
-        foreach (['learner', 'reviewer', 'moderator', '', ['admin']] as $bad) {
+        foreach (['superuser', 'guest', 'ADMIN', '', ['admin']] as $bad) {
             $this->withToken($token)->putJson("/api/admin/users/{$ok->id}/role", ['role' => $bad])->assertUnprocessable();
         }
         $this->withToken($token)->putJson("/api/admin/users/{$ok->id}/role", ['role' => 'contributor', 'status' => 'banned'])->assertUnprocessable();
