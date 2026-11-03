@@ -19,6 +19,18 @@ type AuthResponse = {
 };
 
 let currentUser: AuthUser | null = null;
+const listeners = new Set<() => void>();
+
+export function setCurrentUser(user: AuthUser | null): void {
+  currentUser = user;
+  listeners.forEach((listener) => listener());
+}
+
+/** Lets shell components (header) react to sign-in, sign-out and profile edits. */
+export function subscribeCurrentUser(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
 
 export async function register(input: {
   name: string;
@@ -34,7 +46,7 @@ export async function login(input: { email: string; password: string }): Promise
 
   if (response.data.token) {
     setAccessToken(response.data.token);
-    currentUser = response.data.user;
+    setCurrentUser(response.data.user);
   }
 
   return response;
@@ -53,7 +65,7 @@ export async function logout(): Promise<void> {
   }
 
   setAccessToken(null);
-  currentUser = null;
+  setCurrentUser(null);
 }
 
 export function getCurrentUser(): AuthUser | null {

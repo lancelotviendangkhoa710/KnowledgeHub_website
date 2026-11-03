@@ -60,18 +60,30 @@ class AuthService
     /** @return array{user: User, token: NewAccessToken} */
     public function login(string $email, string $password): array
     {
-        $user = User::query()->where('email', $email)->first();
+        $invalid = fn () => ValidationException::withMessages([
+            'email' => ['The provided credentials are invalid.'],
+        ]);
 
-        if (! $user || $user->status !== 'active' || ! $this->hash->check($password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are invalid.'],
-            ]);
+        // Slow hash check runs without any lock, so wrong-password attempts cannot queue behind a row lock.
+        $candidate = User::query()->where('email', $email)->first();
+        if (! $candidate || $candidate->status !== 'active' || ! $this->hash->check($password, $candidate->password)) {
+            throw $invalid();
         }
 
-        return [
-            'user' => $user->load('roles'),
-            'token' => $user->createToken('web'),
-        ];
+        // Re-check status and hash on the locked row so a concurrent ban or password
+        // change cannot leave a fresh token behind.
+        return $this->database->transaction(function () use ($candidate, $invalid): array {
+            $user = User::query()->whereKey($candidate->getKey())->lockForUpdate()->first();
+
+            if (! $user || $user->status !== 'active' || $user->password !== $candidate->password) {
+                throw $invalid();
+            }
+
+            return [
+                'user' => $user->load('roles'),
+                'token' => $user->createToken('web'),
+            ];
+        });
     }
 
     public function logout(User $user, ?string $plainToken = null): void
