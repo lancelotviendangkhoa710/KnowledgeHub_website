@@ -4,7 +4,260 @@
 /* The root landing page stylesheet is the approved visual source for UX-01. */
 @import "./landing-source.css";
 
-/* Auth pages reuse the same source tokens while keeping the feature forms functional. */
+/* ============================================================
+   UX-01 DESIGN FOUNDATION - GLOBAL TOKEN ISOLATION & NORMALIZATION
+   Source: docs/features/UX-01-design-foundation.md
+   Eradicates washed-out contrast defects across all application domains.
+   ============================================================ */
+
+:root {
+  /* 1. Background Color Palette */
+  --color-off-white:      #FAF7F5;
+  --color-white:          #FFFFFF;
+  --color-primary-pale:   #F3E5E5;
+  --color-primary-faint:  #FBF0F0;
+  --color-charcoal:       #242124;
+  --color-primary:        #8B0000;
+  --color-primary-dark:   #650000;
+  --color-primary-light:  #B22222;
+
+  /* 2. Typography Palette & Borders */
+  --color-gray:           #706B6B;
+  --color-gray-light:     #9E9898;
+  --color-border:         #E8DEDC;
+  --color-border-light:   #F0E8E8;
+
+  /* 3. Typography Fonts */
+  --font-family:          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-serif:    Georgia, 'Times New Roman', serif;
+
+  /* 4. Legacy Token Isolation: Map dark-mode variables from shared-source.css to light foundation */
+  --bg-canvas:            var(--color-off-white);
+  --bg-surface:           var(--color-white);
+  --bg-surface-elevated:  var(--color-white);
+  --bg-glass:             rgba(255, 255, 255, 0.90);
+  --bg-glass-card:        var(--color-white);
+
+  --color-bg:             var(--color-off-white);
+  --color-text:           var(--color-charcoal);
+  --color-muted:          var(--color-gray);
+
+  --text-primary:         var(--color-charcoal);
+  --text-secondary:       var(--color-gray);
+  --text-muted:           var(--color-gray);
+  --text-faint:           var(--color-gray-light);
+
+  --border-subtle:        var(--color-border-light);
+  --border-medium:        var(--color-border);
+  --border-glow:          rgba(139, 0, 0, 0.15);
+
+  --accent-gold:          var(--color-primary);
+  --accent-gold-light:    var(--color-primary-pale);
+  --accent-gold-glow:     rgba(139, 0, 0, 0.10);
+  --accent-cyan:          #1A6B85;
+  --accent-emerald:       #1B6E34;
+}
+
+/* Base Canvas & Global Element Reset */
+html {
+  background-color: var(--color-off-white) !important;
+  color: var(--color-charcoal) !important;
+}
+
+body {
+  background-color: var(--color-off-white) !important;
+  background-image: none !important;
+  color: var(--color-charcoal) !important;
+  font-family: var(--font-family) !important;
+}
+
+/* Strict Text Hierarchy: Charcoal Headings & Gray Copy (WCAG AA compliant) */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-charcoal) !important;
+  font-family: var(--font-family) !important;
+}
+
+p {
+  color: var(--color-gray);
+}
+
+/* Global Form Surface & Text Alignment */
+input, select, textarea {
+  color: var(--color-charcoal);
+  background-color: var(--color-white);
+  border-color: var(--color-border);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--color-gray-light);
+}
+
+/* ============================================================
+   SHARED PRIMITIVES NORMALIZATION
+   ============================================================ */
+
+/* Primary Button (Burgundy, White Text) */
+.btn-primary {
+  background: var(--color-primary) !important;
+  color: var(--color-white) !important;
+  border: 1.5px solid var(--color-primary) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-dark) !important;
+  color: var(--color-white) !important;
+}
+
+/* Secondary Button (White Surface, Border, Charcoal Text) */
+.btn-secondary {
+  background: var(--color-white) !important;
+  color: var(--color-charcoal) !important;
+  border: 1.5px solid var(--color-border) !important;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  background: var(--color-primary-faint) !important;
+}
+
+/* Outline Button */
+.btn-outline {
+  background: transparent !important;
+  color: var(--color-charcoal) !important;
+  border: 1.5px solid var(--color-border) !important;
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+}
+
+/* Course Card (White Elevated Surface, Border #E8DEDC) */
+.course-card {
+  background: var(--color-white) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-xs) !important;
+}
+
+.course-card::before {
+  display: none !important;
+}
+
+.course-card:hover {
+  border-color: var(--color-border) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Badges Aligned to Light Editorial Theme */
+.badge-gold,
+.badge-status-draft {
+  background: var(--color-primary-pale) !important;
+  color: var(--color-primary) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.badge-cyan {
+  background: #E8F4F8 !important;
+  color: #1A6B85 !important;
+  border: 1px solid #CDE5ED !important;
+}
+
+.badge-status-published {
+  background: #EBF5EE !important;
+  color: #1B6E34 !important;
+  border: 1px solid #D2EBD9 !important;
+}
+
+/* App Shell: Site Header (White Surface) */
+.site-header {
+  background: var(--color-white) !important;
+  border-bottom: 1px solid var(--color-border-light) !important;
+}
+
+.site-brand {
+  color: var(--color-charcoal) !important;
+}
+
+.site-brand strong {
+  color: var(--color-primary) !important;
+}
+
+.site-nav a {
+  color: var(--color-gray) !important;
+  transition: color var(--transition-fast);
+}
+
+.site-nav a:hover {
+  color: var(--color-charcoal) !important;
+}
+
+/* App Shell: Site Footer (Strictly Charcoal #242124 Background) */
+.site-footer {
+  background-color: var(--color-charcoal) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.70) !important;
+}
+
+.site-footer .site-brand {
+  color: var(--color-white) !important;
+}
+
+.site-footer .site-brand strong {
+  color: var(--color-primary-light) !important;
+}
+
+.site-footer p {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+.site-footer__nav a {
+  color: rgba(255, 255, 255, 0.58) !important;
+}
+
+.site-footer__nav a:hover {
+  color: var(--color-white) !important;
+}
+
+/* Reader Prose High-Contrast Normalization */
+.prose {
+  color: var(--color-charcoal) !important;
+}
+
+.prose h2,
+.prose h3 {
+  color: var(--color-charcoal) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+.prose p {
+  color: var(--color-charcoal) !important;
+}
+
+.prose blockquote {
+  border-left-color: var(--color-primary) !important;
+  background: var(--color-primary-faint) !important;
+  color: var(--color-charcoal) !important;
+}
+
+.prose pre {
+  background: var(--color-charcoal) !important;
+  color: #F8FAFC !important;
+  border-color: var(--color-border) !important;
+}
+
+.prose code:not(pre code) {
+  background: var(--color-primary-pale) !important;
+  color: var(--color-primary) !important;
+}
+
+/* ============================================================
+   AUTH PAGES
+   ============================================================ */
 .auth-page {
   min-height: calc(100vh - var(--nav-height) - 8rem);
   display: grid;

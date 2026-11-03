@@ -29,20 +29,26 @@ export default function AuthActions() {
 
   if (!userName) {
     return (
-      <div className="site-header__actions">
-        <Link className="site-header__action" href="/login">Sign in</Link>
-        <Link className="button button--primary site-header__action" href="/register">Get started</Link>
+      <div className="site-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        <Link className="site-header__action" href="/login" style={{ color: 'var(--color-charcoal)', fontWeight: 500, fontSize: '0.9rem' }}>
+          Sign in
+        </Link>
+        <Link className="btn btn-primary" href="/register" style={{ padding: '0.45rem 1rem', fontSize: '0.875rem' }}>
+          Get started
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="site-header__actions">
-      <span aria-label={`Signed in as ${userName}`}>{userName}</span>
-      <button type="button" className="button button--secondary" onClick={handleLogout} disabled={loggingOut}>
+    <div className="site-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+      <span aria-label={`Signed in as ${userName}`} style={{ color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '0.9rem' }}>
+        {userName}
+      </span>
+      <button type="button" className="btn btn-secondary" onClick={handleLogout} disabled={loggingOut} style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>
         {loggingOut ? 'Signing out...' : 'Sign out'}
       </button>
-      {logoutError && <span role="alert">{logoutError}</span>}
+      {logoutError && <span role="alert" style={{ color: 'var(--color-primary-light)', fontSize: '0.85rem' }}>{logoutError}</span>}
     </div>
   );
 }
