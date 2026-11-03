@@ -199,6 +199,13 @@ input::placeholder, textarea::placeholder {
   color: var(--color-primary) !important;
 }
 
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+}
+
 .site-nav a {
   color: var(--color-gray) !important;
   transition: color var(--transition-fast);
@@ -336,6 +343,10 @@ input::placeholder, textarea::placeholder {
   background: var(--color-primary-faint);
 }
 
+.auth-message {
+  color: var(--color-charcoal);
+}
+
 .auth-submit {
   width: 100%;
   min-height: 2.9rem;
@@ -361,4 +372,197 @@ input::placeholder, textarea::placeholder {
 
 @media (max-width: 520px) {
   .auth-card { padding: 1.5rem; }
+}
+
+/* ============================================================
+   AUTH-02: ACCOUNT & ADMIN USER SCREENS
+   ============================================================ */
+.account-page {
+  display: grid;
+  gap: 1.25rem;
+  width: min(100% - 3rem, 40rem);
+  padding: 4rem 0;
+}
+
+.account-page--wide {
+  width: min(100% - 3rem, 64rem);
+}
+
+.account-page h1 {
+  margin: 0;
+  color: var(--color-charcoal);
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+
+.account-page .auth-lead {
+  margin: 0;
+}
+
+.account-card {
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.account-card h2 {
+  margin: 0 0 0.25rem;
+  color: var(--color-charcoal);
+  font-size: var(--text-xl);
+}
+
+.account-card--danger .auth-lead {
+  margin-bottom: 1.25rem;
+}
+
+.account-card--danger {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-faint);
+}
+
+.account-card .auth-field input:disabled {
+  color: var(--color-gray);
+  background: var(--color-off-white);
+}
+
+.auth-field .account-hint,
+.account-hint {
+  color: var(--color-gray);
+  font-weight: var(--weight-regular);
+}
+
+.account-submit {
+  margin-top: 1.5rem;
+}
+
+.account-submit:disabled,
+.users-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.account-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.users-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.users-filters input,
+.users-filters select,
+.users-table select {
+  min-height: 2.6rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-charcoal);
+  background: var(--color-white);
+  font: inherit;
+}
+
+.users-filters input {
+  flex: 1 1 14rem;
+}
+
+.users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.users-table th,
+.users-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--color-border-light);
+  text-align: left;
+}
+
+.users-table th {
+  color: var(--color-gray);
+  font-weight: var(--weight-semibold);
+  background: var(--color-off-white);
+}
+
+.users-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.users-action {
+  min-height: 2.2rem;
+  padding: 0.35rem 0.85rem;
+}
+
+.users-status {
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--color-off-white);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.users-status--active {
+  color: var(--color-charcoal);
+  background: var(--color-border-light);
+}
+
+.users-status--pending,
+.users-status--inactive {
+  color: var(--color-gray);
+}
+
+.users-status--banned {
+  color: var(--color-primary);
+  background: var(--color-primary-pale);
+}
+
+.users-pager {
+  justify-content: center;
+}
+
+@media (max-width: 640px) {
+  .account-page {
+    width: min(100% - 2rem, 40rem);
+    padding: 2.5rem 0;
+  }
+  .account-card {
+    padding: 1.25rem;
+  }
+  .users-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .users-table td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .users-table td::before {
+    content: attr(data-label);
+    color: var(--color-gray);
+    font-weight: var(--weight-semibold);
+  }
 }

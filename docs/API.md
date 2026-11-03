@@ -54,7 +54,7 @@ Identity/Auth, Content, and Learning progress endpoints are documented below.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
 | --- | --- | ---: | ---: | --- |
-| Identity/Auth | TEAM_MEMBER_A | 3 | 3 | AUTH-01 registration, login and logout; activation and account management are deferred |
+| Identity/Auth | TEAM_MEMBER_A | 10 | 10 | AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
 | Content | TEAM_MEMBER_B | 21 | 21 | Implemented in routes/api/content.php; verified with 37 tests |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 0 | 0 | AI service not in repository |
@@ -98,6 +98,64 @@ return `401`; other tokens belonging to the same user remain valid.
 normalization, duplicate and soft-deleted email behavior, pending-login
 rejection, guest-only authorization failures, login throttling, token issuance,
 and current-token-only revocation.
+
+### IMPLEMENTED - GET `/api/me`
+
+Requires a Sanctum bearer token. Returns `200` with `data.user`
+(`id`, `name`, `email`, `status`, `roles`, `created_at`) for the authenticated
+user only; no user id is accepted from the client. Never returns the password
+hash or tokens. Missing or revoked token returns `401`.
+
+### IMPLEMENTED - PATCH `/api/me`
+
+Updates the caller's profile. The only editable field is `name` (required,
+string, max 255). Any other key in the payload (`email`, `status`, `roles`,
+`id`, `user_id`, `password`, ...) is rejected with `422` and nothing is
+written. Returns `200` with the updated `data.user`. Email change and extra
+profile columns are deferred: the `users` table has no such columns and the
+schema is unchanged.
+
+### IMPLEMENTED - PUT `/api/me/password`
+
+Body: `current_password`, `password` (min 8, must differ from the current
+one), `password_confirmation`. A wrong `current_password` returns `422` and the
+stored hash is untouched. On success every other token of the user is revoked;
+the token used for the request stays valid. Returns `200` with `data: null`.
+Throttled to 6 requests per minute (`429`).
+
+### IMPLEMENTED - DELETE `/api/me`
+
+Body: `current_password`. Soft-deletes the account (`deleted_at`), revokes all
+its tokens and returns `200` with `data: null`. Conversations, payments,
+roadmaps and other dependent rows are retained (RESTRICT foreign keys); the
+account can no longer sign in and its email may be registered again. The last
+active administrator cannot delete their account (`422`). Wrong password
+returns `422`. Throttled to 6 requests per minute.
+
+### IMPLEMENTED - GET `/api/admin/users`
+
+Admin only (`403` for User/Contributor, `401` for Guest). Query: `status`
+(`active|inactive|banned|pending`), `role` (`user|contributor|admin`),
+`search` (name/email substring, max 100), `per_page` (1-100, default 20).
+Soft-deleted users are excluded. Returns
+`{ status, data: [user...], meta: { current_page, last_page, per_page, total } }`.
+
+### IMPLEMENTED - GET `/api/admin/users/{id}`
+
+Admin only. `{id}` must be a UUID. Returns `data.user`. Soft-deleted or
+malformed ids return `404`.
+
+### IMPLEMENTED - PATCH `/api/admin/users/{id}/status`
+
+Admin only. Body: `status` in `active|inactive|banned`; other keys are
+rejected with `422`. Moving a user away from `active` revokes all their tokens.
+A `pending` account can only be moved to `active` (this is how accounts are
+activated). An admin cannot change their own status (`403`). Role assignment
+is not part of this endpoint (AUTH-03).
+
+**AUTH-02 tests**: `ProfileTest.php` (ownership, mass-assignment, password,
+deletion, last-admin guard) and `AdminUserTest.php` (RBAC for all four actors,
+filters, pagination, token revocation, strict payload).
 
 ---
 

@@ -2,15 +2,16 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { getCurrentUser, logout } from '@/lib/auth';
+import { getCurrentUser, logout, subscribeCurrentUser } from '@/lib/auth';
 
 export default function AuthActions() {
-  const [userName, setUserName] = useState<string | null>(null);
+  const [user, setUser] = useState(getCurrentUser);
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => {
-    setUserName(getCurrentUser()?.name ?? null);
+    setUser(getCurrentUser());
+    return subscribeCurrentUser(() => setUser(getCurrentUser()));
   }, []);
 
   async function handleLogout() {
@@ -19,7 +20,6 @@ export default function AuthActions() {
 
     try {
       await logout();
-      setUserName(null);
     } catch {
       setLogoutError('Could not sign out. Please try again.');
     } finally {
@@ -27,7 +27,7 @@ export default function AuthActions() {
     }
   }
 
-  if (!userName) {
+  if (!user) {
     return (
       <div className="site-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <Link className="site-header__action" href="/login" style={{ color: 'var(--color-charcoal)', fontWeight: 500, fontSize: '0.9rem' }}>
@@ -42,9 +42,14 @@ export default function AuthActions() {
 
   return (
     <div className="site-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-      <span aria-label={`Signed in as ${userName}`} style={{ color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '0.9rem' }}>
-        {userName}
-      </span>
+      {user.roles.includes('admin') && (
+        <Link href="/admin/users" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.9rem' }}>
+          Users
+        </Link>
+      )}
+      <Link href="/account" aria-label={`Account of ${user.name}`} style={{ color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '0.9rem' }}>
+        {user.name}
+      </Link>
       <button type="button" className="btn btn-secondary" onClick={handleLogout} disabled={loggingOut} style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>
         {loggingOut ? 'Signing out...' : 'Sign out'}
       </button>
