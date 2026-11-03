@@ -8,6 +8,7 @@ RUN apt-get update \
         unzip \
         libpq-dev \
         libzip-dev \
+        libonig-dev \
     && docker-php-ext-install -j"$(nproc)" \
         bcmath \
         mbstring \
