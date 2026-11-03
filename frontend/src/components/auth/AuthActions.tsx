@@ -47,7 +47,7 @@ export default function AuthActions() {
           Users
         </Link>
       )}
-      <Link href="/account" aria-label={`Account of ${user.name}`} style={{ color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '0.9rem' }}>
+      <Link href="/account" aria-label={`Account of ${user.name}`} style={{ color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '0.9rem', overflowWrap: 'anywhere', minWidth: 0 }}>
         {user.name}
       </Link>
       <button type="button" className="btn btn-secondary" onClick={handleLogout} disabled={loggingOut} style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>

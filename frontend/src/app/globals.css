@@ -101,7 +101,7 @@ input, select, textarea {
 }
 
 input::placeholder, textarea::placeholder {
-  color: var(--color-gray-light);
+  color: var(--color-gray);
 }
 
 /* ============================================================
@@ -227,7 +227,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .site-footer .site-brand strong {
-  color: var(--color-primary-light) !important;
+  color: var(--color-primary-pale) !important;
 }
 
 .site-footer p {

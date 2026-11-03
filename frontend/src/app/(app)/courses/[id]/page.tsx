@@ -255,10 +255,12 @@ export default function CourseDetailPage() {
               Course Information
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              <div>
-                <span style={{ color: 'var(--color-gray)' }}>Domain: </span>
-                <span style={{ color: 'var(--color-charcoal)', fontWeight: 600 }}>{article.category?.name || 'General'}</span>
-              </div>
+              {article.category && (
+                <div>
+                  <span style={{ color: 'var(--color-gray)' }}>Domain: </span>
+                  <span style={{ color: 'var(--color-charcoal)', fontWeight: 600 }}>{article.category.name}</span>
+                </div>
+              )}
               <div>
                 <span style={{ color: 'var(--color-gray)' }}>Snapshot ID: </span>
                 <span style={{ color: 'var(--color-charcoal)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>

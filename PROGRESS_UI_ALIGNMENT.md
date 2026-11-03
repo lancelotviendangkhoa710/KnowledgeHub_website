@@ -43,3 +43,10 @@
 ### 7. Git Commit & Push
 - [x] Commit with message `p1: align conflicting UI screens with UX-01 design foundation`
 - [x] Push branch to remote: `git push -u origin p1/UX-02-ui-alignment`
+
+### 8. Code Review & Follow-up Refinements
+- [x] `frontend/src/app/globals.css`: Footer logo "Hub" contrast elevated with `--color-primary-pale`
+- [x] `frontend/src/app/globals.css`: Input & textarea placeholder contrast elevated with `--color-gray`
+- [x] `frontend/src/app/(app)/courses/[id]/page.tsx`: Domain line conditionally rendered only when `article.category` exists
+- [x] `frontend/src/components/auth/AuthActions.tsx`: User account name link wrapped safely with `overflowWrap: 'anywhere'`
+- [x] `watchdog_runner.py`: Resilient exception handling `(OSError, UnicodeDecodeError)` & unreadable warning flag

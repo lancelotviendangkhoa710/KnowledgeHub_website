@@ -28,7 +28,7 @@ def get_pending_tasks(filepath: str) -> Optional[list[str]]:
                     checkbox_count += 1
                 if stripped.startswith("- [ ]"):
                     pending.append(stripped[5:].strip())
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None
 
     if checkbox_count == 0:
@@ -44,6 +44,7 @@ def main():
     print(f"[WATCHDOG] Monitoring file: {PROGRESS_FILE}")
 
     iteration = 0
+    reported_unreadable = False
     while True:
         elapsed = time.monotonic() - start_time
         if elapsed >= MAX_DURATION_SECONDS:
@@ -52,8 +53,13 @@ def main():
 
         pending = get_pending_tasks(PROGRESS_FILE)
         if pending is None:
+            if not reported_unreadable:
+                print(f"[WATCHDOG] Cannot read tasks from {PROGRESS_FILE}. Retrying every {CHECK_INTERVAL_SECONDS}s.")
+                reported_unreadable = True
             time.sleep(CHECK_INTERVAL_SECONDS)
             continue
+
+        reported_unreadable = False
 
         if not pending:
             print("[WATCHDOG] All tasks in PROGRESS_UI_ALIGNMENT.md are complete! [x]")
