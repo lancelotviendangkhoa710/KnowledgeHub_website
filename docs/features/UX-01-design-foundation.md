@@ -12,48 +12,48 @@ not invent unrelated styles. The foundation uses the existing editorial design
 source: warm paper background, charcoal typography, burgundy accent, restrained
 borders, compact radii, and content-led spacing.
 
-## Core Design Tokens & Rules (Quy chuẩn màu nền và màu chữ)
+## Core Design Tokens & Rules (Background and Text Colors)
 
-Mọi màn hình trên toàn bộ nền tảng (bao gồm Landing, Auth, Courses, Learning, AI Companion) bắt buộc phải tuân thủ nghiêm ngặt hệ thống Design Tokens và quy chuẩn màu nền - màu chữ sau đây:
+All screens across the platform (including Landing, Auth, Courses, Learning, AI Companion) must strictly adhere to the following Design Tokens and color rules:
 
-### 1. Palette màu nền (Background Colors)
+### 1. Background Color Palette
 
-| Token CSS | Giá trị HEX / RGBA | Mục đích & Ngữ cảnh sử dụng bắt buộc |
+| CSS Token | HEX / RGBA Value | Mandatory Purpose & Usage Context |
 |---|---|---|
-| `--color-off-white` | `#FAF7F5` | **Canvas nền chính (Warm paper background)**: Dùng làm background tổng thể cho `body`, trang chủ, hero section, các khối section landing và layout container ứng dụng. |
-| `--color-white` | `#FFFFFF` | **Nền bề mặt nổi (Surface/Card/Input background)**: Dùng cho nền thẻ nội dung (`card`), khung form, ô nhập liệu (`input`, `textarea`), hộp thoại dialog, menu dropdown. |
-| `--color-primary-pale` | `#F3E5E5` | **Nền nhấn cấp 1 (Pale accent background)**: Dùng cho pill badges nổi bật, hover state nhẹ, thẻ đang chọn. |
-| `--color-primary-faint` | `#FBF0F0` | **Nền nhấn cấp 2 (Faint accent background)**: Dùng cho feature card đặc biệt (ví dụ AI Learning Companion), banner thông báo info/success. |
-| `--color-charcoal` | `#242124` | **Nền tương phản cao (High-contrast background)**: Chỉ dùng cho Footer (`.site-footer`). |
-| `--color-primary` | `#8B0000` | **Nền thương hiệu chính (Brand accent background)**: Dùng cho CTA banner nổi bật, nút chính (`.btn--primary`). |
+| `--color-off-white` | `#FAF7F5` | **Primary Canvas (Warm Paper Background)**: Global background for `body`, landing page, hero section, landing sections, and application layout containers. |
+| `--color-white` | `#FFFFFF` | **Elevated Surface (Card / Form / Input Background)**: Content cards, form containers, input fields (`input`, `textarea`), modal dialogs, and dropdown menus. |
+| `--color-primary-pale` | `#F3E5E5` | **Level 1 Accent Background (Pale)**: Prominent pill badges, subtle hover states, and active/selected card indicators. |
+| `--color-primary-faint` | `#FBF0F0` | **Level 2 Accent Background (Faint)**: Highlighted feature cards (e.g., AI Learning Companion), information and success message banners. |
+| `--color-charcoal` | `#242124` | **High-Contrast Surface Background**: Strictly reserved for the site footer (`.site-footer`). |
+| `--color-primary` | `#8B0000` | **Primary Brand Background**: Call-to-action banners (`.cta-section`) and primary action buttons (`.btn--primary`). |
 
-### 2. Palette màu chữ & Phân cấp Typography (Text Colors & Hierarchy)
+### 2. Typography Palette & Text Hierarchy
 
-| Token CSS | Giá trị HEX / RGBA | Mục đích & Quy tắc bắt buộc |
+| CSS Token | HEX / RGBA Value | Mandatory Rules & Application |
 |---|---|---|
-| `--color-charcoal` | `#242124` | **Màu chữ chính (Primary Text)**: Áp dụng cho toàn bộ tiêu đề (`h1`, `h2`, `h3`, `h4`), tiêu đề khóa học/bài viết, nhãn form (`label`), text quan trọng. Đảm bảo độ tương phản WCAG > 13:1 trên nền `#FAF7F5` và `#FFFFFF`. |
-| `--color-gray` | `#706B6B` | **Màu chữ phụ (Secondary / Body Text)**: Áp dụng cho các đoạn văn mô tả (`p`, `desc`), metadata, nhãn phụ, liên kết điều hướng mặc định. Đảm bảo độ tương phản WCAG > 4.5:1 (đạt chuẩn WCAG 2.1 AA). |
-| `--color-gray-light` | `#9E9898` | **Màu chữ mờ (Tertiary / Muted Text)**: Áp dụng cho text placeholder, phụ đề nhỏ, trạng thái disabled. |
-| `--color-primary` | `#8B0000` | **Màu chữ nhấn thương hiệu (Brand Accent Text)**: Dùng cho từ khóa nhấn (accent heading), link active, text eyebrow in hoa, logo wordmark `Hub`. |
-| `--color-primary-light` | `#B22222` | **Màu chữ trạng thái hover/active**: Dùng cho link hover, thông báo lỗi nhẹ/chú thích cảnh báo. |
-| `--color-white` | `#FFFFFF` | **Màu chữ tương phản nghịch (Inverted Text)**: **CHỈ ĐƯỢC PHÉP DÙNG TRÊN NỀN TỐI HOẶC NỀN ĐỎ** (như trong nút `.btn--primary`, CTA banner `.cta-section`, hoặc footer `.site-footer`). **TUYỆT ĐỐI CẤM** dùng text màu trắng hoặc xám sáng trên nền canvas giấy ấm / trắng. |
+| `--color-charcoal` | `#242124` | **Primary Text**: Headings (`h1`–`h4`), course/article titles, form field labels (`label`), and key body content. Guarantees WCAG contrast ratio > 13:1 on `#FAF7F5` and `#FFFFFF`. |
+| `--color-gray` | `#706B6B` | **Secondary / Body Text**: Descriptive paragraphs (`p`, `desc`), metadata, sub-labels, and default navigation links. Guarantees WCAG 2.1 AA compliance (> 4.5:1). |
+| `--color-gray-light` | `#9E9898` | **Tertiary / Muted Text**: Form placeholders, small sub-captions, and disabled UI states. |
+| `--color-primary` | `#8B0000` | **Brand Accent Text**: Emphasized heading keywords (italic accents), active navigation links, uppercase eyebrow text, and the `Hub` logo wordmark. |
+| `--color-primary-light` | `#B22222` | **Interactive Accent Text**: Link hover states and warning/light alert notices. |
+| `--color-white` | `#FFFFFF` | **Inverted Text**: **Permitted strictly on dark or red backgrounds** (such as `.btn--primary`, `.cta-section`, or `.site-footer`). **Never use white or light-gray text on warm paper or white surfaces.** |
 
-### 3. Font chữ & Phân cấp hiển thị (Font Families)
+### 3. Typography & Font Families
 
-- **Sans-serif (Phông hệ thống chính)**:  
+- **Primary Sans-Serif (System & UI Font)**:  
   `--font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;`  
-  Áp dụng cho toàn bộ giao diện: UI controls, body text, tiêu đề thông thường, buttons, inputs.
-- **Serif (Phông điểm nhấn Editorial)**:  
+  Applied across the entire UI: controls, body prose, standard headings, buttons, and inputs.
+- **Editorial Serif (Accent Font)**:  
   `--font-family-serif: Georgia, 'Times New Roman', serif;`  
-  Chỉ dùng cho các từ khóa nhấn nghiêng (italic accent) tại tiêu đề chính (`.hero-heading__accent`) hoặc trích dẫn cảm hứng (blockquotes editorial).
+  Reserved exclusively for italic accent words in hero headings (`.hero-heading__accent`) and editorial blockquotes.
 
-### 4. Quy tắc tương phản & Ngăn ngừa xung đột liên miền (Cross-Domain Contrast Invariants)
+### 4. Cross-Domain Theme & Contrast Invariants
 
-1. **Chuẩn tương phản bắt buộc**: Mọi thành phần UI hiển thị văn bản phải đạt tối thiểu chuẩn **WCAG 2.1 AA** (tỷ lệ tương phản ≥ 4.5:1 với văn bản thông thường và ≥ 3:1 với văn bản kích thước lớn/in đậm).
-2. **Loại bỏ hiện tượng "Chữ trắng trên nền trắng" (Washed-out Text Bug)**:
-   - Nghiêm cấm mọi hành vi sử dụng style dark mode cũ (như `--text-primary: #f8fafc`, `--text-secondary: #cbd5e1`) khi hiển thị trong container nền sáng.
-   - Các màn hình thuộc phân hệ của Member B (`/courses`, `CourseCard`) và Member C (`/learning/roadmaps`) khi chạy chung app shell phải kế thừa hệ màu sáng (`--color-charcoal` trên nền `--color-off-white` / `--color-white`).
-3. **Cách ly hoặc chuẩn hóa `shared-source.css`**: Không để các biến toàn cục cũ từ `shared-source.css` (`--bg-canvas: #090c13`, `--color-primary: #f59e0b`) làm sai lệch bảng màu nền tảng của `landing-source.css`.
+1. **Mandatory Contrast Compliance**: Every text-bearing UI element must pass **WCAG 2.1 AA** standards (minimum 4.5:1 contrast for regular text; 3:1 for large or bold text).
+2. **Elimination of Washed-Out Text Defects**:
+   - Legacy dark mode styles (`--text-primary: #f8fafc`, `--text-secondary: #cbd5e1`, etc.) must never be rendered against light surfaces.
+   - Feature screens across domains (Member B's `/courses` and Member C's `/learning/roadmaps`) sharing the application shell must inherit the light foundation palette (`--color-charcoal` on `--color-off-white` / `--color-white`).
+3. **Isolation and Normalization of `shared-source.css`**: Legacy global variables from `shared-source.css` (`--bg-canvas: #090c13`, `--color-primary: #f59e0b`) must not overwrite or pollute the baseline foundation tokens defined in `landing-source.css`.
 
 ## Migration rules
 
@@ -101,4 +101,4 @@ Mọi màn hình trên toàn bộ nền tảng (bao gồm Landing, Auth, Courses
   follow-up restores them from `origin/dev` rather than redesigning those routes.
 - Auth forms add only the minimum form styles needed to use the same source
   tokens; their behavior remains outside this UX branch.
-- **2026-11-03**: Updated foundation document with explicit background and text color rules, typography hierarchy, and cross-domain WCAG AA contrast invariants to prevent washed-out text conflicts across team members' domains.
+- **2026-11-03**: Updated foundation document with explicit background and text color rules, typography hierarchy, and cross-domain WCAG AA contrast invariants to prevent washed-out text conflicts across team members' domains. Translated all foundation specifications to English.
