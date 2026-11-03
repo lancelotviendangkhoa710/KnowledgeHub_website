@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
 import { accountClient, errorMessage } from '@/lib/accountClient';
 import { getCurrentUser, setCurrentUser, subscribeCurrentUser } from '@/lib/auth';
-import { setAccessToken } from '@/lib/authToken';
+import { getAccessToken, setAccessToken } from '@/lib/authToken';
 
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
@@ -38,16 +38,23 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (!getCurrentUser()) return;
+    const tokenAtRequest = getAccessToken();
     accountClient.me().then((response) => {
       setUser(response.data.user);
+      setCurrentUser(response.data.user);
       // Keep what the user already typed while /me was loading.
       setName((current) => (current === (getCurrentUser()?.name ?? '') ? response.data.user.name : current));
     }).catch((error: { status?: number }) => {
       // Token revoked: drop the local session so the page shows signed-out state.
       if (error?.status === 401) {
-        setAccessToken(null);
-        setCurrentUser(null);
+        // Ignore a stale 401 if the user signed in again meanwhile.
+        if (getAccessToken() === tokenAtRequest) {
+          setAccessToken(null);
+          setCurrentUser(null);
+        }
+        return;
       }
+      setProfileNotice({ kind: 'error', text: errorMessage(error, 'Unable to refresh your profile.') });
     });
   }, []);
 

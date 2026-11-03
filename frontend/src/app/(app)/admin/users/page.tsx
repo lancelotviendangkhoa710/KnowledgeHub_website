@@ -27,6 +27,11 @@ export default function AdminUsersPage() {
     try {
       const response = await adminUserClient.list(filters);
       if (requestId !== latestRequest.current) return; // a newer request superseded this one
+      // The current page vanished (e.g. its last user left the filter): go back to the last page.
+      if (response.data.length === 0 && response.meta.last_page < (filters.page ?? 1)) {
+        setFilters({ ...filters, page: Math.max(1, response.meta.last_page) });
+        return;
+      }
       setUsers(response.data);
       setMeta(response.meta);
     } catch (e) {

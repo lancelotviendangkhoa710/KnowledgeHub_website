@@ -28,9 +28,10 @@ class ProfileService
      */
     public function changePassword(User $user, string $currentPassword, string $newPassword): void
     {
-        $this->assertPassword($user, $currentPassword);
+        $this->database->transaction(function () use ($user, $currentPassword, $newPassword): void {
+            $locked = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertPassword($locked, $currentPassword);
 
-        $this->database->transaction(function () use ($user, $newPassword): void {
             $user->update(['password' => $newPassword]);
 
             $current = $user->currentAccessToken();
