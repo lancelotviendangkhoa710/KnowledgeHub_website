@@ -24,9 +24,12 @@ RUN composer install \
     --no-interaction \
     --no-progress \
     --prefer-dist \
+    --no-scripts \
     --optimize-autoloader
 
 COPY . .
+
+RUN composer dump-autoload --optimize
 
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views \
     && chmod -R ug+rwx storage bootstrap/cache
