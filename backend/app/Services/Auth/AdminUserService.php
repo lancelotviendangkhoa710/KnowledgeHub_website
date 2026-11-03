@@ -74,9 +74,8 @@ class AdminUserService
     public function changeRole(User $actor, User $target, string $role, ?string $password): User
     {
         $this->database->transaction(function () use ($actor, $target, $role, $password): void {
-            // Lock every admin row (stable order) so concurrent role changes serialize.
-            $admins = User::query()->whereHas('roles', fn ($q) => $q->where('name', 'admin'))
-                ->orderBy('id')->lockForUpdate()->get();
+            // Same lock order as changeStatus/deleteAccount: admin role row first, then the user row.
+            $this->database->table('roles')->where('name', 'admin')->lockForUpdate()->value('id');
             $locked = User::query()->whereKey($target->getKey())->lockForUpdate()->firstOrFail();
 
             if (! in_array($locked->status, ['active', 'inactive'], true)) {
@@ -92,7 +91,8 @@ class AdminUserService
                 $this->profiles->assertPassword($actor, (string) $password);
             }
 
-            if ($old === 'admin' && $admins->where('status', 'active')->whereNotIn('id', [$locked->id])->isEmpty()) {
+            if ($old === 'admin' && ! User::query()->where('status', 'active')->whereKeyNot($locked->getKey())
+                ->whereHas('roles', fn ($q) => $q->where('name', 'admin'))->exists()) {
                 throw ValidationException::withMessages(['role' => ['The last administrator cannot lose the admin role.']]);
             }
 
