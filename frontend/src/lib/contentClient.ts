@@ -1,7 +1,7 @@
 import { Article, Category, Tag } from '@/types/content';
 import { mockArticles, mockCategories, mockTags } from './mockContent';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/v1`;
 
 /**
  * Fetch all published articles with optional filters.
