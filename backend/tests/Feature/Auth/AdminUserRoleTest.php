@@ -5,7 +5,10 @@ namespace Tests\Feature\Auth;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Services\Auth\AdminUserService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -104,6 +107,28 @@ class AdminUserRoleTest extends TestCase
 
         $this->withToken($token)->putJson("/api/admin/users/{$target->id}/role", ['role' => 'contributor', 'current_password' => 'password-123'])->assertOk();
         $this->assertSame(['contributor'], $this->roles($target));
+    }
+
+    public function test_role_change_is_logged_only_when_the_transaction_commits(): void
+    {
+        $admin = $this->createUser('admin@example.com', 'active', 'admin');
+        $target = $this->createUser('t@example.com');
+        $service = app(AdminUserService::class);
+        Log::spy();
+
+        try {
+            DB::transaction(function () use ($service, $admin, $target) {
+                $service->changeRole($admin, $target, 'contributor', null);
+                throw new \RuntimeException('rollback');
+            });
+        } catch (\RuntimeException) {
+        }
+
+        $this->assertSame(['user'], $this->roles($target));
+        Log::shouldNotHaveReceived('info');
+
+        $service->changeRole($admin, $target, 'contributor', null);
+        Log::shouldHaveReceived('info')->once();
     }
 
     public function test_missing_role_row_is_a_validation_error(): void
