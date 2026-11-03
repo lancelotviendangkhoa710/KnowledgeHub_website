@@ -23,6 +23,7 @@ export default function AccountPage() {
   const [name, setName] = useState(user?.name ?? '');
   const [profileNotice, setProfileNotice] = useState<Notice>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [refreshing, setRefreshing] = useState(false); // /me in flight: cached data may be stale
 
   const [pw, setPw] = useState({ current_password: '', password: '', password_confirmation: '' });
   const [pwNotice, setPwNotice] = useState<Notice>(null);
@@ -39,11 +40,14 @@ export default function AccountPage() {
   useEffect(() => {
     if (!getCurrentUser()) return;
     const tokenAtRequest = getAccessToken();
+    setRefreshing(true);
     accountClient.me().then((response) => {
+      // Read the cached name before setCurrentUser overwrites it.
+      const cachedName = getCurrentUser()?.name ?? '';
       setUser(response.data.user);
       setCurrentUser(response.data.user);
       // Keep what the user already typed while /me was loading.
-      setName((current) => (current === (getCurrentUser()?.name ?? '') ? response.data.user.name : current));
+      setName((current) => (current === cachedName ? response.data.user.name : current));
     }).catch((error: { status?: number }) => {
       // Token revoked: drop the local session so the page shows signed-out state.
       if (error?.status === 401) {
@@ -55,7 +59,7 @@ export default function AccountPage() {
         return;
       }
       setProfileNotice({ kind: 'error', text: errorMessage(error, 'Unable to refresh your profile.') });
-    });
+    }).finally(() => setRefreshing(false));
   }, []);
 
   if (!user) {
@@ -141,7 +145,7 @@ export default function AccountPage() {
             <input value={user.email} disabled readOnly />
             <small className="account-hint">Email cannot be changed yet.</small>
           </label>
-          <button className="button button--primary account-submit" type="submit" disabled={savingProfile || !name.trim() || name.trim() === user.name}>
+          <button className="button button--primary account-submit" type="submit" disabled={savingProfile || refreshing || !name.trim() || name.trim() === user.name}>
             {savingProfile ? 'Saving...' : 'Save changes'}
           </button>
         </form>
