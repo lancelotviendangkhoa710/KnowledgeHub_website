@@ -186,8 +186,14 @@ database/seeders/DatabaseSeeder.php
 Tables: conversations, messages, user_memories
 Paths:  backend/app/Http/Controllers/AI/ (to be created)
         backend/app/Services/AI/ (to be created)
-Owner:  UNASSIGNED â€” assign when AI phase begins (Development Sequence step 3)
+Owner:  UNASSIGNED for AI-01, AI-02, and AI-03.
+        TEAM_MEMBER_C owns AI-04 (RAG Integration) and AI-05 (Roadmap Generation)
+        as feature-specific work, including their Learning integration.
 ```
+
+AI-04/AI-05 ownership does not assign the rest of the AI Companion domain or
+authorize changes to Content, shared architecture, or protected files outside
+the normal coordination rules.
 
 ### Payment
 ```
