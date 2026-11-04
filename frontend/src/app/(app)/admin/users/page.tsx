@@ -21,6 +21,8 @@ export default function AdminUsersPage() {
   // A role change that touches `admin` waits here for the acting admin's password.
   const [roleChange, setRoleChange] = useState<{ user: AccountUser; role: AssignableRole } | null>(null);
   const [password, setPassword] = useState('');
+  // Rows stay read-only while a request runs or an admin confirmation is open, so one action cannot clobber another.
+  const locked = busyId !== null || roleChange !== null;
 
   const [refreshVersion, setRefreshVersion] = useState(0);
   const latestRequest = useRef(0);
@@ -163,7 +165,7 @@ export default function AdminUsersPage() {
                         <select
                           aria-label={`Change role of ${user.name}`}
                           value={user.roles.length === 1 ? user.roles[0] : ''}
-                          disabled={busyId !== null}
+                          disabled={locked}
                           onChange={(event) => chooseRole(user, event.target.value as AssignableRole)}
                         >
                           {user.roles.length !== 1 && <option value="" disabled>{user.roles.join(', ') || 'no role'}</option>}
@@ -176,12 +178,12 @@ export default function AdminUsersPage() {
                       {self ? (
                         <small className="account-hint">You</small>
                       ) : user.status === 'pending' ? (
-                        <button className="button button--primary users-action" disabled={busyId !== null} onClick={() => void changeStatus(user, 'active')}>Activate</button>
+                        <button className="button button--primary users-action" disabled={locked} onClick={() => void changeStatus(user, 'active')}>Activate</button>
                       ) : (
                         <select
                           aria-label={`Change status of ${user.name}`}
                           value={user.status}
-                          disabled={busyId !== null}
+                          disabled={locked}
                           onChange={(event) => void changeStatus(user, event.target.value as Exclude<UserStatus, 'pending'>)}
                         >
                           <option value="active">active</option>
