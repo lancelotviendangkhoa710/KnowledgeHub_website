@@ -65,11 +65,11 @@ backend/app/Services/Content/
 | Conversation Management | AI-01 | PLANNED | `conversations` | TBD | AI service (Python/FastAPI) |
 | Message History | AI-02 | PLANNED | `messages` | TBD | AI service |
 | User Memory | AI-03 | PLANNED | `user_memories` | TBD | Long-term memory |
-| RAG Integration | AI-04 | PLANNED | â€” | TBD | Requires pgvector |
-| Roadmap Generation | AI-05 | PLANNED | `learning_roadmaps` | TBD | AI-generated |
+| RAG Integration | AI-04 | PLANNED | â€” | TBD | Owner: TEAM_MEMBER_C; requires pgvector |
+| Roadmap Generation | AI-05 | PLANNED | `learning_roadmaps` | TBD | Owner: TEAM_MEMBER_C; AI-generated |
 
 **DB tables**: `conversations`, `messages`, `user_memories`
-**Note**: Schema exists; service not yet built. Assign owner when AI phase begins.
+**Note**: Schema exists; service not yet built. AI-01/02/03 remain unassigned.
 
 ---
 
