@@ -65,6 +65,17 @@ class AIRoadmapServiceTest extends TestCase
         $service->generate(['goal' => 'Goal', 'level' => 'beginner', 'weeks' => 1, 'hours_per_week' => 1]);
     }
 
+    public function test_generate_rejects_invalid_items(): void
+    {
+        config(['services.gemini.api_key' => 'test-key']);
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [['content' => ['parts' => [['text' => json_encode($this->payload(['items' => [['title' => 'Missing fields']]]))]]]]],
+        ])]);
+
+        $this->expectException(RuntimeException::class);
+        app(AIRoadmapService::class)->generate(['goal' => 'Goal', 'level' => 'beginner', 'weeks' => 1, 'hours_per_week' => 1]);
+    }
+
     public function test_generate_wraps_provider_errors(): void
     {
         config(['services.gemini.api_key' => 'test-key']);
