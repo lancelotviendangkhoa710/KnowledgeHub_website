@@ -30,7 +30,15 @@ export const adminUserClient = {
   },
   setStatus: (id: string, status: Exclude<UserStatus, 'pending'>) =>
     api.patch<Envelope<{ user: AccountUser }>>(`/admin/users/${id}/status`, { status }),
+  setRole: (id: string, role: AssignableRole, confirmation?: string) => {
+    const body: Record<string, string> = { role };
+    if (confirmation) body['current_password'] = confirmation;
+    return api.put<Envelope<{ user: AccountUser }>>(`/admin/users/${id}/role`, body);
+  },
 };
+
+export type AssignableRole = 'user' | 'contributor' | 'admin';
+export const ASSIGNABLE_ROLES: AssignableRole[] = ['user', 'contributor', 'admin'];
 
 /** First human-readable message from a Laravel validation or API error. */
 export function errorMessage(error: unknown, fallback: string): string {
