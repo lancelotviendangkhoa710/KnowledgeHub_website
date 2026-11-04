@@ -1,0 +1,10 @@
+<?php
+
+use App\Http\Controllers\AI\RoadmapGenerationController;
+use Illuminate\Support\Facades\Route;
+
+// AI-05 Roadmap Assistant - TEAM_MEMBER_C
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/ai/roadmaps/preview', [RoadmapGenerationController::class, 'preview'])
+        ->middleware('throttle:10,1');
+});
