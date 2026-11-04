@@ -7,10 +7,11 @@ use RuntimeException;
 
 class AIRoadmapService
 {
+    /** Generate and normalize a roadmap draft from the configured provider. */
     public function generate(array $input): array
     {
-        $apiKey = (string) env('GEMINI_API_KEY', '');
-        $model = (string) env('AI_MODEL', 'gemini-2.5-flash');
+        $apiKey = (string) config('services.gemini.api_key', '');
+        $model = (string) config('services.gemini.model', 'gemini-2.5-flash');
 
         if ($apiKey === '') {
             throw new RuntimeException('Gemini API key is not configured.');
@@ -98,11 +99,14 @@ class AIRoadmapService
         ];
     }
 
+    /** Validate provider output and convert it to the public roadmap contract. */
     private function normalize(array $roadmap): array
     {
         $items = $roadmap['items'] ?? null;
         if (! is_string($roadmap['title'] ?? null)
+            || trim($roadmap['title']) === ''
             || ! is_string($roadmap['summary'] ?? null)
+            || trim($roadmap['summary']) === ''
             || ! is_array($items)
             || count($items) < 1
         ) {

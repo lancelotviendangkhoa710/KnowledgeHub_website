@@ -588,7 +588,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ## 7. AI Companion / Roadmap Assistant
 
-### IMPLEMENTED — POST `/api/ai/roadmaps/preview`
+### APPROVED — POST `/api/ai/roadmaps/preview`
 
 **Owner**: TEAM_MEMBER_C
 **Authentication**: `auth:sanctum` Bearer token. The Gemini API key is read only by the backend from `GEMINI_API_KEY`; it is never accepted from the browser or request body.

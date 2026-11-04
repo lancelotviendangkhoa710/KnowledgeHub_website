@@ -12,6 +12,7 @@ class RoadmapGenerationController extends Controller
 {
     public function __construct(private readonly AIRoadmapService $generator) {}
 
+    /** Return a provider-generated roadmap draft without persisting it. */
     public function preview(GenerateRoadmapRequest $request): JsonResponse
     {
         try {

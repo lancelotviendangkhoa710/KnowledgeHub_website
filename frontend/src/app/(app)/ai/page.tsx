@@ -8,8 +8,8 @@ type Message = { role: 'user' | 'assistant'; text: string };
 export default function AiRoadmapPage() {
   const [goal, setGoal] = useState('');
   const [level, setLevel] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner');
-  const [weeks, setWeeks] = useState(24);
-  const [hours, setHours] = useState(8);
+  const [weeks, setWeeks] = useState('24');
+  const [hours, setHours] = useState('8');
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState<RoadmapDraft | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,11 +19,10 @@ export default function AiRoadmapPage() {
     event.preventDefault();
     setLoading(true);
     setError(null);
-    setDraft(null);
     setMessages((current) => [...current, { role: 'user', text: goal }]);
 
     try {
-      const response = await aiRoadmapClient.preview({ goal, level, weeks, hours_per_week: hours });
+      const response = await aiRoadmapClient.preview({ goal, level, weeks: Number(weeks), hours_per_week: Number(hours) });
       setDraft(response.data);
       setMessages((current) => [...current, { role: 'assistant', text: response.data.summary }]);
     } catch (requestError) {
@@ -50,13 +49,13 @@ export default function AiRoadmapPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.85fr) minmax(0, 1.15fr)', gap: '1.5rem' }}>
         <form onSubmit={submit} style={{ background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', height: 'fit-content' }}>
-          <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Mục tiêu học tập</label>
-          <textarea required minLength={3} maxLength={500} value={goal} onChange={(event) => setGoal(event.target.value)}
+          <label htmlFor="roadmap-goal" style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Mục tiêu học tập</label>
+          <textarea id="roadmap-goal" aria-label="Mục tiêu học tập" required minLength={3} maxLength={500} value={goal} onChange={(event) => setGoal(event.target.value)}
             placeholder="Ví dụ: Tôi muốn trở thành Data Engineer" rows={5}
             style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', resize: 'vertical' }} />
 
-          <label style={{ display: 'block', fontWeight: 600, margin: '1rem 0 0.4rem' }}>Trình độ hiện tại</label>
-          <select value={level} onChange={(event) => setLevel(event.target.value as typeof level)}
+          <label htmlFor="roadmap-level" style={{ display: 'block', fontWeight: 600, margin: '1rem 0 0.4rem' }}>Trình độ hiện tại</label>
+          <select id="roadmap-level" aria-label="Trình độ hiện tại" value={level} onChange={(event) => setLevel(event.target.value as typeof level)}
             style={{ width: '100%', padding: '0.7rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
             <option value="beginner">Mới bắt đầu</option>
             <option value="intermediate">Đã có nền tảng</option>
@@ -65,11 +64,11 @@ export default function AiRoadmapPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
             <label style={{ fontWeight: 600 }}>Số tuần
-              <input type="number" min={1} max={104} value={weeks} onChange={(event) => setWeeks(Number(event.target.value))}
+              <input type="number" min={1} max={104} required value={weeks} onChange={(event) => setWeeks(event.target.value)}
                 style={{ display: 'block', width: '100%', marginTop: '0.4rem', padding: '0.7rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }} />
             </label>
             <label style={{ fontWeight: 600 }}>Giờ / tuần
-              <input type="number" min={1} max={80} value={hours} onChange={(event) => setHours(Number(event.target.value))}
+              <input type="number" min={1} max={80} required value={hours} onChange={(event) => setHours(event.target.value)}
                 style={{ display: 'block', width: '100%', marginTop: '0.4rem', padding: '0.7rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }} />
             </label>
           </div>
