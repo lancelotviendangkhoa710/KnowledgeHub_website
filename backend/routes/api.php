@@ -25,3 +25,7 @@ if (file_exists(__DIR__ . '/api/content.php')) {
 if (file_exists(__DIR__ . '/api/learning.php')) {
     require __DIR__ . '/api/learning.php';
 }
+
+if (file_exists(__DIR__ . '/api/ai.php')) {
+    require __DIR__ . '/api/ai.php';
+}

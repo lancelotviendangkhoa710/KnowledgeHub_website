@@ -532,7 +532,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ### IMPLEMENTED — GET `/api/learning/roadmap-items/{item}/progress`
 
-**Owner**: `TEAM_MEMBER_C`  
+**Owner**: `TEAM_MEMBER_C`
 **Authentication**: `auth:sanctum` Bearer token. Owner of the parent roadmap or Admin only. Token issuance/login is not yet implemented; see the common authentication note above.
 
 **Success — 200**
@@ -557,7 +557,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ### IMPLEMENTED — PATCH `/api/learning/roadmap-items/{item}/progress`
 
-**Owner**: `TEAM_MEMBER_C`  
+**Owner**: `TEAM_MEMBER_C`
 **Authentication**: same as GET.
 
 **Request**
@@ -586,7 +586,35 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ---
 
-## 7. Endpoint Template
+## 7. AI Companion / Roadmap Assistant
+
+### APPROVED — POST `/api/ai/roadmaps/preview`
+
+**Owner**: TEAM_MEMBER_C
+**Authentication**: `auth:sanctum` Bearer token. The Gemini API key is read only by the backend from `GEMINI_API_KEY`; it is never accepted from the browser or request body.
+
+**Request**
+
+```json
+{
+  "goal": "Become a Data Engineer",
+  "level": "beginner",
+  "weeks": 24,
+  "hours_per_week": 8
+}
+```
+
+**Success — 200**
+
+Returns a roadmap draft with ordered skill steps. `article_id` is `null` until the published course catalog is connected. The response also includes provider/model metadata for debugging; it never includes the API key. This endpoint does not persist a roadmap.
+
+**Errors**: `401` unauthenticated; `422` invalid input; `502` Gemini failure or invalid model output; `503` missing backend API key.
+
+**Rate limit**: 10 requests per minute per authenticated client.
+
+---
+
+## 8. Endpoint Template
 
 Copy this block only after feature approval:
 
