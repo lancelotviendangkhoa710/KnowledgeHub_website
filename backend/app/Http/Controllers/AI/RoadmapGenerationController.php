@@ -4,13 +4,13 @@ namespace App\Http\Controllers\AI;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AI\GenerateRoadmapRequest;
-use App\Services\AI\GeminiRoadmapService;
+use App\Services\AI\AIRoadmapService;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 class RoadmapGenerationController extends Controller
 {
-    public function __construct(private readonly GeminiRoadmapService $generator) {}
+    public function __construct(private readonly AIRoadmapService $generator) {}
 
     public function preview(GenerateRoadmapRequest $request): JsonResponse
     {

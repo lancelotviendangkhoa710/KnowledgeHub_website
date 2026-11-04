@@ -5,7 +5,7 @@ namespace App\Services\AI;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
-class GeminiRoadmapService
+class AIRoadmapService
 {
     public function generate(array $input): array
     {
