@@ -93,6 +93,10 @@ export default function AiRoadmapPage() {
 
           {draft && <div style={{ marginTop: '1.25rem', background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem' }}>
             <h2 style={{ marginTop: 0, color: 'var(--color-charcoal)' }}>{draft.title}</h2>
+            {draft.meta && <p style={{ color: 'var(--color-gray)', fontSize: '0.8rem' }}>
+              Provider: {draft.meta.provider} · Configured model: {draft.meta.configured_model}
+              {draft.meta.model_version ? ` · Runtime model: ${draft.meta.model_version}` : ''}
+            </p>}
             <ol style={{ paddingLeft: '1.25rem' }}>{draft.items.map((item) => (
               <li key={item.position} style={{ marginBottom: '1rem' }}>
                 <strong>{item.title}</strong>

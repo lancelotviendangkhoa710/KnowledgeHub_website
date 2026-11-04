@@ -45,7 +45,14 @@ class GeminiRoadmapService
             throw new RuntimeException('Gemini returned invalid roadmap JSON.');
         }
 
-        return $this->normalize($roadmap);
+        $normalized = $this->normalize($roadmap);
+        $normalized['meta'] = [
+            'provider' => 'gemini',
+            'configured_model' => $model,
+            'model_version' => data_get($response->json(), 'modelVersion'),
+        ];
+
+        return $normalized;
     }
 
     private function prompt(array $input): string

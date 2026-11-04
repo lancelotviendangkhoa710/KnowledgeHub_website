@@ -12,6 +12,11 @@ export interface RoadmapDraft {
   title: string;
   summary: string;
   items: RoadmapDraftItem[];
+  meta?: {
+    provider: string;
+    configured_model: string;
+    model_version: string | null;
+  };
 }
 
 export interface RoadmapDraftRequest {

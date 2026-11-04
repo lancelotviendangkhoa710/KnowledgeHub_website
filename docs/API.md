@@ -606,7 +606,7 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 **Success — 200**
 
-Returns a roadmap draft with ordered skill steps. `article_id` is `null` until the published course catalog is connected. This endpoint does not persist a roadmap.
+Returns a roadmap draft with ordered skill steps. `article_id` is `null` until the published course catalog is connected. The response also includes provider/model metadata for debugging; it never includes the API key. This endpoint does not persist a roadmap.
 
 **Errors**: `401` unauthenticated; `422` invalid input; `502` Gemini failure or invalid model output; `503` missing backend API key.
 
