@@ -1,7 +1,7 @@
 # AI-04 — RAG
 
 **Mức:** Kỹ — kiến trúc, riêng tư, an toàn nội dung  
-**Owner:** UNASSIGNED  
+**Owner:** TEAM_MEMBER_C
 **Commit dự kiến:** `ai: implement retrieval augmented generation` (**prefix chờ duyệt**)
 
 ## Trạng thái quyết định

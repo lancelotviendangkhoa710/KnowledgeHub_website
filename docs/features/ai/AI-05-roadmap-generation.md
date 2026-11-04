@@ -1,7 +1,7 @@
 # AI-05 — Tạo roadmap bằng AI
 
 **Mức:** Kỹ; AI tác động kế hoạch học tập và tạo dữ liệu  
-**Owner:** UNASSIGNED; phối hợp TEAM_MEMBER_C bắt buộc  
+**Owner:** TEAM_MEMBER_C (AI generation và Learning integration)
 **Commit dự kiến:** `ai: implement AI roadmap generation` (**prefix chờ duyệt**)
 
 ## Luồng activity đề xuất

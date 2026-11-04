@@ -24,7 +24,8 @@ Sổ này là hàng đợi và nguồn chuẩn phân công. Mỗi nhiệm vụ �
 
 | ID | Section/module | Owner (tên thật) | Domain owner hiện tại | Reviewer | Status | Dependency | Activity Spec | Commit message |
 |---|---|---|---|---|---|---|---|---|
-| — | Chưa có task business nào được giao cụ thể | — | — | Khoa điều phối | BACKLOG | Xác nhận member↔owner mapping và priority | [`../../features/README.md`](../../features/README.md) | Theo spec feature |
+| AI-04 | RAG integration | Khoa | TEAM_MEMBER_C (feature-specific AI) | Team/Product | BLOCKED | ADR/provider/pgvector/indexing/privacy/service contract approval | [`../../features/ai/AI-04-rag.md`](../../features/ai/AI-04-rag.md) | `p3: implement AI-04 RAG integration` (đề xuất) |
+| AI-05 | AI roadmap generation | Khoa | TEAM_MEMBER_C (AI + Learning integration) | Team/Product | BLOCKED | AI-04; model/provider/confirm/quota/API approval | [`../../features/ai/AI-05-roadmap-generation.md`](../../features/ai/AI-05-roadmap-generation.md) | `p3: implement AI-05 roadmap generation` (đề xuất) |
 
 ## Phân công agile đề xuất — chờ Khoa xác nhận
 
@@ -53,9 +54,10 @@ Chia theo domain owner, giao nguyên vertical module; task nhỏ là từng feat
 
 ### Chờ owner/team assignment
 
-- AI-01–AI-05: domain owner chưa gán; service boundary/provider/privacy approvals còn mở.
+- AI-01–AI-03: domain owner chưa gán; service boundary/provider/privacy approvals còn mở.
+- AI-04 và AI-05: Khoa (`TEAM_MEMBER_C`) nhận feature; implementation chờ các quyết định trong bảng nhiệm vụ.
 - PAY-01–PAY-02: domain owner chưa gán; provider/entitlement/webhook approvals còn mở.
 
 **Cập nhật quyết định:** người dùng đã chọn YouTube embed theo cách “Contributor dán link; người học xem player ngay trong trang”. Task `CONTENT-05A` được đưa về `READY` cho Khua; API/schema/security/CSP vẫn cần xử lý theo approval và Content ownership. Upload S3 vẫn `BLOCKED` độc lập.
 
-AI-01–AI-05 và PAY-01–PAY-02 chưa gán owner; đề xuất để backlog tới khi team chỉ định owner/decision. Không đưa vào cam kết sprint.
+AI-01–AI-03 và PAY-01–PAY-02 chưa gán owner; đề xuất để backlog tới khi team chỉ định owner/decision. AI-04/AI-05 đã giao cho Khoa nhưng chưa đưa vào cam kết sprint khi còn BLOCKED.
