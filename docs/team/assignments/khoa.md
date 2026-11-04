@@ -12,6 +12,8 @@
 | INFRA-COORD-01 | Công bố mapping đề xuất và xin team xác nhận | IN_PROGRESS | Team xác nhận Khiêm=A, Khua=B, Khoa=C | [`../ASSIGNMENT-PROTOCOL-VI.md`](../ASSIGNMENT-PROTOCOL-VI.md) | Team | File assignment; `OWNERSHIP.md` vẫn protected | `docs: define team task assignment protocol` |
 | INFRA-COORD-02 | Duy trì registry/file nhiệm vụ và tiến độ | READY | INFRA-COORD-01 | [`README.md`](README.md) | Team | Chỉ assignment/task tracking; `OWNERSHIP.md` vẫn protected | `docs: define team task assignment protocol` |
 | INFRA-DEPLOY-01 | Lập checklist deploy/release cho infrastructure hiện có | BACKLOG | Xác nhận platform/target, secrets, môi trường và quyền release | Context pack Foundation + deployment runbook được duyệt | Khoa + reviewer infra/team | Chưa cấp — docker/workflow/shared paths yêu cầu owner coordination | TBD khi task/spec được duyệt |
+| AI-04 | RAG integration | BLOCKED | ADR về provider, embeddings, pgvector/schema, indexing, privacy và service contract được team duyệt | [`../../features/ai/AI-04-rag.md`](../../features/ai/AI-04-rag.md) | Team/Product | Phân tích AI-04; code, migration và shared paths chỉ sau approval theo spec | `p3: implement AI-04 RAG integration` (đề xuất) |
+| AI-05 | AI roadmap generation | BLOCKED | AI-04 và contract/provider/consent/confirmation/quota được team duyệt | [`../../features/ai/AI-05-roadmap-generation.md`](../../features/ai/AI-05-roadmap-generation.md) | Team/Product + Learning owner | Phân tích AI-05; Learning integration và shared paths chỉ sau approval theo spec | `p3: implement AI-05 roadmap generation` (đề xuất) |
 
 ## Phân bổ tải
 

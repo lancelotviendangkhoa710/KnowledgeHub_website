@@ -58,7 +58,7 @@ backend/app/Services/Content/
 
 ## Domain C â€” AI Companion
 
-**Owner**: TBD | **Status**: PLANNED â€” Development Sequence step 3
+**Owner**: TEAM_MEMBER_C for AI-04/AI-05; TBD for AI-01/AI-02/AI-03 | **Status**: PLANNED â€” Development Sequence step 3
 
 | Feature | ID | Status | DB Tables | API Endpoints | Notes |
 |---|---|---|---|---|---|
