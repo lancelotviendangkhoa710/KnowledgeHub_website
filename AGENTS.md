@@ -351,7 +351,7 @@ Do NOT auto-fix application code. Flag for team review. Each requires a team-app
 
 | # | Issue | Type | Location |
 |---|---|---|---|
-| 1 | `RoleSeeder` seeds `learner`, `reviewer` — approved model requires `user`, `contributor`, `admin` | IMPLEMENTATION ISSUE | `database/seeders/RoleSeeder.php` |
+| 1 | `RoleSeeder` seeded legacy roles; it now seeds `user`, `contributor`, `admin` (matches the approved model) | RESOLVED | `database/seeders/RoleSeeder.php` |
 | 2 | `articles_status_check` allows `submitted`, `rejected` — approved: `draft`, `published`, `archived` only | IMPLEMENTATION ISSUE | `database/migrations/2026_01_01_000005_create_articles_tables.php` |
 | 3 | Migration 000002 comment references old 4-role model | DOCUMENTATION ISSUE | `database/migrations/2026_01_01_000002_create_roles_tables.php` |
 | 4 | Approved architecture ADR says Next.js/React is active; scaffolded in `frontend/` | RESOLVED | `frontend/` |
