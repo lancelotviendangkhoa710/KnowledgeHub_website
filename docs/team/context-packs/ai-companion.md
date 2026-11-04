@@ -1,5 +1,9 @@
 # AI Companion Context Pack
 
+For hosted testing, also read `deployment-hosting.md`: Vercel serves the
+frontend and Render serves the Laravel backend. AI secrets belong only in the
+Render environment.
+
 Read: `AGENTS.md`, `backend/AGENTS.md`, `docs/ARCHITECTURE.md`, AI sections of `docs/DATABASE.md` and `docs/ERD.md`, `docs/API.md`, approved ADRs, ownership registry, task spec, related source/tests.
 
 ```text
