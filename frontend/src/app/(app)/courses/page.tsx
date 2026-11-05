@@ -5,6 +5,7 @@ import Link from 'next/link';
 import CourseCard from '@/components/content/CourseCard';
 import { Article, Category } from '@/types/content';
 import { fetchArticles, fetchCategories } from '@/lib/contentClient';
+import { getCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 
 export default function CoursesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -12,6 +13,11 @@ export default function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
+
+  useEffect(() => {
+    return subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -208,50 +214,92 @@ export default function CoursesPage() {
       )}
 
       {/* Contributor Action Strip */}
-      <section
-        style={{
-          marginTop: '4.5rem',
-          padding: '2.5rem',
-          borderRadius: 'var(--radius-lg)',
-          background: 'var(--color-primary-faint)',
-          border: '1px solid var(--color-primary-pale)',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1.5rem',
-          boxShadow: 'var(--shadow-xs)',
-        }}
-      >
-        <div>
-          <span
-            className="badge"
+      {(() => {
+        const isGuest = !currentUser;
+        const isContributorOrAdmin =
+          currentUser?.roles?.some((r) => r === 'contributor' || r === 'admin') ?? false;
+
+        return (
+          <section
             style={{
-              backgroundColor: 'var(--color-primary-pale)',
-              color: 'var(--color-primary)',
-              border: '1px solid var(--color-border)',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              padding: '0.2rem 0.65rem',
-              borderRadius: 'var(--radius-full)',
-              marginBottom: '0.75rem',
-              display: 'inline-flex',
+              marginTop: '4.5rem',
+              padding: '2.5rem',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--color-primary-faint)',
+              border: '1px solid var(--color-primary-pale)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.5rem',
+              boxShadow: 'var(--shadow-xs)',
             }}
           >
-            Internal Publishing System
-          </span>
-          <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 700 }}>
-            Are you an internal contributor?
-          </h2>
-          <p style={{ color: 'var(--color-gray)', maxWidth: 600, lineHeight: 1.6 }}>
-            Author new engineering curricula with immutable version snapshots, automated diagram generation, and instant publication rights.
-          </p>
-        </div>
+            <div>
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: 'var(--color-primary-pale)',
+                  color: 'var(--color-primary)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                  marginBottom: '0.75rem',
+                  display: 'inline-flex',
+                }}
+              >
+                {isContributorOrAdmin
+                  ? 'Active Contributor Workspace'
+                  : isGuest
+                  ? 'Internal Publishing System'
+                  : 'Contributor Role Required'}
+              </span>
+              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 700 }}>
+                {isContributorOrAdmin
+                  ? 'Author & Publish Course Curricula'
+                  : isGuest
+                  ? 'Are you an internal contributor?'
+                  : 'Interested in authoring course material?'}
+              </h2>
+              <p style={{ color: 'var(--color-gray)', maxWidth: 600, lineHeight: 1.6 }}>
+                {isContributorOrAdmin
+                  ? 'Create new course modules with immutable version snapshots, structured markdown, and direct publishing workflow.'
+                  : isGuest
+                  ? 'Sign in with your contributor credentials to access the authoring workbench and publish technical curricula.'
+                  : 'Contributor access is granted exclusively by administrators. Contact an administrator to upgrade your account.'}
+              </p>
+            </div>
 
-        <Link href="/courses/create" className="btn btn-primary" style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}>
-          Open Contributor Studio &rarr;
-        </Link>
-      </section>
+            {isContributorOrAdmin ? (
+              <Link
+                href="/courses/create"
+                className="btn btn-primary"
+                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
+              >
+                Open Contributor Studio &rarr;
+              </Link>
+            ) : isGuest ? (
+              <Link
+                href="/login?redirect=/courses/create"
+                className="btn btn-primary"
+                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
+              >
+                Sign In to Author &rarr;
+              </Link>
+            ) : (
+              <Link
+                href="/account"
+                className="btn btn-secondary"
+                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
+              >
+                View Account & Roles &rarr;
+              </Link>
+            )}
+          </section>
+        );
+      })()}
     </div>
   );
 }
