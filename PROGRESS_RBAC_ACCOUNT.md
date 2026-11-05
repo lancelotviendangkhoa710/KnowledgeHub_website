@@ -19,7 +19,7 @@
 
 ## Giai đoạn 4: Nâng cấp Toàn diện Giao diện Trang Cá nhân (`/account`)
 - [x] 4.1. Thiết kế Thẻ Định danh & Thông tin Tổng quan (Profile Overview Card)
-- [ ] 4.2. Bổ sung Khu vực Đặc quyền theo Vai trò (Role Privileges Dashboard)
+- [x] 4.2. Bổ sung Khu vực Đặc quyền theo Vai trò (Role Privileges Dashboard)
 - [ ] 4.3. Bổ sung Widget Thống kê Hoạt động Học tập (Quick Learning Stats)
 
 ## Giai đoạn 5: Kiểm thử, Tối ưu & Đóng gói Pull Request

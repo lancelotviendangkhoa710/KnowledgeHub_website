@@ -276,6 +276,124 @@ export default function AccountPage() {
         </div>
       </div>
 
+      {/* Role Privileges Dashboard */}
+      <div
+        className="role-privileges-dashboard"
+        style={{
+          background: 'var(--color-white)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '1.75rem 2rem',
+          marginBottom: '2rem',
+          boxShadow: 'var(--shadow-xs)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1.25rem' }}>
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'var(--color-primary-pale, #E0F2FE)',
+              color: 'var(--color-primary, #0284C7)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
+              Đặc quyền &amp; Quyền hạn Tài khoản
+            </h3>
+            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-gray)' }}>
+              Phân quyền thực thi dựa trên vai trò hệ thống KnowledgeHub RBAC
+            </p>
+          </div>
+        </div>
+
+        {user.roles?.includes('admin') ? (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              background: '#F0FDF4',
+              border: '1px solid #BBF7D0',
+              padding: '1.25rem 1.5rem',
+              borderRadius: 'var(--radius-md)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, color: '#166534', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                Toàn quyền Quản trị Nền tảng (Platform Administrator)
+              </div>
+              <div style={{ fontSize: '0.88rem', color: '#15803D', lineHeight: 1.5 }}>
+                Bạn có toàn quyền quản lý người dùng, phân quyền vai trò (User, Contributor, Admin), và quản trị các khóa học trên toàn hệ thống.
+              </div>
+            </div>
+            <Link
+              href="/admin/users"
+              className="button button--primary"
+              style={{ padding: '0.65rem 1.35rem', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none' }}
+            >
+              Bảng Quản trị Người dùng &amp; Phân quyền &rarr;
+            </Link>
+          </div>
+        ) : user.roles?.includes('contributor') ? (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              background: '#FFF7ED',
+              border: '1px solid #FFEDD5',
+              padding: '1.25rem 1.5rem',
+              borderRadius: 'var(--radius-md)',
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 700, color: '#9A3412', fontSize: '1rem', marginBottom: '0.25rem' }}>
+                Quyền Tác giả Ban Chuyên Môn (Contributor Privileges)
+              </div>
+              <div style={{ fontSize: '0.88rem', color: '#C2410C', lineHeight: 1.5 }}>
+                Bạn có quyền tạo mới bài giảng giáo trình, cập nhật phiên bản bất biến (version snapshots) và xuất bản trực tiếp lên nền tảng.
+              </div>
+            </div>
+            <Link
+              href="/courses/create"
+              className="button button--primary"
+              style={{ padding: '0.65rem 1.35rem', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none' }}
+            >
+              Mở Contributor Studio để soạn giáo trình mới &rarr;
+            </Link>
+          </div>
+        ) : (
+          <div
+            style={{
+              background: 'var(--color-primary-faint, #F0F9FF)',
+              border: '1px solid var(--color-primary-pale, #BAE6FD)',
+              padding: '1.25rem 1.5rem',
+              borderRadius: 'var(--radius-md)',
+            }}
+          >
+            <div style={{ fontWeight: 700, color: '#0369A1', fontSize: '1rem', marginBottom: '0.35rem' }}>
+              Quyền tác giả (Contributor Status)
+            </div>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#075985', lineHeight: 1.6 }}>
+              Hiện đang là Người học (User). Bạn có chuyên môn kỹ thuật sâu và muốn đóng góp bài giảng? Hãy liên hệ Quản trị viên để đăng ký quyền Contributor.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="account-card">
         <h2>Profile</h2>
         <NoticeLine notice={profileNotice} />
