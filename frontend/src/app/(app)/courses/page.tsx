@@ -288,19 +288,19 @@ export default function CoursesPage() {
               >
                 {isContributorOrAdmin
                   ? 'Active Contributor Workspace'
-                  : 'Ban Chuyên Môn KnowledgeHub'}
+                  : 'KnowledgeHub Publishing System'}
               </span>
               <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 700 }}>
                 {isContributorOrAdmin
                   ? 'Author & Publish Course Curricula'
-                  : 'Tìm hiểu cách trở thành Contributor nội bộ'}
+                  : 'Interested in Authoring Course Material?'}
               </h2>
               <p style={{ color: 'var(--color-gray)', maxWidth: 620, lineHeight: 1.65 }}>
                 {isContributorOrAdmin
                   ? 'Create new course modules with immutable version snapshots, structured markdown, and direct publishing workflow.'
                   : isGuest
-                  ? 'Bạn là chuyên gia kỹ thuật và muốn xuất bản giáo trình? Vui lòng đăng nhập và gửi yêu cầu cấp quyền Contributor qua trang cá nhân.'
-                  : 'Quyền tác giả khóa học được cấp duyệt bởi Quản trị viên. Hãy cập nhật hồ sơ cá nhân và gửi yêu cầu cấp quyền Contributor đến Admin.'}
+                  ? 'Are you a domain expert interested in publishing technical curricula? Sign in and request Contributor access via your account profile.'
+                  : 'Course authoring access is granted exclusively by Administrators. Update your profile and submit a request to an Administrator.'}
               </p>
             </div>
 
@@ -318,7 +318,7 @@ export default function CoursesPage() {
                 className="btn btn-primary"
                 style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
               >
-                Đăng nhập để gửi yêu cầu &rarr;
+                Sign In to Request Access &rarr;
               </Link>
             ) : (
               <Link
@@ -326,7 +326,7 @@ export default function CoursesPage() {
                 className="btn btn-secondary"
                 style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
               >
-                Gửi yêu cầu qua Trang cá nhân &rarr;
+                Request Access via Account &rarr;
               </Link>
             )}
           </section>
