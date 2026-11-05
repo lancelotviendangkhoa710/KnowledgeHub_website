@@ -11,7 +11,7 @@
 
 ## Giai đoạn B: Phân quyền & Bảo vệ Trang Biên Soạn (Contributor Studio Guard)
 - [x] B1. Kiểm tra quyền truy cập của người dùng tại `/courses/create`
-- [ ] B2. Cập nhật giao diện nút "Open Contributor Studio" tại danh sách khóa học
+- [x] B2. Cập nhật giao diện nút "Open Contributor Studio" tại danh sách khóa học
 
 ## Giai đoạn C: Nâng cấp Trang Chi tiết Khóa học (`/courses/[id]`)
 - [ ] C1. Tích hợp Mục lục Động (Dynamic Table of Contents - TOC)
