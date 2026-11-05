@@ -258,6 +258,8 @@ export default function CourseDetailPage() {
   const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
+  const [readingProgress, setReadingProgress] = useState<number>(0);
+  const [isCompleted, setIsCompleted] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadCourse() {
@@ -382,6 +384,63 @@ export default function CourseDetailPage() {
       } catch {
         // Ignore storage errors
       }
+    }
+  };
+
+
+  // Track reading progress based on article content scroll
+  useEffect(() => {
+    const updateProgress = () => {
+      const articleEl = document.getElementById('course-article-content');
+      if (!articleEl) return;
+      const rect = articleEl.getBoundingClientRect();
+      const windowHeight = window.innerHeight;
+      const totalHeight = rect.height;
+      const scrolled = Math.max(0, -rect.top);
+      const maxScroll = totalHeight - windowHeight + 100;
+      if (maxScroll <= 0) {
+        setReadingProgress(100);
+      } else {
+        const percent = Math.min(100, Math.max(0, Math.round((scrolled / maxScroll) * 100)));
+        setReadingProgress(percent);
+      }
+    };
+
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    window.addEventListener('resize', updateProgress);
+    updateProgress();
+    return () => {
+      window.removeEventListener('scroll', updateProgress);
+      window.removeEventListener('resize', updateProgress);
+    };
+  }, [article]);
+
+  // Load completion status from storage
+  useEffect(() => {
+    if (!article?.id) return;
+    try {
+      const completedList: string[] = JSON.parse(localStorage.getItem('kh_completed_articles') || '[]');
+      setIsCompleted(completedList.includes(article.id));
+    } catch {
+      // Ignore
+    }
+  }, [article?.id]);
+
+  const handleToggleCompleted = () => {
+    if (!article?.id) return;
+    const nextCompleted = !isCompleted;
+    setIsCompleted(nextCompleted);
+    try {
+      const completedList: string[] = JSON.parse(localStorage.getItem('kh_completed_articles') || '[]');
+      if (nextCompleted) {
+        if (!completedList.includes(article.id)) completedList.push(article.id);
+      } else {
+        const idx = completedList.indexOf(article.id);
+        if (idx !== -1) completedList.splice(idx, 1);
+      }
+      localStorage.setItem('kh_completed_articles', JSON.stringify(completedList));
+    } catch {
+      // Ignore
     }
   };
 
@@ -560,6 +619,23 @@ export default function CourseDetailPage() {
 
   return (
     <div className="container" style={{ paddingTop: '2.5rem' }}>
+      {/* Top Reading Progress Bar */}
+      <div
+        role="progressbar"
+        aria-valuenow={readingProgress}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: `${readingProgress}%`,
+          height: '4px',
+          backgroundColor: 'var(--color-primary, #0284C7)',
+          zIndex: 9999,
+          transition: 'width 100ms ease-out',
+        }}
+      />
       {/* Breadcrumbs */}
       <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-gray)', marginBottom: '1.75rem' }}>
         <Link href="/courses" style={{ color: 'var(--color-gray)', transition: 'color var(--transition-fast)' }}>
@@ -578,7 +654,10 @@ export default function CourseDetailPage() {
       {/* Reader Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '3rem', alignItems: 'start' }}>
         {/* Main Content Column */}
-        <article style={{ maxWidth: 'var(--max-w-reader)', background: 'var(--color-white)', padding: '2.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xs)' }}>
+        <article
+          id="course-article-content"
+          style={{ maxWidth: 'var(--max-w-reader)', background: 'var(--color-white)', padding: '2.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xs)' }}
+        >
           <header style={{ marginBottom: '2.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '2rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
               <span
@@ -705,6 +784,76 @@ export default function CourseDetailPage() {
           {/* Prose Content */}
           <div className="prose">
             {renderFormattedContent(content)}
+          </div>
+
+          {/* Completion Footer Action */}
+          <div
+            style={{
+              marginTop: '3.5rem',
+              padding: '2rem',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: isCompleted ? '#F0FDF4' : 'var(--color-background)',
+              border: isCompleted ? '1.5px solid #86EFAC' : '1px solid var(--color-border)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1.25rem',
+              boxShadow: 'var(--shadow-xs)',
+            }}
+          >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                {isCompleted ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-gray)" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 14 14" />
+                  </svg>
+                )}
+                <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: isCompleted ? '#166534' : 'var(--color-charcoal)' }}>
+                  {isCompleted ? 'Bài học đã hoàn thành' : 'Hoàn thành bài học'}
+                </h4>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: isCompleted ? '#15803D' : 'var(--color-gray)' }}>
+                {isCompleted
+                  ? 'Bạn đã hoàn tất bài học này. Tiến độ đã được lưu lại trong lộ trình cá nhân.'
+                  : 'Đánh dấu để lưu lại lịch sử học tập và theo dõi tiến độ tổng thể.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleToggleCompleted}
+              className={isCompleted ? 'btn btn-secondary' : 'btn btn-primary'}
+              style={{
+                padding: '0.65rem 1.4rem',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+              }}
+            >
+              {isCompleted ? (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Đã hoàn thành (Bấm để hủy)
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Đánh dấu đã hoàn thành
+                </>
+              )}
+            </button>
           </div>
         </article>
 

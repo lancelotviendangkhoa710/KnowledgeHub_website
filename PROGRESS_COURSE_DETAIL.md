@@ -17,7 +17,7 @@
 - [x] C1. Tích hợp Mục lục Động (Dynamic Table of Contents - TOC)
 - [x] C2. Hoàn thiện Bộ đọc Markdown & Code Block Chuyên nghiệp
 - [x] C3. Đồng bộ hóa tính năng Bookmark với Backend API
-- [ ] C4. Nút "Đánh dấu đã hoàn thành" / Tiến độ học tập
+- [x] C4. Nút "Đánh dấu đã hoàn thành" / Tiến độ học tập
 - [ ] C5. Kiểm soát hiển thị khối "Author Actions" ở Sidebar
 
 ## Giai đoạn D: Kiểm thử & Đóng gói PR
