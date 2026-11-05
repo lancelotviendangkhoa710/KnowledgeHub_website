@@ -13,11 +13,15 @@ import { getAccessToken } from '@/lib/authToken';
 function CodeBlock({ code, language }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
-    if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Clipboard write permission denied or unavailable
+      }
     }
   };
 
@@ -225,18 +229,33 @@ function renderInlineFormatting(text: string): React.ReactNode {
     } else if (matchedPart.startsWith('[') && matchedPart.includes('](')) {
       const closingBracket = matchedPart.indexOf('](');
       const linkText = matchedPart.slice(1, closingBracket);
-      const linkHref = matchedPart.slice(closingBracket + 2, -1);
-      parts.push(
-        <a
-          key={`link-${match.index}`}
-          href={linkHref}
-          target={linkHref.startsWith('http') ? '_blank' : undefined}
-          rel={linkHref.startsWith('http') ? 'noopener noreferrer' : undefined}
-          style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
-        >
-          {linkText}
-        </a>
-      );
+      const linkHref = matchedPart.slice(closingBracket + 2, -1).trim();
+
+      const isSafe =
+        linkHref.startsWith('#') ||
+        (linkHref.startsWith('/') &&
+          !linkHref.startsWith('//') &&
+          !linkHref.startsWith('/\\') &&
+          !linkHref.includes('\\') &&
+          !/[\r\n\t]/.test(linkHref)) ||
+        linkHref.startsWith('http://') ||
+        linkHref.startsWith('https://');
+
+      if (isSafe) {
+        parts.push(
+          <a
+            key={`link-${match.index}`}
+            href={linkHref}
+            target={linkHref.startsWith('http') ? '_blank' : undefined}
+            rel={linkHref.startsWith('http') ? 'noopener noreferrer' : undefined}
+            style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+          >
+            {linkText}
+          </a>
+        );
+      } else {
+        parts.push(linkText);
+      }
     }
     lastIndex = regex.lastIndex;
   }
@@ -256,6 +275,7 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
+  const [isBookmarkPending, setIsBookmarkPending] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
   const [readingProgress, setReadingProgress] = useState<number>(0);
@@ -297,13 +317,14 @@ export default function CourseDetailPage() {
   }, [idOrSlug]);
 
 
-  // Extract dynamic table of contents from markdown
+  // Extract dynamic table of contents from markdown with unique IDs
   const tocItems = useMemo(() => {
     if (!article) return [];
     const v = article.published_version || article.latest_version;
     const raw = v?.content || '';
     const lines = raw.split('\n');
     const items: { id: string; text: string; level: number }[] = [];
+    const seenIds = new Map<string, number>();
     let inCode = false;
 
     lines.forEach((line, idx) => {
@@ -315,11 +336,17 @@ export default function CourseDetailPage() {
 
       if (line.startsWith('## ')) {
         const text = line.replace('## ', '').trim();
-        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        const count = seenIds.get(base) || 0;
+        seenIds.set(base, count + 1);
+        const id = count === 0 ? base : `${base}-${count}`;
         items.push({ id, text, level: 2 });
       } else if (line.startsWith('### ')) {
         const text = line.replace('### ', '').trim();
-        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        const count = seenIds.get(base) || 0;
+        seenIds.set(base, count + 1);
+        const id = count === 0 ? base : `${base}-${count}`;
         items.push({ id, text, level: 3 });
       }
     });
@@ -360,8 +387,9 @@ export default function CourseDetailPage() {
   };
 
   const toggleBookmark = async () => {
-    if (!article) return;
+    if (!article || isBookmarkPending) return;
     const targetState = !bookmarked;
+    setIsBookmarkPending(true);
     setBookmarked(targetState);
     setBookmarkNotice(null);
 
@@ -380,6 +408,8 @@ export default function CourseDetailPage() {
         setBookmarked(!targetState);
         setBookmarkNotice('Unable to sync bookmark with server. Please try again.');
         setTimeout(() => setBookmarkNotice(null), 4000);
+      } finally {
+        setIsBookmarkPending(false);
       }
     } else {
       // Guest: persist in localStorage and suggest signing in
@@ -395,7 +425,12 @@ export default function CourseDetailPage() {
         localStorage.setItem('kh_saved_courses', JSON.stringify(stored));
         setTimeout(() => setBookmarkNotice(null), 4000);
       } catch {
-        // Ignore storage errors
+        // Revert on storage failure (e.g. QuotaExceededError)
+        setBookmarked(!targetState);
+        setBookmarkNotice('Unable to save bookmark locally on this device.');
+        setTimeout(() => setBookmarkNotice(null), 4000);
+      } finally {
+        setIsBookmarkPending(false);
       }
     }
   };
@@ -494,40 +529,42 @@ export default function CourseDetailPage() {
   const renderFormattedContent = (raw: string) => {
     const lines = raw.split('\n');
     const elements: React.ReactNode[] = [];
-    let inCodeBlock = false;
-    let codeBuffer: string[] = [];
-    let codeLanguage = '';
+    const seenHeadingIds = new Map<string, number>();
 
-    lines.forEach((line, idx) => {
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i];
+
+      // Code Block
       if (line.startsWith('```')) {
-        if (!inCodeBlock) {
-          inCodeBlock = true;
-          codeBuffer = [];
-          codeLanguage = line.replace('```', '').trim();
-        } else {
-          inCodeBlock = false;
-          elements.push(
-            <CodeBlock
-              key={`code-${idx}`}
-              code={codeBuffer.join('\n')}
-              language={codeLanguage}
-            />
-          );
+        const codeLanguage = line.replace('```', '').trim();
+        const codeBuffer: string[] = [];
+        i++;
+        while (i < lines.length && !lines[i].startsWith('```')) {
+          codeBuffer.push(lines[i]);
+          i++;
         }
-        return;
+        elements.push(
+          <CodeBlock
+            key={`code-${i}`}
+            code={codeBuffer.join('\n')}
+            language={codeLanguage}
+          />
+        );
+        i++; // skip closing ```
+        continue;
       }
 
-      if (inCodeBlock) {
-        codeBuffer.push(line);
-        return;
-      }
-
+      // Headings
       if (line.startsWith('## ')) {
         const text = line.replace('## ', '').trim();
-        const headingId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${i}`;
+        const count = seenHeadingIds.get(base) || 0;
+        seenHeadingIds.set(base, count + 1);
+        const headingId = count === 0 ? base : `${base}-${count}`;
         elements.push(
           <h2
-            key={idx}
+            key={`h2-${i}`}
             id={headingId}
             style={{
               color: 'var(--color-charcoal)',
@@ -544,12 +581,19 @@ export default function CourseDetailPage() {
             {text}
           </h2>
         );
-      } else if (line.startsWith('### ')) {
+        i++;
+        continue;
+      }
+
+      if (line.startsWith('### ')) {
         const text = line.replace('### ', '').trim();
-        const headingId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${i}`;
+        const count = seenHeadingIds.get(base) || 0;
+        seenHeadingIds.set(base, count + 1);
+        const headingId = count === 0 ? base : `${base}-${count}`;
         elements.push(
           <h3
-            key={idx}
+            key={`h3-${i}`}
             id={headingId}
             style={{
               color: 'var(--color-charcoal)',
@@ -564,38 +608,59 @@ export default function CourseDetailPage() {
             {text}
           </h3>
         );
-      } else if (line.startsWith('> [!NOTE]') || line.startsWith('> [!IMPORTANT]')) {
-        const rawNote = line.replace(/^>\s*\[!(NOTE|IMPORTANT)\]\s*/i, '').trim();
+        i++;
+        continue;
+      }
+
+      // Group consecutive blockquote lines starting with > into one Callout
+      if (line.startsWith('>')) {
+        let calloutKind: 'note' | 'tip' | 'warning' | 'default' = 'default';
+        let calloutTitle: string | undefined = undefined;
+        const quoteContents: string[] = [];
+
+        const firstClean = line.replace(/^>\s*/, '');
+        if (/^\[!(NOTE|IMPORTANT)\]/i.test(firstClean)) {
+          calloutKind = 'note';
+          calloutTitle = 'Note';
+          const rest = firstClean.replace(/^\[!(NOTE|IMPORTANT)\]\s*/i, '').trim();
+          if (rest) quoteContents.push(rest);
+        } else if (/^\[!TIP\]/i.test(firstClean)) {
+          calloutKind = 'tip';
+          calloutTitle = 'Tip & Best Practice';
+          const rest = firstClean.replace(/^\[!TIP\]\s*/i, '').trim();
+          if (rest) quoteContents.push(rest);
+        } else if (/^\[!(WARNING|CAUTION)\]/i.test(firstClean)) {
+          calloutKind = 'warning';
+          calloutTitle = 'Warning';
+          const rest = firstClean.replace(/^\[!(WARNING|CAUTION)\]\s*/i, '').trim();
+          if (rest) quoteContents.push(rest);
+        } else {
+          quoteContents.push(firstClean);
+        }
+
+        i++;
+        while (i < lines.length && lines[i].startsWith('>')) {
+          quoteContents.push(lines[i].replace(/^>\s*/, ''));
+          i++;
+        }
+
         elements.push(
-          <Callout key={idx} kind="note" title="Note">
-            {renderInlineFormatting(rawNote || 'Important technical context and requirements.')}
+          <Callout key={`quote-${i}`} kind={calloutKind} title={calloutTitle}>
+            {quoteContents.map((qc, qIdx) => (
+              <p key={qIdx} style={{ margin: qIdx > 0 ? '0.5rem 0 0 0' : 0 }}>
+                {renderInlineFormatting(qc)}
+              </p>
+            ))}
           </Callout>
         );
-      } else if (line.startsWith('> [!TIP]')) {
-        const rawTip = line.replace(/^>\s*\[!TIP\]\s*/i, '').trim();
-        elements.push(
-          <Callout key={idx} kind="tip" title="Tip & Best Practice">
-            {renderInlineFormatting(rawTip || 'Recommended production design pattern.')}
-          </Callout>
-        );
-      } else if (line.startsWith('> [!WARNING]') || line.startsWith('> [!CAUTION]')) {
-        const rawWarn = line.replace(/^>\s*\[!(WARNING|CAUTION)\]\s*/i, '').trim();
-        elements.push(
-          <Callout key={idx} kind="warning" title="Warning">
-            {renderInlineFormatting(rawWarn || 'Breaking changes or operational risks.')}
-          </Callout>
-        );
-      } else if (line.startsWith('> ')) {
-        const rawQuote = line.replace(/^>\s*/, '').trim();
-        elements.push(
-          <Callout key={idx} kind="default">
-            {renderInlineFormatting(rawQuote)}
-          </Callout>
-        );
-      } else if (line.startsWith('* ') || line.startsWith('- ')) {
+        continue;
+      }
+
+      // List Items
+      if (line.startsWith('* ') || line.startsWith('- ')) {
         elements.push(
           <li
-            key={idx}
+            key={`li-${i}`}
             style={{
               marginLeft: '1.5rem',
               color: 'var(--color-charcoal)',
@@ -607,12 +672,22 @@ export default function CourseDetailPage() {
             {renderInlineFormatting(line.replace(/^[*-]\s+/, ''))}
           </li>
         );
-      } else if (line.trim() === '---') {
-        elements.push(<hr key={idx} style={{ borderColor: 'var(--color-border)', margin: '2.5rem 0' }} />);
-      } else if (line.trim().length > 0) {
+        i++;
+        continue;
+      }
+
+      // Horizontal Rule
+      if (line.trim() === '---') {
+        elements.push(<hr key={`hr-${i}`} style={{ borderColor: 'var(--color-border)', margin: '2.5rem 0' }} />);
+        i++;
+        continue;
+      }
+
+      // Paragraph
+      if (line.trim().length > 0) {
         elements.push(
           <p
-            key={idx}
+            key={`p-${i}`}
             style={{
               color: 'var(--color-charcoal)',
               marginBottom: '1.4rem',
@@ -625,7 +700,9 @@ export default function CourseDetailPage() {
           </p>
         );
       }
-    });
+
+      i++;
+    }
 
     return elements;
   };
@@ -742,6 +819,7 @@ export default function CourseDetailPage() {
                   <button
                     type="button"
                     onClick={toggleBookmark}
+                    disabled={isBookmarkPending}
                     className="btn btn-secondary"
                     style={{
                       padding: '0.45rem 0.95rem',
@@ -834,8 +912,8 @@ export default function CourseDetailPage() {
               </div>
               <p style={{ margin: 0, fontSize: '0.9rem', color: isCompleted ? '#15803D' : 'var(--color-gray)' }}>
                 {isCompleted
-                  ? 'You have completed this curriculum module. Your progress has been recorded in your learning profile.'
-                  : 'Mark this module as complete to record your learning progress and track your curriculum path.'}
+                  ? 'You have completed this module on this browser. Lesson progress is recorded locally on this device.'
+                  : 'Mark this module as complete to save your learning history on this browser.'}
               </p>
             </div>
 

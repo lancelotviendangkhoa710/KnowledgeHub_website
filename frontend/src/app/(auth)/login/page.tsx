@@ -5,6 +5,22 @@ import { useRouter } from 'next/navigation';
 import { FormEvent, useState } from 'react';
 import { login } from '@/lib/auth';
 
+function getSafeRedirectUrl(param: string | null): string {
+  if (!param) return '/courses';
+  const trimmed = param.trim();
+  // Must start with single slash and not be protocol-relative (//) or backslash (/\)
+  if (
+    trimmed.startsWith('/') &&
+    !trimmed.startsWith('//') &&
+    !trimmed.startsWith('/\\') &&
+    !trimmed.includes('\\') &&
+    !/[\r\n\t]/.test(trimmed)
+  ) {
+    return trimmed;
+  }
+  return '/courses';
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -22,7 +38,7 @@ export default function LoginPage() {
       // Client-side navigation keeps the in-memory bearer token (lib/authToken.ts)
       // available for the next page; a full reload would drop the session.
       const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-      const targetUrl = searchParams?.get('redirect') || '/courses';
+      const targetUrl = getSafeRedirectUrl(searchParams?.get('redirect') ?? null);
       router.push(targetUrl);
     } catch (error) {
       const response = error as { message?: string; errors?: Record<string, string[]> };

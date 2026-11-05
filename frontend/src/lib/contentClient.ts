@@ -26,9 +26,10 @@ export async function fetchArticles(params?: {
 }): Promise<Article[]> {
   try {
     const baseTarget = buildApiUrl('/articles');
+    const fallbackBase = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1';
     const url = new URL(
       baseTarget,
-      baseTarget.startsWith('http') ? undefined : 'http://localhost'
+      baseTarget.startsWith('http') ? undefined : fallbackBase
     );
     if (params?.categoryId) url.searchParams.append('category_id', params.categoryId);
     if (params?.tagSlug) url.searchParams.append('tag_slug', params.tagSlug);

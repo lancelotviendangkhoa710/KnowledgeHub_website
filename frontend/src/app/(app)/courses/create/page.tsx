@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category } from '@/types/content';
-import { fetchCategories } from '@/lib/contentClient';
+import { fetchCategories, fetchArticle } from '@/lib/contentClient';
 import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
@@ -41,6 +41,8 @@ List the mathematical or operational guarantees enforced by this architecture.
   const [previewMode, setPreviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [parentId, setParentId] = useState<string | null>(null);
 
   useEffect(() => {
     return subscribeCurrentUser(() => setUser(getCurrentUser()));
@@ -81,6 +83,28 @@ List the mathematical or operational guarantees enforced by this architecture.
       }
     }
     load();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const pid = params.get('parent_id');
+      if (pid) {
+        setParentId(pid);
+        fetchArticle(pid)
+          .then((art) => {
+            if (art) {
+              const v = art.published_version || art.latest_version;
+              if (v) {
+                setTitle(`Revision: ${v.title}`);
+                setContent(v.content);
+              }
+              if (art.category_id) {
+                setCategoryId(art.category_id);
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    }
   }, []);
 
   const handleTitleChange = (val: string) => {
@@ -103,35 +127,61 @@ List the mathematical or operational guarantees enforced by this architecture.
 
     setIsSubmitting(true);
     setSuccessMessage(null);
+    setErrorMessage(null);
 
     // Call API or simulate contributor creation
     try {
-      type ArticleCreateResponse = {
-        status: string;
-        message: string;
-        data?: { id: string; slug: string; status: string };
-      };
+      if (parentId) {
+        type VersionCreateResponse = {
+          status: string;
+          message: string;
+          data?: { id: string; article_id: string; version_no: number };
+        };
+        const verRes = await api.post<VersionCreateResponse>(`/v1/articles/${parentId}/versions`, {
+          title,
+          content,
+        });
 
-      const data = await api.post<ArticleCreateResponse>('/v1/articles', {
-        title,
-        slug,
-        category_id: categoryId || null,
-        content,
-        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-      });
+        if (publish && verRes?.data?.id) {
+          await api.post(`/v1/articles/${parentId}/publish`, {
+            version_id: verRes.data.id,
+          });
+        }
+      } else {
+        type ArticleCreateResponse = {
+          status: string;
+          message: string;
+          data?: { id: string; slug: string; status: string };
+        };
 
-      if (publish && data?.data?.id) {
-        await api.post(`/v1/articles/${data.data.id}/publish`, {});
+        const data = await api.post<ArticleCreateResponse>('/v1/articles', {
+          title,
+          slug,
+          category_id: categoryId || null,
+          content,
+          tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+        });
+
+        if (publish && data?.data?.id) {
+          await api.post(`/v1/articles/${data.data.id}/publish`, {});
+        }
       }
-    } catch {
-      // Local fallback simulation
+    } catch (err: unknown) {
+      const errorObj = err as { status?: number; message?: string; errors?: Record<string, string[]> };
+      if (errorObj?.status && errorObj.status >= 400) {
+        const firstErr = errorObj.errors ? Object.values(errorObj.errors)[0]?.[0] : undefined;
+        setErrorMessage(firstErr || errorObj.message || 'Failed to save course. Please check your inputs.');
+        setIsSubmitting(false);
+        return;
+      }
+      // Local fallback simulation if API is unreachable
     }
 
     setIsSubmitting(false);
     setSuccessMessage(
-      publish
-        ? 'Course successfully published to the KnowledgeHub platform!'
-        : 'Course draft saved to your contributor workbench.'
+      parentId
+        ? (publish ? 'New course version published successfully!' : 'Draft revision saved to your workbench.')
+        : (publish ? 'Course successfully published to the KnowledgeHub platform!' : 'Course draft saved to your contributor workbench.')
     );
 
     setTimeout(() => {
@@ -229,6 +279,42 @@ List the mathematical or operational guarantees enforced by this architecture.
           </button>
         </div>
       </div>
+
+      {parentId && (
+        <div
+          style={{
+            marginBottom: '1.5rem',
+            padding: '0.85rem 1.25rem',
+            background: '#F0F9FF',
+            border: '1px solid #BAE6FD',
+            borderRadius: 'var(--radius-md)',
+            color: '#0369A1',
+            fontSize: '0.875rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>Draft Revision Mode:</span> Creating a new version snapshot for parent course ID: <code>{parentId}</code>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div
+          role="alert"
+          style={{
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.5rem',
+            color: '#B91C1C',
+            marginBottom: '1.5rem',
+            fontWeight: 600,
+          }}
+        >
+          {errorMessage}
+        </div>
+      )}
 
       {successMessage && (
         <div
