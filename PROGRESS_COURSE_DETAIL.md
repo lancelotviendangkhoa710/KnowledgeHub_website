@@ -7,7 +7,7 @@
 
 ## Giai đoạn A: Dọn dẹp & Chuẩn hóa Kết nối API
 - [x] A1. Kiểm tra cấu hình API Base Client
-- [ ] A2. Sửa lỗi gọi API tại trang Create Course
+- [x] A2. Sửa lỗi gọi API tại trang Create Course
 
 ## Giai đoạn B: Phân quyền & Bảo vệ Trang Biên Soạn (Contributor Studio Guard)
 - [ ] B1. Kiểm tra quyền truy cập của người dùng tại `/courses/create`

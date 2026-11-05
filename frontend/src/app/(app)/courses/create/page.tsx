@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category } from '@/types/content';
 import { fetchCategories } from '@/lib/contentClient';
-import { getAccessToken } from '@/lib/authToken';
+import { api } from '@/lib/api';
 
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
@@ -71,36 +71,22 @@ List the mathematical or operational guarantees enforced by this architecture.
 
     // Call API or simulate contributor creation
     try {
-      const bearerToken = getAccessToken();
-      const res = await fetch('http://localhost:8080/api/articles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
-        },
-        body: JSON.stringify({
-          title,
-          slug,
-          category_id: categoryId || null,
-          content,
-          tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-        }),
+      type ArticleCreateResponse = {
+        status: string;
+        message: string;
+        data?: { id: string; slug: string; status: string };
+      };
+
+      const data = await api.post<ArticleCreateResponse>('/v1/articles', {
+        title,
+        slug,
+        category_id: categoryId || null,
+        content,
+        tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
       });
 
-      if (res.ok && publish) {
-        const data = await res.json();
-        // If publish requested, trigger publish endpoint
-        if (data.data?.id) {
-          await fetch(`http://localhost:8080/api/articles/${data.data.id}/publish`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Accept: 'application/json',
-              ...(bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {}),
-            },
-          });
-        }
+      if (publish && data?.data?.id) {
+        await api.post(`/v1/articles/${data.data.id}/publish`, {});
       }
     } catch {
       // Local fallback simulation
