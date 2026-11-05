@@ -23,6 +23,6 @@
 - [x] 4.3. Bổ sung Widget Thống kê Hoạt động Học tập (Quick Learning Stats)
 
 ## Giai đoạn 5: Kiểm thử, Tối ưu & Đóng gói Pull Request
-- [ ] 5.1. Kiểm tra Build & Type Safety trong `frontend/`
+- [x] 5.1. Kiểm tra Build & Type Safety trong `frontend/`
 - [ ] 5.2. Chạy kịch bản kiểm tra Guardrails dự án
 - [ ] 5.3. Tạo Pull Request
