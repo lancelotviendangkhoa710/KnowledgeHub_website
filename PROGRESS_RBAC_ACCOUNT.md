@@ -18,7 +18,7 @@
 - [x] 3.2. Cập nhật Banner CTA Contributor trên trang danh mục (`/courses/page.tsx`)
 
 ## Giai đoạn 4: Nâng cấp Toàn diện Giao diện Trang Cá nhân (`/account`)
-- [ ] 4.1. Thiết kế Thẻ Định danh & Thông tin Tổng quan (Profile Overview Card)
+- [x] 4.1. Thiết kế Thẻ Định danh & Thông tin Tổng quan (Profile Overview Card)
 - [ ] 4.2. Bổ sung Khu vực Đặc quyền theo Vai trò (Role Privileges Dashboard)
 - [ ] 4.3. Bổ sung Widget Thống kê Hoạt động Học tập (Quick Learning Stats)
 
