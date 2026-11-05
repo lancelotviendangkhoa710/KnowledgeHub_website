@@ -6,7 +6,7 @@
 - [x] 0.3. Tạo nhánh Git tính năng độc lập `p1/AUTH-04-rbac-account-ui`
 
 ## Giai đoạn 1: Bắt buộc Đăng nhập khi Gắn Bookmark
-- [ ] 1.1. Chặn hành vi Bookmark của Khách trên `CourseCard.tsx`
+- [x] 1.1. Chặn hành vi Bookmark của Khách trên `CourseCard.tsx`
 - [ ] 1.2. Chặn hành vi Bookmark của Khách trên trang Chi tiết bài giảng (`/courses/[id]`)
 
 ## Giai đoạn 2: Bắt buộc Đăng nhập khi Xem Chi tiết Bài giảng (`/courses/[id]`)
