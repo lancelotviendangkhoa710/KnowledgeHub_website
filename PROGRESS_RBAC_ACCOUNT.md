@@ -14,7 +14,7 @@
 - [x] 2.2. Đảm bảo trải nghiệm đọc liền mạch cho thành viên đã đăng nhập
 
 ## Giai đoạn 3: Phân quyền Nghiêm ngặt Trang Tạo bài giảng (`/courses/create`)
-- [ ] 3.1. Tạo RBAC Guard tại trang Contributor Studio
+- [x] 3.1. Tạo RBAC Guard tại trang Contributor Studio
 - [ ] 3.2. Cập nhật Banner CTA Contributor trên trang danh mục (`/courses/page.tsx`)
 
 ## Giai đoạn 4: Nâng cấp Toàn diện Giao diện Trang Cá nhân (`/account`)
