@@ -102,14 +102,12 @@ export default function BookmarksPage() {
             </svg>
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.75rem' }}>
-            Yêu cầu Đăng nhập
+            Sign In Required
           </h2>
           <p style={{ color: 'var(--color-gray)', marginBottom: '2rem', fontSize: '1rem', lineHeight: 1.6 }}>
-            Vui lòng đăng nhập để lưu trữ và xem lại các khóa học trong Thư viện cá nhân của bạn.
+            Please sign in to view and manage your saved courses in your personal library.
           </p>
-          <Link href="/login?redirect=/bookmarks" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontWeight: 600 }}>
-            Đăng nhập ngay &rarr;
-          </Link>
+          <Link href="/login?redirect=/bookmarks" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontWeight: 600 }}>Sign In Now &rarr;</Link>
         </div>
       ) : bookmarkedArticles.length > 0 ? (
         <div

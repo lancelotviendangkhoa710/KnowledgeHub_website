@@ -11,13 +11,14 @@ import { getAccessToken, setAccessToken } from '@/lib/authToken';
 type Notice = { kind: 'ok' | 'error'; text: string } | null;
 
 function formatTenure(dateString?: string | null): string {
-  if (!dateString) return 'Thành viên KnowledgeHub';
+  if (!dateString) return 'KnowledgeHub Member';
   try {
     const d = new Date(dateString);
-    if (isNaN(d.getTime())) return 'Thành viên KnowledgeHub';
-    return `Thành viên từ tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+    if (isNaN(d.getTime())) return 'KnowledgeHub Member';
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return `Member since ${monthNames[d.getMonth()]} ${d.getFullYear()}`;
   } catch {
-    return 'Thành viên KnowledgeHub';
+    return 'KnowledgeHub Member';
   }
 }
 
@@ -265,7 +266,7 @@ export default function AccountPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: '#CBD5E1', flexWrap: 'wrap' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#4ADE80', fontWeight: 600 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ADE80', display: 'inline-block' }} />
-                Hoạt động (Active)
+                Active
               </span>
               <span style={{ color: '#64748B' }}>•</span>
               <span style={{ color: '#E2E8F0' }}>
@@ -307,10 +308,10 @@ export default function AccountPage() {
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-charcoal)' }}>
-              Đặc quyền &amp; Quyền hạn Tài khoản
+              Account Roles &amp; Privileges
             </h3>
             <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--color-gray)' }}>
-              Phân quyền thực thi dựa trên vai trò hệ thống KnowledgeHub RBAC
+              Role-based access controls enforced by KnowledgeHub RBAC
             </p>
           </div>
         </div>
@@ -331,10 +332,10 @@ export default function AccountPage() {
           >
             <div>
               <div style={{ fontWeight: 700, color: '#166534', fontSize: '1rem', marginBottom: '0.25rem' }}>
-                Toàn quyền Quản trị Nền tảng (Platform Administrator)
+                Platform Administrator Privileges
               </div>
               <div style={{ fontSize: '0.88rem', color: '#15803D', lineHeight: 1.5 }}>
-                Bạn có toàn quyền quản lý người dùng, phân quyền vai trò (User, Contributor, Admin), và quản trị các khóa học trên toàn hệ thống.
+                You have full administrative privileges to manage user accounts, assign roles (User, Contributor, Admin), and govern platform-wide curricula.
               </div>
             </div>
             <Link
@@ -342,7 +343,7 @@ export default function AccountPage() {
               className="button button--primary"
               style={{ padding: '0.65rem 1.35rem', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none' }}
             >
-              Bảng Quản trị Người dùng &amp; Phân quyền &rarr;
+              User &amp; Access Management &rarr;
             </Link>
           </div>
         ) : user.roles?.includes('contributor') ? (
@@ -361,10 +362,10 @@ export default function AccountPage() {
           >
             <div>
               <div style={{ fontWeight: 700, color: '#9A3412', fontSize: '1rem', marginBottom: '0.25rem' }}>
-                Quyền Tác giả Ban Chuyên Môn (Contributor Privileges)
+                Contributor Authoring Privileges
               </div>
               <div style={{ fontSize: '0.88rem', color: '#C2410C', lineHeight: 1.5 }}>
-                Bạn có quyền tạo mới bài giảng giáo trình, cập nhật phiên bản bất biến (version snapshots) và xuất bản trực tiếp lên nền tảng.
+                You can author technical course materials, publish immutable version snapshots, and manage your course workbench.
               </div>
             </div>
             <Link
@@ -372,7 +373,7 @@ export default function AccountPage() {
               className="button button--primary"
               style={{ padding: '0.65rem 1.35rem', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none' }}
             >
-              Mở Contributor Studio để soạn giáo trình mới &rarr;
+              Open Contributor Studio &rarr;
             </Link>
           </div>
         ) : (
@@ -391,18 +392,18 @@ export default function AccountPage() {
           >
             <div>
               <div style={{ fontWeight: 700, color: '#0369A1', fontSize: '1rem', marginBottom: '0.35rem' }}>
-                Quyền tác giả (Contributor Status)
+                Contributor Status
               </div>
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#075985', lineHeight: 1.6 }}>
-                Hiện đang là Người học (User). Bạn có chuyên môn kỹ thuật sâu và muốn đóng góp bài giảng? Hãy gửi yêu cầu để Ban Quản trị cấp quyền Contributor.
+                Current Role: User. Do you have deep technical expertise and wish to contribute course material? Submit a request to the Administrators to upgrade your role.
               </p>
             </div>
             <a
-              href="mailto:admin@knowledgehub.internal?subject=Y%C3%AAu%20c%E1%BA%A7u%20c%E1%BA%A5p%20quy%E1%BB%81n%20Contributor&body=Xin%20ch%C3%A0o%20Ban%20Qu%E1%BA%A3n%20tr%E1%BB%8B%20KnowledgeHub,%0A%0AT%C3%B4i%20mu%E1%BB%91n%20%C4%91%C4%83ng%20k%C3%BD%20tr%E1%BB%9F%20th%C3%A0nh%20Contributor%20%C4%91%E1%BB%83%20tham%20gia%20bi%C3%AAn%20so%E1%BA%A1n%20v%C3%A0%20xu%E1%BA%A5t%20b%E1%BA%A3n%20gi%C3%A1o%20tr%C3%ACnh%20k%E1%BB%B9%20thu%E1%BA%ADt.%0A%0ATh%C3%B4ng%20tin%20chuy%C3%AAn%20m%C3%B4n%20c%E1%BB%A7a%20t%C3%B4i:%20[%C4%90i%E1%BB%81n%20t%C3%B3m%20t%E1%BA%AFt%20chuy%C3%AAn%20m%C3%B4n]"
+              href="mailto:admin@knowledgehub.internal?subject=Request%20for%20Contributor%20Access&body=Hello%20KnowledgeHub%20Admin,%0A%0AI%20would%20like%20to%20apply%20for%20Contributor%20privileges%20to%20author%20technical%20curricula%20on%20KnowledgeHub.%0A%0AMy%20technical%20background%20and%20domain%20expertise:%20[Brief%20summary]"
               className="button button--secondary"
               style={{ padding: '0.65rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none' }}
             >
-              Gửi email yêu cầu &rarr;
+              Request Contributor Access &rarr;
             </a>
           </div>
         )}
@@ -454,10 +455,10 @@ export default function AccountPage() {
             </div>
             <div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
-                Khóa học đã lưu
+                Saved Library
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-gray)' }}>
-                Truy cập Thư viện cá nhân
+                Access your saved courses and references
               </div>
             </div>
           </div>
@@ -501,10 +502,10 @@ export default function AccountPage() {
             </div>
             <div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
-                Lộ trình cá nhân
+                Learning Roadmaps
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-gray)' }}>
-                AI Learning Roadmaps
+                Explore AI-guided curricula
               </div>
             </div>
           </div>

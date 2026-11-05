@@ -23,7 +23,7 @@ export default function CourseCard({ article }: CourseCardProps) {
 
     const authBearer = getAccessToken();
     if (!authBearer) {
-      setNotice('Vui lòng đăng nhập để lưu khóa học vào Thư viện cá nhân');
+      setNotice('Please sign in to save courses to your library');
       router.push('/login?redirect=/courses');
       return;
     }
@@ -42,7 +42,7 @@ export default function CourseCard({ article }: CourseCardProps) {
       }
     } catch {
       setBookmarked(!nextState);
-      setNotice('Không thể cập nhật bookmark. Vui lòng thử lại.');
+      setNotice('Unable to update bookmark. Please try again.');
       setTimeout(() => setNotice(null), 3000);
     } finally {
       setIsPending(false);
@@ -132,7 +132,7 @@ export default function CourseCard({ article }: CourseCardProps) {
               onClick={toggleBookmark}
               disabled={isPending}
               aria-label={bookmarked ? 'Remove from saved library' : 'Save course'}
-              title={bookmarked ? 'Bỏ lưu khóa học' : 'Lưu vào Thư viện cá nhân'}
+              title={bookmarked ? 'Remove from saved library' : 'Save to personal library'}
               style={{
                 background: bookmarked ? 'var(--color-primary-pale)' : 'var(--color-white)',
                 border: '1px solid',

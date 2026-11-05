@@ -231,19 +231,13 @@ List the mathematical or operational guarantees enforced by this architecture.
               <path d="M7 11V7a5 5 0 0 1 10 0v4" />
             </svg>
           </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-charcoal)', marginBottom: '1rem', letterSpacing: '-0.02em' }}>
-            Quyền truy cập dành riêng cho Contributor &amp; Admin
-          </h2>
+          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-charcoal)', marginBottom: '1rem', letterSpacing: '-0.02em' }}>Contributor & Administrator Access Required</h2>
           <p style={{ color: 'var(--color-gray)', lineHeight: 1.7, marginBottom: '2.25rem', fontSize: '1.025rem' }}>
-            Tài khoản của bạn hiện là Người học (User). Để đảm bảo chất lượng giáo trình nội bộ, chỉ thành viên thuộc Ban chuyên môn (Contributor) hoặc Quản trị viên mới có quyền tạo khóa học mới. Vui lòng liên hệ Admin để được cấp quyền.
+            Your account currently has the standard User role. To maintain internal curriculum quality, only domain specialists (Contributors) or Administrators may author new courses. Please contact an Administrator to request Contributor privileges.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <Link href="/courses" className="btn btn-primary" style={{ padding: '0.75rem 1.6rem', fontWeight: 600 }}>
-              Quay lại Khám phá Khóa học
-            </Link>
-            <Link href="/account" className="btn btn-secondary" style={{ padding: '0.75rem 1.6rem', fontWeight: 600 }}>
-              Xem thông tin tài khoản
-            </Link>
+            <Link href="/courses" className="btn btn-primary" style={{ padding: '0.75rem 1.6rem', fontWeight: 600 }}>Back to Courses</Link>
+            <Link href="/account" className="btn btn-secondary" style={{ padding: '0.75rem 1.6rem', fontWeight: 600 }}>View Account Privileges</Link>
           </div>
         </div>
       </div>

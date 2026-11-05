@@ -411,7 +411,7 @@ export default function CourseDetailPage() {
     const authBearer = getAccessToken();
 
     if (!authBearer) {
-      setBookmarkNotice('Vui lòng đăng nhập để lưu khóa học vào Thư viện cá nhân');
+      setBookmarkNotice('Please sign in to save courses to your library.');
       router.push(`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`);
       return;
     }
@@ -430,7 +430,7 @@ export default function CourseDetailPage() {
     } catch {
       // Revert optimistic update on error
       setBookmarked(!targetState);
-      setBookmarkNotice('Không thể đồng bộ bookmark với máy chủ. Vui lòng thử lại.');
+      setBookmarkNotice('Unable to sync bookmark with server. Please try again.');
       setTimeout(() => setBookmarkNotice(null), 4000);
     } finally {
       setIsBookmarkPending(false);
@@ -555,7 +555,7 @@ export default function CourseDetailPage() {
     const fallbackCut = Math.max(1, Math.min(4, Math.floor(lines.length / 2)));
     return {
       introContent: lines.slice(0, fallbackCut).join('\n'),
-      remainingContent: lines.slice(fallbackCut).join('\n') || 'Đăng nhập để xem toàn bộ nội dung giáo trình.',
+      remainingContent: lines.slice(fallbackCut).join('\n') || 'Sign in to access the complete curriculum material.',
     };
   }, [content, article]);
 
@@ -996,7 +996,7 @@ export default function CourseDetailPage() {
                       letterSpacing: '-0.01em',
                     }}
                   >
-                    Nội dung Độc quyền dành cho Thành viên
+                    Exclusive Member Curriculum
                   </h3>
                   <p
                     style={{
@@ -1007,7 +1007,7 @@ export default function CourseDetailPage() {
                       margin: '0 auto 1.75rem auto',
                     }}
                   >
-                    Vui lòng đăng nhập tài khoản KnowledgeHub để mở khóa toàn bộ bài giảng kỹ thuật, mã nguồn mẫu và theo dõi tiến độ học tập.
+                    Please sign in to your KnowledgeHub account to unlock the full technical curriculum, interactive code blocks, and progress tracking.
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
                     <Link
@@ -1015,14 +1015,14 @@ export default function CourseDetailPage() {
                       className="btn btn-primary"
                       style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 600 }}
                     >
-                      Đăng nhập ngay
+                      Sign In Now
                     </Link>
                     <Link
                       href={`/register?redirect=/courses/${encodeURIComponent(idOrSlug)}`}
                       className="btn btn-secondary"
                       style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 600 }}
                     >
-                      Đăng ký tài khoản miễn phí
+                      Create Free Account
                     </Link>
                   </div>
                 </div>
