@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Article } from '@/types/content';
-import { fetchArticle } from '@/lib/contentClient';
+import { fetchArticle, fetchArticles } from '@/lib/contentClient';
 import { api } from '@/lib/api';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 
 
@@ -260,6 +260,12 @@ export default function CourseDetailPage() {
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
+  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
+
+  useEffect(() => {
+    return subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
+  }, []);
 
   useEffect(() => {
     async function loadCourse() {
@@ -277,6 +283,13 @@ export default function CourseDetailPage() {
         } catch {
           setBookmarked(false);
         }
+      }
+      if (data?.category_id) {
+        fetchArticles({ categoryId: data.category_id })
+          .then((list) => {
+            setRelatedArticles(list.filter((a) => a.id !== data.id).slice(0, 3));
+          })
+          .catch(() => {});
       }
       setLoading(false);
     }
@@ -953,46 +966,135 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
-          {/* Contributor revision box */}
-          <div
-            style={{
-              background: 'var(--color-primary-faint)',
-              border: '1px solid var(--color-primary-pale)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.5rem',
-              boxShadow: 'var(--shadow-xs)',
-            }}
-          >
-            <span
-              className="badge"
-              style={{
-                backgroundColor: 'var(--color-primary-pale)',
-                color: 'var(--color-primary)',
-                border: '1px solid var(--color-border)',
-                marginBottom: '0.5rem',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                padding: '0.2rem 0.65rem',
-                borderRadius: 'var(--radius-full)',
-                display: 'inline-flex',
-              }}
-            >
-              Author Actions
-            </span>
-            <h4 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 600 }}>
-              Update Curriculum
-            </h4>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.5 }}>
-              Need to add sections or fix technical details? Create an immutable Version {(version?.version_no || 1) + 1}.
-            </p>
-            <Link
-              href={`/courses/create?parent_id=${article.id}&slug=${article.slug}`}
-              className="btn btn-secondary"
-              style={{ width: '100%', fontSize: '0.85rem' }}
-            >
-              Draft Revision &rarr;
-            </Link>
-          </div>
+          {/* Author Actions (Only for Author or Admin) vs Related Modules (for Learners & Guests) */}
+          {(() => {
+            const isAuthor = Boolean(
+              currentUser &&
+                article &&
+                (article.author_id === currentUser.id || article.author?.id === currentUser.id)
+            );
+            const isAdmin = Boolean(currentUser?.roles?.includes('admin'));
+            const canEdit = isAuthor || isAdmin;
+
+            if (canEdit) {
+              return (
+                <div
+                  style={{
+                    background: 'var(--color-primary-faint)',
+                    border: '1px solid var(--color-primary-pale)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '1.5rem',
+                    boxShadow: 'var(--shadow-xs)',
+                  }}
+                >
+                  <span
+                    className="badge"
+                    style={{
+                      backgroundColor: 'var(--color-primary-pale)',
+                      color: 'var(--color-primary)',
+                      border: '1px solid var(--color-border)',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '0.2rem 0.65rem',
+                      borderRadius: 'var(--radius-full)',
+                      display: 'inline-flex',
+                    }}
+                  >
+                    Author Actions
+                  </span>
+                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 600 }}>
+                    Update Curriculum
+                  </h4>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.5 }}>
+                    Need to add sections or fix technical details? Create an immutable Version {(version?.version_no || 1) + 1}.
+                  </p>
+                  <Link
+                    href={`/courses/create?parent_id=${article.id}&slug=${article.slug}`}
+                    className="btn btn-secondary"
+                    style={{ width: '100%', fontSize: '0.85rem' }}
+                  >
+                    Draft Revision &rarr;
+                  </Link>
+                </div>
+              );
+            }
+
+            return (
+              <div
+                style={{
+                  background: 'var(--color-white)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '1.5rem',
+                  boxShadow: 'var(--shadow-xs)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                    <polyline points="2 17 12 22 22 17" />
+                    <polyline points="2 12 12 17 22 12" />
+                  </svg>
+                  <h4 style={{ margin: 0, color: 'var(--color-charcoal)', fontWeight: 700, fontSize: '1rem' }}>
+                    Các khóa học liên quan
+                  </h4>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.45 }}>
+                  Học phần cùng chuyên đề {article.category ? `"${article.category.name}"` : 'kỹ thuật'}:
+                </p>
+                {relatedArticles.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {relatedArticles.map((rel) => {
+                      const relVersion = rel.published_version || rel.latest_version;
+                      return (
+                        <Link
+                          key={rel.id}
+                          href={`/courses/${rel.slug || rel.id}`}
+                          style={{
+                            display: 'block',
+                            padding: '0.75rem',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--color-border-light)',
+                            textDecoration: 'none',
+                            backgroundColor: 'var(--color-background)',
+                            transition: 'border-color var(--transition-fast)',
+                          }}
+                        >
+                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
+                            {relVersion?.title || rel.slug}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-gray)' }}>
+                            Version {relVersion?.version_no || 1}.0 • {rel.category?.name || 'Technical'}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '0.82rem', color: 'var(--color-gray)', fontStyle: 'italic' }}>
+                    Đang hoàn thiện các bài học tiếp theo trong lộ trình.
+                  </div>
+                )}
+                <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border-light)' }}>
+                  <Link
+                    href="/learning/roadmaps"
+                    style={{
+                      fontSize: '0.82rem',
+                      color: 'var(--color-primary)',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                    }}
+                  >
+                    Khám phá Lộ trình Toàn diện &rarr;
+                  </Link>
+                </div>
+              </div>
+            );
+          })()}
         </aside>
       </div>
     </div>

@@ -18,7 +18,7 @@
 - [x] C2. Hoàn thiện Bộ đọc Markdown & Code Block Chuyên nghiệp
 - [x] C3. Đồng bộ hóa tính năng Bookmark với Backend API
 - [x] C4. Nút "Đánh dấu đã hoàn thành" / Tiến độ học tập
-- [ ] C5. Kiểm soát hiển thị khối "Author Actions" ở Sidebar
+- [x] C5. Kiểm soát hiển thị khối "Author Actions" ở Sidebar
 
 ## Giai đoạn D: Kiểm thử & Đóng gói PR
 - [ ] D1. Kiểm tra build và TypeScript trong `frontend/`
