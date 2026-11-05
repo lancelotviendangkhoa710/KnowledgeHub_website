@@ -1,7 +1,20 @@
 import { Article, Category, Tag } from '@/types/content';
 import { mockArticles, mockCategories, mockTags } from './mockContent';
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api'}/v1`;
+const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+const API_BASE = `${BASE_URL}/v1`;
+
+function buildApiUrl(path: string): string {
+  const fullPath = `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
+  if (fullPath.startsWith('http://') || fullPath.startsWith('https://')) {
+    return fullPath;
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}${fullPath}`;
+  }
+  return fullPath;
+}
 
 /**
  * Fetch all published articles with optional filters.
@@ -12,7 +25,11 @@ export async function fetchArticles(params?: {
   search?: string;
 }): Promise<Article[]> {
   try {
-    const url = new URL(`${API_BASE}/articles`);
+    const baseTarget = buildApiUrl('/articles');
+    const url = new URL(
+      baseTarget,
+      baseTarget.startsWith('http') ? undefined : 'http://localhost'
+    );
     if (params?.categoryId) url.searchParams.append('category_id', params.categoryId);
     if (params?.tagSlug) url.searchParams.append('tag_slug', params.tagSlug);
     if (params?.search) url.searchParams.append('search', params.search);
@@ -61,7 +78,7 @@ export async function fetchArticles(params?: {
  */
 export async function fetchArticle(identifier: string): Promise<Article | null> {
   try {
-    const res = await fetch(`${API_BASE}/articles/${identifier}`, {
+    const res = await fetch(buildApiUrl(`/articles/${identifier}`), {
       next: { revalidate: 60 },
       headers: { Accept: 'application/json' },
     });
@@ -85,7 +102,7 @@ export async function fetchArticle(identifier: string): Promise<Article | null> 
  */
 export async function fetchCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${API_BASE}/categories`, {
+    const res = await fetch(buildApiUrl('/categories'), {
       next: { revalidate: 300 },
       headers: { Accept: 'application/json' },
     });
@@ -108,7 +125,7 @@ export async function fetchCategories(): Promise<Category[]> {
  */
 export async function fetchTags(): Promise<Tag[]> {
   try {
-    const res = await fetch(`${API_BASE}/tags`, {
+    const res = await fetch(buildApiUrl('/tags'), {
       next: { revalidate: 300 },
       headers: { Accept: 'application/json' },
     });

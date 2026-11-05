@@ -7,7 +7,8 @@
 
 import { getAccessToken } from '@/lib/authToken';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
+const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {
@@ -27,8 +28,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   let response: Response;
 
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
   try {
-    response = await fetch(`${BASE_URL}${path}`, options);
+    response = await fetch(`${BASE_URL}${normalizedPath}`, options);
   } catch {
     throw {
       message: 'Unable to reach the KnowledgeHub API. Check that the API service is running.',

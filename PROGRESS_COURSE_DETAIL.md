@@ -6,7 +6,7 @@
 - [x] 0.3. Tạo nhánh Git tính năng
 
 ## Giai đoạn A: Dọn dẹp & Chuẩn hóa Kết nối API
-- [ ] A1. Kiểm tra cấu hình API Base Client
+- [x] A1. Kiểm tra cấu hình API Base Client
 - [ ] A2. Sửa lỗi gọi API tại trang Create Course
 
 ## Giai đoạn B: Phân quyền & Bảo vệ Trang Biên Soạn (Contributor Studio Guard)
