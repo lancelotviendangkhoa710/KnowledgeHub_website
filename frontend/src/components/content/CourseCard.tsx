@@ -21,8 +21,8 @@ export default function CourseCard({ article }: CourseCardProps) {
     e.preventDefault();
     e.stopPropagation();
 
-    const token = getAccessToken();
-    if (!token) {
+    const authBearer = getAccessToken();
+    if (!authBearer) {
       setNotice('Vui lòng đăng nhập để lưu khóa học vào Thư viện cá nhân');
       router.push('/login?redirect=/courses');
       return;

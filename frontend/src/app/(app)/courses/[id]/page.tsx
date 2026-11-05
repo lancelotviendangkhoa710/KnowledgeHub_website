@@ -287,8 +287,8 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     const unsub = subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
-    const token = getAccessToken();
-    if (token && !getCurrentUser()) {
+    const authBearer = getAccessToken();
+    if (authBearer && !getCurrentUser()) {
       accountClient
         .me()
         .then((res) => {
@@ -307,8 +307,8 @@ export default function CourseDetailPage() {
       const data = await fetchArticle(idOrSlug);
       setArticle(data);
       const user = getCurrentUser();
-      const token = getAccessToken();
-      if (user || token) {
+      const authBearer = getAccessToken();
+      if (user || authBearer) {
         setBookmarked(data?.is_bookmarked ?? false);
       } else {
         setBookmarked(false);

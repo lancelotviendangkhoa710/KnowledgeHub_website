@@ -19,8 +19,8 @@ export default function CoursesPage() {
 
   useEffect(() => {
     const unsub = subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
-    const token = getAccessToken();
-    if (token && !getCurrentUser()) {
+    const authBearer = getAccessToken();
+    if (authBearer && !getCurrentUser()) {
       accountClient
         .me()
         .then((res) => {
