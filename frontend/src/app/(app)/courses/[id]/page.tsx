@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Article } from '@/types/content';
@@ -14,6 +14,7 @@ export default function CourseDetailPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [activeHeadingId, setActiveHeadingId] = useState<string>('');
 
   useEffect(() => {
     async function loadCourse() {
@@ -26,6 +27,69 @@ export default function CourseDetailPage() {
     }
     loadCourse();
   }, [idOrSlug]);
+
+
+  // Extract dynamic table of contents from markdown
+  const tocItems = useMemo(() => {
+    if (!article) return [];
+    const v = article.published_version || article.latest_version;
+    const raw = v?.content || '';
+    const lines = raw.split('\n');
+    const items: { id: string; text: string; level: number }[] = [];
+    let inCode = false;
+
+    lines.forEach((line, idx) => {
+      if (line.startsWith('```')) {
+        inCode = !inCode;
+        return;
+      }
+      if (inCode) return;
+
+      if (line.startsWith('## ')) {
+        const text = line.replace('## ', '').trim();
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        items.push({ id, text, level: 2 });
+      } else if (line.startsWith('### ')) {
+        const text = line.replace('### ', '').trim();
+        const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        items.push({ id, text, level: 3 });
+      }
+    });
+
+    return items;
+  }, [article]);
+
+  useEffect(() => {
+    if (tocItems.length === 0) return;
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY + 120;
+      let currentId = '';
+      for (const item of tocItems) {
+        const el = document.getElementById(item.id);
+        if (el && el.offsetTop <= scrollY) {
+          currentId = item.id;
+        }
+      }
+      if (currentId) {
+        setActiveHeadingId(currentId);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [tocItems]);
+
+  const scrollToSection = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.pushState(null, '', `#${id}`);
+      setActiveHeadingId(id);
+    }
+  };
 
   const toggleBookmark = () => {
     setBookmarked(!bookmarked);
@@ -105,9 +169,45 @@ export default function CourseDetailPage() {
       }
 
       if (line.startsWith('## ')) {
-        elements.push(<h2 key={idx} style={{ color: 'var(--color-charcoal)', marginTop: '2.5rem', marginBottom: '1rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '0.5rem', fontSize: '1.75rem', fontWeight: 700 }}>{line.replace('## ', '')}</h2>);
+        const text = line.replace('## ', '').trim();
+        const headingId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        elements.push(
+          <h2
+            key={idx}
+            id={headingId}
+            style={{
+              color: 'var(--color-charcoal)',
+              marginTop: '2.5rem',
+              marginBottom: '1rem',
+              borderBottom: '1px solid var(--color-border)',
+              paddingBottom: '0.5rem',
+              fontSize: '1.75rem',
+              fontWeight: 700,
+              scrollMarginTop: 'calc(var(--header-height) + 1.5rem)',
+            }}
+          >
+            {text}
+          </h2>
+        );
       } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={idx} style={{ color: 'var(--color-charcoal)', marginTop: '1.75rem', marginBottom: '0.75rem', fontSize: '1.35rem', fontWeight: 600 }}>{line.replace('### ', '')}</h3>);
+        const text = line.replace('### ', '').trim();
+        const headingId = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
+        elements.push(
+          <h3
+            key={idx}
+            id={headingId}
+            style={{
+              color: 'var(--color-charcoal)',
+              marginTop: '1.75rem',
+              marginBottom: '0.75rem',
+              fontSize: '1.35rem',
+              fontWeight: 600,
+              scrollMarginTop: 'calc(var(--header-height) + 1.5rem)',
+            }}
+          >
+            {text}
+          </h3>
+        );
       } else if (line.startsWith('> ')) {
         elements.push(<blockquote key={idx} style={{ borderLeft: '3px solid var(--color-primary)', background: 'var(--color-primary-faint)', padding: '1rem 1.5rem', borderRadius: '0 var(--radius-md) var(--radius-md) 0', margin: '1.5rem 0', color: 'var(--color-charcoal)', fontStyle: 'italic' }}>{line.replace('> ', '')}</blockquote>);
       } else if (line.startsWith('* ') || line.startsWith('- ')) {
@@ -242,6 +342,68 @@ export default function CourseDetailPage() {
 
         {/* Sidebar Info & Controls */}
         <aside style={{ position: 'sticky', top: 'calc(var(--header-height) + 1.5rem)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Dynamic Table of Contents */}
+          {tocItems.length > 0 && (
+            <nav
+              aria-label="Table of Contents"
+              style={{
+                background: 'var(--color-white)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1.5rem',
+                boxShadow: 'var(--shadow-xs)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.2">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                <h4 style={{ margin: 0, color: 'var(--color-charcoal)', fontWeight: 700, fontSize: '1rem' }}>
+                  Table of Contents
+                </h4>
+              </div>
+              <ul
+                style={{
+                  listStyle: 'none',
+                  padding: 0,
+                  margin: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.5rem',
+                }}
+              >
+                {tocItems.map((item) => {
+                  const isActive = activeHeadingId === item.id;
+                  return (
+                    <li key={item.id} style={{ paddingLeft: item.level === 3 ? '1.25rem' : '0' }}>
+                      <a
+                        href={`#${item.id}`}
+                        onClick={(e) => scrollToSection(e, item.id)}
+                        style={{
+                          fontSize: item.level === 3 ? '0.82rem' : '0.875rem',
+                          color: isActive ? 'var(--color-primary)' : 'var(--color-gray)',
+                          fontWeight: isActive ? 600 : 400,
+                          textDecoration: 'none',
+                          lineHeight: 1.45,
+                          display: 'block',
+                          transition: 'color var(--transition-fast)',
+                          borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
+                          paddingLeft: '0.5rem',
+                        }}
+                      >
+                        {item.text}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          )}
           <div
             style={{
               background: 'var(--color-white)',

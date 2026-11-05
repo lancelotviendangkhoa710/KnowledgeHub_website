@@ -14,7 +14,7 @@
 - [x] B2. Cập nhật giao diện nút "Open Contributor Studio" tại danh sách khóa học
 
 ## Giai đoạn C: Nâng cấp Trang Chi tiết Khóa học (`/courses/[id]`)
-- [ ] C1. Tích hợp Mục lục Động (Dynamic Table of Contents - TOC)
+- [x] C1. Tích hợp Mục lục Động (Dynamic Table of Contents - TOC)
 - [ ] C2. Hoàn thiện Bộ đọc Markdown & Code Block Chuyên nghiệp
 - [ ] C3. Đồng bộ hóa tính năng Bookmark với Backend API
 - [ ] C4. Nút "Đánh dấu đã hoàn thành" / Tiến độ học tập
