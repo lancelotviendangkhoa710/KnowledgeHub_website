@@ -10,6 +10,8 @@ import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 
+const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
+
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
@@ -86,6 +88,21 @@ List the mathematical or operational guarantees enforced by this architecture.
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      // Restore draft if saved before sign-in redirect
+      const savedDraft = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed.title) setTitle(parsed.title);
+          if (parsed.slug) setSlug(parsed.slug);
+          if (parsed.categoryId) setCategoryId(parsed.categoryId);
+          if (parsed.tags) setTags(parsed.tags);
+          if (parsed.content) setContent(parsed.content);
+        } catch {
+          // ignore corrupted draft
+        }
+      }
+
       const pid = params.get('parent_id');
       if (pid) {
         setParentId(pid);
@@ -186,6 +203,10 @@ List the mathematical or operational guarantees enforced by this architecture.
         return;
       }
       // Local fallback simulation if API is unreachable
+    }
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     }
 
     setIsSubmitting(false);
@@ -331,7 +352,15 @@ List the mathematical or operational guarantees enforced by this architecture.
           <span>{errorMessage}</span>
           {(errorMessage.toLowerCase().includes('sign in') || errorMessage.toLowerCase().includes('authenticat')) && (
             <Link
-              href="/login?redirect=/courses/create"
+              href={`/login?redirect=${encodeURIComponent(parentId ? `/courses/create?parent_id=${parentId}` : '/courses/create')}`}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem(
+                    DRAFT_STORAGE_KEY,
+                    JSON.stringify({ title, slug, categoryId, tags, content })
+                  );
+                }
+              }}
               className="btn btn-primary"
               style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
             >
