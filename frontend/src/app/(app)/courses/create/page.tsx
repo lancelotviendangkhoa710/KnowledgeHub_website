@@ -125,6 +125,12 @@ List the mathematical or operational guarantees enforced by this architecture.
       return;
     }
 
+    const bearerSession = getAccessToken();
+    if (!bearerSession) {
+      setErrorMessage('Authentication session expired. Please sign in again to author course material.');
+      return;
+    }
+
     setIsSubmitting(true);
     setSuccessMessage(null);
     setErrorMessage(null);
@@ -168,6 +174,11 @@ List the mathematical or operational guarantees enforced by this architecture.
       }
     } catch (err: unknown) {
       const errorObj = err as { status?: number; message?: string; errors?: Record<string, string[]> };
+      if (errorObj?.status === 401 || errorObj?.message === 'Unauthenticated.') {
+        setErrorMessage('Authentication session expired or unauthorized. Please sign in to your contributor account.');
+        setIsSubmitting(false);
+        return;
+      }
       if (errorObj?.status && errorObj.status >= 400) {
         const firstErr = errorObj.errors ? Object.values(errorObj.errors)[0]?.[0] : undefined;
         setErrorMessage(firstErr || errorObj.message || 'Failed to save course. Please check your inputs.');
@@ -311,9 +322,22 @@ List the mathematical or operational guarantees enforced by this architecture.
             color: '#B91C1C',
             marginBottom: '1.5rem',
             fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
           }}
         >
-          {errorMessage}
+          <span>{errorMessage}</span>
+          {(errorMessage.toLowerCase().includes('sign in') || errorMessage.toLowerCase().includes('authenticat')) && (
+            <Link
+              href="/login?redirect=/courses/create"
+              className="btn btn-primary"
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       )}
 
