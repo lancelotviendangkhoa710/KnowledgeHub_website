@@ -506,6 +506,45 @@ export default function CourseDetailPage() {
   const version = article.published_version || article.latest_version;
   const content = version?.content || 'No content recorded for this version.';
 
+  const isGuest = !currentUser && !getAccessToken();
+
+  const { introContent, remainingContent } = useMemo(() => {
+    if (!content) return { introContent: '', remainingContent: '' };
+    const lines = content.split('\n');
+    let splitIdx = -1;
+    let headingCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('## ')) {
+        headingCount++;
+        if (headingCount >= 2) {
+          splitIdx = i;
+          break;
+        }
+      }
+    }
+    if (splitIdx === -1) {
+      let nonEmpties = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().length > 0) nonEmpties++;
+        if (nonEmpties >= 4) {
+          splitIdx = i + 1;
+          break;
+        }
+      }
+    }
+    if (splitIdx > 0 && splitIdx < lines.length) {
+      return {
+        introContent: lines.slice(0, splitIdx).join('\n'),
+        remainingContent: lines.slice(splitIdx).join('\n'),
+      };
+    }
+    const fallbackCut = Math.min(6, lines.length);
+    return {
+      introContent: lines.slice(0, fallbackCut).join('\n'),
+      remainingContent: lines.slice(fallbackCut).join('\n'),
+    };
+  }, [content]);
+
   // Advanced parser for technical long-form reading with Dracula code blocks and alert callouts
   const renderFormattedContent = (raw: string) => {
     const lines = raw.split('\n');
@@ -855,13 +894,110 @@ export default function CourseDetailPage() {
 
           {/* Prose Content */}
           <div className="prose">
-            {renderFormattedContent(content)}
+            {isGuest ? (
+              <>
+                {renderFormattedContent(introContent)}
+
+                {/* Blurred preview teaser */}
+                {remainingContent && (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      filter: 'blur(5px)',
+                      opacity: 0.35,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                      maxHeight: 220,
+                      overflow: 'hidden',
+                      marginTop: '1.5rem',
+                    }}
+                  >
+                    {renderFormattedContent(remainingContent.slice(0, 800))}
+                  </div>
+                )}
+
+                {/* Curriculum Access Gate */}
+                <div
+                  style={{
+                    marginTop: '2rem',
+                    padding: '2.75rem 2rem',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+                    border: '1.5px solid var(--color-border)',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03)',
+                    textAlign: 'center',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--color-primary-pale, #E0F2FE)',
+                      color: 'var(--color-primary, #0284C7)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '1.25rem',
+                      boxShadow: 'var(--shadow-xs)',
+                    }}
+                  >
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  </div>
+                  <h3
+                    style={{
+                      fontSize: '1.45rem',
+                      fontWeight: 700,
+                      color: 'var(--color-charcoal)',
+                      marginBottom: '0.75rem',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
+                    Nội dung Độc quyền dành cho Thành viên
+                  </h3>
+                  <p
+                    style={{
+                      color: 'var(--color-gray)',
+                      fontSize: '1rem',
+                      lineHeight: 1.65,
+                      maxWidth: 540,
+                      margin: '0 auto 1.75rem auto',
+                    }}
+                  >
+                    Vui lòng đăng nhập tài khoản KnowledgeHub để mở khóa toàn bộ bài giảng kỹ thuật, mã nguồn mẫu và theo dõi tiến độ học tập.
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                    <Link
+                      href={`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`}
+                      className="btn btn-primary"
+                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 600 }}
+                    >
+                      Đăng nhập ngay
+                    </Link>
+                    <Link
+                      href={`/register?redirect=/courses/${encodeURIComponent(idOrSlug)}`}
+                      className="btn btn-secondary"
+                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 600 }}
+                    >
+                      Đăng ký tài khoản miễn phí
+                    </Link>
+                  </div>
+                </div>
+              </>
+            ) : (
+              renderFormattedContent(content)
+            )}
           </div>
 
           {/* Completion Footer Action */}
-          <div
-            style={{
-              marginTop: '3.5rem',
+          {!isGuest && (
+            <div
+              style={{
+                marginTop: '3.5rem',
               padding: '2rem',
               borderRadius: 'var(--radius-lg)',
               backgroundColor: isCompleted ? '#F0FDF4' : 'var(--color-background)',
@@ -927,6 +1063,7 @@ export default function CourseDetailPage() {
               )}
             </button>
           </div>
+          )}
         </article>
 
         {/* Sidebar Info & Controls */}
