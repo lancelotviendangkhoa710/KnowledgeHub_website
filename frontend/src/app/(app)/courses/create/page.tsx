@@ -145,7 +145,7 @@ List the mathematical or operational guarantees enforced by this architecture.
   if (!authChecked) {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
-        Đang kiểm tra quyền truy cập...
+        Verifying contributor access...
       </div>
     );
   }
@@ -180,13 +180,13 @@ List the mathematical or operational guarantees enforced by this architecture.
             </svg>
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '1rem' }}>
-            Quyền truy cập bị giới hạn
+            Contributor Access Required
           </h2>
           <p style={{ color: 'var(--color-gray)', lineHeight: 1.6, marginBottom: '2rem', fontSize: '1rem' }}>
-            Chỉ Contributor hoặc Quản trị viên mới có quyền biên soạn giáo trình. Hãy liên hệ Admin để được cấp quyền.
+            Only Contributors or Administrators have permissions to author curriculum. Please contact an Administrator to request contributor privileges.
           </p>
           <Link href="/courses" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontWeight: 600 }}>
-            Quay lại Danh sách Khóa học
+            Return to Courses
           </Link>
         </div>
       </div>

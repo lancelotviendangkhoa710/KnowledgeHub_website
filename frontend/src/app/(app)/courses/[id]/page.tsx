@@ -201,7 +201,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
       parts.push(text.substring(lastIndex, match.index));
     }
     const matchedPart = match[0];
-    if (matchedPart.startsWith('`') && token.endsWith('`')) {
+    if (matchedPart.startsWith('`') && matchedPart.endsWith('`')) {
       parts.push(
         <code
           key={`code-${match.index}`}
@@ -218,14 +218,14 @@ function renderInlineFormatting(text: string): React.ReactNode {
           {matchedPart.slice(1, -1)}
         </code>
       );
-    } else if (matchedPart.startsWith('**') && token.endsWith('**')) {
+    } else if (matchedPart.startsWith('**') && matchedPart.endsWith('**')) {
       parts.push(<strong key={`bold-${match.index}`}>{matchedPart.slice(2, -2)}</strong>);
-    } else if (matchedPart.startsWith('*') && token.endsWith('*')) {
+    } else if (matchedPart.startsWith('*') && matchedPart.endsWith('*')) {
       parts.push(<em key={`italic-${match.index}`}>{matchedPart.slice(1, -1)}</em>);
     } else if (matchedPart.startsWith('[') && matchedPart.includes('](')) {
       const closingBracket = matchedPart.indexOf('](');
-      const linkText = token.slice(1, closingBracket);
-      const linkHref = token.slice(closingBracket + 2, -1);
+      const linkText = matchedPart.slice(1, closingBracket);
+      const linkHref = matchedPart.slice(closingBracket + 2, -1);
       parts.push(
         <a
           key={`link-${match.index}`}
@@ -829,13 +829,13 @@ export default function CourseDetailPage() {
                   </svg>
                 )}
                 <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: isCompleted ? '#166534' : 'var(--color-charcoal)' }}>
-                  {isCompleted ? 'Bài học đã hoàn thành' : 'Hoàn thành bài học'}
+                  {isCompleted ? 'Lesson Completed' : 'Complete Lesson'}
                 </h4>
               </div>
               <p style={{ margin: 0, fontSize: '0.9rem', color: isCompleted ? '#15803D' : 'var(--color-gray)' }}>
                 {isCompleted
-                  ? 'Bạn đã hoàn tất bài học này. Tiến độ đã được lưu lại trong lộ trình cá nhân.'
-                  : 'Đánh dấu để lưu lại lịch sử học tập và theo dõi tiến độ tổng thể.'}
+                  ? 'You have completed this curriculum module. Your progress has been recorded in your learning profile.'
+                  : 'Mark this module as complete to record your learning progress and track your curriculum path.'}
               </p>
             </div>
 
@@ -856,14 +856,14 @@ export default function CourseDetailPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Đã hoàn thành (Bấm để hủy)
+                  Completed (Click to undo)
                 </>
               ) : (
                 <>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Đánh dấu đã hoàn thành
+                  Mark as Completed
                 </>
               )}
             </button>
@@ -1037,11 +1037,11 @@ export default function CourseDetailPage() {
                     <polyline points="2 12 12 17 22 12" />
                   </svg>
                   <h4 style={{ margin: 0, color: 'var(--color-charcoal)', fontWeight: 700, fontSize: '1rem' }}>
-                    Các khóa học liên quan
+                    Related Curricula
                   </h4>
                 </div>
                 <p style={{ fontSize: '0.82rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.45 }}>
-                  Học phần cùng chuyên đề {article.category ? `"${article.category.name}"` : 'kỹ thuật'}:
+                  Related modules in the {article.category ? `"${article.category.name}"` : 'technical'} domain:
                 </p>
                 {relatedArticles.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1073,7 +1073,7 @@ export default function CourseDetailPage() {
                   </div>
                 ) : (
                   <div style={{ fontSize: '0.82rem', color: 'var(--color-gray)', fontStyle: 'italic' }}>
-                    Đang hoàn thiện các bài học tiếp theo trong lộ trình.
+                    Additional modules for this learning domain are currently in preparation.
                   </div>
                 )}
                 <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border-light)' }}>
@@ -1089,7 +1089,7 @@ export default function CourseDetailPage() {
                       gap: '0.35rem',
                     }}
                   >
-                    Khám phá Lộ trình Toàn diện &rarr;
+                    Explore Learning Roadmaps &rarr;
                   </Link>
                 </div>
               </div>

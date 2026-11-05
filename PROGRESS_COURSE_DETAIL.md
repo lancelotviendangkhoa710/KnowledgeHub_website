@@ -1,26 +1,26 @@
 # PROGRESS COURSE DETAIL EXPERIENCE & STUDIO
 
-## Giai đoạn 0: Khởi tạo Tiến độ & Kích hoạt Watchdog
-- [x] 0.1. Tạo file theo dõi tiến độ `PROGRESS_COURSE_DETAIL.md`
-- [x] 0.2. Cấu hình & khởi chạy `watchdog_runner.py`
-- [x] 0.3. Tạo nhánh Git tính năng
+## Phase 0: Setup Progress Tracking & Watchdog
+- [x] 0.1. Initialize progress tracker `PROGRESS_COURSE_DETAIL.md`
+- [x] 0.2. Configure and launch `watchdog_runner.py`
+- [x] 0.3. Create feature branch
 
-## Giai đoạn A: Dọn dẹp & Chuẩn hóa Kết nối API
-- [x] A1. Kiểm tra cấu hình API Base Client
-- [x] A2. Sửa lỗi gọi API tại trang Create Course
+## Phase A: Clean & Standardize API Client
+- [x] A1. Standardize API base URL configuration across content services
+- [x] A2. Fix API endpoints in Course Creation Studio with centralized client
 
-## Giai đoạn B: Phân quyền & Bảo vệ Trang Biên Soạn (Contributor Studio Guard)
-- [x] B1. Kiểm tra quyền truy cập của người dùng tại `/courses/create`
-- [x] B2. Cập nhật giao diện nút "Open Contributor Studio" tại danh sách khóa học
+## Phase B: Role-Based Access Control & Contributor Studio Guard
+- [x] B1. Enforce RBAC guard on `/courses/create` for contributor/admin roles
+- [x] B2. Refine Contributor Studio banner CTA and auth awareness
 
-## Giai đoạn C: Nâng cấp Trang Chi tiết Khóa học (`/courses/[id]`)
-- [x] C1. Tích hợp Mục lục Động (Dynamic Table of Contents - TOC)
-- [x] C2. Hoàn thiện Bộ đọc Markdown & Code Block Chuyên nghiệp
-- [x] C3. Đồng bộ hóa tính năng Bookmark với Backend API
-- [x] C4. Nút "Đánh dấu đã hoàn thành" / Tiến độ học tập
-- [x] C5. Kiểm soát hiển thị khối "Author Actions" ở Sidebar
+## Phase C: Enhance Course Detail Reader Experience (`/courses/[id]`)
+- [x] C1. Implement dynamic sticky table of contents navigation
+- [x] C2. Upgrade markdown parser with Dracula code blocks and styled callouts
+- [x] C3. Synchronize bookmark toggle with backend API and optimistic UI
+- [x] C4. Add reading progress bar and completion tracking action
+- [x] C5. Conditionally display author actions based on article ownership
 
-## Giai đoạn D: Kiểm thử & Đóng gói PR
-- [x] D1. Kiểm tra build và TypeScript trong `frontend/`
-- [x] D2. Chạy kịch bản Guardrails
-- [x] D3. Tạo Pull Request
+## Phase D: Testing, Quality Gates & Pull Request
+- [x] D1. Verify frontend build cleanliness and TypeScript safety
+- [x] D2. Run architecture and security guardrails
+- [x] D3. Create Pull Request
