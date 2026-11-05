@@ -392,16 +392,20 @@ export default function CourseDetailPage() {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       window.history.pushState(null, '', `#${id}`);
       setActiveHeadingId(id);
+    } else if (isGuest) {
+      const gateEl = document.getElementById('curriculum-access-gate');
+      if (gateEl) {
+        gateEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
   };
 
   const toggleBookmark = async () => {
     if (!article || isBookmarkPending) return;
 
-    const user = getCurrentUser();
     const authBearer = getAccessToken();
 
-    if (!user && !authBearer) {
+    if (!authBearer) {
       setBookmarkNotice('Vui lòng đăng nhập để lưu khóa học vào Thư viện cá nhân');
       router.push(`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`);
       return;
@@ -493,6 +497,63 @@ export default function CourseDetailPage() {
     }
   };
 
+  const version = article?.published_version || article?.latest_version;
+  const content = version?.content || 'No content recorded for this version.';
+  const isGuest = !currentUser && !getAccessToken();
+
+  const { introContent, remainingContent } = useMemo(() => {
+    if (!content || !article) return { introContent: '', remainingContent: '' };
+    const lines = content.split('\n');
+
+    let splitIdx = -1;
+    let headingCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('## ')) {
+        headingCount++;
+        if (headingCount >= 2) {
+          splitIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (splitIdx === -1) {
+      let nonEmpties = 0;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().length > 0) nonEmpties++;
+        if (nonEmpties >= 3) {
+          splitIdx = i + 1;
+          break;
+        }
+      }
+    }
+
+    if (splitIdx > 0 && splitIdx < lines.length) {
+      const candidateIntro = lines.slice(0, splitIdx).join('\n');
+      if (candidateIntro.length <= 500) {
+        return {
+          introContent: candidateIntro,
+          remainingContent: lines.slice(splitIdx).join('\n'),
+        };
+      }
+    }
+
+    if (content.length > 300) {
+      const cutPoint = content.indexOf('\n\n', 200);
+      const safeCut = cutPoint !== -1 && cutPoint < 450 ? cutPoint : 300;
+      return {
+        introContent: content.slice(0, safeCut).trim(),
+        remainingContent: content.slice(safeCut).trim(),
+      };
+    }
+
+    const fallbackCut = Math.max(1, Math.min(4, Math.floor(lines.length / 2)));
+    return {
+      introContent: lines.slice(0, fallbackCut).join('\n'),
+      remainingContent: lines.slice(fallbackCut).join('\n') || 'Đăng nhập để xem toàn bộ nội dung giáo trình.',
+    };
+  }, [content, article]);
+
   if (loading) {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
@@ -515,47 +576,7 @@ export default function CourseDetailPage() {
     );
   }
 
-  const version = article.published_version || article.latest_version;
-  const content = version?.content || 'No content recorded for this version.';
 
-  const isGuest = !currentUser && !getAccessToken();
-
-  const { introContent, remainingContent } = useMemo(() => {
-    if (!content) return { introContent: '', remainingContent: '' };
-    const lines = content.split('\n');
-    let splitIdx = -1;
-    let headingCount = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('## ')) {
-        headingCount++;
-        if (headingCount >= 2) {
-          splitIdx = i;
-          break;
-        }
-      }
-    }
-    if (splitIdx === -1) {
-      let nonEmpties = 0;
-      for (let i = 0; i < lines.length; i++) {
-        if (lines[i].trim().length > 0) nonEmpties++;
-        if (nonEmpties >= 4) {
-          splitIdx = i + 1;
-          break;
-        }
-      }
-    }
-    if (splitIdx > 0 && splitIdx < lines.length) {
-      return {
-        introContent: lines.slice(0, splitIdx).join('\n'),
-        remainingContent: lines.slice(splitIdx).join('\n'),
-      };
-    }
-    const fallbackCut = Math.min(6, lines.length);
-    return {
-      introContent: lines.slice(0, fallbackCut).join('\n'),
-      remainingContent: lines.slice(fallbackCut).join('\n'),
-    };
-  }, [content]);
 
   // Advanced parser for technical long-form reading with Dracula code blocks and alert callouts
   const renderFormattedContent = (raw: string) => {
@@ -930,6 +951,7 @@ export default function CourseDetailPage() {
 
                 {/* Curriculum Access Gate */}
                 <div
+                  id="curriculum-access-gate"
                   style={{
                     marginTop: '2rem',
                     padding: '2.75rem 2rem',
