@@ -6,6 +6,245 @@ import { useParams } from 'next/navigation';
 import { Article } from '@/types/content';
 import { fetchArticle } from '@/lib/contentClient';
 
+
+function CodeBlock({ code, language }: { code: string; language?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        margin: '1.75rem 0',
+        borderRadius: 'var(--radius-md)',
+        overflow: 'hidden',
+        border: '1px solid #334155',
+        backgroundColor: '#0F172A',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0.45rem 1rem',
+          backgroundColor: '#1E293B',
+          borderBottom: '1px solid #334155',
+          fontSize: '0.75rem',
+          color: '#94A3B8',
+          fontFamily: 'var(--font-mono, monospace)',
+          textTransform: 'lowercase',
+        }}
+      >
+        <span>{language || 'code'}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            background: 'transparent',
+            border: '1px solid #475569',
+            color: copied ? '#4ADE80' : '#E2E8F0',
+            borderRadius: '4px',
+            padding: '0.2rem 0.55rem',
+            fontSize: '0.72rem',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            transition: 'all var(--transition-fast)',
+          }}
+        >
+          {copied ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Copied!
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              Copy
+            </>
+          )}
+        </button>
+      </div>
+      <pre
+        style={{
+          padding: '1.25rem',
+          margin: 0,
+          overflowX: 'auto',
+          fontSize: '0.9rem',
+          lineHeight: 1.65,
+          color: '#F8FAFC',
+          fontFamily: 'var(--font-mono, monospace)',
+          backgroundColor: '#0F172A',
+        }}
+      >
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+function Callout({
+  kind,
+  title,
+  children,
+}: {
+  kind: 'note' | 'tip' | 'warning' | 'default';
+  title?: string;
+  children: React.ReactNode;
+}) {
+  const styles = {
+    note: {
+      border: '#3B82F6',
+      bg: '#EFF6FF',
+      text: '#1E40AF',
+      title: title || 'Note',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      ),
+    },
+    tip: {
+      border: '#10B981',
+      bg: '#ECFDF5',
+      text: '#065F46',
+      title: title || 'Tip',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+          <path d="M9 18h6m-4 4h2m-1-18a7 7 0 0 0-7 7c0 2.22 1.2 4.15 3 5.19V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-.81c1.8-1.04 3-2.97 3-5.19a7 7 0 0 0-7-7z" />
+        </svg>
+      ),
+    },
+    warning: {
+      border: '#F59E0B',
+      bg: '#FFFBEB',
+      text: '#92400E',
+      title: title || 'Warning',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      ),
+    },
+    default: {
+      border: 'var(--color-primary, #0284C7)',
+      bg: 'var(--color-primary-faint, #F0F9FF)',
+      text: 'var(--color-charcoal, #0F172A)',
+      title: undefined,
+      icon: null,
+    },
+  }[kind];
+
+  return (
+    <div
+      style={{
+        borderLeft: `4px solid ${styles.border}`,
+        backgroundColor: styles.bg,
+        padding: '1rem 1.25rem',
+        borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+        margin: '1.5rem 0',
+      }}
+    >
+      {styles.title && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            marginBottom: '0.4rem',
+            fontWeight: 700,
+            color: styles.text,
+            fontSize: '0.9rem',
+          }}
+        >
+          {styles.icon}
+          <span>{styles.title}</span>
+        </div>
+      )}
+      <div style={{ color: styles.text, fontSize: '0.975rem', lineHeight: 1.7 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function renderInlineFormatting(text: string): React.ReactNode {
+  // Simple inline parser for `code`, **bold**, *italic*, and [link](url)
+  const parts: React.ReactNode[] = [];
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    const token = match[0];
+    if (token.startsWith('`') && token.endsWith('`')) {
+      parts.push(
+        <code
+          key={`code-${match.index}`}
+          style={{
+            backgroundColor: '#F1F5F9',
+            color: '#0F172A',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            fontSize: '0.88em',
+            fontFamily: 'var(--font-mono, monospace)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          {token.slice(1, -1)}
+        </code>
+      );
+    } else if (token.startsWith('**') && token.endsWith('**')) {
+      parts.push(<strong key={`bold-${match.index}`}>{token.slice(2, -2)}</strong>);
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      parts.push(<em key={`italic-${match.index}`}>{token.slice(1, -1)}</em>);
+    } else if (token.startsWith('[') && token.includes('](')) {
+      const closingBracket = token.indexOf('](');
+      const linkText = token.slice(1, closingBracket);
+      const linkHref = token.slice(closingBracket + 2, -1);
+      parts.push(
+        <a
+          key={`link-${match.index}`}
+          href={linkHref}
+          target={linkHref.startsWith('http') ? '_blank' : undefined}
+          rel={linkHref.startsWith('http') ? 'noopener noreferrer' : undefined}
+          style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+        >
+          {linkText}
+        </a>
+      );
+    }
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
 export default function CourseDetailPage() {
   const params = useParams();
   const idOrSlug = params?.id as string;
@@ -140,24 +379,28 @@ export default function CourseDetailPage() {
   const version = article.published_version || article.latest_version;
   const content = version?.content || 'No content recorded for this version.';
 
-  // Simple parser to render markdown headings, code blocks, and blockquotes cleanly
+  // Advanced parser for technical long-form reading with Dracula code blocks and alert callouts
   const renderFormattedContent = (raw: string) => {
     const lines = raw.split('\n');
     const elements: React.ReactNode[] = [];
     let inCodeBlock = false;
     let codeBuffer: string[] = [];
+    let codeLanguage = '';
 
     lines.forEach((line, idx) => {
       if (line.startsWith('```')) {
         if (!inCodeBlock) {
           inCodeBlock = true;
           codeBuffer = [];
+          codeLanguage = line.replace('```', '').trim();
         } else {
           inCodeBlock = false;
           elements.push(
-            <pre key={`code-${idx}`} style={{ background: 'var(--color-charcoal)', color: '#F8FAFC', padding: '1.25rem', borderRadius: 'var(--radius-md)', margin: '1.5rem 0', overflowX: 'auto', border: '1px solid var(--color-border)' }}>
-              <code>{codeBuffer.join('\n')}</code>
-            </pre>
+            <CodeBlock
+              key={`code-${idx}`}
+              code={codeBuffer.join('\n')}
+              language={codeLanguage}
+            />
           );
         }
         return;
@@ -177,12 +420,13 @@ export default function CourseDetailPage() {
             id={headingId}
             style={{
               color: 'var(--color-charcoal)',
-              marginTop: '2.5rem',
-              marginBottom: '1rem',
-              borderBottom: '1px solid var(--color-border)',
-              paddingBottom: '0.5rem',
-              fontSize: '1.75rem',
-              fontWeight: 700,
+              marginTop: '3rem',
+              marginBottom: '1.25rem',
+              borderBottom: '1.5px solid var(--color-border)',
+              paddingBottom: '0.65rem',
+              fontSize: '1.85rem',
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
               scrollMarginTop: 'calc(var(--header-height) + 1.5rem)',
             }}
           >
@@ -198,24 +442,77 @@ export default function CourseDetailPage() {
             id={headingId}
             style={{
               color: 'var(--color-charcoal)',
-              marginTop: '1.75rem',
-              marginBottom: '0.75rem',
-              fontSize: '1.35rem',
-              fontWeight: 600,
+              marginTop: '2.25rem',
+              marginBottom: '0.85rem',
+              fontSize: '1.4rem',
+              fontWeight: 700,
+              letterSpacing: '-0.015em',
               scrollMarginTop: 'calc(var(--header-height) + 1.5rem)',
             }}
           >
             {text}
           </h3>
         );
+      } else if (line.startsWith('> [!NOTE]') || line.startsWith('> [!IMPORTANT]')) {
+        const rawNote = line.replace(/^>\s*\[!(NOTE|IMPORTANT)\]\s*/i, '').trim();
+        elements.push(
+          <Callout key={idx} kind="note" title="Note">
+            {renderInlineFormatting(rawNote || 'Important technical context and requirements.')}
+          </Callout>
+        );
+      } else if (line.startsWith('> [!TIP]')) {
+        const rawTip = line.replace(/^>\s*\[!TIP\]\s*/i, '').trim();
+        elements.push(
+          <Callout key={idx} kind="tip" title="Tip & Best Practice">
+            {renderInlineFormatting(rawTip || 'Recommended production design pattern.')}
+          </Callout>
+        );
+      } else if (line.startsWith('> [!WARNING]') || line.startsWith('> [!CAUTION]')) {
+        const rawWarn = line.replace(/^>\s*\[!(WARNING|CAUTION)\]\s*/i, '').trim();
+        elements.push(
+          <Callout key={idx} kind="warning" title="Warning">
+            {renderInlineFormatting(rawWarn || 'Breaking changes or operational risks.')}
+          </Callout>
+        );
       } else if (line.startsWith('> ')) {
-        elements.push(<blockquote key={idx} style={{ borderLeft: '3px solid var(--color-primary)', background: 'var(--color-primary-faint)', padding: '1rem 1.5rem', borderRadius: '0 var(--radius-md) var(--radius-md) 0', margin: '1.5rem 0', color: 'var(--color-charcoal)', fontStyle: 'italic' }}>{line.replace('> ', '')}</blockquote>);
+        const rawQuote = line.replace(/^>\s*/, '').trim();
+        elements.push(
+          <Callout key={idx} kind="default">
+            {renderInlineFormatting(rawQuote)}
+          </Callout>
+        );
       } else if (line.startsWith('* ') || line.startsWith('- ')) {
-        elements.push(<li key={idx} style={{ marginLeft: '1.25rem', color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>{line.replace(/^[*\-]\s+/, '')}</li>);
+        elements.push(
+          <li
+            key={idx}
+            style={{
+              marginLeft: '1.5rem',
+              color: 'var(--color-charcoal)',
+              marginBottom: '0.65rem',
+              lineHeight: 1.75,
+              fontSize: '1.05rem',
+            }}
+          >
+            {renderInlineFormatting(line.replace(/^[*-]\s+/, ''))}
+          </li>
+        );
       } else if (line.trim() === '---') {
-        elements.push(<hr key={idx} style={{ borderColor: 'var(--color-border)', margin: '2rem 0' }} />);
+        elements.push(<hr key={idx} style={{ borderColor: 'var(--color-border)', margin: '2.5rem 0' }} />);
       } else if (line.trim().length > 0) {
-        elements.push(<p key={idx} style={{ color: 'var(--color-charcoal)', marginBottom: '1.25rem', lineHeight: 1.8, fontSize: '1.05rem' }}>{line}</p>);
+        elements.push(
+          <p
+            key={idx}
+            style={{
+              color: 'var(--color-charcoal)',
+              marginBottom: '1.4rem',
+              lineHeight: 1.85,
+              fontSize: '1.075rem',
+              letterSpacing: '0.005em',
+            }}
+          >
+            {renderInlineFormatting(line)}
+          </p>
+        );
       }
     });
 
