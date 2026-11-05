@@ -47,15 +47,15 @@ List the mathematical or operational guarantees enforced by this architecture.
   }, []);
 
   useEffect(() => {
-    const token = getAccessToken();
+    const authBearer = getAccessToken();
     const currentUser = getCurrentUser();
 
-    if (!token && !currentUser) {
+    if (!authBearer && !currentUser) {
       router.push('/login?redirect=/courses/create');
       return;
     }
 
-    if (!currentUser && token) {
+    if (!currentUser && authBearer) {
       accountClient
         .me()
         .then((res) => {

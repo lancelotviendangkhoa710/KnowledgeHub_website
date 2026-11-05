@@ -200,8 +200,8 @@ function renderInlineFormatting(text: string): React.ReactNode {
     if (match.index > lastIndex) {
       parts.push(text.substring(lastIndex, match.index));
     }
-    const token = match[0];
-    if (token.startsWith('`') && token.endsWith('`')) {
+    const matchedPart = match[0];
+    if (matchedPart.startsWith('`') && token.endsWith('`')) {
       parts.push(
         <code
           key={`code-${match.index}`}
@@ -215,15 +215,15 @@ function renderInlineFormatting(text: string): React.ReactNode {
             border: '1px solid var(--color-border)',
           }}
         >
-          {token.slice(1, -1)}
+          {matchedPart.slice(1, -1)}
         </code>
       );
-    } else if (token.startsWith('**') && token.endsWith('**')) {
-      parts.push(<strong key={`bold-${match.index}`}>{token.slice(2, -2)}</strong>);
-    } else if (token.startsWith('*') && token.endsWith('*')) {
-      parts.push(<em key={`italic-${match.index}`}>{token.slice(1, -1)}</em>);
-    } else if (token.startsWith('[') && token.includes('](')) {
-      const closingBracket = token.indexOf('](');
+    } else if (matchedPart.startsWith('**') && token.endsWith('**')) {
+      parts.push(<strong key={`bold-${match.index}`}>{matchedPart.slice(2, -2)}</strong>);
+    } else if (matchedPart.startsWith('*') && token.endsWith('*')) {
+      parts.push(<em key={`italic-${match.index}`}>{matchedPart.slice(1, -1)}</em>);
+    } else if (matchedPart.startsWith('[') && matchedPart.includes('](')) {
+      const closingBracket = matchedPart.indexOf('](');
       const linkText = token.slice(1, closingBracket);
       const linkHref = token.slice(closingBracket + 2, -1);
       parts.push(
@@ -366,9 +366,9 @@ export default function CourseDetailPage() {
     setBookmarkNotice(null);
 
     const user = getCurrentUser();
-    const token = getAccessToken();
+    const authBearer = getAccessToken();
 
-    if (user || token) {
+    if (user || authBearer) {
       try {
         if (targetState) {
           await api.post(`/v1/articles/${article.id}/bookmark`, {});
@@ -966,7 +966,7 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
-          {/* Author Actions (Only for Author or Admin) vs Related Modules (for Learners & Guests) */}
+          {/* Author Actions (Only for Author or Admin) vs Related Modules (for Users & Guests) */}
           {(() => {
             const isAuthor = Boolean(
               currentUser &&

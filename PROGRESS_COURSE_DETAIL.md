@@ -22,5 +22,5 @@
 
 ## Giai đoạn D: Kiểm thử & Đóng gói PR
 - [x] D1. Kiểm tra build và TypeScript trong `frontend/`
-- [ ] D2. Chạy kịch bản Guardrails
+- [x] D2. Chạy kịch bản Guardrails
 - [ ] D3. Tạo Pull Request
