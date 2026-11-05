@@ -6,7 +6,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
 import { fetchArticle, fetchArticles } from '@/lib/contentClient';
 import { api } from '@/lib/api';
-import { getCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import { accountClient } from '@/lib/accountClient';
 import { getAccessToken } from '@/lib/authToken';
 
 
@@ -285,7 +286,18 @@ export default function CourseDetailPage() {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
 
   useEffect(() => {
-    return subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
+    const unsub = subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
+    const token = getAccessToken();
+    if (token && !getCurrentUser()) {
+      accountClient
+        .me()
+        .then((res) => {
+          setGlobalCurrentUser(res.data.user);
+          setCurrentUser(res.data.user);
+        })
+        .catch(() => {});
+    }
+    return unsub;
   }, []);
 
   useEffect(() => {

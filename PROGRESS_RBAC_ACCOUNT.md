@@ -11,7 +11,7 @@
 
 ## Giai đoạn 2: Bắt buộc Đăng nhập khi Xem Chi tiết Bài giảng (`/courses/[id]`)
 - [x] 2.1. Thiết lập Content Gate cho người dùng chưa đăng nhập
-- [ ] 2.2. Đảm bảo trải nghiệm đọc liền mạch cho thành viên đã đăng nhập
+- [x] 2.2. Đảm bảo trải nghiệm đọc liền mạch cho thành viên đã đăng nhập
 
 ## Giai đoạn 3: Phân quyền Nghiêm ngặt Trang Tạo bài giảng (`/courses/create`)
 - [ ] 3.1. Tạo RBAC Guard tại trang Contributor Studio
