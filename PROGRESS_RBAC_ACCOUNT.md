@@ -15,7 +15,7 @@
 
 ## Giai đoạn 3: Phân quyền Nghiêm ngặt Trang Tạo bài giảng (`/courses/create`)
 - [x] 3.1. Tạo RBAC Guard tại trang Contributor Studio
-- [ ] 3.2. Cập nhật Banner CTA Contributor trên trang danh mục (`/courses/page.tsx`)
+- [x] 3.2. Cập nhật Banner CTA Contributor trên trang danh mục (`/courses/page.tsx`)
 
 ## Giai đoạn 4: Nâng cấp Toàn diện Giao diện Trang Cá nhân (`/account`)
 - [ ] 4.1. Thiết kế Thẻ Định danh & Thông tin Tổng quan (Profile Overview Card)
