@@ -1,7 +1,7 @@
 """
-watchdog_runner.py - UI Alignment Execution Watchdog
+watchdog_runner.py - Execution Watchdog
 
-Monitors PROGRESS_UI_ALIGNMENT.md and ensures continuous progress
+Monitors progress files and ensures continuous progress
 for up to 8 hours (28,800 seconds).
 """
 
@@ -10,9 +10,22 @@ import sys
 import time
 from typing import Optional
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 MAX_DURATION_SECONDS = 28800  # 8 hours
 CHECK_INTERVAL_SECONDS = 15
-PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "PROGRESS_UI_ALIGNMENT.md")
+PROGRESS_FILE = os.environ.get(
+    "WATCHDOG_PROGRESS_FILE",
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        sys.argv[1] if len(sys.argv) > 1 else "PROGRESS_COURSE_DETAIL.md"
+    )
+)
 
 
 def get_pending_tasks(filepath: str) -> Optional[list[str]]:
@@ -62,7 +75,7 @@ def main():
         reported_unreadable = False
 
         if not pending:
-            print("[WATCHDOG] All tasks in PROGRESS_UI_ALIGNMENT.md are complete! [x]")
+            print("[WATCHDOG] All tasks are complete! [x]")
             break
 
         iteration += 1
