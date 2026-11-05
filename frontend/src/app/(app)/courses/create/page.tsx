@@ -10,6 +10,8 @@ import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 
+const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
+
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
@@ -86,6 +88,21 @@ List the mathematical or operational guarantees enforced by this architecture.
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      // Restore draft if saved before sign-in redirect
+      const savedDraft = sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        try {
+          const parsed = JSON.parse(savedDraft);
+          if (parsed.title) setTitle(parsed.title);
+          if (parsed.slug) setSlug(parsed.slug);
+          if (parsed.categoryId) setCategoryId(parsed.categoryId);
+          if (parsed.tags) setTags(parsed.tags);
+          if (parsed.content) setContent(parsed.content);
+        } catch {
+          // ignore corrupted draft
+        }
+      }
+
       const pid = params.get('parent_id');
       if (pid) {
         setParentId(pid);
@@ -122,6 +139,12 @@ List the mathematical or operational guarantees enforced by this architecture.
   const handleSubmit = async (publish: boolean) => {
     if (!title.trim() || !content.trim()) {
       alert('Please provide both a course title and content body.');
+      return;
+    }
+
+    const bearerSession = getAccessToken();
+    if (!bearerSession) {
+      setErrorMessage('Authentication session expired. Please sign in again to author course material.');
       return;
     }
 
@@ -168,6 +191,11 @@ List the mathematical or operational guarantees enforced by this architecture.
       }
     } catch (err: unknown) {
       const errorObj = err as { status?: number; message?: string; errors?: Record<string, string[]> };
+      if (errorObj?.status === 401 || errorObj?.message === 'Unauthenticated.') {
+        setErrorMessage('Authentication session expired or unauthorized. Please sign in to your contributor account.');
+        setIsSubmitting(false);
+        return;
+      }
       if (errorObj?.status && errorObj.status >= 400) {
         const firstErr = errorObj.errors ? Object.values(errorObj.errors)[0]?.[0] : undefined;
         setErrorMessage(firstErr || errorObj.message || 'Failed to save course. Please check your inputs.');
@@ -175,6 +203,10 @@ List the mathematical or operational guarantees enforced by this architecture.
         return;
       }
       // Local fallback simulation if API is unreachable
+    }
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     }
 
     setIsSubmitting(false);
@@ -311,9 +343,30 @@ List the mathematical or operational guarantees enforced by this architecture.
             color: '#B91C1C',
             marginBottom: '1.5rem',
             fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
           }}
         >
-          {errorMessage}
+          <span>{errorMessage}</span>
+          {(errorMessage.toLowerCase().includes('sign in') || errorMessage.toLowerCase().includes('authenticat')) && (
+            <Link
+              href={`/login?redirect=${encodeURIComponent(parentId ? `/courses/create?parent_id=${parentId}` : '/courses/create')}`}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem(
+                    DRAFT_STORAGE_KEY,
+                    JSON.stringify({ title, slug, categoryId, tags, content })
+                  );
+                }
+              }}
+              className="btn btn-primary"
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       )}
 
