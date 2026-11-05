@@ -382,14 +382,28 @@ export default function AccountPage() {
               border: '1px solid var(--color-primary-pale, #BAE6FD)',
               padding: '1.25rem 1.5rem',
               borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
             }}
           >
-            <div style={{ fontWeight: 700, color: '#0369A1', fontSize: '1rem', marginBottom: '0.35rem' }}>
-              Quyền tác giả (Contributor Status)
+            <div>
+              <div style={{ fontWeight: 700, color: '#0369A1', fontSize: '1rem', marginBottom: '0.35rem' }}>
+                Quyền tác giả (Contributor Status)
+              </div>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#075985', lineHeight: 1.6 }}>
+                Hiện đang là Người học (User). Bạn có chuyên môn kỹ thuật sâu và muốn đóng góp bài giảng? Hãy gửi yêu cầu để Ban Quản trị cấp quyền Contributor.
+              </p>
             </div>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#075985', lineHeight: 1.6 }}>
-              Hiện đang là Người học (User). Bạn có chuyên môn kỹ thuật sâu và muốn đóng góp bài giảng? Hãy liên hệ Quản trị viên để đăng ký quyền Contributor.
-            </p>
+            <a
+              href="mailto:admin@knowledgehub.internal?subject=Y%C3%AAu%20c%E1%BA%A7u%20c%E1%BA%A5p%20quy%E1%BB%81n%20Contributor&body=Xin%20ch%C3%A0o%20Ban%20Qu%E1%BA%A3n%20tr%E1%BB%8B%20KnowledgeHub,%0A%0AT%C3%B4i%20mu%E1%BB%91n%20%C4%91%C4%83ng%20k%C3%BD%20tr%E1%BB%9F%20th%C3%A0nh%20Contributor%20%C4%91%E1%BB%83%20tham%20gia%20bi%C3%AAn%20so%E1%BA%A1n%20v%C3%A0%20xu%E1%BA%A5t%20b%E1%BA%A3n%20gi%C3%A1o%20tr%C3%ACnh%20k%E1%BB%B9%20thu%E1%BA%ADt.%0A%0ATh%C3%B4ng%20tin%20chuy%C3%AAn%20m%C3%B4n%20c%E1%BB%A7a%20t%C3%B4i:%20[%C4%90i%E1%BB%81n%20t%C3%B3m%20t%E1%BA%AFt%20chuy%C3%AAn%20m%C3%B4n]"
+              className="button button--secondary"
+              style={{ padding: '0.65rem 1.25rem', fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'nowrap', textDecoration: 'none' }}
+            >
+              Gửi email yêu cầu &rarr;
+            </a>
           </div>
         )}
       </div>
