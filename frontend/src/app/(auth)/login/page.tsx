@@ -21,7 +21,9 @@ export default function LoginPage() {
       await login({ email, password });
       // Client-side navigation keeps the in-memory bearer token (lib/authToken.ts)
       // available for the next page; a full reload would drop the session.
-      router.push('/courses');
+      const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const targetUrl = searchParams?.get('redirect') || '/courses';
+      router.push(targetUrl);
     } catch (error) {
       const response = error as { message?: string; errors?: Record<string, string[]> };
       setMessage(response.errors?.email?.[0] ?? response.message ?? 'Unable to sign in. Check your credentials and account status.');

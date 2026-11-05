@@ -10,7 +10,7 @@
 - [x] A2. Sửa lỗi gọi API tại trang Create Course
 
 ## Giai đoạn B: Phân quyền & Bảo vệ Trang Biên Soạn (Contributor Studio Guard)
-- [ ] B1. Kiểm tra quyền truy cập của người dùng tại `/courses/create`
+- [x] B1. Kiểm tra quyền truy cập của người dùng tại `/courses/create`
 - [ ] B2. Cập nhật giao diện nút "Open Contributor Studio" tại danh sách khóa học
 
 ## Giai đoạn C: Nâng cấp Trang Chi tiết Khóa học (`/courses/[id]`)

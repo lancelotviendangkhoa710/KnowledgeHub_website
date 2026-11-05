@@ -6,9 +6,14 @@ import { useRouter } from 'next/navigation';
 import { Category } from '@/types/content';
 import { fetchCategories } from '@/lib/contentClient';
 import { api } from '@/lib/api';
+import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import { getAccessToken } from '@/lib/authToken';
+import { accountClient } from '@/lib/accountClient';
 
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
+  const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
+  const [authChecked, setAuthChecked] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
@@ -36,6 +41,36 @@ List the mathematical or operational guarantees enforced by this architecture.
   const [previewMode, setPreviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    return subscribeCurrentUser(() => setUser(getCurrentUser()));
+  }, []);
+
+  useEffect(() => {
+    const token = getAccessToken();
+    const currentUser = getCurrentUser();
+
+    if (!token && !currentUser) {
+      router.push('/login?redirect=/courses/create');
+      return;
+    }
+
+    if (!currentUser && token) {
+      accountClient
+        .me()
+        .then((res) => {
+          setCurrentUser(res.data.user);
+          setUser(res.data.user);
+          setAuthChecked(true);
+        })
+        .catch(() => {
+          router.push('/login?redirect=/courses/create');
+        });
+    } else {
+      setUser(currentUser);
+      setAuthChecked(true);
+    }
+  }, [router]);
 
   useEffect(() => {
     async function load() {
@@ -103,6 +138,60 @@ List the mathematical or operational guarantees enforced by this architecture.
       router.push('/courses');
     }, 1800);
   };
+
+  const isContributorOrAdmin =
+    user?.roles?.some((role) => role === 'contributor' || role === 'admin') ?? false;
+
+  if (!authChecked) {
+    return (
+      <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
+        Đang kiểm tra quyền truy cập...
+      </div>
+    );
+  }
+
+  if (!isContributorOrAdmin) {
+    return (
+      <div className="container" style={{ paddingTop: '5rem', maxWidth: 640, textAlign: 'center' }}>
+        <div
+          style={{
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '3rem 2rem',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: '#FEF3C7',
+              color: '#D97706',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1.5rem',
+            }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '1rem' }}>
+            Quyền truy cập bị giới hạn
+          </h2>
+          <p style={{ color: 'var(--color-gray)', lineHeight: 1.6, marginBottom: '2rem', fontSize: '1rem' }}>
+            Chỉ Contributor hoặc Quản trị viên mới có quyền biên soạn giáo trình. Hãy liên hệ Admin để được cấp quyền.
+          </p>
+          <Link href="/courses" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontWeight: 600 }}>
+            Quay lại Danh sách Khóa học
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container" style={{ paddingTop: '2.5rem', maxWidth: 960 }}>
