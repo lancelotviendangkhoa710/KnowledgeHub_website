@@ -394,6 +394,110 @@ export default function AccountPage() {
         )}
       </div>
 
+      {/* Quick Learning Stats Widget */}
+      <div
+        className="quick-learning-stats"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '1.25rem',
+          marginBottom: '2rem',
+        }}
+      >
+        {/* Saved Library Card */}
+        <Link
+          href="/bookmarks"
+          style={{
+            textDecoration: 'none',
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: 'var(--shadow-xs)',
+            transition: 'border-color var(--transition-fast), transform var(--transition-fast)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--color-primary-pale, #E0F2FE)',
+                color: 'var(--color-primary, #0284C7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
+                Khóa học đã lưu
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-gray)' }}>
+                Truy cập Thư viện cá nhân
+              </div>
+            </div>
+          </div>
+          <span style={{ color: 'var(--color-primary)', fontWeight: 700, fontSize: '1.25rem' }}>&rarr;</span>
+        </Link>
+
+        {/* AI Roadmaps Card */}
+        <Link
+          href="/learning/roadmaps"
+          style={{
+            textDecoration: 'none',
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: 'var(--shadow-xs)',
+            transition: 'border-color var(--transition-fast), transform var(--transition-fast)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#ECFDF5',
+                color: '#059669',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
+                Lộ trình cá nhân
+              </div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--color-gray)' }}>
+                AI Learning Roadmaps
+              </div>
+            </div>
+          </div>
+          <span style={{ color: '#059669', fontWeight: 700, fontSize: '1.25rem' }}>&rarr;</span>
+        </Link>
+      </div>
+
       <div className="account-card">
         <h2>Profile</h2>
         <NoticeLine notice={profileNotice} />
