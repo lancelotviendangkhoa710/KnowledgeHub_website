@@ -8,6 +8,7 @@ import { fetchArticles, fetchCategories } from '@/lib/contentClient';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
+import { api } from '@/lib/api';
 
 export default function CoursesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -27,7 +28,12 @@ export default function CoursesPage() {
           setGlobalCurrentUser(res.data.user);
           setCurrentUser(res.data.user);
         })
-        .catch(() => {});
+        .catch((err: { status?: number }) => {
+          if (err?.status === 401) {
+            setGlobalCurrentUser(null);
+            setCurrentUser(null);
+          }
+        });
     }
     return unsub;
   }, []);
@@ -36,6 +42,23 @@ export default function CoursesPage() {
     async function loadData() {
       setLoading(true);
       const [arts, cats] = await Promise.all([fetchArticles(), fetchCategories()]);
+
+      const authBearer = getAccessToken();
+      if (authBearer) {
+        try {
+          const bRes = await api.get<{ data: Article[] }>('/v1/bookmarks');
+          if (bRes?.data && Array.isArray(bRes.data)) {
+            const bIds = new Set(bRes.data.map((b) => b.id));
+            setArticles(arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) })));
+            setCategories(cats);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If bookmarks endpoint is unreachable, fallback to fetched articles
+        }
+      }
+
       setArticles(arts);
       setCategories(cats);
       setLoading(false);

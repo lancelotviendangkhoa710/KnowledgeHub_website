@@ -295,7 +295,12 @@ export default function CourseDetailPage() {
           setGlobalCurrentUser(res.data.user);
           setCurrentUser(res.data.user);
         })
-        .catch(() => {});
+        .catch((err: { status?: number }) => {
+          if (err?.status === 401) {
+            setGlobalCurrentUser(null);
+            setCurrentUser(null);
+          }
+        });
     }
     return unsub;
   }, []);
