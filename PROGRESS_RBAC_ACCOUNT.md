@@ -7,7 +7,7 @@
 
 ## Giai đoạn 1: Bắt buộc Đăng nhập khi Gắn Bookmark
 - [x] 1.1. Chặn hành vi Bookmark của Khách trên `CourseCard.tsx`
-- [ ] 1.2. Chặn hành vi Bookmark của Khách trên trang Chi tiết bài giảng (`/courses/[id]`)
+- [x] 1.2. Chặn hành vi Bookmark của Khách trên trang Chi tiết bài giảng (`/courses/[id]`)
 
 ## Giai đoạn 2: Bắt buộc Đăng nhập khi Xem Chi tiết Bài giảng (`/courses/[id]`)
 - [ ] 2.1. Thiết lập Content Gate cho người dùng chưa đăng nhập

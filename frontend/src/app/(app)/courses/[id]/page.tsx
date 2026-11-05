@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
 import { fetchArticle, fetchArticles } from '@/lib/contentClient';
 import { api } from '@/lib/api';
@@ -268,6 +268,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
 }
 
 export default function CourseDetailPage() {
+  const router = useRouter();
   const params = useParams();
   const idOrSlug = params?.id as string;
 
@@ -294,15 +295,11 @@ export default function CourseDetailPage() {
       const data = await fetchArticle(idOrSlug);
       setArticle(data);
       const user = getCurrentUser();
-      if (user) {
+      const token = getAccessToken();
+      if (user || token) {
         setBookmarked(data?.is_bookmarked ?? false);
-      } else if (data?.id) {
-        try {
-          const stored = JSON.parse(localStorage.getItem('kh_saved_courses') || '[]');
-          setBookmarked(stored.includes(data.id));
-        } catch {
-          setBookmarked(false);
-        }
+      } else {
+        setBookmarked(false);
       }
       if (data?.category_id) {
         fetchArticles({ categoryId: data.category_id })
@@ -388,50 +385,34 @@ export default function CourseDetailPage() {
 
   const toggleBookmark = async () => {
     if (!article || isBookmarkPending) return;
+
+    const user = getCurrentUser();
+    const authBearer = getAccessToken();
+
+    if (!user && !authBearer) {
+      setBookmarkNotice('Vui lòng đăng nhập để lưu khóa học vào Thư viện cá nhân');
+      router.push(`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`);
+      return;
+    }
+
     const targetState = !bookmarked;
     setIsBookmarkPending(true);
     setBookmarked(targetState);
     setBookmarkNotice(null);
 
-    const user = getCurrentUser();
-    const authBearer = getAccessToken();
-
-    if (user || authBearer) {
-      try {
-        if (targetState) {
-          await api.post(`/v1/articles/${article.id}/bookmark`, {});
-        } else {
-          await api.delete(`/v1/articles/${article.id}/bookmark`);
-        }
-      } catch {
-        // Revert optimistic update on error
-        setBookmarked(!targetState);
-        setBookmarkNotice('Unable to sync bookmark with server. Please try again.');
-        setTimeout(() => setBookmarkNotice(null), 4000);
-      } finally {
-        setIsBookmarkPending(false);
+    try {
+      if (targetState) {
+        await api.post(`/v1/articles/${article.id}/bookmark`, {});
+      } else {
+        await api.delete(`/v1/articles/${article.id}/bookmark`);
       }
-    } else {
-      // Guest: persist in localStorage and suggest signing in
-      try {
-        const stored: string[] = JSON.parse(localStorage.getItem('kh_saved_courses') || '[]');
-        if (targetState) {
-          if (!stored.includes(article.id)) stored.push(article.id);
-          setBookmarkNotice('Saved locally! Sign in to sync bookmarks across all devices.');
-        } else {
-          const idx = stored.indexOf(article.id);
-          if (idx !== -1) stored.splice(idx, 1);
-        }
-        localStorage.setItem('kh_saved_courses', JSON.stringify(stored));
-        setTimeout(() => setBookmarkNotice(null), 4000);
-      } catch {
-        // Revert on storage failure (e.g. QuotaExceededError)
-        setBookmarked(!targetState);
-        setBookmarkNotice('Unable to save bookmark locally on this device.');
-        setTimeout(() => setBookmarkNotice(null), 4000);
-      } finally {
-        setIsBookmarkPending(false);
-      }
+    } catch {
+      // Revert optimistic update on error
+      setBookmarked(!targetState);
+      setBookmarkNotice('Không thể đồng bộ bookmark với máy chủ. Vui lòng thử lại.');
+      setTimeout(() => setBookmarkNotice(null), 4000);
+    } finally {
+      setIsBookmarkPending(false);
     }
   };
 
