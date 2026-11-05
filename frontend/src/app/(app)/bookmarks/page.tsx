@@ -4,31 +4,37 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import CourseCard from '@/components/content/CourseCard';
 import { Article } from '@/types/content';
-import { fetchArticles } from '@/lib/contentClient';
+import { api } from '@/lib/api';
+import { getAccessToken } from '@/lib/authToken';
 
 export default function BookmarksPage() {
   const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [hasAuth, setHasAuth] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadBookmarks() {
-      setLoading(true);
-      const allArticles = await fetchArticles();
-      let savedIds: string[] = [];
-
-      try {
-        savedIds = JSON.parse(localStorage.getItem('kh_saved_courses') || '["art-001", "art-003"]');
-      } catch {
-        savedIds = ['art-001', 'art-003'];
+      const authBearer = getAccessToken();
+      if (!authBearer) {
+        setHasAuth(false);
+        setLoading(false);
+        return;
       }
 
-      const filtered = allArticles.filter((a) => savedIds.includes(a.id)).map((a) => ({
-        ...a,
-        is_bookmarked: true,
-      }));
-
-      setBookmarkedArticles(filtered);
-      setLoading(false);
+      setHasAuth(true);
+      setLoading(true);
+      try {
+        const response = await api.get<{ data: Article[] }>('/v1/bookmarks');
+        if (response?.data && Array.isArray(response.data)) {
+          setBookmarkedArticles(response.data.map((a) => ({ ...a, is_bookmarked: true })));
+        } else {
+          setBookmarkedArticles([]);
+        }
+      } catch {
+        setBookmarkedArticles([]);
+      } finally {
+        setLoading(false);
+      }
     }
 
     loadBookmarks();
@@ -64,6 +70,46 @@ export default function BookmarksPage() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
           Loading your saved library...
+        </div>
+      ) : !hasAuth ? (
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '4.5rem 2rem',
+            background: 'var(--color-white)',
+            border: '1.5px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-xs)',
+            maxWidth: 580,
+            margin: '0 auto',
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              backgroundColor: 'var(--color-primary-pale)',
+              color: 'var(--color-primary)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '1.25rem',
+            }}
+          >
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.75rem' }}>
+            Yêu cầu Đăng nhập
+          </h2>
+          <p style={{ color: 'var(--color-gray)', marginBottom: '2rem', fontSize: '1rem', lineHeight: 1.6 }}>
+            Vui lòng đăng nhập để lưu trữ và xem lại các khóa học trong Thư viện cá nhân của bạn.
+          </p>
+          <Link href="/login?redirect=/bookmarks" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontWeight: 600 }}>
+            Đăng nhập ngay &rarr;
+          </Link>
         </div>
       ) : bookmarkedArticles.length > 0 ? (
         <div

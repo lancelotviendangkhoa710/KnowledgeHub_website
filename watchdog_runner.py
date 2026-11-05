@@ -23,7 +23,7 @@ PROGRESS_FILE = os.environ.get(
     "WATCHDOG_PROGRESS_FILE",
     os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        sys.argv[1] if len(sys.argv) > 1 else "PROGRESS_COURSE_DETAIL.md"
+        sys.argv[1] if len(sys.argv) > 1 else "PROGRESS_RBAC_ACCOUNT.md"
     )
 )
 

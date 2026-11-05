@@ -5,7 +5,10 @@ import Link from 'next/link';
 import CourseCard from '@/components/content/CourseCard';
 import { Article, Category } from '@/types/content';
 import { fetchArticles, fetchCategories } from '@/lib/contentClient';
-import { getCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import { getAccessToken } from '@/lib/authToken';
+import { accountClient } from '@/lib/accountClient';
+import { api } from '@/lib/api';
 
 export default function CoursesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -16,13 +19,46 @@ export default function CoursesPage() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
 
   useEffect(() => {
-    return subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
+    const unsub = subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
+    const authBearer = getAccessToken();
+    if (authBearer && !getCurrentUser()) {
+      accountClient
+        .me()
+        .then((res) => {
+          setGlobalCurrentUser(res.data.user);
+          setCurrentUser(res.data.user);
+        })
+        .catch((err: { status?: number }) => {
+          if (err?.status === 401) {
+            setGlobalCurrentUser(null);
+            setCurrentUser(null);
+          }
+        });
+    }
+    return unsub;
   }, []);
 
   useEffect(() => {
     async function loadData() {
       setLoading(true);
       const [arts, cats] = await Promise.all([fetchArticles(), fetchCategories()]);
+
+      const authBearer = getAccessToken();
+      if (authBearer) {
+        try {
+          const bRes = await api.get<{ data: Article[] }>('/v1/bookmarks');
+          if (bRes?.data && Array.isArray(bRes.data)) {
+            const bIds = new Set(bRes.data.map((b) => b.id));
+            setArticles(arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) })));
+            setCategories(cats);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // If bookmarks endpoint is unreachable, fallback to fetched articles
+        }
+      }
+
       setArticles(arts);
       setCategories(cats);
       setLoading(false);
@@ -215,7 +251,7 @@ export default function CoursesPage() {
 
       {/* Contributor Action Strip */}
       {(() => {
-        const isGuest = !currentUser;
+        const isGuest = !currentUser && !getAccessToken();
         const isContributorOrAdmin =
           currentUser?.roles?.some((r) => r === 'contributor' || r === 'admin') ?? false;
 
@@ -252,23 +288,19 @@ export default function CoursesPage() {
               >
                 {isContributorOrAdmin
                   ? 'Active Contributor Workspace'
-                  : isGuest
-                  ? 'Internal Publishing System'
-                  : 'Contributor Role Required'}
+                  : 'Ban Chuyên Môn KnowledgeHub'}
               </span>
               <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 700 }}>
                 {isContributorOrAdmin
                   ? 'Author & Publish Course Curricula'
-                  : isGuest
-                  ? 'Are you an internal contributor?'
-                  : 'Interested in authoring course material?'}
+                  : 'Tìm hiểu cách trở thành Contributor nội bộ'}
               </h2>
-              <p style={{ color: 'var(--color-gray)', maxWidth: 600, lineHeight: 1.6 }}>
+              <p style={{ color: 'var(--color-gray)', maxWidth: 620, lineHeight: 1.65 }}>
                 {isContributorOrAdmin
                   ? 'Create new course modules with immutable version snapshots, structured markdown, and direct publishing workflow.'
                   : isGuest
-                  ? 'Sign in with your contributor credentials to access the authoring workbench and publish technical curricula.'
-                  : 'Contributor access is granted exclusively by administrators. Contact an administrator to upgrade your account.'}
+                  ? 'Bạn là chuyên gia kỹ thuật và muốn xuất bản giáo trình? Vui lòng đăng nhập và gửi yêu cầu cấp quyền Contributor qua trang cá nhân.'
+                  : 'Quyền tác giả khóa học được cấp duyệt bởi Quản trị viên. Hãy cập nhật hồ sơ cá nhân và gửi yêu cầu cấp quyền Contributor đến Admin.'}
               </p>
             </div>
 
@@ -276,25 +308,25 @@ export default function CoursesPage() {
               <Link
                 href="/courses/create"
                 className="btn btn-primary"
-                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
+                style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
               >
                 Open Contributor Studio &rarr;
               </Link>
             ) : isGuest ? (
               <Link
-                href="/login?redirect=/courses/create"
+                href="/login?redirect=/courses"
                 className="btn btn-primary"
-                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
+                style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
               >
-                Sign In to Author &rarr;
+                Đăng nhập để gửi yêu cầu &rarr;
               </Link>
             ) : (
               <Link
                 href="/account"
                 className="btn btn-secondary"
-                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
+                style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
               >
-                View Account & Roles &rarr;
+                Gửi yêu cầu qua Trang cá nhân &rarr;
               </Link>
             )}
           </section>

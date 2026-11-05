@@ -2,32 +2,50 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
+import { getAccessToken } from '@/lib/authToken';
+import { api } from '@/lib/api';
 
 interface CourseCardProps {
   article: Article;
 }
 
 export default function CourseCard({ article }: CourseCardProps) {
+  const router = useRouter();
   const [bookmarked, setBookmarked] = useState(article.is_bookmarked ?? false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
 
-  const toggleBookmark = (e: React.MouseEvent) => {
+  const toggleBookmark = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setBookmarked(!bookmarked);
 
-    // Persist bookmark to localStorage for immediate UI persistence
+    const authBearer = getAccessToken();
+    if (!authBearer) {
+      setNotice('Vui lòng đăng nhập để lưu khóa học vào Thư viện cá nhân');
+      router.push('/login?redirect=/courses');
+      return;
+    }
+
+    if (isPending) return;
+    const nextState = !bookmarked;
+    setIsPending(true);
+    setBookmarked(nextState);
+    setNotice(null);
+
     try {
-      const stored = JSON.parse(localStorage.getItem('kh_saved_courses') || '[]');
-      if (!bookmarked) {
-        if (!stored.includes(article.id)) stored.push(article.id);
+      if (nextState) {
+        await api.post(`/v1/articles/${article.id}/bookmark`, {});
       } else {
-        const idx = stored.indexOf(article.id);
-        if (idx !== -1) stored.splice(idx, 1);
+        await api.delete(`/v1/articles/${article.id}/bookmark`);
       }
-      localStorage.setItem('kh_saved_courses', JSON.stringify(stored));
     } catch {
-      // Ignore local storage error
+      setBookmarked(!nextState);
+      setNotice('Không thể cập nhật bookmark. Vui lòng thử lại.');
+      setTimeout(() => setNotice(null), 3000);
+    } finally {
+      setIsPending(false);
     }
   };
 
@@ -108,29 +126,54 @@ export default function CourseCard({ article }: CourseCardProps) {
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={toggleBookmark}
-            aria-label={bookmarked ? 'Remove from saved library' : 'Save course'}
-            style={{
-              background: bookmarked ? 'var(--color-primary-pale)' : 'var(--color-white)',
-              border: '1px solid',
-              borderColor: bookmarked ? 'var(--color-primary)' : 'var(--color-border)',
-              color: bookmarked ? 'var(--color-primary)' : 'var(--color-gray)',
-              width: 34,
-              height: 34,
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'all var(--transition-fast)',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={toggleBookmark}
+              disabled={isPending}
+              aria-label={bookmarked ? 'Remove from saved library' : 'Save course'}
+              title={bookmarked ? 'Bỏ lưu khóa học' : 'Lưu vào Thư viện cá nhân'}
+              style={{
+                background: bookmarked ? 'var(--color-primary-pale)' : 'var(--color-white)',
+                border: '1px solid',
+                borderColor: bookmarked ? 'var(--color-primary)' : 'var(--color-border)',
+                color: bookmarked ? 'var(--color-primary)' : 'var(--color-gray)',
+                width: 34,
+                height: 34,
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all var(--transition-fast)',
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </button>
+            {notice && (
+              <div
+                role="status"
+                style={{
+                  position: 'absolute',
+                  top: '115%',
+                  right: 0,
+                  backgroundColor: '#0F172A',
+                  color: '#F8FAFC',
+                  padding: '0.45rem 0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '0.75rem',
+                  whiteSpace: 'nowrap',
+                  boxShadow: 'var(--shadow-md)',
+                  zIndex: 50,
+                  border: '1px solid #334155',
+                }}
+              >
+                {notice}
+              </div>
+            )}
+          </div>
         </div>
 
         <Link href={`/courses/${article.slug || article.id}`}>
