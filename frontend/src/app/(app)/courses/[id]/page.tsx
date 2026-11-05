@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Article } from '@/types/content';
 import { fetchArticle } from '@/lib/contentClient';
+import { api } from '@/lib/api';
+import { getCurrentUser } from '@/lib/auth';
+import { getAccessToken } from '@/lib/authToken';
 
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
@@ -252,6 +255,7 @@ export default function CourseDetailPage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
+  const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
 
@@ -261,7 +265,17 @@ export default function CourseDetailPage() {
       setLoading(true);
       const data = await fetchArticle(idOrSlug);
       setArticle(data);
-      setBookmarked(data?.is_bookmarked ?? false);
+      const user = getCurrentUser();
+      if (user) {
+        setBookmarked(data?.is_bookmarked ?? false);
+      } else if (data?.id) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('kh_saved_courses') || '[]');
+          setBookmarked(stored.includes(data.id));
+        } catch {
+          setBookmarked(false);
+        }
+      }
       setLoading(false);
     }
     loadCourse();
@@ -330,19 +344,44 @@ export default function CourseDetailPage() {
     }
   };
 
-  const toggleBookmark = () => {
-    setBookmarked(!bookmarked);
-    try {
-      const stored = JSON.parse(localStorage.getItem('kh_saved_courses') || '[]');
-      if (!bookmarked) {
-        if (!stored.includes(article?.id)) stored.push(article?.id);
-      } else {
-        const idx = stored.indexOf(article?.id);
-        if (idx !== -1) stored.splice(idx, 1);
+  const toggleBookmark = async () => {
+    if (!article) return;
+    const targetState = !bookmarked;
+    setBookmarked(targetState);
+    setBookmarkNotice(null);
+
+    const user = getCurrentUser();
+    const token = getAccessToken();
+
+    if (user || token) {
+      try {
+        if (targetState) {
+          await api.post(`/v1/articles/${article.id}/bookmark`, {});
+        } else {
+          await api.delete(`/v1/articles/${article.id}/bookmark`);
+        }
+      } catch {
+        // Revert optimistic update on error
+        setBookmarked(!targetState);
+        setBookmarkNotice('Unable to sync bookmark with server. Please try again.');
+        setTimeout(() => setBookmarkNotice(null), 4000);
       }
-      localStorage.setItem('kh_saved_courses', JSON.stringify(stored));
-    } catch {
-      // Ignore
+    } else {
+      // Guest: persist in localStorage and suggest signing in
+      try {
+        const stored: string[] = JSON.parse(localStorage.getItem('kh_saved_courses') || '[]');
+        if (targetState) {
+          if (!stored.includes(article.id)) stored.push(article.id);
+          setBookmarkNotice('Saved locally! Sign in to sync bookmarks across all devices.');
+        } else {
+          const idx = stored.indexOf(article.id);
+          if (idx !== -1) stored.splice(idx, 1);
+        }
+        localStorage.setItem('kh_saved_courses', JSON.stringify(stored));
+        setTimeout(() => setBookmarkNotice(null), 4000);
+      } catch {
+        // Ignore storage errors
+      }
     }
   };
 
@@ -607,17 +646,49 @@ export default function CourseDetailPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '0.65rem' }}>
-                <button
-                  type="button"
-                  onClick={toggleBookmark}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                  </svg>
-                  {bookmarked ? 'Bookmarked' : 'Bookmark'}
-                </button>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={toggleBookmark}
+                    className="btn btn-secondary"
+                    style={{
+                      padding: '0.45rem 0.95rem',
+                      fontSize: '0.85rem',
+                      backgroundColor: bookmarked ? 'var(--color-primary-pale)' : undefined,
+                      color: bookmarked ? 'var(--color-primary)' : undefined,
+                      borderColor: bookmarked ? 'var(--color-primary)' : undefined,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    {bookmarked ? 'Bookmarked' : 'Bookmark'}
+                  </button>
+                  {bookmarkNotice && (
+                    <div
+                      role="status"
+                      style={{
+                        position: 'absolute',
+                        top: '115%',
+                        right: 0,
+                        backgroundColor: '#0F172A',
+                        color: '#F8FAFC',
+                        padding: '0.5rem 0.75rem',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: '0.75rem',
+                        whiteSpace: 'nowrap',
+                        boxShadow: 'var(--shadow-md)',
+                        zIndex: 50,
+                        border: '1px solid #334155',
+                      }}
+                    >
+                      {bookmarkNotice}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="button"
