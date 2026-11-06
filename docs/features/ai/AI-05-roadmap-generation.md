@@ -10,7 +10,7 @@ Người dùng gửi mục tiêu/trình độ/thời lượng và job posting t�
 
 ## Đã thống nhất cho AI-05
 
-- AI dùng service FastAPI riêng; Gemini API key chỉ đặt ở service này.
+- AI dùng service FastAPI riêng; DeepSeek API key chỉ đặt ở service này.
 - Preview dùng goal, level, thời lượng và job posting tùy chọn; người học xem bản nháp và xác nhận trước khi lưu.
 - Laravel chỉ gửi danh sách catalog published gồm id/title được allowlist; AI không có công cụ ghi catalog.
 - Người dùng thường giới hạn 10 preview/phút; admin không bị application limiter.
@@ -39,12 +39,17 @@ Premium subscription gate, retention policy, moderation policy, đánh giá ch�
 
 ## Cấu hình runtime và luồng xác nhận
 
-Build `ai-service/Dockerfile` thành dịch vụ FastAPI riêng. Đặt `GEMINI_API_KEY`
+Build `ai-service/Dockerfile` thành dịch vụ FastAPI riêng. Đặt `DEEPSEEK_API_KEY`
 và `AI_SERVICE_TOKEN` trên dịch vụ này; Laravel cần `AI_SERVICE_URL` và cùng
-`AI_SERVICE_TOKEN`. `AI_MODEL` là tùy chọn, mặc định `gemini-2.5-flash`. Chạy
+`AI_SERVICE_TOKEN`. `AI_MODEL` là tùy chọn, mặc định `deepseek-flash`. API
+DeepSeek tính phí theo token. Chạy
 Compose cục bộ bằng cách đặt hai secret rồi dùng `docker compose --profile ai
 up`. Không đưa credential vào source control. Việc tạo dịch vụ Render do người
 vận hành thực hiện; thay đổi này không tạo hoặc deploy tài nguyên Render.
+
+Khi nâng cấp từ Gemini sang DeepSeek, cập nhật hoặc xóa mọi giá trị `AI_MODEL`
+cũ trong file `.env` và Environment của Render. Service chỉ gửi model có tiền tố
+`deepseek-`; nếu nhận override thuộc provider khác, nó dùng `deepseek-flash`.
 
 Người học xem bản nháp và xác nhận trước khi Learning lưu roadmap cùng các mục
 theo thứ tự trong một transaction. CRUD Learning, tiến độ (LEARN-02) và
