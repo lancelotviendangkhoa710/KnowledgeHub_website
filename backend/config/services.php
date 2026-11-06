@@ -35,9 +35,9 @@ return [
         ],
     ],
 
-    'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
-        'model' => env('AI_MODEL', 'gemini-2.5-flash'),
+    'ai' => [
+        'url' => env('AI_SERVICE_URL'),
+        'token' => env('AI_SERVICE_TOKEN'),
     ],
 
 ];

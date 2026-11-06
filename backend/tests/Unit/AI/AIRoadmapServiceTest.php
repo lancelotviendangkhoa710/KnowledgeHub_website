@@ -4,84 +4,53 @@ namespace Tests\Unit\AI;
 
 use App\Services\AI\AIRoadmapService;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
 use Tests\TestCase;
 
 class AIRoadmapServiceTest extends TestCase
 {
-    private function payload(array $overrides = []): array
-    {
-        return array_replace_recursive([
-            'title' => 'Data Engineer roadmap',
-            'summary' => 'A practical path.',
-            'items' => [[
-                'position' => 1,
-                'title' => 'SQL foundations',
-                'description' => 'Learn relational querying.',
-                'skills' => ['SQL'],
-                'article_id' => null,
-            ]],
-        ], $overrides);
-    }
+    use RefreshDatabase;
 
-    public function test_generate_normalizes_provider_response(): void
+    public function test_generate_calls_private_ai_service_and_normalizes_output(): void
     {
-        config(['services.gemini.api_key' => 'test-key', 'services.gemini.model' => 'test-model']);
-        Http::fake(['generativelanguage.googleapis.com/*' => Http::response([
-            'modelVersion' => 'gemini-test',
-            'candidates' => [['content' => ['parts' => [['text' => json_encode($this->payload())]]]]],
+        config(['services.ai.url' => 'https://ai.example', 'services.ai.token' => 'internal-secret']);
+        Http::fake(['ai.example/*' => Http::response([
+            'title' => 'Personalized path', 'summary' => 'Summary', 'items' => array_map(fn ($position) => [
+                'position' => $position, 'title' => "Skill {$position}", 'description' => 'Practice it.', 'skills' => ['Python'],
+            ], range(1, 4)), 'meta' => ['provider' => 'gemini', 'configured_model' => 'gemini-2.5-flash', 'model_version' => null],
         ])]);
 
-        $result = app(AIRoadmapService::class)->generate([
-            'goal' => 'Become a data engineer', 'level' => 'beginner', 'weeks' => 12, 'hours_per_week' => 8,
+        $draft = app(AIRoadmapService::class)->generate([
+            'goal' => 'Build a personal finance app', 'level' => 'beginner', 'weeks' => 10,
+            'hours_per_week' => 4, 'job_postings' => [],
         ]);
 
-        $this->assertSame('Data Engineer roadmap', $result['title']);
-        $this->assertSame('gemini-test', $result['meta']['model_version']);
-        $this->assertSame(1, $result['items'][0]['position']);
+        Http::assertSent(fn ($request) => $request->header('X-Service-Token') === 'internal-secret'
+            && $request['goal'] === 'Build a personal finance app');
+        $this->assertSame('gemini', $draft['meta']['provider']);
+        $this->assertSame(1, $draft['items'][0]['position']);
+        $this->assertNull($draft['items'][0]['article_id']);
     }
 
-    public function test_generate_rejects_invalid_json(): void
+    public function test_generate_rejects_malformed_service_output(): void
     {
-        config(['services.gemini.api_key' => 'test-key']);
-        Http::fake(['generativelanguage.googleapis.com/*' => Http::response([
-            'candidates' => [['content' => ['parts' => [['text' => '{invalid']]]]]],
-        ])]);
-
+        config(['services.ai.url' => 'https://ai.example', 'services.ai.token' => 'internal-secret']);
+        Http::fake(['ai.example/*' => Http::response(['items' => 'not-an-array'])]);
         $this->expectException(RuntimeException::class);
-        $service = app(AIRoadmapService::class);
-        $service->generate(['goal' => 'Goal', 'level' => 'beginner', 'weeks' => 1, 'hours_per_week' => 1]);
+        app(AIRoadmapService::class)->generate(['goal' => 'goal']);
     }
 
-    public function test_generate_rejects_blank_titles(): void
+    public function test_provider_errors_are_classified_without_exposing_provider_body(): void
     {
-        config(['services.gemini.api_key' => 'test-key']);
-        Http::fake(['generativelanguage.googleapis.com/*' => Http::response([
-            'candidates' => [['content' => ['parts' => [['text' => json_encode($this->payload(['title' => '  ']))]]]]],
-        ])]);
-
-        $this->expectException(RuntimeException::class);
-        $service = app(AIRoadmapService::class);
-        $service->generate(['goal' => 'Goal', 'level' => 'beginner', 'weeks' => 1, 'hours_per_week' => 1]);
-    }
-
-    public function test_generate_rejects_invalid_items(): void
-    {
-        config(['services.gemini.api_key' => 'test-key']);
-        Http::fake(['generativelanguage.googleapis.com/*' => Http::response([
-            'candidates' => [['content' => ['parts' => [['text' => json_encode($this->payload(['items' => [['title' => 'Missing fields']]]))]]]]],
-        ])]);
-
-        $this->expectException(RuntimeException::class);
-        app(AIRoadmapService::class)->generate(['goal' => 'Goal', 'level' => 'beginner', 'weeks' => 1, 'hours_per_week' => 1]);
-    }
-
-    public function test_generate_wraps_provider_errors(): void
-    {
-        config(['services.gemini.api_key' => 'test-key']);
-        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['error' => 'down'], 500)]);
-
-        $this->expectExceptionMessage('Gemini request failed.');
-        app(AIRoadmapService::class)->generate(['goal' => 'Goal', 'level' => 'beginner', 'weeks' => 1, 'hours_per_week' => 1]);
+        config(['services.ai.url' => 'https://ai.example', 'services.ai.token' => 'internal-secret']);
+        Http::fake(['ai.example/*' => Http::response(['detail' => ['code' => 'provider_auth']], 502)]);
+        try {
+            app(AIRoadmapService::class)->generate(['goal' => 'goal']);
+            $this->fail('Expected provider error.');
+        } catch (RuntimeException $exception) {
+            $this->assertSame(502, $exception->getCode());
+            $this->assertStringNotContainsString('provider_auth', $exception->getMessage());
+        }
     }
 }

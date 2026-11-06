@@ -24,6 +24,7 @@ export interface RoadmapDraftRequest {
   level: 'beginner' | 'intermediate' | 'advanced';
   weeks: number;
   hours_per_week: number;
+  job_postings: string[];
 }
 
 export const aiRoadmapClient = {
@@ -32,4 +33,13 @@ export const aiRoadmapClient = {
       '/ai/roadmaps/preview',
       data,
     ),
+  confirm: (data: RoadmapDraft & { goal: string }) =>
+    api.post('/ai/roadmaps/confirm', {
+      goal: data.goal,
+      title: data.title,
+      summary: data.summary,
+      items: data.items.map(({ position, title, description, skills }) => ({
+        position, title, description, skills,
+      })),
+    }),
 };

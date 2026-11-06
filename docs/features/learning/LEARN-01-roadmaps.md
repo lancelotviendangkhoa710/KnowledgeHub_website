@@ -13,7 +13,7 @@ User gửi yêu cầu tạo/sửa → API xác thực → Policy xác minh owner
 
 ## Chờ duyệt
 
-Quota/số roadmap, auto-complete, chuyển trạng thái hợp lệ, thêm/xóa/reorder item, xử lý archived article và `article_id SET NULL`, Admin visibility, cascade delete, API. AI-generated roadmap là AI-05 riêng; không gọi AI ở chức năng CRUD cơ bản.
+Các quyết định CRUD còn lại: quota roadmap, auto-complete, chuyển trạng thái, reorder item, xử lý archived article, Admin visibility, cascade delete và API. AI-05 là luồng tạo preview rồi xác nhận để Learning lưu roadmap; CRUD cơ bản vẫn không tự gọi AI.
 
 ## Kiểm tra kỹ
 
@@ -30,3 +30,13 @@ Quota/số roadmap, auto-complete, chuyển trạng thái hợp lệ, thêm/xóa
 - [ ] Test RBAC, owner isolation, position/transaction, stale article, race.
 - [ ] Không thay course/material model hoặc thêm AI; diff/tests đạt.
 - [ ] Commit: `p3: implement learning roadmaps`.
+
+## Luồng sản phẩm roadmap AI (AI-05)
+
+AI-05 là điểm bắt đầu tạo bản nháp trong luồng Learning: AI tạo preview từ mục
+tiêu, trình độ, thời lượng và các mô tả tuyển dụng tùy chọn; người học xem lại
+rồi xác nhận; Learning tạo roadmap thuộc người dùng và các mục theo thứ tự trong
+một transaction. `summary` chỉ hiển thị ở preview vì schema Learning hiện chưa
+có cột này. Learning vẫn quản lý quyền sở hữu, CRUD, trạng thái tiến độ và
+prerequisite. LEARN-02 và LEARN-03 tiếp tục là các cơ chế riêng, AI không thay
+thế chúng. Idempotency bền vững cần được duyệt migration Learning.
