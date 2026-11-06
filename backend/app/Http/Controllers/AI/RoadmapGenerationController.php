@@ -52,7 +52,7 @@ class RoadmapGenerationController extends Controller
         ]);
     }
 
-    /** Save the exact draft submitted by the authenticated user. */
+    /** Persist the roadmap provided by the authenticated user. */
     public function confirm(ConfirmRoadmapRequest $request): JsonResponse
     {
         $roadmap = $this->confirmation->save($request->user(), $request->validated());
