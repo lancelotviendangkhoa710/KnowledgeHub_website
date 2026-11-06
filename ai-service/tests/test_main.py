@@ -116,6 +116,40 @@ class RoadmapServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(502, error.exception.status_code)
         self.assertEqual("invalid_provider_response", error.exception.detail["code"])
 
+    async def test_non_deepseek_model_override_falls_back_to_default(self):
+        """Do not send a stale model override from another provider to DeepSeek."""
+        data = main.RoadmapInput(goal="Learn a skill", level="beginner", weeks=4, hours_per_week=4)
+        with patch.dict("os.environ", {"AI_MODEL": "gemini-2.0-flash"}):
+            await main.preview(data, "internal")
+        self.assertEqual("deepseek-flash", FakeClient.payload["model"])
+
+    async def test_invalid_model_metadata_returns_safe_error(self):
+        """Reject non-string model metadata returned by the provider."""
+        FakeClient.response = FakeResponse({
+            "model": {"unexpected": "object"},
+            "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({
+                "title": "Custom learning path", "summary": "A clear summary", "items": [
+                    {"title": f"Step {n}", "description": "Practice and reflect.", "skills": ["Python"]}
+                    for n in range(1, 5)
+                ],
+            })}}],
+        })
+        data = main.RoadmapInput(goal="Learn a skill", level="beginner", weeks=4, hours_per_week=4)
+        with self.assertRaises(HTTPException) as error:
+            await main.preview(data, "internal")
+        self.assertEqual(502, error.exception.status_code)
+        self.assertEqual("invalid_provider_response", error.exception.detail["code"])
+
+    async def test_lowercase_provider_error_code_is_logged(self):
+        """Keep lowercase provider error codes as safe diagnostic metadata."""
+        error_body = {"error": {"code": "invalid_request", "type": "bad_request"}}
+        FakeClient.response = FakeResponse(error_body, status_code=400)
+        data = main.RoadmapInput(goal="Learn a skill", level="beginner", weeks=4, hours_per_week=4)
+        with self.assertLogs(main.logger, level="WARNING") as captured:
+            with self.assertRaises(HTTPException):
+                await main.preview(data, "internal")
+        self.assertIn("provider_status=bad_request", captured.output[0])
+
     async def test_missing_deepseek_key_returns_configuration_error(self):
         """Report missing provider credentials without attempting an HTTP request."""
         data = main.RoadmapInput(goal="Learn a skill", level="beginner", weeks=4, hours_per_week=4)

@@ -88,6 +88,9 @@ async def preview(data: RoadmapInput, auth_header: Annotated[str | None, Header(
         raise HTTPException(status_code=503, detail={"code": "provider_configuration"})
 
     model = os.getenv("AI_MODEL", "deepseek-flash")
+    if not model.startswith("deepseek-"):
+        logger.warning("provider_model_invalid provider=deepseek; using default model")
+        model = "deepseek-flash"
     user_data = json.dumps(data.model_dump(), ensure_ascii=False)
     payload = {
         "model": model,
@@ -101,6 +104,8 @@ async def preview(data: RoadmapInput, auth_header: Annotated[str | None, Header(
         "stream": False,
     }
     request_id = str(uuid.uuid4())
+    finish_reason = None
+    content_empty = True
     try:
         async with httpx.AsyncClient(timeout=35) as client:
             response = await client.post(
@@ -116,17 +121,25 @@ async def preview(data: RoadmapInput, auth_header: Annotated[str | None, Header(
                     provider_status = provider_body["error"].get("type") or provider_body["error"].get("code")
             except ValueError:
                 pass
-            if not isinstance(provider_status, str) or re.fullmatch(r"[A-Z0-9_]{1,40}", provider_status) is None:
+            if not isinstance(provider_status, str) or re.fullmatch(r"[A-Za-z0-9_]{1,40}", provider_status) is None:
                 provider_status = None
             logger.warning("provider_request_failed request_id=%s provider=deepseek category=%s status=%s provider_status=%s", request_id, code, response.status_code, provider_status)
             raise HTTPException(status_code=status, detail={"code": code, "request_id": request_id})
         provider_body = response.json()
-        raw_text = provider_body["choices"][0]["message"]["content"]
+        choice = provider_body["choices"][0]
+        candidate_finish_reason = choice.get("finish_reason")
+        if isinstance(candidate_finish_reason, str) and re.fullmatch(r"[A-Za-z0-9_-]{1,40}", candidate_finish_reason):
+            finish_reason = candidate_finish_reason
+        raw_text = choice["message"]["content"]
+        content_empty = not isinstance(raw_text, str) or not raw_text.strip()
         result = RoadmapOutput.model_validate_json(raw_text)
+        provider_model = provider_body.get("model", model)
+        if provider_model is not None and not isinstance(provider_model, str):
+            raise TypeError("Provider model metadata must be a string or null")
         return {"title": result.title, "summary": result.summary, "items": [
             {**step.model_dump(exclude={"position"}), "position": index} for index, step in enumerate(result.items, 1)
         ], "meta": {"provider": "deepseek", "configured_model": model,
-                     "model_version": provider_body.get("model", model)}}
+                     "model_version": provider_model}}
     except httpx.TimeoutException:
         code, status = classify_provider_error(None, timed_out=True)
         logger.warning("provider_request_failed request_id=%s provider=deepseek category=%s", request_id, code)
@@ -136,5 +149,10 @@ async def preview(data: RoadmapInput, auth_header: Annotated[str | None, Header(
         logger.warning("provider_request_failed request_id=%s provider=deepseek category=%s", request_id, code)
         raise HTTPException(status_code=status, detail={"code": code, "request_id": request_id})
     except (KeyError, IndexError, TypeError, ValueError):
-        logger.warning("provider_response_invalid request_id=%s provider=deepseek", request_id)
+        logger.warning(
+            "provider_response_invalid request_id=%s provider=deepseek finish_reason=%s content_empty=%s",
+            request_id,
+            finish_reason,
+            content_empty,
+        )
         raise HTTPException(status_code=502, detail={"code": "invalid_provider_response", "request_id": request_id})

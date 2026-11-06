@@ -85,6 +85,7 @@ services:
     environment:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      # The service validates this override and falls back if it belongs to another provider.
       AI_MODEL: ${AI_MODEL:-deepseek-flash}
     networks:
       - knowledgehub

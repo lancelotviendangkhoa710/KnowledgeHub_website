@@ -47,6 +47,10 @@ Compose cục bộ bằng cách đặt hai secret rồi dùng `docker compose --
 up`. Không đưa credential vào source control. Việc tạo dịch vụ Render do người
 vận hành thực hiện; thay đổi này không tạo hoặc deploy tài nguyên Render.
 
+Khi nâng cấp từ Gemini sang DeepSeek, cập nhật hoặc xóa mọi giá trị `AI_MODEL`
+cũ trong file `.env` và Environment của Render. Service chỉ gửi model có tiền tố
+`deepseek-`; nếu nhận override thuộc provider khác, nó dùng `deepseek-flash`.
+
 Người học xem bản nháp và xác nhận trước khi Learning lưu roadmap cùng các mục
 theo thứ tự trong một transaction. CRUD Learning, tiến độ (LEARN-02) và
 prerequisite (LEARN-03) vẫn giữ vai trò nguồn dữ liệu chuẩn. Schema hiện chưa có

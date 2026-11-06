@@ -72,6 +72,11 @@ endpoint at:
 
     https://api.deepseek.com/chat/completions
 
+When upgrading from Gemini, update or remove any old `AI_MODEL` override in the
+local `.env` file and the Render AI service Environment. The service accepts
+DeepSeek model IDs (`deepseek-*`) and falls back to `deepseek-flash` for a model
+override from another provider.
+
 DeepSeek bills usage by tokens. Confirm the DeepSeek account has available
 balance before enabling production traffic.
 
