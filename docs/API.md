@@ -1,7 +1,7 @@
 # docs/API.md — KnowledgeHub API Contract
 
-**Version**: 0.7 | **Date**: 2026-11-03  
-**Status**: AUTH-01, Content, and Learning routes are implemented, documented, and verified with automated test suites.
+**Version**: 0.8 | **Date**: 2026-11-06
+**Status**: AUTH-01, Content, Learning, and AI-05 routes are implemented; verify using the documented suites.
 
 > This document is the frontend/backend boundary once API implementation begins.
 > It intentionally does **not** invent endpoints, auth mechanisms, response envelopes, or pagination rules.
@@ -588,10 +588,10 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 
 ## 7. AI Companion / Roadmap Assistant
 
-### APPROVED — POST `/api/ai/roadmaps/preview`
+### IMPLEMENTED — POST `/api/ai/roadmaps/preview`
 
 **Owner**: TEAM_MEMBER_C
-**Authentication**: `auth:sanctum` Bearer token. The Gemini API key is read only by the backend from `GEMINI_API_KEY`; it is never accepted from the browser or request body.
+**Authentication**: `auth:sanctum` Bearer token. Laravel calls the separate FastAPI service using a private service token; the Gemini key stays in that service only.
 
 **Request**
 
@@ -600,17 +600,77 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
   "goal": "Become a Data Engineer",
   "level": "beginner",
   "weeks": 24,
-  "hours_per_week": 8
+  "hours_per_week": 8,
+  "job_postings": ["Pasted job requirements text"]
 }
 ```
 
 **Success — 200**
 
-Returns a roadmap draft with ordered skill steps. `article_id` is `null` until the published course catalog is connected. The response also includes provider/model metadata for debugging; it never includes the API key. This endpoint does not persist a roadmap.
+Returns a 4-12 step personalized draft; no roadmap is persisted. Optional job postings accept up to 5 strings, 5000 characters each, with a combined maximum of 15000 characters. Laravel returns a field-level 422 validation error if the combined limit is exceeded. Laravel sends only a backend-selected read-only allowlist of up to 100 published catalog IDs and titles. Draft items use `article_id: null`; no resource ID is inferred or created. Provider metadata contains no credentials.
 
-**Errors**: `401` unauthenticated; `422` invalid input; `502` Gemini failure or invalid model output; `503` missing backend API key.
+**Errors**: `401` unauthenticated; `422` invalid input; `502` provider rejection/invalid output; `503` provider unavailable or missing configuration; `504` timeout.
 
-**Rate limit**: 10 requests per minute per authenticated client.
+**Rate limit**: Non-admin users are limited to 10 requests per minute per user. Admins are exempt from the application limiter.
+
+### IMPLEMENTED — POST `/api/ai/roadmaps/confirm`
+
+**Owner**: TEAM_MEMBER_C
+**Authentication**: `auth:sanctum`; User, Contributor, or Admin may save a roadmap owned by that authenticated actor. Guests receive `401`.
+
+**Request**
+
+```json
+{
+  "goal": "Prepare for a data role",
+  "title": "Personal plan",
+  "summary": "A preview-only summary",
+  "items": [
+    { "position": 1, "title": "SQL", "description": "Practice queries", "skills": [] },
+    { "position": 2, "title": "Python", "description": "Build data scripts", "skills": ["pandas"] },
+    { "position": 3, "title": "Spark", "description": "Process datasets", "skills": ["Spark"] },
+    { "position": 4, "title": "Airflow", "description": "Schedule pipelines", "skills": ["Airflow"] }
+  ]
+}
+```
+
+Validation limits: `goal` 3-500 characters; `title` 1-255; `summary` 1-5000; `items` is an ordered list of 4-12 entries with sequential positions starting at 1; item title 1-255; description 1-5000; `skills` must be present as an array (empty is allowed) with at most 30 strings, each at most 100 characters. `article_id` is prohibited.
+
+**Success — 201**
+
+```json
+{
+  "status": "success",
+  "message": "Roadmap saved successfully.",
+  "data": {
+    "id": "uuid",
+    "user_id": "uuid",
+    "title": "Personal plan",
+    "goal": "Prepare for a data role",
+    "status": "active",
+    "items": [
+      { "id": "uuid", "roadmap_id": "uuid", "title": "SQL", "description": "Practice queries", "position": 1 }
+    ]
+  }
+}
+```
+
+The summary is preview-only because the Learning schema has no summary field. Skills are appended to item descriptions because the Learning schema has no skills column; all validated skills are retained. The roadmap and all items are created in one transaction, so a failure while creating any item rolls back the entire save.
+
+**Errors**
+
+| Status | Condition | Response |
+|---|---|---|
+| 401 | Guest request | Standard unauthenticated API error |
+| 422 | Invalid fields or non-sequential item positions | `{ "message": "...", "errors": { "items": ["..."] } }` |
+
+Durable idempotent retry remains pending approval for a Learning generation key and unique constraint. If the response is lost, the client cannot infer whether the commit completed; check the user's roadmap list before retrying because a retry may create a duplicate.
+
+**Tests**: `backend/tests/Feature/AI/RoadmapGenerationTest.php` covers guest rejection, User/Contributor confirmation ownership, empty skills, sequential positions, and rollback when item creation fails. `backend/tests/Unit/AI/AIRoadmapServiceTest.php` verifies the service token and published catalog allowlist.
+**AI service deployment**: Build `ai-service/Dockerfile` as a separate web
+service. FastAPI requires `GEMINI_API_KEY` and `AI_SERVICE_TOKEN`; Laravel
+requires `AI_SERVICE_URL` and the matching `AI_SERVICE_TOKEN`. `AI_MODEL` is
+optional and defaults to `gemini-2.5-flash`.
 
 ---
 
@@ -646,10 +706,11 @@ Copy this block only after feature approval:
 
 ---
 
-## 8. Change Log
+## 9. Change Log
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.8 | 2026-11-06 | Documented AI-05 preview and confirm endpoints; separated generation into FastAPI service |
 | 0.7 | 2026-11-03 | Documented all 21 Content Domain endpoints, verified by automated unit and feature test suite |
 | 0.6 | 2026-10-30 | AUTH-01 authorization and login hardening: guest-only `UserPolicy` checks on register/login/logout, `429` login throttling, explicit failure when the seeded `user` role is missing; frontend keeps the bearer token in memory instead of web storage |
 | 0.5 | 2026-10-23 | Implemented AUTH-01 registration, login, logout, Sanctum bearer-token contract, and feature coverage; activation/throttling/token lifetime remain deferred |

@@ -16,6 +16,8 @@ services:
       - DB_DATABASE=knowledgehub
       - DB_USERNAME=knowledgehub
       - DB_PASSWORD=secret
+      - AI_SERVICE_URL=http://ai-service:8000
+      - AI_SERVICE_TOKEN=${AI_SERVICE_TOKEN:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -71,6 +73,19 @@ services:
       - "3000:3000"
     depends_on:
       - nginx
+    networks:
+      - knowledgehub
+
+  ai-service:
+    profiles: ["ai"]
+    stop_grace_period: 45s
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gemini-2.5-flash}
     networks:
       - knowledgehub
 

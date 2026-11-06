@@ -2,139 +2,87 @@
 
 namespace App\Services\AI;
 
+use App\Models\Article;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class AIRoadmapService
 {
-    /** Generate and normalize a roadmap draft from the configured provider. */
+    /** Generate and validate a roadmap draft through the private AI service. */
     public function generate(array $input): array
     {
-        $apiKey = (string) config('services.gemini.api_key', '');
-        $model = (string) config('services.gemini.model', 'gemini-2.5-flash');
-
-        if ($apiKey === '') {
-            throw new RuntimeException('Gemini API key is not configured.');
+        $url = (string) config('services.ai.url', '');
+        $token = (string) config('services.ai.token', '');
+        if ($url === '' || $token === '') {
+            throw new RuntimeException('AI service is not configured.');
         }
+
+        // This is the complete read-only catalog allowlist sent to the AI service.
+        $input['catalog'] = Article::query()->published()
+            ->with('publishedVersion:id,article_id,title')
+            ->orderBy('id')->limit(100)->get()->map(static fn (Article $article): array => [
+                'id' => $article->id,
+                'title' => (string) $article->publishedVersion?->title,
+            ])->values()->all();
 
         try {
-            $response = Http::withHeaders([
-                'x-goog-api-key' => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(35)->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent",
-                [
-                    'contents' => [[
-                        'role' => 'user',
-                        'parts' => [['text' => $this->prompt($input)]],
-                    ]],
-                    'generationConfig' => [
-                        'temperature' => 0.2,
-                        'responseMimeType' => 'application/json',
-                        'responseSchema' => $this->schema(),
-                    ],
-                ],
-            );
-            $response->throw();
-        } catch (\Throwable $exception) {
-            throw new RuntimeException('Gemini request failed.', 0, $exception);
+            $response = Http::withHeader('X-Service-Token', $token)
+                ->timeout(40)->post(rtrim($url, '/').'/v1/roadmaps/preview', $input);
+        } catch (ConnectionException $exception) {
+            Log::warning('ai.provider_request_failed', ['provider' => 'fastapi', 'category' => 'service_connection']);
+            throw new RuntimeException('Roadmap generation is temporarily unavailable.', 0, $exception);
         }
 
-        $text = data_get($response->json(), 'candidates.0.content.parts.0.text');
-        $roadmap = is_string($text) ? json_decode($text, true) : null;
-        if (! is_array($roadmap)) {
-            throw new RuntimeException('Gemini returned invalid roadmap JSON.');
+        if ($response->failed()) {
+            $detail = $response->json('detail');
+            $code = is_array($detail) && is_string($detail['code'] ?? null) ? $detail['code'] : 'service_error';
+            $requestId = is_array($detail) && is_string($detail['request_id'] ?? null) ? $detail['request_id'] : null;
+            Log::warning('ai.provider_request_failed', [
+                'provider' => 'fastapi', 'category' => $code, 'status' => $response->status(), 'request_id' => $requestId,
+            ]);
+            throw new RuntimeException(match ($response->status()) {
+                401 => 'AI service authentication is temporarily unavailable.',
+                503 => 'Roadmap generation is temporarily unavailable.',
+                504 => 'Roadmap generation timed out. Please retry.',
+                default => 'Roadmap generation failed. Please retry.',
+            }, $response->status() === 401 ? 503 : $response->status());
         }
 
-        $normalized = $this->normalize($roadmap);
-        $normalized['meta'] = [
-            'provider' => 'gemini',
-            'configured_model' => $model,
-            'model_version' => data_get($response->json(), 'modelVersion'),
-        ];
-
-        return $normalized;
-    }
-
-    private function prompt(array $input): string
-    {
-        return implode("\n", [
-            'You are KnowledgeHub learning roadmap planner.',
-            'Create a practical learning roadmap from the user goal.',
-            'Return only JSON matching the supplied schema. Do not use markdown.',
-            'Do not invent course IDs. The backend will attach article_id as null because the course catalog is not connected yet.',
-            'Use 4 to 12 ordered learning steps. Each step must be a concrete skill or project.',
-            'User goal: '.$input['goal'],
-            'Current level: '.$input['level'],
-            'Available duration in weeks: '.$input['weeks'],
-            'Available hours per week: '.$input['hours_per_week'],
-        ]);
-    }
-
-    private function schema(): array
-    {
-        return [
-            'type' => 'OBJECT',
-            'properties' => [
-                'title' => ['type' => 'STRING'],
-                'summary' => ['type' => 'STRING'],
-                'items' => [
-                    'type' => 'ARRAY',
-                    'minItems' => 4,
-                    'maxItems' => 12,
-                    'items' => [
-                        'type' => 'OBJECT',
-                        'properties' => [
-                            'position' => ['type' => 'INTEGER'],
-                            'title' => ['type' => 'STRING'],
-                            'description' => ['type' => 'STRING'],
-                            'skills' => ['type' => 'ARRAY', 'items' => ['type' => 'STRING']],
-                        ],
-                        'required' => ['position', 'title', 'description', 'skills'],
-                    ],
-                ],
-            ],
-            'required' => ['title', 'summary', 'items'],
-        ];
-    }
-
-    /** Validate provider output and convert it to the public roadmap contract. */
-    private function normalize(array $roadmap): array
-    {
-        $items = $roadmap['items'] ?? null;
-        if (! is_string($roadmap['title'] ?? null)
-            || trim($roadmap['title']) === ''
-            || ! is_string($roadmap['summary'] ?? null)
-            || trim($roadmap['summary']) === ''
-            || ! is_array($items)
-            || count($items) < 1
-        ) {
-            throw new RuntimeException('Gemini returned an incomplete roadmap.');
+        $draft = $response->json();
+        if (! is_array($draft) || ! is_string($draft['title'] ?? null) || trim($draft['title']) === ''
+            || mb_strlen($draft['title']) > 255 || ! is_string($draft['summary'] ?? null)
+            || trim($draft['summary']) === '' || mb_strlen($draft['summary']) > 5000
+            || ! is_array($draft['items'] ?? null) || ! array_is_list($draft['items'])
+            || count($draft['items']) < 4 || count($draft['items']) > 12) {
+            Log::warning('ai.provider_response_invalid', ['provider' => 'fastapi']);
+            throw new RuntimeException('Roadmap generation returned an invalid response.');
         }
 
-        $normalizedItems = [];
-        foreach (array_values($items) as $index => $item) {
-            if (! is_array($item)
-                || ! is_string($item['title'] ?? null)
-                || ! is_string($item['description'] ?? null)
-                || ! is_array($item['skills'] ?? null)
-            ) {
-                throw new RuntimeException('Gemini returned an invalid roadmap item.');
+        foreach ($draft['items'] as $item) {
+            if (! is_array($item) || ! is_string($item['title'] ?? null) || trim($item['title']) === ''
+                || mb_strlen($item['title']) > 255
+                || ! is_string($item['description'] ?? null) || ! is_array($item['skills'] ?? null)
+                || trim($item['description']) === '' || mb_strlen($item['description']) > 5000
+                || ! array_is_list($item['skills']) || count($item['skills']) > 30
+                || array_filter($item['skills'], static fn ($skill): bool => ! is_string($skill) || mb_strlen($skill) > 100) !== []) {
+                Log::warning('ai.provider_response_invalid', ['provider' => 'fastapi']);
+                throw new RuntimeException('Roadmap generation returned an invalid response.');
             }
-
-            $normalizedItems[] = [
+        }
+        $draft['items'] = array_map(static function (array $item, int $index): array {
+            return [
                 'position' => $index + 1,
-                'title' => trim($item['title']),
+                'title' => trim((string) ($item['title'] ?? '')),
                 'description' => trim($item['description']),
-                'skills' => array_values(array_filter($item['skills'], 'is_string')),
+                'skills' => is_array($item['skills'] ?? null) ? $item['skills'] : [],
                 'article_id' => null,
             ];
+        }, $draft['items'], array_keys($draft['items']));
+        if (! is_array($draft['meta'] ?? null)) {
+            unset($draft['meta']);
         }
-
-        return [
-            'title' => trim($roadmap['title']),
-            'summary' => trim($roadmap['summary']),
-            'items' => $normalizedItems,
-        ];
+        return $draft;
     }
 }
