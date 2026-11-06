@@ -22,7 +22,7 @@ class RoadmapGenerationTest extends TestCase
                 'position' => $position, 'title' => "Step {$position}", 'description' => 'Description', 'skills' => ['SQL'],
             ], range(1, 4)),
         ])]);
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs($this->createUser());
 
         $this->postJson('/api/ai/roadmaps/preview', [
             'goal' => 'Become a data engineer', 'level' => 'beginner', 'weeks' => 12, 'hours_per_week' => 8,
@@ -33,7 +33,7 @@ class RoadmapGenerationTest extends TestCase
     public function test_guest_is_rejected_and_invalid_input_is_validated(): void
     {
         $this->postJson('/api/ai/roadmaps/preview', [])->assertUnauthorized();
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs($this->createUser());
 
         $this->postJson('/api/ai/roadmaps/preview', [
             'goal' => '', 'level' => 'unknown', 'weeks' => 0, 'hours_per_week' => 0, 'job_postings' => [str_repeat('x', 6_000)],
@@ -42,7 +42,7 @@ class RoadmapGenerationTest extends TestCase
 
     public function test_confirm_atomically_saves_roadmap_and_items_for_authenticated_user(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createUser();
         Sanctum::actingAs($user);
         $items = [];
         for ($position = 1; $position <= 4; $position++) {
@@ -60,7 +60,7 @@ class RoadmapGenerationTest extends TestCase
 
     public function test_confirm_rolls_back_all_rows_for_nonsequential_or_untrusted_item_positions(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        Sanctum::actingAs($this->createUser());
         $items = [];
         for ($position = 1; $position <= 4; $position++) {
             $items[] = ['position' => $position, 'title' => "Step {$position}", 'description' => 'Practice.', 'skills' => []];
@@ -81,7 +81,7 @@ class RoadmapGenerationTest extends TestCase
         Http::fake(['ai.example/*' => Http::response($draftResponse)]);
         $this->postJson('/api/ai/roadmaps/confirm', [])->assertUnauthorized();
 
-        $admin = User::factory()->create();
+        $admin = $this->createUser();
         $this->assignRole($admin, 'admin');
         Sanctum::actingAs($admin);
         config(['services.ai.url' => 'https://ai.example', 'services.ai.token' => 'internal-secret']);
@@ -101,7 +101,7 @@ class RoadmapGenerationTest extends TestCase
                 'position' => $position, 'title' => "Step {$position}", 'description' => 'Description', 'skills' => [],
             ], range(1, 4)),
         ])]);
-        $user = User::factory()->create();
+        $user = $this->createUser();
         Sanctum::actingAs($user);
         $payload = ['goal' => 'A clear learning goal', 'level' => 'beginner', 'weeks' => 6, 'hours_per_week' => 4];
 
@@ -113,11 +113,11 @@ class RoadmapGenerationTest extends TestCase
 
     public function test_contributor_confirmation_is_still_owned_by_the_authenticated_user(): void
     {
-        $contributor = User::factory()->create();
+        $contributor = $this->createUser();
         $this->assignRole($contributor, 'contributor');
         Sanctum::actingAs($contributor);
         $items = array_map(static fn ($position) => [
-            'position' => $position, 'title' => "Step {$position}", 'description' => 'Practice.', 'skills' => [],
+            'position' => $position, 'title' => "Step {$position}", 'description' => 'Practice.', 'skills' => ['SQL'],
         ], range(1, 4));
 
         $this->postJson('/api/ai/roadmaps/confirm', [
@@ -133,5 +133,14 @@ class RoadmapGenerationTest extends TestCase
             DB::table('roles')->insert(['id' => $roleId, 'name' => $name, 'created_at' => now(), 'updated_at' => now()]);
         }
         DB::table('user_roles')->insert(['user_id' => $user->id, 'role_id' => $roleId, 'created_at' => now()]);
+    }
+
+    private function createUser(): User
+    {
+        return User::query()->create([
+            'name' => 'Roadmap learner',
+            'email' => 'roadmap-'.Str::uuid().'@example.test',
+            'password' => 'password',
+        ]);
     }
 }

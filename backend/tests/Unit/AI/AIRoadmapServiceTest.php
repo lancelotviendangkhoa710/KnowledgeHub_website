@@ -26,7 +26,7 @@ class AIRoadmapServiceTest extends TestCase
             'hours_per_week' => 4, 'job_postings' => [],
         ]);
 
-        Http::assertSent(fn ($request) => $request->header('X-Service-Token') === 'internal-secret'
+        Http::assertSent(fn ($request) => $request->header('X-Service-Token') === ['internal-secret']
             && $request['goal'] === 'Build a personal finance app');
         $this->assertSame('gemini', $draft['meta']['provider']);
         $this->assertSame(1, $draft['items'][0]['position']);
