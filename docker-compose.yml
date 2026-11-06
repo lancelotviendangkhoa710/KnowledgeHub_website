@@ -84,8 +84,8 @@ services:
       dockerfile: Dockerfile
     environment:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
-      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      AI_MODEL: ${AI_MODEL:-gemini-2.5-flash}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-deepseek-flash}
     networks:
       - knowledgehub
 

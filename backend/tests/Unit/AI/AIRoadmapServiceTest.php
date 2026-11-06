@@ -22,7 +22,7 @@ class AIRoadmapServiceTest extends TestCase
         Http::fake(['ai.example/*' => Http::response([
             'title' => 'Personalized path', 'summary' => 'Summary', 'items' => array_map(fn ($position) => [
                 'position' => $position, 'title' => "Skill {$position}", 'description' => 'Practice it.', 'skills' => ['Python'],
-            ], range(1, 4)), 'meta' => ['provider' => 'gemini', 'configured_model' => 'gemini-2.5-flash', 'model_version' => null],
+            ], range(1, 4)), 'meta' => ['provider' => 'deepseek', 'configured_model' => 'deepseek-flash', 'model_version' => 'deepseek-flash'],
         ])]);
 
         $draft = app(AIRoadmapService::class)->generate([
@@ -32,7 +32,7 @@ class AIRoadmapServiceTest extends TestCase
 
         Http::assertSent(fn ($request) => $request->header('X-Service-Token') === ['internal-secret']
             && $request['goal'] === 'Build a personal finance app');
-        $this->assertSame('gemini', $draft['meta']['provider']);
+        $this->assertSame('deepseek', $draft['meta']['provider']);
         $this->assertSame(1, $draft['items'][0]['position']);
         $this->assertNull($draft['items'][0]['article_id']);
     }

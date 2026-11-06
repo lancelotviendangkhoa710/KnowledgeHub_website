@@ -591,7 +591,8 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 ### IMPLEMENTED — POST `/api/ai/roadmaps/preview`
 
 **Owner**: TEAM_MEMBER_C
-**Authentication**: `auth:sanctum` Bearer token. Laravel calls the separate FastAPI service using a private service token; the Gemini key stays in that service only.
+
+**Authentication**: `auth:sanctum` Bearer token. Laravel calls the separate FastAPI service using a private service token; the DeepSeek key stays in that service only.
 
 **Request**
 
@@ -668,9 +669,10 @@ Durable idempotent retry remains pending approval for a Learning generation key 
 
 **Tests**: `backend/tests/Feature/AI/RoadmapGenerationTest.php` covers guest rejection, User/Contributor confirmation ownership, empty skills, sequential positions, and rollback when item creation fails. `backend/tests/Unit/AI/AIRoadmapServiceTest.php` verifies the service token and published catalog allowlist.
 **AI service deployment**: Build `ai-service/Dockerfile` as a separate web
-service. FastAPI requires `GEMINI_API_KEY` and `AI_SERVICE_TOKEN`; Laravel
+service. FastAPI requires `DEEPSEEK_API_KEY` and `AI_SERVICE_TOKEN`; Laravel
 requires `AI_SERVICE_URL` and the matching `AI_SERVICE_TOKEN`. `AI_MODEL` is
-optional and defaults to `gemini-2.5-flash`.
+optional and defaults to `deepseek-flash`. DeepSeek API usage is metered by
+tokens; configure an API key with available balance before enabling production traffic.
 
 ---
 

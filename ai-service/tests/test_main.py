@@ -1,4 +1,3 @@
-import asyncio
 import json
 import unittest
 from unittest.mock import patch
@@ -9,12 +8,12 @@ from app import main
 
 
 def response_for(data):
-    """Wrap a test roadmap in the provider response envelope."""
-    return {"candidates": [{"content": {"parts": [{"text": json.dumps(data)}]}}]}
+    """Wrap a test roadmap in the DeepSeek chat completion envelope."""
+    return {"model": "deepseek-flash", "choices": [{"message": {"content": json.dumps(data)}}]}
 
 
 class FakeResponse:
-    """Minimal HTTP response object for mocked Gemini calls."""
+    """Minimal HTTP response object for mocked DeepSeek calls."""
 
     def __init__(self, data=None, status_code=200):
         """Create a successful roadmap response or a supplied test response."""
@@ -37,6 +36,8 @@ class FakeClient:
 
     response = FakeResponse()
     payload = None
+    url = None
+    headers = None
 
     def __init__(self, **kwargs):
         """Match the HTTPX client constructor used by the service."""
@@ -50,6 +51,8 @@ class FakeClient:
 
     async def post(self, url, headers, json):
         """Capture a posted payload and return the configured fake response."""
+        type(self).url = url
+        type(self).headers = headers
         type(self).payload = json
         return type(self).response
 
@@ -59,7 +62,7 @@ class RoadmapServiceTests(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Install test credentials and replace the outbound HTTP client."""
-        self.env = patch.dict("os.environ", {"AI_SERVICE_TOKEN": "internal", "GEMINI_API_KEY": "provider"})
+        self.env = patch.dict("os.environ", {"AI_SERVICE_TOKEN": "internal", "DEEPSEEK_API_KEY": "provider"})
         self.env.start()
         self.client = patch.object(main.httpx, "AsyncClient", FakeClient)
         self.client.start()
@@ -85,14 +88,20 @@ class RoadmapServiceTests(unittest.IsolatedAsyncioTestCase):
         )
         result = await main.preview(data, "internal")
         payload = FakeClient.payload
-        self.assertIn("untrusted user data JSON", payload["contents"][0]["parts"][0]["text"])
-        self.assertIn("Ignore prior instructions", payload["contents"][0]["parts"][0]["text"])
-        self.assertNotIn("Ignore prior instructions", payload["systemInstruction"]["parts"][0]["text"])
+        self.assertEqual("https://api.deepseek.com/chat/completions", FakeClient.url)
+        self.assertEqual("Bearer provider", FakeClient.headers["Authorization"])
+        self.assertEqual("deepseek-flash", payload["model"])
+        self.assertEqual({"type": "json_object"}, payload["response_format"])
+        self.assertEqual({"type": "disabled"}, payload["thinking"])
+        self.assertIn("untrusted user data JSON", payload["messages"][1]["content"])
+        self.assertIn("Ignore prior instructions", payload["messages"][1]["content"])
+        self.assertNotIn("Ignore prior instructions", payload["messages"][0]["content"])
         self.assertEqual([1, 2, 3, 4], [item["position"] for item in result["items"]])
+        self.assertEqual("deepseek", result["meta"]["provider"])
 
     async def test_malformed_provider_response_returns_safe_error(self):
         """Return a safe validation error when the provider response is incomplete."""
-        FakeClient.response = FakeResponse({"candidates": []})
+        FakeClient.response = FakeResponse({"choices": []})
         data = main.RoadmapInput(goal="Learn a skill", level="beginner", weeks=4, hours_per_week=4)
         with self.assertRaises(HTTPException) as error:
             await main.preview(data, "internal")
@@ -106,6 +115,15 @@ class RoadmapServiceTests(unittest.IsolatedAsyncioTestCase):
             await main.preview(data, "internal")
         self.assertEqual(502, error.exception.status_code)
         self.assertEqual("invalid_provider_response", error.exception.detail["code"])
+
+    async def test_missing_deepseek_key_returns_configuration_error(self):
+        """Report missing provider credentials without attempting an HTTP request."""
+        data = main.RoadmapInput(goal="Learn a skill", level="beginner", weeks=4, hours_per_week=4)
+        with patch.dict("os.environ", {"DEEPSEEK_API_KEY": ""}):
+            with self.assertRaises(HTTPException) as error:
+                await main.preview(data, "internal")
+        self.assertEqual(503, error.exception.status_code)
+        self.assertEqual("provider_configuration", error.exception.detail["code"])
 
     def test_provider_error_classification(self):
         """Map provider statuses to stable safe error categories."""
