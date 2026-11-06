@@ -10,6 +10,7 @@ use RuntimeException;
 
 class AIRoadmapService
 {
+    /** Generate and validate a roadmap draft through the private AI service. */
     public function generate(array $input): array
     {
         $url = (string) config('services.ai.url', '');
@@ -42,10 +43,11 @@ class AIRoadmapService
                 'provider' => 'fastapi', 'category' => $code, 'status' => $response->status(), 'request_id' => $requestId,
             ]);
             throw new RuntimeException(match ($response->status()) {
+                401 => 'AI service authentication is temporarily unavailable.',
                 503 => 'Roadmap generation is temporarily unavailable.',
                 504 => 'Roadmap generation timed out. Please retry.',
                 default => 'Roadmap generation failed. Please retry.',
-            }, $response->status());
+            }, $response->status() === 401 ? 503 : $response->status());
         }
 
         $draft = $response->json();

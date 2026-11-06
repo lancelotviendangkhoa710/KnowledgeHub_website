@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useRef, useState } from 'react';
 import Link from 'next/link';
 import { aiRoadmapClient, RoadmapDraft } from '@/lib/aiRoadmapClient';
 
@@ -19,16 +19,26 @@ export default function AiRoadmapPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [previewedGoal, setPreviewedGoal] = useState('');
+  const [saveOutcomeUnknown, setSaveOutcomeUnknown] = useState(false);
+  const draftVersion = useRef(0);
+
+  const clearDraft = () => {
+    draftVersion.current += 1;
+    setDraft(null);
+    setSaved(false);
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setSaveOutcomeUnknown(false);
     setMessages((current) => [...current, { role: 'user', text: goal }]);
 
     try {
       const response = await aiRoadmapClient.preview({ goal, level, weeks: Number(weeks), hours_per_week: Number(hours),
         job_postings: jobPostings.split(/\n---\s*\n/).map((posting) => posting.trim()).filter(Boolean) });
+      draftVersion.current += 1;
       setDraft(response.data);
       setPreviewedGoal(goal);
       setSaved(false);
@@ -45,13 +55,17 @@ export default function AiRoadmapPage() {
 
   const confirm = async () => {
     if (!draft || saving || saved) return;
+    const draftBeingSaved = draft;
+    const versionBeingSaved = draftVersion.current;
     setSaving(true);
     setError(null);
+    setSaveOutcomeUnknown(false);
     try {
-      await aiRoadmapClient.confirm({ ...draft, goal: previewedGoal });
-      setSaved(true);
+      await aiRoadmapClient.confirm({ ...draftBeingSaved, goal: previewedGoal });
+      if (draftVersion.current === versionBeingSaved) setSaved(true);
     } catch {
-      setError('Roadmap could not be confirmed. Please retry.');
+      setSaveOutcomeUnknown(true);
+      setError('Không xác định được roadmap đã lưu hay chưa. Hãy kiểm tra danh sách roadmap trước khi thử lại; thử lại có thể tạo bản trùng.');
     } finally {
       setSaving(false);
     }
@@ -72,12 +86,12 @@ export default function AiRoadmapPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.85fr) minmax(0, 1.15fr)', gap: '1.5rem' }}>
         <form onSubmit={submit} style={{ background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '1.5rem', height: 'fit-content' }}>
           <label htmlFor="roadmap-goal" style={{ display: 'block', fontWeight: 600, marginBottom: '0.4rem' }}>Mục tiêu học tập</label>
-          <textarea id="roadmap-goal" aria-label="Mục tiêu học tập" required minLength={3} maxLength={500} value={goal} disabled={loading} onChange={(event) => { setGoal(event.target.value); setDraft(null); setSaved(false); }}
+          <textarea id="roadmap-goal" aria-label="Mục tiêu học tập" required minLength={3} maxLength={500} value={goal} disabled={loading} onChange={(event) => { setGoal(event.target.value); clearDraft(); }}
             placeholder="Ví dụ: Tôi muốn trở thành Data Engineer" rows={5}
             style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', resize: 'vertical' }} />
 
           <label htmlFor="roadmap-level" style={{ display: 'block', fontWeight: 600, margin: '1rem 0 0.4rem' }}>Trình độ hiện tại</label>
-          <select id="roadmap-level" aria-label="Trình độ hiện tại" value={level} disabled={loading} onChange={(event) => { setLevel(event.target.value as typeof level); setDraft(null); setSaved(false); }}
+          <select id="roadmap-level" aria-label="Trình độ hiện tại" value={level} disabled={loading} onChange={(event) => { setLevel(event.target.value as typeof level); clearDraft(); }}
             style={{ width: '100%', padding: '0.7rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
             <option value="beginner">Mới bắt đầu</option>
             <option value="intermediate">Đã có nền tảng</option>
@@ -85,17 +99,17 @@ export default function AiRoadmapPage() {
           </select>
 
           <label htmlFor="roadmap-postings" style={{ display: 'block', fontWeight: 600, margin: '1rem 0 0.4rem' }}>Mô tả tuyển dụng (không bắt buộc)</label>
-          <textarea id="roadmap-postings" value={jobPostings} maxLength={15000} disabled={loading} onChange={(event) => { setJobPostings(event.target.value); setDraft(null); setSaved(false); }}
+          <textarea id="roadmap-postings" value={jobPostings} maxLength={15000} disabled={loading} onChange={(event) => { setJobPostings(event.target.value); clearDraft(); }}
             placeholder="Dán nhiều mô tả, phân cách bằng một dòng chỉ có ---" rows={6}
             style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', resize: 'vertical' }} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1rem' }}>
             <label style={{ fontWeight: 600 }}>Số tuần
-              <input type="number" min={1} max={104} required value={weeks} disabled={loading} onChange={(event) => { setWeeks(event.target.value); setDraft(null); setSaved(false); }}
+              <input type="number" min={1} max={104} required value={weeks} disabled={loading} onChange={(event) => { setWeeks(event.target.value); clearDraft(); }}
                 style={{ display: 'block', width: '100%', marginTop: '0.4rem', padding: '0.7rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }} />
             </label>
             <label style={{ fontWeight: 600 }}>Giờ / tuần
-              <input type="number" min={1} max={80} required value={hours} disabled={loading} onChange={(event) => { setHours(event.target.value); setDraft(null); setSaved(false); }}
+              <input type="number" min={1} max={80} required value={hours} disabled={loading} onChange={(event) => { setHours(event.target.value); clearDraft(); }}
                 style={{ display: 'block', width: '100%', marginTop: '0.4rem', padding: '0.7rem', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }} />
             </label>
           </div>
@@ -103,7 +117,7 @@ export default function AiRoadmapPage() {
           <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: '1.25rem' }}>
             {loading ? 'AI đang suy nghĩ…' : 'Tạo roadmap nháp'}
           </button>
-          {error && <p role="alert" style={{ color: '#b42318', lineHeight: 1.5, marginBottom: 0 }}>{error}</p>}
+          {error && <p role="alert" style={{ color: '#b42318', lineHeight: 1.5, marginBottom: 0 }}>{error}{saveOutcomeUnknown && <> <Link href="/learning/roadmaps">Mở danh sách roadmap</Link></>}</p>}
         </form>
 
         <section aria-live="polite">

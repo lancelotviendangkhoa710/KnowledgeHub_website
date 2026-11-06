@@ -78,6 +78,7 @@ services:
 
   ai-service:
     profiles: ["ai"]
+    stop_grace_period: 45s
     build:
       context: ./ai-service
       dockerfile: Dockerfile
