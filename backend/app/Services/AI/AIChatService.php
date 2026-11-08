@@ -53,14 +53,11 @@ class AIChatService
                 504 => 504,
                 default => 502,
             };
-            $message = match ($status) {
+            throw new RuntimeException(match ($status) {
                 503 => 'AI Companion is temporarily unavailable.',
                 504 => 'AI Companion timed out. Please retry.',
                 default => 'AI Companion failed to reply. Please retry.',
-            };
-            // Temporary diagnostic: expose only the upstream HTTP status, never content.
-            $message .= ' (upstream '.$response->status().')';
-            throw new RuntimeException($message, $status);
+            }, $status);
         }
 
         $payload = $response->json();
