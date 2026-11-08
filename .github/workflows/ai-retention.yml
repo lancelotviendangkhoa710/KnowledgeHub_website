@@ -1,0 +1,39 @@
+name: ai-retention
+
+# Runs from the repository default branch (currently `dev`).
+# 20:00 UTC = 03:00 Asia/Ho_Chi_Minh (UTC+7).
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger retention purge endpoint
+        env:
+          RETENTION_CRON_TOKEN: ${{ secrets.RETENTION_CRON_TOKEN }}
+        run: |
+          set -u
+          if [ -z "${RETENTION_CRON_TOKEN:-}" ]; then
+            echo "RETENTION_CRON_TOKEN secret is missing" >&2
+            exit 1
+          fi
+          status=$(curl -sS --retry 2 --retry-delay 10 --retry-all-errors \
+            -o /tmp/retention-response.json \
+            -w "%{http_code}" \
+            -X POST \
+            -H "X-Retention-Token: ${RETENTION_CRON_TOKEN}" \
+            -H "Accept: application/json" \
+            https://knowledgehub-website.onrender.com/api/internal/ai/purge-deleted-users)
+          echo "HTTP status: ${status}"
+          cat /tmp/retention-response.json
+          if [ "${status}" != "200" ]; then
+            echo "Retention purge failed (expected 200)" >&2
+            exit 1
+          fi
