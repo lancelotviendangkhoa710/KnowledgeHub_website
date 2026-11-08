@@ -8,7 +8,27 @@ This guide distinguishes the configured local Docker environment from production
 - **Backend:** PHP container bootstraps Laravel at runtime when the mounted `backend/` directory has no `artisan` file. Generated Laravel application source is not tracked.
 - **Frontend:** Next.js Dockerfile runs the development server. It is not a production-hardened image.
 - **Managed database:** Supabase is the approved PostgreSQL target, but project URL, database credentials, network access, and production deployment configuration must be supplied by the operator.
-- **Production release:** No production orchestration, CI/CD workflow, hosted frontend/API target, or zero-downtime migration procedure is established in these files. Production deployment is not one-command ready.
+- **Production release:** A hosted preview deployment exists (Vercel frontend, Render Laravel API). There is still no production orchestration, zero-downtime migration procedure, or complete CI/CD release pipeline in these files; production deployment is not one-command ready.
+
+## Current hosted environments
+
+Last verified: 2026-11-08.
+
+| Component | Provider | URL | Status |
+|---|---|---|---|
+| Frontend | Vercel | <https://knowledge-hub-website-eight.vercel.app/> | Live; serves the Next.js application and calls the Render API |
+| Backend API | Render | <https://knowledgehub-website.onrender.com> | Live; Laravel 11 / PHP 8.3, API under `/api/v1`, `/up` returns 200 |
+| Database | Supabase PostgreSQL | private | Managed database target; credentials are not documented here |
+
+Verified on the date above: `/`, `/courses`, and `/login` render; `/api/v1/articles` and `/api/v1/categories` return 200 with `Access-Control-Allow-Origin: *`; `/courses` lists the 4 published articles. The Render root returns the framework default page — expected for the API service; use `/api/v1/*` for API checks. Render may cold-start (the first request can return 503 while the instance boots), so smoke checks need retries and a longer timeout.
+
+Frontend build-time variable (keep the `/api` suffix; the client appends `/v1/...`; redeploy Vercel after changing it):
+
+```dotenv
+NEXT_PUBLIC_API_URL=https://knowledgehub-website.onrender.com/api
+```
+
+Environment variables, CORS, and the AI service request flow are documented in the deployment context pack: [`team/context-packs/deployment-hosting.md`](team/context-packs/deployment-hosting.md).
 
 ## Local Docker environment
 
