@@ -28,3 +28,11 @@ Loại dữ liệu được lưu, consent/opt-out, extraction và xác minh, vis
 - [ ] Test isolation, erase, source link, cache/index/derived-data theo policy.
 - [ ] Tests/diff đạt; prefix được thống nhất.
 - [ ] Commit dự kiến: `ai: implement user memory management`.
+
+## Implementation status (2026-11-08, V1 draft — chưa duyệt/merge)
+
+- Đã implement backend V1 explicit-only: `UserMemory` model, `UserMemoryPolicy`, `UserMemoryService`, `UserMemoryController`, FormRequests; routes `GET/POST /api/ai/memories`, `PATCH/DELETE /api/ai/memories/{uuid}`.
+- `memory_type` chỉ `preference|fact|goal`; **`instruction` bị từ chối 422** (chống stored prompt injection). Delete = tombstone `status='deleted'` (row giữ lại), list/`activeForPrompt` loại trừ.
+- `activeForPrompt(User, limit=10)` chỉ trả content strings của đúng user, active + chưa hết hạn; không ids/source/system.
+- Không migration (dùng bảng `user_memories` sẵn có). Tests: `backend/tests/Feature/AI/UserMemoryApiTest.php` (đã viết, **chưa chạy** — không có PHP).
+- Contract: `docs/API.md` §7. Consent/retention/DSR vẫn là gate Product/Privacy (`ADR-C` NOT APPROVED).
