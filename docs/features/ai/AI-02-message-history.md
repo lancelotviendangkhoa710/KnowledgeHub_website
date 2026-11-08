@@ -35,4 +35,4 @@ Vai trò `user`/`assistant`/system/tool, schema payload, token/size limits, orde
 - Send: sync, **đã được duyệt bật ngày 2026-11-08**; `services.ai.chat_enabled` default **true** (set `AI_CHAT_ENABLED=false` để tắt). Gọi AI trước, chỉ persist user+assistant trong một transaction khi thành công (không partial rows); context ≤19 message + memory active ≤10; idempotency best-effort bằng `client_message_id` (chưa có unique constraint — cần M1).
 - Rate limit 20 send/phút/user; lỗi map 502/503/504; 503 kèm `code:"chat_disabled"` khi flag tắt.
 - Tests: `MessageHistoryTest`, `MessageSendTest` (đã viết, **chưa chạy** — không có PHP). AI service: `ai-service/tests/test_main.py` **đã chạy 19/19 pass** (gồm chat).
-- Contract: `docs/API.md` §7. Bật chat trong production vẫn bị gate bởi NFR-PRIV-01 + ADR-C (DeepSeek subprocessor/retention).
+- Contract: `docs/API.md` §7. Đã được duyệt bật ngày 2026-11-08; **production E2E đã xác minh**: `POST messages → 201`, assistant reply, `GET history` 2 message, `DELETE conversation` 200. Retention/DPA/ADR vẫn nên được ghi nhận chính thức (NFR-PRIV-01, ADR-C).
