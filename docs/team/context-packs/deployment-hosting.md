@@ -6,9 +6,9 @@ backend, environment variables, CORS, or AI provider testing.
 ## Current hosted targets
 
 | Component | Provider | URL | Role |
-|---|---|---|---|
-| Frontend | Vercel | https://knowledge-hub-website-eight.vercel.app/ | Next.js browser application |
-| Backend | Render | https://knowledgehub-website.onrender.com | Laravel API/PHP runtime |
+| --- | --- | --- | --- |
+| Frontend | Vercel | <https://knowledge-hub-website-eight.vercel.app/> | Next.js browser application |
+| Backend | Render | <https://knowledgehub-website.onrender.com> | Laravel API/PHP runtime |
 | Database | Supabase PostgreSQL | private project URL | Managed PostgreSQL target |
 
 Observed on 2026-11-04: both public URLs returned HTTP 200. The Render root
@@ -35,8 +35,7 @@ Set private runtime variables in the Render service:
     APP_DEBUG=false
     APP_URL=https://knowledgehub-website.onrender.com
     AI_SERVICE_URL=<FastAPI service URL>
-    AI_SERVICE_TOKEN=<shared private token>
-
+    AI_SERVICE_TOKEN=<same shared private token>
 Also configure the approved Supabase PostgreSQL connection and Laravel
 authentication variables. Do not commit the values.
 
@@ -71,11 +70,6 @@ AI_MODEL selects the DeepSeek model. The AI service uses the Chat Completions
 endpoint at:
 
     https://api.deepseek.com/chat/completions
-
-When upgrading from Gemini, update or remove any old `AI_MODEL` override in the
-local `.env` file and the Render AI service Environment. The service accepts
-DeepSeek model IDs (`deepseek-*`) and falls back to `deepseek-flash` for a model
-override from another provider.
 
 DeepSeek bills usage by tokens. Confirm the DeepSeek account has available
 balance before enabling production traffic.
