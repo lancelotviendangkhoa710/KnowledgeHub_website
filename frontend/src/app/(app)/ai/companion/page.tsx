@@ -68,7 +68,8 @@ export default function AICompanionPage() {
     }
     if (apiError.code === 'chat_disabled') {
       setChatDisabled(true);
-      setError('AI chat is not enabled yet on this platform. You can still manage conversations and memories.');
+      // The persistent chat-disabled banner is already rendered above; avoid a duplicate alert.
+      setError(null);
       return;
     }
     setError(apiError.message && apiError.message.trim() ? apiError.message : fallback);
