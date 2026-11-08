@@ -1,8 +1,10 @@
 'use client';
 
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { LearningRoadmap } from '@/types/learning';
 import { roadmapClient } from '@/lib/roadmapClient';
+import RoadmapCard from '@/components/learning/RoadmapCard';
 
 export default function RoadmapsPage() {
   const [roadmaps, setRoadmaps] = useState<LearningRoadmap[]>([]);
@@ -11,6 +13,7 @@ export default function RoadmapsPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
   // Guards against a double click sending two DELETE requests: the ref blocks
   // re-entry synchronously, the state drives the disabled attribute.
   const deletingRef = useRef<Set<string>>(new Set());
@@ -19,10 +22,17 @@ export default function RoadmapsPage() {
   const load = async () => {
     setLoading(true);
     setError(null);
+    setAuthRequired(false);
     try {
       setRoadmaps((await roadmapClient.list()).data);
-    } catch {
-      setError('Unable to load your roadmaps. Check your session, then retry.');
+    } catch (caught) {
+      setRoadmaps([]);
+      if ((caught as { status?: number }).status === 401) {
+        setAuthRequired(true);
+        setError('Sign in to view and manage your roadmaps.');
+      } else {
+        setError('Unable to load your roadmaps. Check your connection, then retry.');
+      }
     } finally {
       setLoading(false);
     }
@@ -91,7 +101,7 @@ export default function RoadmapsPage() {
       </header>
 
       {/* Create Roadmap Form */}
-      <div
+      {!authRequired && <div
         style={{
           background: 'var(--color-white)',
           border: '1px solid var(--color-border)',
@@ -164,7 +174,7 @@ export default function RoadmapsPage() {
             </button>
           </div>
         </form>
-      </div>
+      </div>}
 
       {error && (
         <div
@@ -182,14 +192,18 @@ export default function RoadmapsPage() {
           }}
         >
           <span>{error}</span>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => void load()}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
-          >
-            Retry
-          </button>
+          {authRequired ? (
+            <Link className="btn btn-secondary" href="/login?redirect=/learning/roadmaps">Sign in</Link>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => void load()}
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
 
@@ -197,7 +211,7 @@ export default function RoadmapsPage() {
         <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-gray)' }}>
           Loading roadmaps…
         </div>
-      ) : roadmaps.length === 0 ? (
+      ) : authRequired ? null : roadmaps.length === 0 ? (
         <div
           style={{
             textAlign: 'center',
@@ -218,56 +232,13 @@ export default function RoadmapsPage() {
       ) : (
         <div style={{ display: 'grid', gap: '1.25rem' }}>
           {roadmaps.map((roadmap) => (
-            <article
+            <RoadmapCard
               key={roadmap.id}
-              style={{
-                padding: '1.75rem',
-                background: 'var(--color-white)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-xs)',
-                transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1.5rem' }}>
-                <div style={{ flex: 1 }}>
-                  <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.5rem', lineHeight: 1.3 }}>
-                    {roadmap.title}
-                  </h2>
-                  <p style={{ color: 'var(--color-gray)', marginBottom: '1rem', fontSize: '0.95rem', lineHeight: 1.6 }}>
-                    {roadmap.goal}
-                  </p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <span
-                      className="badge"
-                      style={{
-                        backgroundColor: 'var(--color-primary-pale)',
-                        color: 'var(--color-primary)',
-                        border: '1px solid var(--color-border)',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        padding: '0.2rem 0.55rem',
-                        borderRadius: 'var(--radius-full)',
-                      }}
-                    >
-                      {roadmap.items.length} items
-                    </span>
-                    <span style={{ fontSize: '0.85rem', color: 'var(--color-gray-light)', textTransform: 'capitalize' }}>
-                      Status: <strong style={{ color: 'var(--color-charcoal)' }}>{roadmap.status}</strong>
-                    </span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={deletingIds.includes(roadmap.id)}
-                  onClick={() => void remove(roadmap.id)}
-                  style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
-                >
-                  {deletingIds.includes(roadmap.id) ? 'Deleting…' : 'Delete'}
-                </button>
-              </div>
-            </article>
+              roadmap={roadmap}
+              onChange={(updated) => setRoadmaps((current) => current.map((entry) => entry.id === updated.id ? updated : entry))}
+              onDelete={() => void remove(roadmap.id)}
+              deleting={deletingIds.includes(roadmap.id)}
+            />
           ))}
         </div>
       )}
