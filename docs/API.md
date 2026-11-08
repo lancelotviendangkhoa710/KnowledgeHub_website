@@ -679,7 +679,7 @@ tokens; configure an API key with available balance before enabling production t
 **Owner**: TBD — must be assigned in `docs/team/OWNERSHIP.md` before merge.
 **Contract status**: V1 draft, pending Product/Architecture/Privacy approval (`reviews/proposals/ADR-A|B|C`).
 **Authentication**: `auth:sanctum`; **owner-only**. Admin has **no read access** to another user's conversations or memories in V1.
-**Feature flag**: Product/operator approved enabling AI chat on **2026-11-08** (privacy decision recorded in the implementation report). Since this release `services.ai.chat_enabled` defaults to **true**; set `AI_CHAT_ENABLED=false` to disable. When disabled, `POST messages` returns `503` with `code: "chat_disabled"` while conversation/history/memory CRUD still works. Enabling chat sends conversation + active memory content to the AI provider (DeepSeek); deploy only after the recorded retention/DPA review.
+**Feature flag**: Product/operator approved enabling AI chat on **2026-11-08** (privacy decision recorded in the implementation report). Since this release `services.ai.chat_enabled` defaults to **true**; set `AI_CHAT_ENABLED=false` to disable. When disabled, `POST messages` returns `503` with `code: "chat_disabled"` while conversation/history/memory CRUD still works. Enabling chat sends conversation + active memory content to the AI provider (DeepSeek); deploy only after the recorded retention/DPA review. Chat also requires the FastAPI service deployed with `POST /v1/chat`; if the deployed AI service predates that endpoint, Laravel maps the failure to `502` ("AI Companion failed to reply. Please retry.").
 **Migration**: none. Uses the existing `conversations`, `messages`, `user_memories` tables (`2026_01_01_000007`).
 
 #### AI-01 — Conversations
