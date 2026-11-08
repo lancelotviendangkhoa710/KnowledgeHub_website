@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FormEvent, useState } from 'react';
 import { learningProgressClient } from '@/lib/learningProgressClient';
 import { roadmapClient } from '@/lib/roadmapClient';
+import { getCurrentUser } from '@/lib/auth';
 import { LearningRoadmap, RoadmapItem, RoadmapItemStatus, RoadmapStatus } from '@/types/learning';
 
 type Props = {
@@ -151,6 +152,11 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
           <p style={{ color: 'var(--color-gray)', margin: 0 }}>
             {completedCount} of {roadmap.items.length} steps completed · {roadmap.status}
           </p>
+          {roadmap.user_id !== getCurrentUser()?.id && (
+            <p style={{ color: 'var(--color-gray)', margin: '0.5rem 0 0', fontSize: '0.85rem' }}>
+              Owned by another account · ID {roadmap.user_id}
+            </p>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button type="button" className="btn btn-primary" aria-expanded={open} aria-controls={`roadmap-${roadmap.id}`} onClick={() => setOpen((value) => !value)}>
