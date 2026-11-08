@@ -32,3 +32,11 @@ Conversation title/state, tạo tự động hay chủ động, archive/delete s
 - [ ] Test tenant/owner isolation, FK, race/retry, redaction.
 - [ ] Tests/diff đạt; thống nhất commit prefix trước khi tạo nhánh.
 - [ ] Commit dự kiến, sau khi thống nhất: `ai: implement conversation management`.
+
+## Implementation status (2026-11-08, V1 draft — chưa duyệt/merge)
+
+- Đã implement backend V1: `Conversation` model, `ConversationPolicy`, `ConversationService`, `ConversationController`, FormRequests; routes `GET/POST /api/ai/conversations`, `GET/PATCH/DELETE /api/ai/conversations/{uuid}`.
+- Owner-only; **Admin không đọc conversation của user khác** trong V1 (privacy gate). List phân trang 20, mới nhất trước; foreign/unknown → 404.
+- Không migration (dùng bảng `conversations` sẵn có trong `2026_01_01_000007`).
+- Tests: `backend/tests/Feature/AI/ConversationApiTest.php` (đã viết, **chưa chạy** — môi trường không có PHP runtime).
+- Contract: `docs/API.md` §7 (AI Companion V1). Quyết định owner/retention vẫn là gate: `reviews/proposals/ADR-A|B|C` (NOT APPROVED).

@@ -57,7 +57,7 @@ Identity/Auth, Content, and Learning progress endpoints are documented below.
 | Identity/Auth | TEAM_MEMBER_A | 10 | 10 | AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
 | Content | TEAM_MEMBER_B | 21 | 21 | Implemented in routes/api/content.php; verified with 37 tests |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
-| AI Companion | TBD | 0 | 0 | AI service not in repository |
+| AI Companion | TBD | 11 | 0 | AI-01..03 V1 implemented in routes/api/ai.php; contract is a V1 draft pending approval; chat is feature-flagged (`AI_CHAT_ENABLED=false`); owner still TBD |
 | Payment | TBD | 0 | 0 | Payment implementation absent |
 
 ---
@@ -674,6 +674,62 @@ requires `AI_SERVICE_URL` and the matching `AI_SERVICE_TOKEN`. `AI_MODEL` is
 optional and defaults to `deepseek-flash`. DeepSeek API usage is metered by
 tokens; configure an API key with available balance before enabling production traffic.
 
+### IMPLEMENTED (V1, feature-flagged) — AI Companion: AI-01, AI-02, AI-03
+
+**Owner**: TBD — must be assigned in `docs/team/OWNERSHIP.md` before merge.
+**Contract status**: V1 draft, pending Product/Architecture/Privacy approval (`reviews/proposals/ADR-A|B|C`).
+**Authentication**: `auth:sanctum`; **owner-only**. Admin has **no read access** to another user's conversations or memories in V1.
+**Feature flag**: chat send requires `AI_CHAT_ENABLED=true` (`services.ai.chat_enabled`). Default is **false**: conversation/history/memory CRUD works, but `POST messages` returns `503` with `code: "chat_disabled"` until the privacy/retention decision (NFR-PRIV-01, ADR-C) is approved.
+**Migration**: none. Uses the existing `conversations`, `messages`, `user_memories` tables (`2026_01_01_000007`).
+
+#### AI-01 — Conversations
+
+| Method | Path | Request | Success | Main errors |
+|---|---|---|---|---|
+| GET | `/api/ai/conversations?page=` | — | 200, owner's conversations newest-first + `meta` pagination | 401 |
+| POST | `/api/ai/conversations` | `title?` (≤120, blank → null) | 201, `data` conversation | 401, 422 |
+| GET | `/api/ai/conversations/{uuid}` | — | 200, conversation with `messages_count` | 401, 404 foreign/unknown |
+| PATCH | `/api/ai/conversations/{uuid}` | `title` (1–120) | 200, updated conversation | 401, 404, 422 |
+| DELETE | `/api/ai/conversations/{uuid}` | — | 200 `{status,message}`; messages cascade | 401, 404 |
+
+#### AI-02 — Message History + sync send
+
+| Method | Path | Request | Success | Main errors |
+|---|---|---|---|---|
+| GET | `/api/ai/conversations/{uuid}/messages` | query `limit` 1–100 (default 30), `before_id?` | 200, oldest-first `data` + `meta {has_more,next_before_id}` | 401, 404, 422 invalid cursor |
+| POST | `/api/ai/conversations/{uuid}/messages` | `content` 1–8000, `client_message_id?` UUID | 201, `data {user_message, assistant_message}` | 401, 404, 422, 429 (20/min/user), 503 `chat_disabled`/provider unavailable, 502, 504 |
+
+- Sync V1, no streaming. The pair is persisted in one transaction **only after** the AI call succeeds; provider failures leave no partial rows.
+- Context sent to the AI service: last ≤19 messages (oldest first) + active explicit memories (≤10). Message/memory content is treated as untrusted data; logs never include content.
+- Best-effort idempotency via `client_message_id` in `messages.metadata`; there is **no unique constraint yet** — durable idempotency needs the M1 migration (ADR-B).
+- Conversation title is set from the first user message when empty (≤120 chars).
+
+#### AI-03 — User Memory (explicit-only)
+
+| Method | Path | Request | Success | Main errors |
+|---|---|---|---|---|
+| GET | `/api/ai/memories` | — | 200, owner's non-deleted memories + pagination meta | 401 |
+| POST | `/api/ai/memories` | `memory_type` preference/fact/goal, `content` 1–1000, `expires_at?` | 201 | 401, 422 (`instruction` forbidden) |
+| PATCH | `/api/ai/memories/{uuid}` | `content?`, `expires_at?` (null clears) | 200, updated memory | 401, 404, 422 |
+| DELETE | `/api/ai/memories/{uuid}` | — | 200; tombstone `status='deleted'` (row retained) | 401, 404 |
+
+- Explicit-only V1: the AI never extracts memories. `instruction` is rejected at the API to prevent stored prompt injection.
+- `activeForPrompt()` injects only `status=active`, non-expired memories of the owning user; no ids, source or system metadata.
+
+#### AI Companion error mapping
+
+| Status | Condition |
+|---|---|
+| 401 | Missing/expired Sanctum token |
+| 404 | Foreign or unknown conversation/memory |
+| 422 | Validation failure or invalid cursor |
+| 429 | Chat send rate limit (20/min/user) |
+| 502 | AI service/provider rejected or returned invalid output |
+| 503 | Chat disabled (`code:"chat_disabled"`) or provider unavailable/config missing |
+| 504 | AI provider timeout |
+
+**Tests written (not executed in this environment — no PHP runtime)**: `backend/tests/Feature/AI/{ConversationApiTest,MessageHistoryTest,MessageSendTest,UserMemoryApiTest}.php`. AI service: `ai-service/tests/test_main.py` (runs with `py -m unittest discover -s tests`; 19 tests pass at the time of implementation).
+
 ---
 
 ## 8. Endpoint Template
@@ -712,6 +768,7 @@ Copy this block only after feature approval:
 
 | Version | Date | Change |
 | --- | --- | --- |
+| 0.9 | 2026-11-08 | Documented AI Companion V1 (AI-01 conversations, AI-02 message history/sync send, AI-03 explicit memory); owner-only, feature-flagged `AI_CHAT_ENABLED=false`; contract pending approval |
 | 0.8 | 2026-11-06 | Documented AI-05 preview and confirm endpoints; separated generation into FastAPI service |
 | 0.7 | 2026-11-03 | Documented all 21 Content Domain endpoints, verified by automated unit and feature test suite |
 | 0.6 | 2026-10-30 | AUTH-01 authorization and login hardening: guest-only `UserPolicy` checks on register/login/logout, `429` login throttling, explicit failure when the seeded `user` role is missing; frontend keeps the bearer token in memory instead of web storage |
