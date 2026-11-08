@@ -29,10 +29,12 @@ asked for the decision to be recorded formally.
    (provider/model/request id only), explicit memory `memory_type/content/expires_at`. No
    passwords, payment data, API keys, IP addresses, user-agent, or full prompt/system instructions
    are stored. `provider`/`model` metadata is whitelisted.
-4. **Retention (V1):** conversations/messages are kept until the user deletes the conversation;
-   account deletion currently soft-deletes the user and does **not** purge AI rows (existing FK
-   `RESTRICT`). No automatic TTL in V1. This is a known gap; a purge/retention job and a TTL are
-   follow-ups.
+4. **Retention (V1, approved 2026-11-08):** conversations/messages are kept until the user deletes
+   the conversation. When an account is soft-deleted, its AI Companion rows (conversations/messages,
+   explicit memories) are **purged after 30 days** by the `ai:purge-deleted-users` command
+   (scheduled daily at 03:00). The Auth-owned user row itself is not hard-deleted by this command;
+   a full-account purge remains an Identity/Auth + Privacy follow-up. No automatic TTL for active
+   conversations in V1.
 5. **User deletion / DSR (V1):** deleting a conversation cascades its messages; deleting a memory
    is a tombstone (`status='deleted'`) and is excluded from lists/prompt injection. Self-service
    JSON export, delete-all-history, and account-deletion purge are **not implemented yet** and are
@@ -59,7 +61,7 @@ asked for the decision to be recorded formally.
 |---|---|---|
 | Enable AI Companion V1 chat (operator) | Repository owner | **Approved 2026-11-08** |
 | Own the AI Companion domain in `docs/team/OWNERSHIP.md` | Team/Lead | **TBD — must be assigned** |
-| Retention policy sign-off (TTL, deletion, backups) | Product + Privacy | **Open — V1 interim rule in §4** |
+| Retention policy sign-off (TTL, deletion, backups) | Product + Privacy | **Approved 2026-11-08**: delete-conversation + purge AI rows 30 days after account deletion; no active TTL; backup/provider limits still to document |
 | DeepSeek DPA / subprocessor / cross-border / training-use | Privacy/Legal | **Open — legal review required** |
 | User-facing AI privacy notice | Product + Privacy | **Open — before public launch** |
 | Security threat-model review (prompt injection, memory poisoning, admin access) | Security | **Open — ADR-C draft threat model is input** |
@@ -100,6 +102,11 @@ asked for the decision to be recorded formally.
 - Frontend: `/ai/companion`, `frontend/src/lib/aiCompanionClient.ts`.
 - Contract: `docs/API.md` §7.
 - Deployed: `origin/dev` commits `29a7a53` → `fa840eb` → `b947772`; production E2E verified 2026-11-08 (chat 201 + assistant reply + history 2 messages).
+- Retention implementation: `backend/app/Console/Commands/PurgeDeletedAiCompanionData.php`,
+  scheduled in `backend/routes/console.php` (`ai:purge-deleted-users`, daily 03:00). Requires a
+  scheduler process on the host (Render Cron Job running `php artisan schedule:run`, or a daily
+  `php artisan ai:purge-deleted-users` job).
+- M1 ordering/idempotency migration: `database/migrations/2026_11_08_000001_add_message_sequence_and_idempotency.php`.
 
 ## Validation
 

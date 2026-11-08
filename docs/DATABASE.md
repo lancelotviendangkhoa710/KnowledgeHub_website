@@ -151,7 +151,9 @@ KnowledgeHub is a **curated learning platform**, not a social or user-generated-
 | Unique PK | article_tags | (article_id, tag_id) | No duplicate tagging |
 | FK index | article_tags | tag_id | Articles by tag |
 | FK index | conversations | user_id | User conversations |
-| Composite | messages | (conversation_id, created_at) | Ordered history |
+| Composite | messages | (conversation_id, created_at) | Legacy history order |
+| Unique | messages | (conversation_id, sequence) | Durable history order (M1 migration 2026_11_08_000001) |
+| Unique | messages | (conversation_id, client_message_id) | Durable idempotency, user rows only (M1) |
 | Composite | user_memories | (user_id, status) | Active memories |
 | FK index | learning_roadmaps | user_id | User roadmaps |
 | Unique | roadmap_items | (roadmap_id, position) | Ordered positions |
@@ -220,6 +222,7 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 11 | 2026-10-12-000002 | Normalize legacy role names and assignments |
 | 12 | 2026-10-21-000001 | `personal_access_tokens` (Sanctum, UUID PK) |
 | 13 | 2026-10-22-000001 | Backfill `roadmap_items.status` from `learning_progress.status` (OQ-05) |
+| 14 | 2026-11-08-000001 | Add `messages.sequence` + `messages.client_message_id` (M1 ordering/idempotency) |
 
 > `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
 > migration once the team approves the schema cleanup task. Until then it is dormant — no application

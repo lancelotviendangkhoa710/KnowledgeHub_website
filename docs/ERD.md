@@ -122,9 +122,11 @@ erDiagram
     messages {
         uuid id PK
         uuid conversation_id FK
+        bigint sequence "M1: unique per conversation, durable order"
         string role "user|assistant|system|tool"
         text content
         jsonb metadata "nullable – no secrets"
+        uuid client_message_id "M1: nullable, unique per conversation (user rows)"
         timestamptz created_at
     }
     user_memories {

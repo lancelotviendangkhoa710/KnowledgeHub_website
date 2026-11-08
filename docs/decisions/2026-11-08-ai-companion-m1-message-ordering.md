@@ -1,6 +1,6 @@
 # Decision: AI Companion message ordering & durable idempotency (M1)
 
-**Status**: Proposed — awaiting Architecture/DB-owner approval  
+**Status**: Implemented — migration + code + tests; production migration pending operator run  
 **Date**: 2026-11-08  
 **Author**: AI agent (implementation review), requested by repository owner  
 **Related**: ADR-C `docs/decisions/2026-11-08-ai-companion-privacy-retention.md`, `reviews/proposals/ADR-B-ai-companion-schema-M1-PROPOSED.md`, `backend/app/Services/AI/MessageService.php`, migration `database/migrations/2026_01_01_000007_create_ai_companion_tables.php`
@@ -55,12 +55,19 @@ One additive migration, **no new tables** (keeps the 25-table invariant):
 columns in `down()`); existing rows are small. **Risk:** low; the only operational step is the
 backfill migration during a normal deployment window.
 
-## Recommendation
+## Decision
 
-- **Pilot now:** Option A is acceptable; chat is live and tested (175 backend tests, 19 AI-service
-  tests, production E2E 201).
-- **Before public launch / paid traffic:** approve **Option B (M1)**. It removes the rare duplicate
-  class and makes ordering independent of clock precision/UUID randomness.
+The repository owner approved **Option B (M1)** on 2026-11-08. Implemented in this release:
+
+- Migration `database/migrations/2026_11_08_000001_add_message_sequence_and_idempotency.php`
+  adds `messages.sequence` + `messages.client_message_id`, backfills them, and adds the two unique
+  indexes.
+- `MessageService` uses `sequence` for ordering/cursor when the columns exist (with a pre-migration
+  fallback so code can deploy before `php artisan migrate`), and stores `client_message_id` on the
+  user message; concurrent duplicates are caught by the unique index and replayed.
+- **Production action required:** run `php artisan migrate --force` on the backend service after
+  deployment (Render Shell / release command) to activate M1. Until then the fallback path keeps
+  chat working but without the durable unique constraint.
 
 ## Decision needed
 

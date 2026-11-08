@@ -21,7 +21,7 @@ class Message extends Model
      * `created_at` is fillable because the send flow sets explicit microsecond
      * timestamps inside one transaction so user/assistant ordering is stable.
      */
-    protected $fillable = ['conversation_id', 'role', 'content', 'metadata', 'created_at'];
+    protected $fillable = ['conversation_id', 'role', 'content', 'metadata', 'created_at', 'sequence', 'client_message_id'];
 
     protected $casts = ['metadata' => 'array'];
 

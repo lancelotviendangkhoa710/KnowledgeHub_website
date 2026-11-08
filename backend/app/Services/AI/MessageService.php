@@ -6,13 +6,18 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class MessageService
 {
+    /** Cached per process; M1 columns arrive with migration 2026_11_08_000001. */
+    private static ?bool $m1Supported = null;
+
     /** Stable marker so the controller can expose this gate as a machine-readable code. */
     public const CHAT_DISABLED_MESSAGE = 'AI Companion chat is not enabled yet.';
 
@@ -47,16 +52,26 @@ class MessageService
                     'before_id' => 'The before_id cursor is not part of this conversation.',
                 ]);
             }
-            // Cursor on (created_at, id) so equal timestamps still page deterministically.
-            $query->where(function ($query) use ($anchor): void {
-                $query->where('created_at', '<', $anchor->created_at)
-                    ->orWhere(function ($query) use ($anchor): void {
-                        $query->where('created_at', $anchor->created_at)->where('id', '<', $anchor->id);
-                    });
-            });
+            if ($this->supportsM1() && $anchor->sequence !== null) {
+                // M1: sequence is the durable cursor; created_at is second-precision only.
+                $query->where('sequence', '<', $anchor->sequence);
+            } else {
+                // Legacy rows without a sequence keep the (created_at, id) cursor.
+                $query->where(function ($query) use ($anchor): void {
+                    $query->where('created_at', '<', $anchor->created_at)
+                        ->orWhere(function ($query) use ($anchor): void {
+                            $query->where('created_at', $anchor->created_at)->where('id', '<', $anchor->id);
+                        });
+                });
+            }
         }
 
-        $rows = $query->orderByDesc('created_at')->orderByDesc('id')->limit($limit + 1)->get();
+        if ($this->supportsM1()) {
+            $query->orderByRaw('COALESCE(sequence, 0) DESC')->orderByDesc('created_at')->orderByDesc('id');
+        } else {
+            $query->orderByDesc('created_at')->orderByDesc('id');
+        }
+        $rows = $query->limit($limit + 1)->get();
         $hasMore = $rows->count() > $limit;
         if ($hasMore) {
             $rows = $rows->slice(0, $limit)->values();
@@ -109,44 +124,81 @@ class MessageService
         $reply = $this->chat->reply($messages, $memory);
 
         // No partial rows: both messages are written only after the AI call succeeded.
-        return DB::transaction(function () use ($conversation, $content, $clientMessageId, $reply): array {
-            // Postgres timestampTz in migration 000007 uses second precision, so microsecond
-            // offsets collapse. Keep the pair strictly after the last stored message and one
-            // second apart; durable ordering needs the M1 sequence column.
-            $lastCreatedAt = Message::query()
-                ->where('conversation_id', $conversation->id)
-                ->max('created_at');
-            $userCreatedAt = now()->startOfSecond();
-            if (is_string($lastCreatedAt) && $lastCreatedAt !== '') {
-                $last = \Illuminate\Support\Carbon::parse($lastCreatedAt)->startOfSecond();
-                if ($userCreatedAt->lessThanOrEqualTo($last)) {
-                    $userCreatedAt = $last->copy()->addSecond();
+        $m1 = $this->supportsM1();
+
+        try {
+            return DB::transaction(function () use ($conversation, $content, $clientMessageId, $reply, $m1): array {
+                // created_at stays second-precision (migration 000007); when M1 is applied the
+                // stable order comes from `sequence`, with created_at only as a UI timestamp.
+                $userCreatedAt = now()->startOfSecond();
+                $assistantCreatedAt = $userCreatedAt->copy()->addSecond();
+
+                $userSequence = null;
+                $assistantSequence = null;
+                $userClientId = null;
+                if ($m1) {
+                    $nextSequence = ((int) Message::query()
+                        ->where('conversation_id', $conversation->id)
+                        ->max('sequence')) + 1;
+                    $userSequence = $nextSequence;
+                    $assistantSequence = $nextSequence + 1;
+                    $userClientId = $clientMessageId;
+                } else {
+                    // Pre-M1 fallback: keep the pair after the last stored message.
+                    $lastCreatedAt = Message::query()
+                        ->where('conversation_id', $conversation->id)
+                        ->max('created_at');
+                    if (is_string($lastCreatedAt) && $lastCreatedAt !== '') {
+                        $last = \Illuminate\Support\Carbon::parse($lastCreatedAt)->startOfSecond();
+                        if ($userCreatedAt->lessThanOrEqualTo($last)) {
+                            $userCreatedAt = $last->copy()->addSecond();
+                        }
+                    }
+                    $assistantCreatedAt = $userCreatedAt->copy()->addSecond();
+                }
+
+                $userMetadata = $clientMessageId !== null ? ['client_message_id' => $clientMessageId] : null;
+                $assistantMetadata = $clientMessageId !== null
+                    ? $reply['meta'] + ['client_message_id' => $clientMessageId]
+                    : $reply['meta'];
+
+                $userMessage = $this->persistMessage(
+                    $conversation,
+                    'user',
+                    $content,
+                    $userMetadata,
+                    $userCreatedAt,
+                    $userSequence,
+                    $userClientId,
+                );
+                $assistantMessage = $this->persistMessage(
+                    $conversation,
+                    'assistant',
+                    $reply['content'],
+                    $assistantMetadata === [] ? null : $assistantMetadata,
+                    $assistantCreatedAt,
+                    $assistantSequence,
+                );
+
+                if ($conversation->title === null || trim((string) $conversation->title) === '') {
+                    $conversation->title = Str::limit($content, 120);
+                }
+                $conversation->updated_at = $assistantCreatedAt;
+                $conversation->save();
+
+                return ['user_message' => $userMessage, 'assistant_message' => $assistantMessage];
+            });
+        } catch (UniqueConstraintViolationException $exception) {
+            // Concurrent retry with the same client_message_id: the unique index wins and the
+            // loser replays the row pair created by the other request.
+            if ($m1 && $clientMessageId !== null) {
+                $replay = $this->findStoredPair($conversation, $clientMessageId);
+                if ($replay !== null) {
+                    return $replay;
                 }
             }
-            $assistantCreatedAt = $userCreatedAt->copy()->addSecond();
-
-            $userMetadata = $clientMessageId !== null ? ['client_message_id' => $clientMessageId] : null;
-            $assistantMetadata = $clientMessageId !== null
-                ? $reply['meta'] + ['client_message_id' => $clientMessageId]
-                : $reply['meta'];
-
-            $userMessage = $this->persistMessage($conversation, 'user', $content, $userMetadata, $userCreatedAt);
-            $assistantMessage = $this->persistMessage(
-                $conversation,
-                'assistant',
-                $reply['content'],
-                $assistantMetadata === [] ? null : $assistantMetadata,
-                $assistantCreatedAt,
-            );
-
-            if ($conversation->title === null || trim((string) $conversation->title) === '') {
-                $conversation->title = Str::limit($content, 120);
-            }
-            $conversation->updated_at = $assistantCreatedAt;
-            $conversation->save();
-
-            return ['user_message' => $userMessage, 'assistant_message' => $assistantMessage];
-        });
+            throw $exception;
+        }
     }
 
     /**
@@ -160,14 +212,24 @@ class MessageService
         string $content,
         ?array $metadata,
         \DateTimeInterface $createdAt,
+        ?int $sequence = null,
+        ?string $clientMessageId = null,
     ): Message
     {
-        $message = new Message([
+        $attributes = [
             'conversation_id' => $conversation->id,
             'role' => $role,
             'content' => $content,
             'metadata' => $metadata,
-        ]);
+        ];
+        if ($sequence !== null) {
+            $attributes['sequence'] = $sequence;
+        }
+        if ($clientMessageId !== null) {
+            $attributes['client_message_id'] = $clientMessageId;
+        }
+
+        $message = new Message($attributes);
         $message->created_at = $createdAt;
         $message->save();
 
@@ -181,8 +243,29 @@ class MessageService
             return null;
         }
 
-        // Postgres needs `->>` (text) for JSONB equality; `where('metadata->key', ...)`
-        // compares JSONB to a string and never matches.
+        if ($this->supportsM1()) {
+            $userMessage = Message::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('role', 'user')
+                ->where('client_message_id', $clientMessageId)
+                ->first();
+            if ($userMessage === null || $userMessage->sequence === null) {
+                return null;
+            }
+
+            $assistantMessage = Message::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('role', 'assistant')
+                ->where('sequence', $userMessage->sequence + 1)
+                ->first();
+
+            return $assistantMessage === null
+                ? null
+                : ['user_message' => $userMessage, 'assistant_message' => $assistantMessage];
+        }
+
+        // Pre-M1 fallback: Postgres needs `->>` (text) for JSONB equality;
+        // `where('metadata->key', ...)` compares JSONB to a string and never matches.
         $userMessage = Message::query()
             ->where('conversation_id', $conversation->id)
             ->where('role', 'user')
@@ -219,11 +302,19 @@ class MessageService
     {
         $limit = max(1, min((int) config('services.ai.chat_history_limit', 20), 19));
 
-        return Message::query()
+        $query = Message::query()
             ->where('conversation_id', $conversation->id)
-            ->whereIn('role', ['user', 'assistant'])
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
+            ->whereIn('role', ['user', 'assistant']);
+
+        if ($this->supportsM1()) {
+            $query->orderByRaw('COALESCE(sequence, 0) DESC')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id');
+        } else {
+            $query->orderByDesc('created_at')->orderByDesc('id');
+        }
+
+        return $query
             ->limit($limit)
             ->get(['role', 'content'])
             ->reverse()
@@ -234,6 +325,13 @@ class MessageService
             ])
             ->values()
             ->all();
+    }
+
+    /** M1 columns are optional so a deploy can happen before `php artisan migrate` runs. */
+    private function supportsM1(): bool
+    {
+        return self::$m1Supported ??= Schema::hasColumn('messages', 'sequence')
+            && Schema::hasColumn('messages', 'client_message_id');
     }
 
     private function ensureOwner(User $user, Conversation $conversation): void
