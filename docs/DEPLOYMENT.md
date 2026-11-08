@@ -22,6 +22,12 @@ Last verified: 2026-11-08.
 
 Verified on the date above: `/`, `/courses`, and `/login` render; `/api/v1/articles` and `/api/v1/categories` return 200 with `Access-Control-Allow-Origin: *`; `/courses` lists the 4 published articles. The Render root returns the framework default page — expected for the API service; use `/api/v1/*` for API checks. Render may cold-start (the first request can return 503 while the instance boots), so smoke checks need retries and a longer timeout.
 
+Frontend build-time variable (keep the `/api` suffix; the client appends `/v1/...`; redeploy Vercel after changing it):
+
+```dotenv
+NEXT_PUBLIC_API_URL=https://knowledgehub-website.onrender.com/api
+```
+
 Environment variables, CORS, and the AI service request flow are documented in the deployment context pack: [`team/context-packs/deployment-hosting.md`](team/context-packs/deployment-hosting.md).
 
 ## Local Docker environment
