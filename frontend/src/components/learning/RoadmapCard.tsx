@@ -210,7 +210,7 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
                     {item.article_id && <Link href={`/courses/${encodeURIComponent(item.article_id)}`}>Open course</Link>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <label htmlFor={`progress-${item.id}`}>Progress</label>
-                      <select id={`progress-${item.id}`} value={item.status} disabled={busy !== null} onChange={(event) => void changeProgress(item, event.target.value as RoadmapItemStatus)} style={{ padding: '0.45rem' }}>
+                      <select id={`progress-${item.id}`} aria-label={`Progress for ${item.title}`} value={item.status} disabled={busy !== null} onChange={(event) => void changeProgress(item, event.target.value as RoadmapItemStatus)} style={{ padding: '0.45rem' }}>
                         {progressOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                       <button type="button" className="btn btn-secondary" disabled={busy !== null} onClick={() => startEditingItem(item)}>Edit step</button>

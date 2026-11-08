@@ -26,6 +26,7 @@ export default function SiteHeader() {
           <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Courses</Link>
           <Link href="/bookmarks" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Saved</Link>
           <Link href="/learning/roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Roadmaps</Link>
+          <Link href="/ai/companion" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>AI Companion</Link>
         </nav>
       </div>
       <AuthActions />
