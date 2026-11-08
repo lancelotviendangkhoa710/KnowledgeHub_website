@@ -110,26 +110,39 @@ class MessageService
 
         // No partial rows: both messages are written only after the AI call succeeded.
         return DB::transaction(function () use ($conversation, $content, $clientMessageId, $reply): array {
-            $now = now();
+            // Postgres timestampTz in migration 000007 uses second precision, so microsecond
+            // offsets collapse. Keep the pair strictly after the last stored message and one
+            // second apart; durable ordering needs the M1 sequence column.
+            $lastCreatedAt = Message::query()
+                ->where('conversation_id', $conversation->id)
+                ->max('created_at');
+            $userCreatedAt = now()->startOfSecond();
+            if (is_string($lastCreatedAt) && $lastCreatedAt !== '') {
+                $last = \Illuminate\Support\Carbon::parse($lastCreatedAt)->startOfSecond();
+                if ($userCreatedAt->lessThanOrEqualTo($last)) {
+                    $userCreatedAt = $last->copy()->addSecond();
+                }
+            }
+            $assistantCreatedAt = $userCreatedAt->copy()->addSecond();
+
             $userMetadata = $clientMessageId !== null ? ['client_message_id' => $clientMessageId] : null;
             $assistantMetadata = $clientMessageId !== null
                 ? $reply['meta'] + ['client_message_id' => $clientMessageId]
                 : $reply['meta'];
 
-            $userMessage = $this->persistMessage($conversation, 'user', $content, $userMetadata, $now);
-            // Assistant is one millisecond later so (created_at, id) ordering is deterministic.
+            $userMessage = $this->persistMessage($conversation, 'user', $content, $userMetadata, $userCreatedAt);
             $assistantMessage = $this->persistMessage(
                 $conversation,
                 'assistant',
                 $reply['content'],
                 $assistantMetadata === [] ? null : $assistantMetadata,
-                $now->copy()->addMilliseconds(1),
+                $assistantCreatedAt,
             );
 
             if ($conversation->title === null || trim((string) $conversation->title) === '') {
                 $conversation->title = Str::limit($content, 120);
             }
-            $conversation->updated_at = $now;
+            $conversation->updated_at = $assistantCreatedAt;
             $conversation->save();
 
             return ['user_message' => $userMessage, 'assistant_message' => $assistantMessage];
@@ -168,10 +181,12 @@ class MessageService
             return null;
         }
 
+        // Postgres needs `->>` (text) for JSONB equality; `where('metadata->key', ...)`
+        // compares JSONB to a string and never matches.
         $userMessage = Message::query()
             ->where('conversation_id', $conversation->id)
             ->where('role', 'user')
-            ->where('metadata->client_message_id', $clientMessageId)
+            ->whereRaw("metadata->>'client_message_id' = ?", [$clientMessageId])
             ->orderByDesc('created_at')
             ->first();
         if ($userMessage === null) {
@@ -181,7 +196,7 @@ class MessageService
         $assistantMessage = Message::query()
             ->where('conversation_id', $conversation->id)
             ->where('role', 'assistant')
-            ->where('metadata->client_message_id', $clientMessageId)
+            ->whereRaw("metadata->>'client_message_id' = ?", [$clientMessageId])
             ->where('created_at', '>', $userMessage->created_at)
             ->orderBy('created_at')
             ->orderBy('id')

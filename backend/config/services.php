@@ -38,9 +38,10 @@ return [
     'ai' => [
         'url' => env('AI_SERVICE_URL'),
         'token' => env('AI_SERVICE_TOKEN'),
-        // AI-01..03 chat is gated until the privacy/retention decision is approved.
-        // Keep disabled by default; enabling it sends conversation content to the AI provider.
-        'chat_enabled' => (bool) env('AI_CHAT_ENABLED', false),
+        // AI-01..03 chat was gated until the privacy/retention decision was approved.
+        // Product/operator approval recorded 2026-11-08; enabled by default from this
+        // release. Set AI_CHAT_ENABLED=false to disable it again (e.g. staging/incident).
+        'chat_enabled' => (bool) env('AI_CHAT_ENABLED', true),
         'chat_timeout' => (int) env('AI_CHAT_TIMEOUT', 40),
         'chat_history_limit' => (int) env('AI_CHAT_HISTORY_LIMIT', 20),
         'chat_memory_limit' => (int) env('AI_CHAT_MEMORY_LIMIT', 10),
