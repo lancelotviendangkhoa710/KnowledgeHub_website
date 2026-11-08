@@ -17,7 +17,7 @@
 | Content | TEAM_MEMBER_B | `p2/` | Medium |
 | Learning / Engagement | TEAM_MEMBER_C | `p3/` | Medium |
 | Infrastructure | TEAM_MEMBER_C | `p3/` | Very High |
-| AI Companion | TBD | TBD | High |
+| AI Companion | TEAM_MEMBER_C | `p3/` | High |
 | Payment | TBD | TBD | High |
 | Architecture / ADRs | Team approval | Any | Very High |
 
@@ -186,8 +186,8 @@ database/seeders/DatabaseSeeder.php
 Tables: conversations, messages, user_memories
 Paths:  backend/app/Http/Controllers/AI/ (to be created)
         backend/app/Services/AI/ (to be created)
-Owner:  UNASSIGNED for AI-01, AI-02, and AI-03.
-        TEAM_MEMBER_C owns AI-04 (RAG Integration) and AI-05 (Roadmap Generation)
+Owner:  TEAM_MEMBER_C (assigned 2026-11-08) for AI-01..AI-05.
+        Owns AI-04 (RAG Integration) and AI-05 (Roadmap Generation)
         as feature-specific work, including their Learning integration.
 ```
 

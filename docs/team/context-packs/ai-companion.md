@@ -7,7 +7,7 @@ Render environment.
 Read: `AGENTS.md`, `backend/AGENTS.md`, `docs/ARCHITECTURE.md`, AI sections of `docs/DATABASE.md` and `docs/ERD.md`, `docs/API.md`, approved ADRs, ownership registry, task spec, related source/tests.
 
 ```text
-Implement only the approved AI Companion task after an owner is assigned.
+Owner: TEAM_MEMBER_C (assigned 2026-11-08). Implement only approved AI Companion tasks after the owner/reviewer has approved the task scope.
 
 Before editing, report: requirement; owner; allowed files; forbidden files; API/DB/privacy impact; all actor outcomes; tests; blockers.
 

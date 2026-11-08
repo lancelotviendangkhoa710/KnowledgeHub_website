@@ -60,13 +60,27 @@ asked for the decision to be recorded formally.
 | Item | Owner | Status |
 |---|---|---|
 | Enable AI Companion V1 chat (operator) | Repository owner | **Approved 2026-11-08** |
-| Own the AI Companion domain in `docs/team/OWNERSHIP.md` | Team/Lead | **TBD — must be assigned** |
+| Own the AI Companion domain in `docs/team/OWNERSHIP.md` | Team/Lead | **TEAM_MEMBER_C — assigned 2026-11-08** |
 | Retention policy sign-off (TTL, deletion, backups) | Product + Privacy | **Approved 2026-11-08**: delete-conversation + purge AI rows 30 days after account deletion; no active TTL; backup/provider limits still to document |
 | DeepSeek DPA / subprocessor / cross-border / training-use | Privacy/Legal | **Open — legal review required** |
 | User-facing AI privacy notice | Product + Privacy | **Open — before public launch** |
 | Security threat-model review (prompt injection, memory poisoning, admin access) | Security | **Open — ADR-C draft threat model is input** |
 | DSR export/delete-all UI | Product + Privacy | **Open — follow-up** |
 | Account deletion purge of AI rows | Privacy + Auth owner + AI owner | **Open — follow-up; cross-domain** |
+
+## Risk acceptance — public launch before DPA/privacy notice (2026-11-08)
+
+The repository owner chose **public** availability for the AI Companion before the DPA/Legal review and
+the user-facing privacy notice are complete. This is recorded as an **owner risk acceptance**, not as
+Legal/Privacy approval:
+
+- Conversation content and explicitly-added memory are sent to DeepSeek when a user chats.
+- The owner accepted the residual legal/privacy risk for this phase; Legal/Privacy sign-off remains
+  outstanding in the approval table above.
+- Minimum safeguards still recommended before marketing/public promotion: publish the privacy notice,
+  document provider data-use/retention if available, and keep the ability to disable chat with
+  `AI_CHAT_ENABLED=false`.
+- If Legal later rejects the provider terms, disable chat immediately.
 
 ## Consequences
 
