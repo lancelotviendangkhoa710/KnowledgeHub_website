@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { LearningRoadmap } from '@/types/learning';
 import { roadmapClient } from '@/lib/roadmapClient';
 import RoadmapCard from '@/components/learning/RoadmapCard';
+import AIRoadmapCreator from '@/components/learning/AIRoadmapCreator';
+
+type RoadmapMode = 'saved' | 'manual' | 'ai';
 
 export default function RoadmapsPage() {
   const [roadmaps, setRoadmaps] = useState<LearningRoadmap[]>([]);
@@ -14,6 +17,7 @@ export default function RoadmapsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authRequired, setAuthRequired] = useState(false);
+  const [mode, setMode] = useState<RoadmapMode>('saved');
   // Guards against a double click sending two DELETE requests: the ref blocks
   // re-entry synchronously, the state drives the disabled attribute.
   const deletingRef = useRef<Set<string>>(new Set());
@@ -38,7 +42,15 @@ export default function RoadmapsPage() {
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('mode') === 'ai') setMode('ai');
+    void load();
+  }, []);
+
+  const selectMode = (next: RoadmapMode) => {
+    setMode(next);
+    window.history.replaceState(window.history.state, '', next === 'ai' ? '/learning/roadmaps?mode=ai' : '/learning/roadmaps');
+  };
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
@@ -49,6 +61,7 @@ export default function RoadmapsPage() {
       setRoadmaps((current) => [roadmap, ...current]);
       setTitle('');
       setGoal('');
+      selectMode('saved');
     } catch {
       setError('Unable to create roadmap. Review required fields, then retry.');
     } finally {
@@ -58,6 +71,8 @@ export default function RoadmapsPage() {
 
   const remove = async (id: string) => {
     if (deletingRef.current.has(id)) return;
+    const roadmap = roadmaps.find((entry) => entry.id === id);
+    if (!roadmap || !window.confirm(`Delete roadmap "${roadmap.title}" and all its steps?`)) return;
     deletingRef.current.add(id);
     setDeletingIds([...deletingRef.current]);
     setError(null);
@@ -100,8 +115,18 @@ export default function RoadmapsPage() {
         </p>
       </header>
 
+      <nav aria-label="Roadmap actions" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+        {([
+          ['saved', 'Saved roadmaps'],
+          ['manual', 'Create manually'],
+          ['ai', 'Create with AI'],
+        ] as [RoadmapMode, string][]).map(([value, label]) => (
+          <button key={value} type="button" className={mode === value ? 'btn btn-primary' : 'btn btn-secondary'} aria-pressed={mode === value} onClick={() => selectMode(value)}>{label}</button>
+        ))}
+      </nav>
+
       {/* Create Roadmap Form */}
-      {!authRequired && <div
+      {mode === 'manual' && !authRequired && <div
         style={{
           background: 'var(--color-white)',
           border: '1px solid var(--color-border)',
@@ -176,6 +201,8 @@ export default function RoadmapsPage() {
         </form>
       </div>}
 
+      {mode === 'ai' && <AIRoadmapCreator authRequired={authRequired} onSaved={() => { selectMode('saved'); void load(); }} />}
+
       {error && (
         <div
           role="alert"
@@ -207,11 +234,11 @@ export default function RoadmapsPage() {
         </div>
       )}
 
-      {loading ? (
+      {mode === 'saved' && (loading ? (
         <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-gray)' }}>
           Loading roadmaps…
         </div>
-      ) : authRequired ? null : roadmaps.length === 0 ? (
+      ) : authRequired || error ? null : roadmaps.length === 0 ? (
         <div
           style={{
             textAlign: 'center',
@@ -241,7 +268,7 @@ export default function RoadmapsPage() {
             />
           ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }
