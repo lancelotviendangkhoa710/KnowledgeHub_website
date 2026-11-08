@@ -106,6 +106,10 @@ asked for the decision to be recorded formally.
   scheduled in `backend/routes/console.php` (`ai:purge-deleted-users`, daily 03:00). Requires a
   scheduler process on the host (Render Cron Job running `php artisan schedule:run`, or a daily
   `php artisan ai:purge-deleted-users` job).
+- Free-tier fallback: `POST /api/internal/ai/purge-deleted-users` protected by the
+  `X-Retention-Token` header (`RETENTION_CRON_TOKEN` env, constant-time compare, 6/min/IP).
+  Call it from GitHub Actions/cron-job.org; returns 503 when the token is not configured.
+  Runbook: `database/manual/README.md`.
 - M1 ordering/idempotency migration: `database/migrations/2026_11_08_000001_add_message_sequence_and_idempotency.php`.
 
 ## Validation

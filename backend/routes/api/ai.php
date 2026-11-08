@@ -2,9 +2,14 @@
 
 use App\Http\Controllers\AI\ConversationController;
 use App\Http\Controllers\AI\MessageController;
+use App\Http\Controllers\AI\RetentionPurgeController;
 use App\Http\Controllers\AI\RoadmapGenerationController;
 use App\Http\Controllers\AI\UserMemoryController;
 use Illuminate\Support\Facades\Route;
+
+// Internal retention trigger for hosts without a scheduler. Protected by
+// X-Retention-Token (RETENTION_CRON_TOKEN), not Sanctum, and rate-limited.
+Route::post('/internal/ai/purge-deleted-users', RetentionPurgeController::class);
 
 // AI service routes. AI-05 route/schema owner is TEAM_MEMBER_C; AI-01..03 owner must be
 // assigned in docs/team/OWNERSHIP.md before merge (still TBD at the time of writing).

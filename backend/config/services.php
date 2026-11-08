@@ -45,6 +45,8 @@ return [
         'chat_timeout' => (int) env('AI_CHAT_TIMEOUT', 40),
         'chat_history_limit' => (int) env('AI_CHAT_HISTORY_LIMIT', 20),
         'chat_memory_limit' => (int) env('AI_CHAT_MEMORY_LIMIT', 10),
+        // Shared secret for the internal retention cron endpoint; empty disables it.
+        'retention_token' => env('RETENTION_CRON_TOKEN'),
     ],
 
 ];
