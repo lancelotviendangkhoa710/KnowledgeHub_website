@@ -54,20 +54,15 @@ host may not run a scheduler/cron. Options:
      `429` rate limit (6/min/IP), `503` token not configured.
    - Never commit the token or put it in a URL/query string.
 
-   GitHub Actions scheduled example (store the token in repo secrets):
+   GitHub Actions workflow đã có trong repo: `.github/workflows/ai-retention.yml`
+   (chạy 20:00 UTC = 03:00 Asia/Ho_Chi_Minh; default branch hiện là `dev`).
+   Secret cần đặt tên `RETENTION_CRON_TOKEN`; test tay bằng **Actions → ai-retention → Run workflow**.
    ```yaml
-   name: retention-purge
    on:
-     schedule: [{ cron: '0 3 * * *' }]
+     schedule: [{ cron: '0 20 * * *' }]   # 03:00 VN
      workflow_dispatch:
-   jobs:
-     purge:
-       runs-on: ubuntu-latest
-       steps:
-         - run: |
-             curl -fsS -X POST \
-               -H "X-Retention-Token: ${{ secrets.RETENTION_CRON_TOKEN }}" \
-               https://knowledgehub-website.onrender.com/api/internal/ai/purge-deleted-users
+   # step: POST .../api/internal/ai/purge-deleted-users
+   #       header X-Retention-Token: ${{ secrets.RETENTION_CRON_TOKEN }}
    ```
 3. **Render Cron Job** (if the plan supports it) running `php artisan ai:purge-deleted-users`.
 
