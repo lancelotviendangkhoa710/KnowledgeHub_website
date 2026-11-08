@@ -26,7 +26,7 @@ Route::prefix('v1')->group(function () {
     Route::get('versions/{versionId}/attachments', [ArticleAttachmentController::class, 'index']);
 
     // ── Authenticated Content Endpoints ────────────────────────────────────
-    Route::middleware('auth')->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
         // Bookmarks (Authenticated Users / Learners)
         Route::get('bookmarks', [BookmarkController::class, 'index']);
         Route::post('articles/{articleId}/bookmark', [BookmarkController::class, 'store']);
