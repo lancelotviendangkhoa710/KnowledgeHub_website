@@ -68,6 +68,10 @@ The repository owner approved **Option B (M1)** on 2026-11-08. Implemented in th
 - **Production action required:** run `php artisan migrate --force` on the backend service after
   deployment (Render Shell / release command) to activate M1. Until then the fallback path keeps
   chat working but without the durable unique constraint.
+- **Render free tier (no shell):** run the idempotent SQL in
+  `database/manual/2026_11_08_000001_m1.sql` via the **Supabase SQL Editor** on the production
+  project. It applies the same columns/backfill/indexes and inserts the Laravel `migrations` row,
+  so no shell or redeploy is needed. Runbook: `database/manual/README.md`.
 
 ## Decision needed
 
