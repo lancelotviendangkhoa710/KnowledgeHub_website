@@ -44,9 +44,31 @@ host may not run a scheduler/cron. Options:
    $$);
    ```
    (Messages cascade from conversations; this bypasses Laravel logging. Confirm with Privacy.)
-2. **External free cron** (GitHub Actions / cron-job.org) calling a protected internal endpoint.
-   This endpoint does not exist yet; if you want this route, ask and it can be added with a
-   `RETENTION_CRON_TOKEN` secret and rate limiting.
+2. **External free cron** (GitHub Actions / cron-job.org) calling the protected internal endpoint
+   (implemented):
+   - Set a long random `RETENTION_CRON_TOKEN` on the Render backend service, then redeploy
+     (`php artisan config:cache` runs at boot).
+   - URL: `POST https://knowledgehub-website.onrender.com/api/internal/ai/purge-deleted-users`
+   - Header: `X-Retention-Token: <RETENTION_CRON_TOKEN>`
+   - Responses: `200` success (exit_code + command output), `401` missing/wrong token,
+     `429` rate limit (6/min/IP), `503` token not configured.
+   - Never commit the token or put it in a URL/query string.
+
+   GitHub Actions scheduled example (store the token in repo secrets):
+   ```yaml
+   name: retention-purge
+   on:
+     schedule: [{ cron: '0 3 * * *' }]
+     workflow_dispatch:
+   jobs:
+     purge:
+       runs-on: ubuntu-latest
+       steps:
+         - run: |
+             curl -fsS -X POST \
+               -H "X-Retention-Token: ${{ secrets.RETENTION_CRON_TOKEN }}" \
+               https://knowledgehub-website.onrender.com/api/internal/ai/purge-deleted-users
+   ```
 3. **Render Cron Job** (if the plan supports it) running `php artisan ai:purge-deleted-users`.
 
 ## D. Rollback
