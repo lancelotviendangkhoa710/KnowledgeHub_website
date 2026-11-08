@@ -54,5 +54,8 @@ __pycache__/
 venv/
 *.egg-info/
 
+# Personal learning notes (local only)
+/personal-notes/ai-service-engineer-study-guide.md
+
 # Binaries
 *.exe
