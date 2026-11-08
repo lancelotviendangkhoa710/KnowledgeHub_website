@@ -701,7 +701,12 @@ tokens; configure an API key with available balance before enabling production t
 
 - Sync V1, no streaming. The pair is persisted in one transaction **only after** the AI call succeeds; provider failures leave no partial rows.
 - Context sent to the AI service: last ≤19 messages (oldest first) + active explicit memories (≤10). Message/memory content is treated as untrusted data; logs never include content.
-- Best-effort idempotency via `client_message_id` in `messages.metadata`; there is **no unique constraint yet** — durable idempotency needs the M1 migration (ADR-B).
+- Idempotency: M1 (`2026_11_08_000001`) adds `messages.client_message_id` + unique
+  `(conversation_id, client_message_id)` for user messages; retries replay the stored pair. The
+  service keeps a pre-migration fallback based on `messages.metadata`, so deploy order is safe;
+  run `php artisan migrate --force` to activate the durable constraint.
+- Ordering: M1 adds `messages.sequence` (unique per conversation); history/context order and the
+  `before_id` cursor use it when present, falling back to `(created_at, id)` for legacy rows.
 - Conversation title is set from the first user message when empty (≤120 chars).
 
 #### AI-03 — User Memory (explicit-only)
