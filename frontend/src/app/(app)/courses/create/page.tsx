@@ -638,11 +638,34 @@ List the mathematical or operational guarantees enforced by this architecture.
   }
 
   return (
-    <div className="container" style={{ paddingTop: '2.5rem', maxWidth: 960 }}>
+    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem', maxWidth: 1600, width: '100%' }}>
+      <style>{`
+        .studio-split-container {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 1.5rem;
+          align-items: start;
+        }
+        @media (max-width: 1024px) {
+          .studio-split-container {
+            grid-template-columns: 1fr;
+          }
+        }
+        .studio-pane {
+          max-height: calc(100vh - 120px);
+          overflow-y: auto;
+          scrollbar-width: thin;
+        }
+        @media (max-width: 1024px) {
+          .studio-pane {
+            max-height: none;
+          }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
             <span
               className="badge"
               style={{
@@ -657,9 +680,9 @@ List the mathematical or operational guarantees enforced by this architecture.
             >
               Contributor Studio
             </span>
-            <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>— Internal Publishing Workflow</span>
+            <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>— Side-by-Side Live Course Studio</span>
           </div>
-          <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800 }}>Author Course Material</h1>
+          <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2rem', fontWeight: 800, margin: 0 }}>Course Authoring Studio</h1>
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -669,7 +692,7 @@ List the mathematical or operational guarantees enforced by this architecture.
             className="btn btn-secondary"
             style={{ fontSize: '0.875rem' }}
           >
-            {previewMode ? 'Edit Raw Markdown' : 'Preview Layout'}
+            {previewMode ? 'Single View Mode' : 'Toggle Single View'}
           </button>
         </div>
       </div>
@@ -747,121 +770,123 @@ List the mathematical or operational guarantees enforced by this architecture.
         </div>
       )}
 
-      {/* Editor Form */}
-      <div
-        style={{
-          background: 'var(--color-white)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '2.5rem',
-          boxShadow: 'var(--shadow-sm)',
-        }}
-      >
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-              Course Title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="e.g., Foundations of Database Storage Engines"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--color-white)',
-                border: '1.5px solid var(--color-border)',
-                color: 'var(--color-charcoal)',
-                fontSize: '1rem',
-                outline: 'none',
-              }}
-            />
+      {/* Main Studio 2-Column Split Layout */}
+      <div className="studio-split-container">
+        {/* Left Column: Builder Controls & Form */}
+        <div
+          className="studio-pane"
+          style={{
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
+                Course Title *
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                placeholder="e.g., Foundations of Database Storage Engines"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-white)',
+                  border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-charcoal)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
+                Domain Category *
+              </label>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-white)',
+                  border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-charcoal)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                }}
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-              Domain Category *
-            </label>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--color-white)',
-                border: '1.5px solid var(--color-border)',
-                color: 'var(--color-charcoal)',
-                fontSize: '0.95rem',
-                outline: 'none',
-              }}
-            >
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
+                Canonical Slug URL
+              </label>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="url-friendly-slug"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-white)',
+                  border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-gray)',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '0.875rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-              Canonical Slug URL
-            </label>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="url-friendly-slug"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--color-white)',
-                border: '1.5px solid var(--color-border)',
-                color: 'var(--color-gray)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.875rem',
-                outline: 'none',
-              }}
-            />
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
+                Tags (comma separated)
+              </label>
+              <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="e.g., storage, lsm-trees, wal"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-white)',
+                  border: '1.5px solid var(--color-border)',
+                  color: 'var(--color-charcoal)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                }}
+              />
+            </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-              Tags (comma separated)
-            </label>
-            <input
-              type="text"
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              placeholder="e.g., storage, lsm-trees, wal"
-              style={{
-                width: '100%',
-                padding: '0.75rem 1rem',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--color-white)',
-                border: '1.5px solid var(--color-border)',
-                color: 'var(--color-charcoal)',
-                fontSize: '0.95rem',
-                outline: 'none',
-              }}
-            />
-          </div>
-        </div>
+          {/* Content Body Editor */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+                Curriculum Body (Markdown & Code Supported) *
+              </label>
 
-        {/* Content Body Editor or Preview */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
-              Curriculum Body (Markdown & Code Supported) *
-            </label>
-
-            {!previewMode && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <button
                   type="button"
@@ -888,246 +913,179 @@ List the mathematical or operational guarantees enforced by this architecture.
                   <span>{showVideoModal ? 'Close Video Tool' : 'Insert YouTube Video'}</span>
                 </button>
               </div>
-            )}
-          </div>
-
-          {videoInsertNotice && (
-            <div
-              style={{
-                marginBottom: '0.75rem',
-                padding: '0.55rem 0.85rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                color: '#065F46',
-                fontSize: '0.82rem',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.45rem',
-              }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              <span>{videoInsertNotice}</span>
             </div>
-          )}
 
-          {/* YouTube Video Insertion Card */}
-          {showVideoModal && !previewMode && (
-            <div
-              style={{
-                marginBottom: '1rem',
-                padding: '1.25rem',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: '#FFF5F5',
-                border: '1.5px solid #FECDD3',
-                boxShadow: 'var(--shadow-xs)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="#E11D48">
-                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
-                  <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
-                </svg>
-                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#9F1239' }}>
-                  Insert YouTube Video Lecture
-                </h4>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
-                <div>
-                  <label
-                    htmlFor="youtube-modal-video-url"
-                    style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}
-                  >
-                    YouTube Link or Video ID *
-                  </label>
-                  <input
-                    id="youtube-modal-video-url"
-                    type="text"
-                    value={videoInputUrl}
-                    onChange={(e) => setVideoInputUrl(e.target.value)}
-                    placeholder="e.g. https://youtu.be/dQw4w9WgXcQ or https://www.youtube.com/watch?v=..."
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      border: '1px solid #FDA4AF',
-                      fontSize: '0.85rem',
-                      fontFamily: 'var(--font-mono, monospace)',
-                      color: 'var(--color-charcoal)',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="youtube-modal-video-title"
-                    style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}
-                  >
-                    Video Lecture Title (optional)
-                  </label>
-                  <input
-                    id="youtube-modal-video-title"
-                    type="text"
-                    value={videoCustomTitle}
-                    onChange={(e) => setVideoCustomTitle(e.target.value)}
-                    placeholder="e.g. Raft Consensus Protocol Walkthrough"
-                    style={{
-                      width: '100%',
-                      padding: '0.55rem 0.75rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      border: '1px solid #FDA4AF',
-                      fontSize: '0.85rem',
-                      color: 'var(--color-charcoal)',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Real-time Validation Feedback */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
-                <div style={{ fontSize: '0.8rem' }}>
-                  {!videoInputUrl.trim() && (
-                    <span style={{ color: 'var(--color-gray)' }}>
-                      Supports standard, short, embed, or shorts YouTube URLs.
-                    </span>
-                  )}
-                  {videoInputUrl.trim() && detectedVideoId && (
-                    <span style={{ color: '#047857', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      Valid YouTube ID: <code>{detectedVideoId}</code>
-                    </span>
-                  )}
-                  {videoInputUrl.trim() && !detectedVideoId && (
-                    <span style={{ color: '#B91C1C', fontWeight: 600 }}>
-                      ⚠ Invalid YouTube link. Please check the URL or provide a valid 11-character video ID.
-                    </span>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowVideoModal(false);
-                      setVideoInputUrl('');
-                      setVideoCustomTitle('');
-                    }}
-                    style={{
-                      padding: '0.4rem 0.75rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      border: '1px solid var(--color-border)',
-                      backgroundColor: 'transparent',
-                      color: 'var(--color-charcoal)',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    disabled={!detectedVideoId}
-                    onClick={handleInsertVideo}
-                    style={{
-                      padding: '0.4rem 0.9rem',
-                      borderRadius: 'var(--radius-sm, 6px)',
-                      border: 'none',
-                      backgroundColor: detectedVideoId ? '#E11D48' : '#FDA4AF',
-                      color: 'white',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: detectedVideoId ? 'pointer' : 'not-allowed',
-                      transition: 'background-color var(--transition-fast)',
-                    }}
-                  >
-                    Insert into Lecture
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {previewMode ? (
-            <div
-              className="prose"
-              style={{
-                minHeight: 420,
-                padding: '2.5rem',
-                background: 'var(--color-white)',
-                border: '1.5px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-sm)',
-              }}
-            >
+            {videoInsertNotice && (
               <div
                 style={{
+                  marginBottom: '0.75rem',
+                  padding: '0.55rem 0.85rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  fontSize: '0.82rem',
+                  fontWeight: 500,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingBottom: '1.25rem',
-                  marginBottom: '2rem',
-                  borderBottom: '1px solid var(--color-border)',
-                  flexWrap: 'wrap',
-                  gap: '0.75rem',
+                  gap: '0.45rem',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                  <span
-                    className="badge"
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>{videoInsertNotice}</span>
+              </div>
+            )}
+
+            {showVideoModal && (
+              <div
+                style={{
+                  marginBottom: '1rem',
+                  padding: '1.25rem',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--color-off-white, #FAF7F5)',
+                  border: '1.5px solid #FECACA',
+                  boxShadow: 'var(--shadow-sm)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#E11D48">
+                      <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                      <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
+                    </svg>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-charcoal)' }}>
+                      Embed YouTube Lecture Video
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowVideoModal(false)}
                     style={{
-                      backgroundColor: 'var(--color-primary-pale)',
-                      color: 'var(--color-primary)',
-                      border: '1px solid var(--color-border)',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      padding: '0.2rem 0.65rem',
-                      borderRadius: 'var(--radius-full)',
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'var(--color-gray)',
+                      fontSize: '1.1rem',
+                      cursor: 'pointer',
+                      padding: '0.2rem 0.4rem',
+                      lineHeight: 1,
                     }}
                   >
-                    Live Reader Preview
-                  </span>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>
-                    Interactive YouTube player & formatting simulation
-                  </span>
+                    &times;
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setPreviewMode(false)}
-                  style={{
-                    padding: '0.3rem 0.75rem',
-                    borderRadius: 'var(--radius-sm, 6px)',
-                    border: '1px solid var(--color-border)',
-                    backgroundColor: 'var(--color-off-white)',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    color: 'var(--color-charcoal)',
-                  }}
-                >
-                  Return to Markdown Editor &larr;
-                </button>
+                <div style={{ display: 'grid', gap: '0.75rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: '0.35rem' }}>
+                      YouTube URL or Video ID *
+                    </label>
+                    <input
+                      type="text"
+                      value={videoInputUrl}
+                      onChange={(e) => setVideoInputUrl(e.target.value)}
+                      placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ or https://youtu.be/dQw4w9WgXcQ"
+                      style={{
+                        width: '100%',
+                        padding: '0.6rem 0.85rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        border: '1.5px solid var(--color-border)',
+                        background: 'var(--color-white)',
+                        fontSize: '0.875rem',
+                        outline: 'none',
+                        color: 'var(--color-charcoal)',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: '0.35rem' }}>
+                      Lecture Video Title (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={videoCustomTitle}
+                      onChange={(e) => setVideoCustomTitle(e.target.value)}
+                      placeholder="e.g. Lecture 1: Distributed Consensus Introduction"
+                      style={{
+                        width: '100%',
+                        padding: '0.6rem 0.85rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        border: '1.5px solid var(--color-border)',
+                        background: 'var(--color-white)',
+                        fontSize: '0.875rem',
+                        outline: 'none',
+                        color: 'var(--color-charcoal)',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div style={{ fontSize: '0.8rem', color: detectedVideoId ? '#059669' : 'var(--color-gray)' }}>
+                    {detectedVideoId ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Detected Video ID: <code>{detectedVideoId}</code>
+                      </span>
+                    ) : (
+                      videoInputUrl.trim() ? (
+                        <span style={{ color: '#DC2626' }}>Invalid YouTube URL or ID format</span>
+                      ) : (
+                        <span>Paste a YouTube URL from your lecture repository</span>
+                      )
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowVideoModal(false)}
+                      style={{
+                        padding: '0.45rem 0.85rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        border: '1px solid var(--color-border)',
+                        backgroundColor: 'var(--color-white)',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        color: 'var(--color-charcoal)',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!detectedVideoId}
+                      onClick={handleInsertVideo}
+                      style={{
+                        padding: '0.45rem 0.95rem',
+                        borderRadius: 'var(--radius-sm, 6px)',
+                        border: 'none',
+                        backgroundColor: detectedVideoId ? '#E11D48' : 'var(--color-border)',
+                        color: 'white',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: detectedVideoId ? 'pointer' : 'not-allowed',
+                        transition: 'background-color var(--transition-fast)',
+                      }}
+                    >
+                      Insert into Lecture
+                    </button>
+                  </div>
+                </div>
               </div>
+            )}
 
-              <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800, marginBottom: '2rem', lineHeight: 1.25 }}>
-                {title || 'Untitled Course Material'}
-              </h1>
-
-              <div>{renderLivePreview(content)}</div>
-            </div>
-          ) : (
             <textarea
               ref={textareaRef}
-              rows={16}
+              rows={18}
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              placeholder="Write your curriculum in markdown..."
               style={{
                 width: '100%',
                 padding: '1.25rem',
@@ -1136,40 +1094,93 @@ List the mathematical or operational guarantees enforced by this architecture.
                 border: '1.5px solid var(--color-border)',
                 color: 'var(--color-charcoal)',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '0.95rem',
+                fontSize: '0.925rem',
                 lineHeight: 1.6,
                 outline: 'none',
                 resize: 'vertical',
               }}
             />
-          )}
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border-light)', paddingTop: '1.25rem' }}>
+            <Link href="/courses" className="btn btn-outline" style={{ fontSize: '0.875rem' }}>
+              Cancel
+            </Link>
+
+            <div style={{ display: 'flex', gap: '0.85rem' }}>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => handleSubmit(false)}
+                className="btn btn-secondary"
+                style={{ fontSize: '0.875rem' }}
+              >
+                Save as Draft
+              </button>
+
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => handleSubmit(true)}
+                className="btn btn-primary"
+                style={{ fontSize: '0.875rem' }}
+              >
+                {isSubmitting ? 'Publishing...' : 'Publish to Platform (Direct)'}
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--color-border-light)', paddingTop: '1.5rem' }}>
-          <Link href="/courses" className="btn btn-outline" style={{ fontSize: '0.875rem' }}>
-            Cancel
-          </Link>
-
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handleSubmit(false)}
-              className="btn btn-secondary"
-            >
-              Save as Draft
-            </button>
-
-            <button
-              type="button"
-              disabled={isSubmitting}
-              onClick={() => handleSubmit(true)}
-              className="btn btn-primary"
-            >
-              {isSubmitting ? 'Publishing...' : 'Publish to Platform (Direct)'}
-            </button>
+        {/* Right Column: Live Student Reader Preview */}
+        <div
+          className="studio-pane"
+          style={{
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingBottom: '1rem',
+              marginBottom: '1.5rem',
+              borderBottom: '1px solid var(--color-border)',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: 'var(--color-primary-pale)',
+                  color: 'var(--color-primary)',
+                  border: '1px solid var(--color-border)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '0.2rem 0.65rem',
+                  borderRadius: 'var(--radius-full)',
+                }}
+              >
+                Live Student Reader Preview
+              </span>
+              <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>
+                Real-time synchronized preview
+              </span>
+            </div>
           </div>
+
+          <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2rem', fontWeight: 800, marginBottom: '1.5rem', lineHeight: 1.25 }}>
+            {title || 'Untitled Course Material'}
+          </h1>
+
+          <div>{renderLivePreview(content)}</div>
         </div>
       </div>
     </div>
