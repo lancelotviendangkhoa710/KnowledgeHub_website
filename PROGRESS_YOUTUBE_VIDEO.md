@@ -1,0 +1,24 @@
+# Tiết độ Tích hợp Video YouTube vào Bài giảng & Studio Soạn thảo (KnowledgeHub)
+
+### Giai đoạn 0: Khởi tạo Tiến trình, Branch Git & Kích hoạt Watchdog
+- [x] **0.1. Tạo file theo dõi tiến độ `PROGRESS_YOUTUBE_VIDEO.md`**
+- [x] **0.2. Cấu hình & kích hoạt `watchdog_runner.py`**
+- [x] **0.3. Tạo nhánh Git tính năng độc lập**
+
+### Giai đoạn 1: Xây dựng Utility Phân tích Link & Component Trình phát YouTube
+- [ ] **1.1. Xây dựng hàm Helper trích xuất YouTube Video ID chuẩn xác**
+- [ ] **1.2. Tạo Component `YouTubeEmbed.tsx` chuẩn UX/UI và Responsive**
+
+### Giai đoạn 2: Nâng cấp Bộ đọc Markdown trên Trang Chi tiết Khóa học (`/courses/[id]`)
+- [ ] **2.1. Cập nhật hàm Render Markdown nhận diện Video YouTube**
+- [ ] **2.2. Xử lý trường hợp Video nằm trong vùng Curriculum Gate của Khách**
+- [ ] **2.3. Cập nhật Mục lục Động (TOC) cho phần Video**
+
+### Giai đoạn 3: Nâng cấp Contributor Studio Soạn thảo Khóa học (`/courses/create`)
+- [ ] **3.1. Thêm công cụ chèn Video nhanh trên giao diện Soạn thảo**
+- [ ] **3.2. Cập nhật Chế độ Xem trước Trực tiếp (Live Preview)**
+
+### Giai đoạn 4: Kiểm thử, Tối ưu & Đóng gói Pull Request
+- [ ] **4.1. Kiểm tra Build & Type Safety trong `frontend/`**
+- [ ] **4.2. Chạy kịch bản kiểm tra Guardrails dự án**
+- [ ] **4.3. Tạo Pull Request**
