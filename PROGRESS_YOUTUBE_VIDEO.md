@@ -6,7 +6,7 @@
 - [x] **0.3. Tạo nhánh Git tính năng độc lập**
 
 ### Giai đoạn 1: Xây dựng Utility Phân tích Link & Component Trình phát YouTube
-- [ ] **1.1. Xây dựng hàm Helper trích xuất YouTube Video ID chuẩn xác**
+- [x] **1.1. Xây dựng hàm Helper trích xuất YouTube Video ID chuẩn xác**
 - [ ] **1.2. Tạo Component `YouTubeEmbed.tsx` chuẩn UX/UI và Responsive**
 
 ### Giai đoạn 2: Nâng cấp Bộ đọc Markdown trên Trang Chi tiết Khóa học (`/courses/[id]`)
