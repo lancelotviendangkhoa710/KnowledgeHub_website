@@ -1,5 +1,6 @@
 import { Article, Category, Tag } from '@/types/content';
 import { mockArticles, mockCategories, mockTags } from './mockContent';
+import { getAccessToken } from '@/lib/authToken';
 
 const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
 const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
@@ -35,9 +36,15 @@ export async function fetchArticles(params?: {
     if (params?.tagSlug) url.searchParams.append('tag_slug', params.tagSlug);
     if (params?.search) url.searchParams.append('search', params.search);
 
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const bearerSession = getAccessToken();
+    if (bearerSession) {
+      headers['Authorization'] = `Bearer ${bearerSession}`;
+    }
+
     const res = await fetch(url.toString(), {
-      next: { revalidate: 60 },
-      headers: { Accept: 'application/json' },
+      ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
+      headers,
     });
 
     if (res.ok) {
@@ -79,9 +86,15 @@ export async function fetchArticles(params?: {
  */
 export async function fetchArticle(identifier: string): Promise<Article | null> {
   try {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const bearerSession = getAccessToken();
+    if (bearerSession) {
+      headers['Authorization'] = `Bearer ${bearerSession}`;
+    }
+
     const res = await fetch(buildApiUrl(`/articles/${identifier}`), {
-      next: { revalidate: 60 },
-      headers: { Accept: 'application/json' },
+      ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
+      headers,
     });
 
     if (res.ok) {

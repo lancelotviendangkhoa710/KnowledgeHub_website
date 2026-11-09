@@ -899,9 +899,18 @@ List the mathematical or operational guarantees enforced by this architecture.
     }
   }, []);
 
-  // Auto-save draft every 20 seconds if title or content exists
+  // Auto-save draft every 20 seconds if title or content exists and no draft restore prompt is pending
   useEffect(() => {
+    // Keep pending restore draft safe from being overwritten while prompt is open
+    if (pendingDraft !== null) {
+      return;
+    }
+
     const timer = setInterval(() => {
+      // Re-verify pendingDraft is null before writing
+      if (pendingDraft !== null) {
+        return;
+      }
       if ((title.trim().length > 0 || content.trim().length > 50) && typeof window !== 'undefined') {
         const draftData: StoredDraft = {
           title,
@@ -923,7 +932,7 @@ List the mathematical or operational guarantees enforced by this architecture.
     }, 20000);
 
     return () => clearInterval(timer);
-  }, [title, slug, categoryId, selectedTags, content, isSlugLocked]);
+  }, [pendingDraft, title, slug, categoryId, selectedTags, content, isSlugLocked]);
 
   const handleRestoreDraft = () => {
     if (!pendingDraft) return;
@@ -1058,19 +1067,19 @@ List the mathematical or operational guarantees enforced by this architecture.
       const errorObj = err as { status?: number; message?: string; errors?: Record<string, string[]> };
       if (errorObj?.status === 401 || errorObj?.message === 'Unauthenticated.') {
         setErrorMessage('Authentication session expired or unauthorized. Please sign in to your contributor account.');
-        setIsSubmitting(false);
-        return;
-      }
-      if (errorObj?.status && errorObj.status >= 400) {
+      } else if (errorObj?.status && errorObj.status >= 400) {
         const firstErr = errorObj.errors ? Object.values(errorObj.errors)[0]?.[0] : undefined;
         setErrorMessage(firstErr || errorObj.message || 'Failed to save course. Please check your inputs.');
-        setIsSubmitting(false);
-        return;
+      } else {
+        setErrorMessage(
+          errorObj?.message || 'Network error or unable to reach API service. Your course draft has been preserved locally.'
+        );
       }
-      // Local fallback simulation if API is unreachable in offline dev
+      setIsSubmitting(false);
+      return;
     }
 
-    // Clear saved drafts upon successful save or publish
+    // Clear saved drafts ONLY upon confirmed successful save or publish
     if (typeof window !== 'undefined') {
       localStorage.removeItem(LOCAL_STUDIO_DRAFT_KEY);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
@@ -1079,8 +1088,8 @@ List the mathematical or operational guarantees enforced by this architecture.
     setIsSubmitting(false);
     setSuccessMessage(
       parentId
-        ? (publish ? 'New course version published successfully! Redirecting...' : 'Draft revision saved to your workbench.')
-        : (publish ? 'Course successfully published to the KnowledgeHub platform! Redirecting to course reader...' : 'Course draft saved to your contributor workbench.')
+        ? (publish ? 'New course version published successfully! Redirecting to course reader...' : 'Draft revision saved successfully! Redirecting to course reader...')
+        : (publish ? 'Course successfully published to the KnowledgeHub platform! Redirecting to course reader...' : 'Course draft saved successfully! Redirecting to course reader...')
     );
 
     setTimeout(() => {
