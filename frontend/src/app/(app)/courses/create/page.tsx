@@ -362,7 +362,8 @@ List the mathematical or operational guarantees enforced by this architecture.
 > Operational Invariant: No state machine may execute state transitions out of global log order.
 `
   );
-  const [previewMode, setPreviewMode] = useState(false);
+  type ViewMode = 'split' | 'editor' | 'preview';
+  const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -685,14 +686,102 @@ List the mathematical or operational guarantees enforced by this architecture.
           <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2rem', fontWeight: 800, margin: 0 }}>Course Authoring Studio</h1>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        {/* View Mode Switcher: Split View | Focus Editor | Full Preview */}
+        <div
+          role="tablist"
+          aria-label="Studio View Mode"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            backgroundColor: '#F1F5F9',
+            padding: '3px',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--color-border)',
+            gap: '2px',
+          }}
+        >
           <button
             type="button"
-            onClick={() => setPreviewMode(!previewMode)}
-            className="btn btn-secondary"
-            style={{ fontSize: '0.875rem' }}
+            role="tab"
+            aria-selected={viewMode === 'split'}
+            onClick={() => setViewMode('split')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.45rem 0.85rem',
+              borderRadius: 'calc(var(--radius-md) - 2px)',
+              border: 'none',
+              backgroundColor: viewMode === 'split' ? 'var(--color-primary)' : 'transparent',
+              color: viewMode === 'split' ? '#FFFFFF' : 'var(--color-charcoal)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: viewMode === 'split' ? 'var(--shadow-xs)' : 'none',
+              transition: 'all var(--transition-fast)',
+            }}
           >
-            {previewMode ? 'Single View Mode' : 'Toggle Single View'}
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="12" y1="3" x2="12" y2="21" />
+            </svg>
+            <span>Split View</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === 'editor'}
+            onClick={() => setViewMode('editor')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.45rem 0.85rem',
+              borderRadius: 'calc(var(--radius-md) - 2px)',
+              border: 'none',
+              backgroundColor: viewMode === 'editor' ? 'var(--color-primary)' : 'transparent',
+              color: viewMode === 'editor' ? '#FFFFFF' : 'var(--color-charcoal)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: viewMode === 'editor' ? 'var(--shadow-xs)' : 'none',
+              transition: 'all var(--transition-fast)',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+            <span>Focus Editor</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === 'preview'}
+            onClick={() => setViewMode('preview')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.45rem 0.85rem',
+              borderRadius: 'calc(var(--radius-md) - 2px)',
+              border: 'none',
+              backgroundColor: viewMode === 'preview' ? 'var(--color-primary)' : 'transparent',
+              color: viewMode === 'preview' ? '#FFFFFF' : 'var(--color-charcoal)',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: viewMode === 'preview' ? 'var(--shadow-xs)' : 'none',
+              transition: 'all var(--transition-fast)',
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span>Full Preview</span>
           </button>
         </div>
       </div>
@@ -770,12 +859,22 @@ List the mathematical or operational guarantees enforced by this architecture.
         </div>
       )}
 
-      {/* Main Studio 2-Column Split Layout */}
-      <div className="studio-split-container">
+      {/* Main Studio Dynamic Layout */}
+      <div
+        className={viewMode === 'split' ? 'studio-split-container' : undefined}
+        style={{
+          display: viewMode === 'split' ? undefined : 'flex',
+          justifyContent: 'center',
+          maxWidth: viewMode === 'split' ? '100%' : viewMode === 'editor' ? '1080px' : '960px',
+          margin: '0 auto',
+        }}
+      >
         {/* Left Column: Builder Controls & Form */}
         <div
           className="studio-pane"
           style={{
+            display: viewMode === 'preview' ? 'none' : 'block',
+            width: viewMode === 'editor' ? '100%' : undefined,
             background: 'var(--color-white)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-lg)',
@@ -1136,6 +1235,8 @@ List the mathematical or operational guarantees enforced by this architecture.
         <div
           className="studio-pane"
           style={{
+            display: viewMode === 'editor' ? 'none' : 'block',
+            width: viewMode === 'preview' ? '100%' : undefined,
             background: 'var(--color-white)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-lg)',

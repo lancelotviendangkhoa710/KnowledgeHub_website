@@ -9,7 +9,7 @@
 
 ### Giai đoạn 1: Thiết kế Bố cục Split-Screen 2 Cột (Side-by-Side Builder & Preview)
 - [x] 1.1. Tái cấu trúc Layout trang `/courses/create` thành 2 cột linh hoạt
-- [ ] 1.2. Thêm Bộ chuyển đổi Chế độ Xem (View Mode Switcher)
+- [x] 1.2. Thêm Bộ chuyển đổi Chế độ Xem (View Mode Switcher)
 
 ### Giai đoạn 2: Xây dựng Thanh Công cụ Soạn thảo Thông minh (Curriculum Toolbar)
 - [ ] 2.1. Tạo thanh công cụ định dạng nhanh phía trên khung Textarea
