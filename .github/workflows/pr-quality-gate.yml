@@ -18,7 +18,9 @@ jobs:
 
       - name: Run repository guardrails
         shell: pwsh
-        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/${{ github.base_ref }}" -RequireTaskId
+        env:
+          PR_BASE_REF: ${{ github.base_ref }}
+        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/$env:PR_BASE_REF" -RequireTaskId
 
   # ─── Job 1: Kiểm tra tên branch đúng convention ───────────────────────────
   branch-convention:
@@ -26,8 +28,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check branch name
+        env:
+          PR_HEAD_REF: ${{ github.head_ref }}
         run: |
-          BRANCH="${{ github.head_ref }}"
+          BRANCH="$PR_HEAD_REF"
           echo "Branch: $BRANCH"
           # Phải bắt đầu bằng p1/, p2/, p3/, hotfix/, release/
           if [[ ! "$BRANCH" =~ ^(p1|p2|p3|hotfix|release)/.+ ]]; then
@@ -47,9 +51,11 @@ jobs:
           fetch-depth: 0
 
       - name: Check commit messages
+        env:
+          PR_BASE_REF: ${{ github.base_ref }}
         run: |
           # Lấy các commit trong PR (không có trong base branch)
-          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --format="%s")
+          COMMITS=$(git log "origin/$PR_BASE_REF"..HEAD --format="%s")
           echo "Commits to check:"
           echo "$COMMITS"
 
@@ -74,8 +80,6 @@ jobs:
   laravel-test:
     name: Laravel Tests
     runs-on: ubuntu-latest
-    # Application source is not tracked until the approved bootstrap task lands.
-    if: hashFiles('backend/composer.json') != ''
 
     services:
       postgres:
