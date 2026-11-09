@@ -110,7 +110,7 @@ jobs:
       - name: Provide database schema to backend
         run: |
           mkdir -p backend/database
-          cp -R database/factories database/migrations database/seeders backend/database/
+          cp -R database/migrations database/seeders backend/database/
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
