@@ -23,7 +23,7 @@
 - [x] 3.3. Tự động sinh URL Slug chuẩn SEO kèm khóa thủ công (Auto-Slug Lock/Unlock)
 
 ### Giai đoạn 4: Hoàn thiện Màn hình Kiểm thử Trực tiếp (Live Student Reader Preview)
-- [ ] 4.1. Kết nối Real-Time Preview đồng bộ 100% với Giao diện Học viên
+- [x] 4.1. Kết nối Real-Time Preview đồng bộ 100% với Giao diện Học viên
 - [ ] 4.2. Render nội dung Markdown, Trình phát Video YouTube và Khối Code
 - [ ] 4.3. Hiển thị Mục lục Tự động (Dynamic Live TOC Preview)
 

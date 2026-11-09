@@ -1981,46 +1981,136 @@ List the mathematical or operational guarantees enforced by this architecture.
             background: 'var(--color-white)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-lg)',
-            padding: '2rem',
+            padding: '2.5rem',
             boxShadow: 'var(--shadow-sm)',
           }}
         >
+          {/* Breadcrumbs matching Student Reader */}
+          <nav aria-label="Student Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--color-gray)', marginBottom: '1.25rem' }}>
+            <span style={{ color: 'var(--color-gray)' }}>Courses</span>
+            <span style={{ color: 'var(--color-gray-light)' }}>/</span>
+            <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>
+              {selectedCategory ? selectedCategory.name : 'Curriculum Domain'}
+            </span>
+            <span style={{ color: 'var(--color-gray-light)' }}>/</span>
+            <span style={{ color: 'var(--color-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '280px' }}>
+              {title || 'Current Course'}
+            </span>
+          </nav>
+
+          {/* Badges */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: 'var(--color-primary-pale)',
+                color: 'var(--color-primary)',
+                border: '1px solid var(--color-border)',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                padding: '0.2rem 0.65rem',
+                borderRadius: 'var(--radius-full)',
+              }}
+            >
+              Version {parentId ? 'Revision' : '1.0'}
+            </span>
+            <span
+              className="badge"
+              style={{
+                backgroundColor: '#EBF5EE',
+                color: '#1B6E34',
+                border: '1px solid #D2EBD9',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                padding: '0.2rem 0.65rem',
+                borderRadius: 'var(--radius-full)',
+              }}
+            >
+              Verified Curriculum
+            </span>
+            <span
+              style={{
+                backgroundColor: '#F1F5F9',
+                color: '#475569',
+                border: '1px solid var(--color-border)',
+                fontSize: '0.72rem',
+                fontWeight: 600,
+                padding: '0.15rem 0.55rem',
+                borderRadius: 'var(--radius-full)',
+              }}
+            >
+              Live Student Preview
+            </span>
+          </div>
+
+          {/* Course Title H1 */}
+          <h1 style={{ color: 'var(--color-charcoal)', fontSize: 'clamp(1.75rem, 2.5vw, 2.25rem)', fontWeight: 800, marginBottom: '1.25rem', lineHeight: 1.25, letterSpacing: '-0.02em' }}>
+            {title || 'Untitled Course Material'}
+          </h1>
+
+          {/* Contributor Author Block & Sync Info */}
           <div
             style={{
               display: 'flex',
+              flexWrap: 'wrap',
               alignItems: 'center',
               justifyContent: 'space-between',
-              paddingBottom: '1rem',
-              marginBottom: '1.5rem',
-              borderBottom: '1px solid var(--color-border)',
-              flexWrap: 'wrap',
-              gap: '0.75rem',
+              gap: '1rem',
+              color: 'var(--color-gray)',
+              fontSize: '0.875rem',
+              paddingBottom: '1.5rem',
+              marginBottom: '1.75rem',
+              borderBottom: '1px solid var(--color-border-light)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-              <span
-                className="badge"
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div
                 style={{
-                  backgroundColor: 'var(--color-primary-pale)',
+                  width: 38,
+                  height: 38,
+                  borderRadius: '50%',
+                  background: 'var(--color-primary-pale)',
+                  border: '1.5px solid var(--color-border)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   color: 'var(--color-primary)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
                 }}
               >
-                Live Student Reader Preview
-              </span>
-              <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>
-                Real-time synchronized preview
-              </span>
+                {user?.name ? user.name[0].toUpperCase() : 'C'}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
+                  {user?.name || 'Contributor / Domain Lead'}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--color-gray)' }}>
+                  Draft Preview · Synchronized live
+                </div>
+              </div>
             </div>
-          </div>
 
-          <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2rem', fontWeight: 800, marginBottom: '1.5rem', lineHeight: 1.25 }}>
-            {title || 'Untitled Course Material'}
-          </h1>
+            {selectedTags.length > 0 && (
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {selectedTags.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--color-gray)',
+                      backgroundColor: '#F8FAFC',
+                      padding: '0.15rem 0.5rem',
+                      borderRadius: '4px',
+                      border: '1px solid var(--color-border)',
+                    }}
+                  >
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div>{renderLivePreview(content)}</div>
         </div>
