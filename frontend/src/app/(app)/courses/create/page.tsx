@@ -376,6 +376,28 @@ List the mathematical or operational guarantees enforced by this architecture.
 
   const detectedVideoId = extractYouTubeVideoId(videoInputUrl);
 
+  const insertMarkdown = (prefix: string, suffix: string = '', defaultText: string = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      setContent((prev) => `${prev}\n\n${prefix}${defaultText}${suffix}\n\n`);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = content.substring(start, end) || defaultText;
+    const before = content.substring(0, start);
+    const after = content.substring(end);
+    const replacement = `${prefix}${selected}${suffix}`;
+    const nextContent = before + replacement + after;
+    setContent(nextContent);
+    setTimeout(() => {
+      textarea.focus();
+      const newStart = start + prefix.length;
+      const newEnd = newStart + selected.length;
+      textarea.setSelectionRange(newStart, newEnd);
+    }, 25);
+  };
+
   const handleInsertVideo = () => {
     if (!detectedVideoId) return;
     const cleanUrl = videoInputUrl.trim();
@@ -1179,6 +1201,190 @@ List the mathematical or operational guarantees enforced by this architecture.
               </div>
             )}
 
+            {/* Curriculum Quick Actions Toolbar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '0.25rem',
+                padding: '0.45rem 0.65rem',
+                backgroundColor: '#F8FAFC',
+                border: '1.5px solid var(--color-border)',
+                borderBottom: 'none',
+                borderTopLeftRadius: 'var(--radius-md)',
+                borderTopRightRadius: 'var(--radius-md)',
+              }}
+            >
+              <button
+                type="button"
+                title="Major Section (H2)"
+                onClick={() => insertMarkdown('\n\n## ', '\n', 'Major Section Title')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                }}
+              >
+                H2
+              </button>
+
+              <button
+                type="button"
+                title="Sub-section (H3)"
+                onClick={() => insertMarkdown('\n\n### ', '\n', 'Sub-section Title')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                }}
+              >
+                H3
+              </button>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--color-border)', margin: '0 0.25rem' }} />
+
+              <button
+                type="button"
+                title="Bold (**text**)"
+                onClick={() => insertMarkdown('**', '**', 'bold text')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 800,
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                  minWidth: '28px',
+                }}
+              >
+                B
+              </button>
+
+              <button
+                type="button"
+                title="Italic (*text*)"
+                onClick={() => insertMarkdown('*', '*', 'italic text')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.82rem',
+                  fontStyle: 'italic',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                  minWidth: '28px',
+                }}
+              >
+                I
+              </button>
+
+              <button
+                type="button"
+                title="Strikethrough (~~text~~)"
+                onClick={() => insertMarkdown('~~', '~~', 'strikethrough text')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.82rem',
+                  textDecoration: 'line-through',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                  minWidth: '28px',
+                }}
+              >
+                S
+              </button>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--color-border)', margin: '0 0.25rem' }} />
+
+              <button
+                type="button"
+                title="Bullet List (- item)"
+                onClick={() => insertMarkdown('\n- ', '\n- Item 2\n', 'Item 1')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <circle cx="3.5" cy="6" r="1.5" fill="currentColor" />
+                  <circle cx="3.5" cy="12" r="1.5" fill="currentColor" />
+                  <circle cx="3.5" cy="18" r="1.5" fill="currentColor" />
+                </svg>
+                <span>List</span>
+              </button>
+
+              <button
+                type="button"
+                title="Blockquote (> text)"
+                onClick={() => insertMarkdown('\n> ', '\n', 'Key invariant or operational quote')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+                  <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z" />
+                </svg>
+                <span>Quote</span>
+              </button>
+
+              <button
+                type="button"
+                title="Divider line (---)"
+                onClick={() => insertMarkdown('\n\n---\n\n', '', '')}
+                style={{
+                  padding: '0.3rem 0.55rem',
+                  fontSize: '0.8rem',
+                  borderRadius: '4px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-white)',
+                  color: 'var(--color-charcoal)',
+                  cursor: 'pointer',
+                }}
+              >
+                ---
+              </button>
+            </div>
+
             <textarea
               ref={textareaRef}
               rows={18}
@@ -1188,9 +1394,13 @@ List the mathematical or operational guarantees enforced by this architecture.
               style={{
                 width: '100%',
                 padding: '1.25rem',
-                borderRadius: 'var(--radius-md)',
+                borderTopLeftRadius: 0,
+                borderTopRightRadius: 0,
+                borderBottomLeftRadius: 'var(--radius-md)',
+                borderBottomRightRadius: 'var(--radius-md)',
                 background: 'var(--color-white)',
                 border: '1.5px solid var(--color-border)',
+                borderTop: 'none',
                 color: 'var(--color-charcoal)',
                 fontFamily: 'var(--font-mono)',
                 fontSize: '0.925rem',
