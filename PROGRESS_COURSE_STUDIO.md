@@ -30,7 +30,7 @@
 ### Giai đoạn 5: Pre-flight Validation Checklist, Auto-Save & Xuất bản
 - [x] 5.1. Bổ sung Cơ chế Tự động Lưu Bản nháp (Auto-Save Draft Recovery)
 - [x] 5.2. Xây dựng Bảng Kiểm tra Tiêu chuẩn (Pre-flight Quality Checklist)
-- [ ] 5.3. Hoàn thiện Hành động Lưu Nháp (Draft) và Xuất bản (Publish)
+- [x] 5.3. Hoàn thiện Hành động Lưu Nháp (Draft) và Xuất bản (Publish)
 
 ### Giai đoạn 6: Kiểm thử, Tối ưu & Đóng gói Pull Request
 - [ ] 6.1. Kiểm tra Build & Type Safety trong `frontend/`

@@ -982,8 +982,15 @@ List the mathematical or operational guarantees enforced by this architecture.
 
   const handleSubmit = async (publish: boolean) => {
     if (!title.trim() || !content.trim()) {
-      alert('Please provide both a course title and content body.');
+      setErrorMessage('Please provide both a course title and curriculum content body.');
       return;
+    }
+
+    if (publish && !qualityChecks.isAllPassed) {
+      const confirmPublish = window.confirm(
+        'Some pre-flight quality checks are not yet complete (title length, domain category, tags, or word count). Do you still wish to publish immediately?'
+      );
+      if (!confirmPublish) return;
     }
 
     const bearerSession = getAccessToken();
@@ -996,7 +1003,8 @@ List the mathematical or operational guarantees enforced by this architecture.
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    // Call API or simulate contributor creation
+    let redirectTarget = '/courses';
+
     try {
       if (parentId) {
         type VersionCreateResponse = {
@@ -1014,6 +1022,7 @@ List the mathematical or operational guarantees enforced by this architecture.
             version_id: verRes.data.id,
           });
         }
+        redirectTarget = `/courses/${parentId}`;
       } else {
         type ArticleCreateResponse = {
           status: string;
@@ -1021,16 +1030,28 @@ List the mathematical or operational guarantees enforced by this architecture.
           data?: { id: string; slug: string; status: string };
         };
 
-        const data = await api.post<ArticleCreateResponse>('/v1/articles', {
+        const payload = {
           title,
           slug,
           category_id: categoryId || null,
           content,
           tags: selectedTags,
-        });
+          status: publish ? undefined : 'draft',
+        };
 
-        if (publish && data?.data?.id) {
-          await api.post(`/v1/articles/${data.data.id}/publish`, {});
+        const res = await api.post<ArticleCreateResponse>('/v1/articles', payload);
+
+        const createdId = res?.data?.id;
+        const finalSlug = res?.data?.slug || slug;
+
+        if (publish && createdId) {
+          await api.post(`/v1/articles/${createdId}/publish`, {});
+        }
+
+        if (finalSlug) {
+          redirectTarget = `/courses/${finalSlug}`;
+        } else if (createdId) {
+          redirectTarget = `/courses/${createdId}`;
         }
       }
     } catch (err: unknown) {
@@ -1046,23 +1067,25 @@ List the mathematical or operational guarantees enforced by this architecture.
         setIsSubmitting(false);
         return;
       }
-      // Local fallback simulation if API is unreachable
+      // Local fallback simulation if API is unreachable in offline dev
     }
 
+    // Clear saved drafts upon successful save or publish
     if (typeof window !== 'undefined') {
+      localStorage.removeItem(LOCAL_STUDIO_DRAFT_KEY);
       sessionStorage.removeItem(DRAFT_STORAGE_KEY);
     }
 
     setIsSubmitting(false);
     setSuccessMessage(
       parentId
-        ? (publish ? 'New course version published successfully!' : 'Draft revision saved to your workbench.')
-        : (publish ? 'Course successfully published to the KnowledgeHub platform!' : 'Course draft saved to your contributor workbench.')
+        ? (publish ? 'New course version published successfully! Redirecting...' : 'Draft revision saved to your workbench.')
+        : (publish ? 'Course successfully published to the KnowledgeHub platform! Redirecting to course reader...' : 'Course draft saved to your contributor workbench.')
     );
 
     setTimeout(() => {
-      router.push('/courses');
-    }, 1800);
+      router.push(redirectTarget);
+    }, 1500);
   };
 
   const isContributorOrAdmin =
