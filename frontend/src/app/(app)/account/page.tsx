@@ -151,12 +151,12 @@ export default function AccountPage() {
       <div
         className="account-hero-card"
         style={{
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '2.5rem',
-          color: '#FFFFFF',
+          background: 'var(--color-white, #FFFFFF)',
+          border: '1px solid var(--color-border, #E8DEDC)',
+          borderRadius: 'var(--radius-lg, 12px)',
+          boxShadow: 'var(--shadow-sm)',
+          padding: '2rem 2.25rem',
           margin: '2rem 0',
-          boxShadow: '0 10px 25px -5px rgba(15, 23, 42, 0.25)',
           display: 'flex',
           flexWrap: 'wrap',
           alignItems: 'center',
@@ -164,36 +164,46 @@ export default function AccountPage() {
           gap: '2rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
           <div
             style={{
               width: 80,
               height: 80,
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
-              border: '3px solid rgba(255, 255, 255, 0.2)',
+              background: 'linear-gradient(135deg, var(--color-primary-pale, #F3E5E5) 0%, #E8D5D5 100%)',
+              border: '2px solid var(--color-border, #E8DEDC)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '2.25rem',
               fontWeight: 800,
-              color: '#FFFFFF',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              color: 'var(--color-primary, #8B0000)',
+              boxShadow: '0 2px 8px rgba(139, 0, 0, 0.08)',
               flexShrink: 0,
             }}
           >
             {user.name ? user.name[0].toUpperCase() : 'U'}
           </div>
 
-          <div>
+          <div style={{ minWidth: 0, flex: '1 1 240px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+              <h2
+                style={{
+                  fontSize: '1.75rem',
+                  fontWeight: 800,
+                  margin: 0,
+                  color: 'var(--color-charcoal, #242124)',
+                  letterSpacing: '-0.02em',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {user.name}
               </h2>
               {user.roles?.includes('admin') ? (
                 <span
                   style={{
-                    backgroundColor: '#EF4444',
+                    backgroundColor: '#DC2626',
                     color: '#FFFFFF',
                     fontSize: '0.75rem',
                     fontWeight: 700,
@@ -214,7 +224,7 @@ export default function AccountPage() {
               ) : user.roles?.includes('contributor') ? (
                 <span
                   style={{
-                    backgroundColor: '#EA580C',
+                    backgroundColor: '#C2410C',
                     color: '#FFFFFF',
                     fontSize: '0.75rem',
                     fontWeight: 700,
@@ -236,9 +246,9 @@ export default function AccountPage() {
               ) : (
                 <span
                   style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                    color: '#E2E8F0',
-                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    backgroundColor: 'var(--color-off-white, #FAF7F5)',
+                    border: '1px solid var(--color-border, #E8DEDC)',
+                    color: 'var(--color-charcoal, #242124)',
                     fontSize: '0.75rem',
                     fontWeight: 700,
                     letterSpacing: '0.05em',
@@ -259,17 +269,17 @@ export default function AccountPage() {
               )}
             </div>
 
-            <p style={{ margin: '0 0 0.65rem 0', color: '#94A3B8', fontSize: '0.95rem' }}>
+            <p style={{ margin: '0 0 0.65rem 0', color: 'var(--color-gray, #706B6B)', fontSize: '0.95rem', overflowWrap: 'break-word' }}>
               {user.email}
             </p>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: '#CBD5E1', flexWrap: 'wrap' }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#4ADE80', fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#4ADE80', display: 'inline-block' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.85rem', color: 'var(--color-gray, #706B6B)', flexWrap: 'wrap' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: '#15803D', fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#16A34A', display: 'inline-block' }} />
                 Active
               </span>
-              <span style={{ color: '#64748B' }}>•</span>
-              <span style={{ color: '#E2E8F0' }}>
+              <span style={{ color: '#CBD5E1' }}>•</span>
+              <span style={{ color: 'var(--color-gray, #706B6B)' }}>
                 {formatTenure(user.created_at)}
               </span>
             </div>
