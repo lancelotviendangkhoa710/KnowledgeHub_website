@@ -7,7 +7,7 @@
 
 ### Giai đoạn 1: Xây dựng Utility Phân tích Link & Component Trình phát YouTube
 - [x] **1.1. Xây dựng hàm Helper trích xuất YouTube Video ID chuẩn xác**
-- [ ] **1.2. Tạo Component `YouTubeEmbed.tsx` chuẩn UX/UI và Responsive**
+- [x] **1.2. Tạo Component `YouTubeEmbed.tsx` chuẩn UX/UI và Responsive**
 
 ### Giai đoạn 2: Nâng cấp Bộ đọc Markdown trên Trang Chi tiết Khóa học (`/courses/[id]`)
 - [ ] **2.1. Cập nhật hàm Render Markdown nhận diện Video YouTube**
