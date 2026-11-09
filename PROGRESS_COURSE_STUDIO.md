@@ -35,4 +35,4 @@
 ### Giai đoạn 6: Kiểm thử, Tối ưu & Đóng gói Pull Request
 - [x] 6.1. Kiểm tra Build & Type Safety trong `frontend/`
 - [x] 6.2. Chạy kịch bản kiểm tra Guardrails dự án
-- [ ] 6.3. Tạo Pull Request
+- [x] 6.3. Tạo Pull Request
