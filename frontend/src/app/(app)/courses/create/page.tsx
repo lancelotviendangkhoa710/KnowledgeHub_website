@@ -370,11 +370,27 @@ List the mathematical or operational guarantees enforced by this architecture.
   const [parentId, setParentId] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showCodeDropdown, setShowCodeDropdown] = useState(false);
   const [videoInputUrl, setVideoInputUrl] = useState('');
   const [videoCustomTitle, setVideoCustomTitle] = useState('');
   const [videoInsertNotice, setVideoInsertNotice] = useState<string | null>(null);
 
   const detectedVideoId = extractYouTubeVideoId(videoInputUrl);
+
+  const CODE_TEMPLATES: Record<string, string> = {
+    typescript: `// Provide executable TypeScript types or logic\ninterface ExampleNode {\n  id: string;\n  active: boolean;\n}`,
+    python: `# Write Python implementation or algorithms\ndef process_node(node_id: str) -> bool:\n    return True`,
+    sql: `-- Write transactional or analytical SQL query\nSELECT id, created_at, status\nFROM records\nWHERE status = 'active';`,
+    bash: `# Run infrastructure or execution command\ndocker compose exec app php artisan migrate`,
+    rust: `// Write concurrent or systems logic\nfn main() {\n    println!("KnowledgeHub Engine");\n}`,
+    json: `{\n  "version": "1.0",\n  "status": "success"\n}`,
+  };
+
+  const handleInsertCodeBlock = (lang: string) => {
+    const template = CODE_TEMPLATES[lang.toLowerCase()] || '// Write code here';
+    insertMarkdown(`\n\n\`\`\`${lang.toLowerCase()}\n${template}\n\`\`\`\n\n`, '', '');
+    setShowCodeDropdown(false);
+  };
 
   const insertMarkdown = (prefix: string, suffix: string = '', defaultText: string = '') => {
     const textarea = textareaRef.current;
@@ -1383,6 +1399,93 @@ List the mathematical or operational guarantees enforced by this architecture.
               >
                 ---
               </button>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--color-border)', margin: '0 0.25rem' }} />
+
+              {/* Code Block Inserter with Multi-Language Dropdown */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  title="Insert Multi-Language Code Block"
+                  onClick={() => setShowCodeDropdown((prev) => !prev)}
+                  style={{
+                    padding: '0.3rem 0.65rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: showCodeDropdown ? '#E2E8F0' : 'var(--color-white)',
+                    color: 'var(--color-charcoal)',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <polyline points="16 18 22 12 16 6" />
+                    <polyline points="8 6 2 12 8 18" />
+                  </svg>
+                  <span>Code Block</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {showCodeDropdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      left: 0,
+                      backgroundColor: 'var(--color-white)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: 'var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1))',
+                      zIndex: 100,
+                      minWidth: '150px',
+                      overflow: 'hidden',
+                      padding: '0.3rem 0',
+                    }}
+                  >
+                    {[
+                      { lang: 'typescript', label: 'TypeScript' },
+                      { lang: 'python', label: 'Python' },
+                      { lang: 'sql', label: 'SQL' },
+                      { lang: 'bash', label: 'Bash' },
+                      { lang: 'rust', label: 'Rust' },
+                      { lang: 'json', label: 'JSON' },
+                    ].map((item) => (
+                      <button
+                        key={item.lang}
+                        type="button"
+                        onClick={() => handleInsertCodeBlock(item.lang)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '0.45rem 0.85rem',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '0.8rem',
+                          fontWeight: 500,
+                          color: 'var(--color-charcoal)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F1F5F9')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <span>{item.label}</span>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--color-gray)', fontFamily: 'var(--font-mono)' }}>
+                          .{item.lang === 'typescript' ? 'ts' : item.lang === 'python' ? 'py' : item.lang}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <textarea
