@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category } from '@/types/content';
@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
+import { extractYouTubeVideoId } from '@/lib/videoUtils';
 
 const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
 
@@ -45,6 +46,45 @@ List the mathematical or operational guarantees enforced by this architecture.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoInputUrl, setVideoInputUrl] = useState('');
+  const [videoCustomTitle, setVideoCustomTitle] = useState('');
+  const [videoInsertNotice, setVideoInsertNotice] = useState<string | null>(null);
+
+  const detectedVideoId = extractYouTubeVideoId(videoInputUrl);
+
+  const handleInsertVideo = () => {
+    if (!detectedVideoId) return;
+    const cleanUrl = videoInputUrl.trim();
+    const cleanTitle = videoCustomTitle.trim();
+    const snippet = cleanTitle
+      ? `\n\n@[youtube](${cleanUrl || detectedVideoId} "${cleanTitle}")\n\n`
+      : `\n\n@[youtube](${cleanUrl || detectedVideoId})\n\n`;
+
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const before = content.substring(0, start);
+      const after = content.substring(end);
+      const nextContent = before + snippet + after;
+      setContent(nextContent);
+      setTimeout(() => {
+        textarea.focus();
+        const newPos = start + snippet.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }, 50);
+    } else {
+      setContent((prev) => `${prev.trim()}${snippet}`);
+    }
+
+    setVideoInputUrl('');
+    setVideoCustomTitle('');
+    setShowVideoModal(false);
+    setVideoInsertNotice(`Embedded YouTube video (${detectedVideoId}) added to lecture content.`);
+    setTimeout(() => setVideoInsertNotice(null), 4000);
+  };
 
   useEffect(() => {
     return subscribeCurrentUser(() => setUser(getCurrentUser()));
@@ -495,9 +535,195 @@ List the mathematical or operational guarantees enforced by this architecture.
 
         {/* Content Body Editor or Preview */}
         <div style={{ marginBottom: '2rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-            Curriculum Body (Markdown & Code Supported) *
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+              Curriculum Body (Markdown & Code Supported) *
+            </label>
+
+            {!previewMode && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowVideoModal((prev) => !prev)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid #FECACA',
+                    backgroundColor: showVideoModal ? '#FEE2E2' : '#FFF1F2',
+                    color: '#BE123C',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                    <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
+                  </svg>
+                  <span>{showVideoModal ? 'Close Video Tool' : 'Insert YouTube Video'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {videoInsertNotice && (
+            <div
+              style={{
+                marginBottom: '0.75rem',
+                padding: '0.55rem 0.85rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#ECFDF5',
+                border: '1px solid #A7F3D0',
+                color: '#065F46',
+                fontSize: '0.82rem',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>{videoInsertNotice}</span>
+            </div>
+          )}
+
+          {/* YouTube Video Insertion Card */}
+          {showVideoModal && !previewMode && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '1.25rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#FFF5F5',
+                border: '1.5px solid #FECDD3',
+                boxShadow: 'var(--shadow-xs)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#E11D48">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                  <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
+                </svg>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#9F1239' }}>
+                  Insert YouTube Video Lecture
+                </h4>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}>
+                    YouTube Link or Video ID *
+                  </label>
+                  <input
+                    type="text"
+                    value={videoInputUrl}
+                    onChange={(e) => setVideoInputUrl(e.target.value)}
+                    placeholder="e.g. https://youtu.be/dQw4w9WgXcQ or https://www.youtube.com/watch?v=..."
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid #FDA4AF',
+                      fontSize: '0.85rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      color: 'var(--color-charcoal)',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}>
+                    Video Lecture Title (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={videoCustomTitle}
+                    onChange={(e) => setVideoCustomTitle(e.target.value)}
+                    placeholder="e.g. Raft Consensus Protocol Walkthrough"
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid #FDA4AF',
+                      fontSize: '0.85rem',
+                      color: 'var(--color-charcoal)',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Real-time Validation Feedback */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.8rem' }}>
+                  {!videoInputUrl.trim() && (
+                    <span style={{ color: 'var(--color-gray)' }}>
+                      Supports standard, short, embed, or shorts YouTube URLs.
+                    </span>
+                  )}
+                  {videoInputUrl.trim() && detectedVideoId && (
+                    <span style={{ color: '#047857', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Valid YouTube ID: <code>{detectedVideoId}</code>
+                    </span>
+                  )}
+                  {videoInputUrl.trim() && !detectedVideoId && (
+                    <span style={{ color: '#B91C1C', fontWeight: 600 }}>
+                      ⚠ Invalid YouTube link. Please check the URL or provide a valid 11-character video ID.
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVideoModal(false);
+                      setVideoInputUrl('');
+                      setVideoCustomTitle('');
+                    }}
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--color-charcoal)',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!detectedVideoId}
+                    onClick={handleInsertVideo}
+                    style={{
+                      padding: '0.4rem 0.9rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: 'none',
+                      backgroundColor: detectedVideoId ? '#E11D48' : '#FDA4AF',
+                      color: 'white',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: detectedVideoId ? 'pointer' : 'not-allowed',
+                      transition: 'background-color var(--transition-fast)',
+                    }}
+                  >
+                    Insert into Lecture
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {previewMode ? (
             <div
@@ -517,6 +743,7 @@ List the mathematical or operational guarantees enforced by this architecture.
             </div>
           ) : (
             <textarea
+              ref={textareaRef}
               rows={16}
               value={content}
               onChange={(e) => setContent(e.target.value)}

@@ -15,7 +15,7 @@
 - [x] **2.3. Cập nhật Mục lục Động (TOC) cho phần Video**
 
 ### Giai đoạn 3: Nâng cấp Contributor Studio Soạn thảo Khóa học (`/courses/create`)
-- [ ] **3.1. Thêm công cụ chèn Video nhanh trên giao diện Soạn thảo**
+- [x] **3.1. Thêm công cụ chèn Video nhanh trên giao diện Soạn thảo**
 - [ ] **3.2. Cập nhật Chế độ Xem trước Trực tiếp (Live Preview)**
 
 ### Giai đoạn 4: Kiểm thử, Tối ưu & Đóng gói Pull Request
