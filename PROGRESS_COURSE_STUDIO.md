@@ -20,7 +20,7 @@
 ### Giai đoạn 3: Nâng cấp Quản lý Thuộc tính Khóa học (Metadata Management)
 - [x] 3.1. Nâng cấp Bộ chọn Thẻ thành Thẻ Tương tác (Interactive Tag Chips)
 - [x] 3.2. Cải tiến Bộ chọn Danh mục (Category Selector)
-- [ ] 3.3. Tự động sinh URL Slug chuẩn SEO kèm khóa thủ công (Auto-Slug Lock/Unlock)
+- [x] 3.3. Tự động sinh URL Slug chuẩn SEO kèm khóa thủ công (Auto-Slug Lock/Unlock)
 
 ### Giai đoạn 4: Hoàn thiện Màn hình Kiểm thử Trực tiếp (Live Student Reader Preview)
 - [ ] 4.1. Kết nối Real-Time Preview đồng bộ 100% với Giao diện Học viên

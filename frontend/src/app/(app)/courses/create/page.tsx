@@ -338,6 +338,7 @@ export default function ContributorCourseCreatePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
+  const [isSlugLocked, setIsSlugLocked] = useState(true);
   const [categoryId, setCategoryId] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>(['distributed-systems', 'algorithms']);
   const [tagInput, setTagInput] = useState('');
@@ -615,15 +616,21 @@ List the mathematical or operational guarantees enforced by this architecture.
     setSelectedTags((prev) => prev.filter((t) => t !== tagToRemove));
   };
 
+  const generateSlug = (val: string): string => {
+    return val
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'd')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (!slug || slug === title.toLowerCase().replace(/[^a-z0-9]+/g, '-')) {
-      setSlug(
-        val
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '')
-      );
+    if (isSlugLocked) {
+      setSlug(generateSlug(val));
     }
   };
 
@@ -1077,26 +1084,96 @@ List the mathematical or operational guarantees enforced by this architecture.
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-                Canonical Slug URL
-              </label>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                placeholder="url-friendly-slug"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-white)',
-                  border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-gray)',
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: '0.875rem',
-                  outline: 'none',
-                }}
-              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+                  Canonical Slug URL *
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsSlugLocked((prev) => !prev)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.1rem 0.35rem',
+                    cursor: 'pointer',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: isSlugLocked ? 'var(--color-primary)' : '#059669',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.3rem',
+                  }}
+                  title={isSlugLocked ? "Slug is locked and synchronized with title. Click to edit manually." : "Slug is unlocked. Click to re-lock to title."}
+                >
+                  {isSlugLocked ? (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      <span>Auto-locked</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                      </svg>
+                      <span>Custom override</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={slug}
+                  readOnly={isSlugLocked}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))}
+                  placeholder="e.g. database-storage-engines"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem 2.5rem 0.75rem 1rem',
+                    borderRadius: 'var(--radius-md)',
+                    background: isSlugLocked ? '#F8FAFC' : 'var(--color-white)',
+                    border: isSlugLocked ? '1.5px solid var(--color-border)' : '1.5px solid var(--color-primary)',
+                    color: isSlugLocked ? 'var(--color-gray)' : 'var(--color-charcoal)',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsSlugLocked((prev) => !prev)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.65rem',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: isSlugLocked ? 'var(--color-primary)' : '#059669',
+                    padding: '0.2rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title={isSlugLocked ? "Unlock to manually customize slug URL" : "Lock to auto-generate from title"}
+                >
+                  {isSlugLocked ? (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                  ) : (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div>
