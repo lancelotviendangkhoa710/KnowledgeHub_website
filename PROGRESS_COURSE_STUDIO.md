@@ -24,7 +24,7 @@
 
 ### Giai đoạn 4: Hoàn thiện Màn hình Kiểm thử Trực tiếp (Live Student Reader Preview)
 - [x] 4.1. Kết nối Real-Time Preview đồng bộ 100% với Giao diện Học viên
-- [ ] 4.2. Render nội dung Markdown, Trình phát Video YouTube và Khối Code
+- [x] 4.2. Render nội dung Markdown, Trình phát Video YouTube và Khối Code
 - [ ] 4.3. Hiển thị Mục lục Tự động (Dynamic Live TOC Preview)
 
 ### Giai đoạn 5: Pre-flight Validation Checklist, Auto-Save & Xuất bản

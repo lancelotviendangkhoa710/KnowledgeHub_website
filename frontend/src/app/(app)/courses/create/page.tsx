@@ -15,9 +15,192 @@ import YouTubeEmbed from '@/components/content/YouTubeEmbed';
 const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
 
 
+function CodeBlockPreview({ code, language }: { code: string; language?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // clipboard permission fallback
+      }
+    }
+  };
+
+  return (
+    <div
+      style={{
+        margin: '1.75rem 0',
+        borderRadius: 'var(--radius-md)',
+        overflow: 'hidden',
+        border: '1px solid #334155',
+        backgroundColor: '#0F172A',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '0.45rem 1rem',
+          backgroundColor: '#1E293B',
+          borderBottom: '1px solid #334155',
+          fontSize: '0.75rem',
+          color: '#94A3B8',
+          fontFamily: 'var(--font-mono, monospace)',
+          textTransform: 'lowercase',
+        }}
+      >
+        <span>{language || 'code'}</span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          style={{
+            background: 'transparent',
+            border: '1px solid #475569',
+            color: copied ? '#4ADE80' : '#E2E8F0',
+            borderRadius: '4px',
+            padding: '0.2rem 0.55rem',
+            fontSize: '0.72rem',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.35rem',
+            transition: 'all var(--transition-fast)',
+          }}
+        >
+          {copied ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Copied!
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
+              Copy
+            </>
+          )}
+        </button>
+      </div>
+      <pre
+        style={{
+          padding: '1.25rem',
+          margin: 0,
+          overflowX: 'auto',
+          fontSize: '0.9rem',
+          lineHeight: 1.65,
+          color: '#F8FAFC',
+          fontFamily: 'var(--font-mono, monospace)',
+          backgroundColor: '#0F172A',
+        }}
+      >
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
+
+function CalloutPreview({
+  kind,
+  title,
+  children,
+}: {
+  kind: 'note' | 'tip' | 'warning' | 'default';
+  title?: string;
+  children: React.ReactNode;
+}) {
+  const styles = {
+    note: {
+      border: '#3B82F6',
+      bg: '#EFF6FF',
+      text: '#1E40AF',
+      title: title || 'Note',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="16" x2="12" y2="12" />
+          <line x1="12" y1="8" x2="12.01" y2="8" />
+        </svg>
+      ),
+    },
+    tip: {
+      border: '#10B981',
+      bg: '#ECFDF5',
+      text: '#065F46',
+      title: title || 'Tip & Best Practice',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+          <path d="M9 18h6m-4 4h2m-1-18a7 7 0 0 0-7 7c0 2.22 1.2 4.15 3 5.19V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-.81c1.8-1.04 3-2.97 3-5.19a7 7 0 0 0-7-7z" />
+        </svg>
+      ),
+    },
+    warning: {
+      border: '#F59E0B',
+      bg: '#FFFBEB',
+      text: '#92400E',
+      title: title || 'Warning',
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      ),
+    },
+    default: {
+      border: 'var(--color-primary, #0284C7)',
+      bg: 'var(--color-primary-faint, #F0F9FF)',
+      text: 'var(--color-charcoal, #0F172A)',
+      title: undefined,
+      icon: null,
+    },
+  }[kind];
+
+  return (
+    <div
+      style={{
+        borderLeft: `4px solid ${styles.border}`,
+        backgroundColor: styles.bg,
+        padding: '1rem 1.25rem',
+        borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+        margin: '1.5rem 0',
+      }}
+    >
+      {styles.title && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            marginBottom: '0.4rem',
+            fontWeight: 700,
+            color: styles.text,
+            fontSize: '0.9rem',
+          }}
+        >
+          {styles.icon}
+          <span>{styles.title}</span>
+        </div>
+      )}
+      <div style={{ color: styles.text, fontSize: '0.95rem', lineHeight: 1.65 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function renderPreviewInline(text: string): React.ReactNode {
   const parts: React.ReactNode[] = [];
-  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|\[[^\]]+\]\([^)]+\))/g;
   let lastIndex = 0;
   let match;
 
@@ -47,6 +230,8 @@ function renderPreviewInline(text: string): React.ReactNode {
       parts.push(<strong key={`bold-${match.index}`}>{matched.slice(2, -2)}</strong>);
     } else if (matched.startsWith('*') && matched.endsWith('*')) {
       parts.push(<em key={`italic-${match.index}`}>{matched.slice(1, -1)}</em>);
+    } else if (matched.startsWith('~~') && matched.endsWith('~~')) {
+      parts.push(<del key={`del-${match.index}`}>{matched.slice(2, -2)}</del>);
     } else if (matched.startsWith('[') && matched.includes('](')) {
       const closingBracket = matched.indexOf('](');
       const linkText = matched.slice(1, closingBracket);
@@ -106,32 +291,11 @@ function renderLivePreview(raw: string): React.ReactNode[] {
         i++;
       }
       elements.push(
-        <div
+        <CodeBlockPreview
           key={`code-${i}`}
-          style={{
-            margin: '1.5rem 0',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            border: '1px solid #334155',
-            backgroundColor: '#0F172A',
-          }}
-        >
-          <div
-            style={{
-              padding: '0.45rem 1rem',
-              backgroundColor: '#1E293B',
-              borderBottom: '1px solid #334155',
-              fontSize: '0.75rem',
-              color: '#94A3B8',
-              fontFamily: 'var(--font-mono, monospace)',
-            }}
-          >
-            {codeLanguage || 'code'}
-          </div>
-          <pre style={{ padding: '1.25rem', margin: 0, overflowX: 'auto', fontSize: '0.9rem', color: '#F8FAFC' }}>
-            <code>{codeBuffer.join('\n')}</code>
-          </pre>
-        </div>
+          code={codeBuffer.join('\n')}
+          language={codeLanguage}
+        />
       );
       i++;
       continue;
@@ -208,28 +372,17 @@ function renderLivePreview(raw: string): React.ReactNode[] {
         i++;
       }
 
-      const borderColor = isTip ? '#10B981' : isWarning ? '#F59E0B' : isNote ? '#3B82F6' : 'var(--color-primary)';
-      const bgColor = isTip ? '#ECFDF5' : isWarning ? '#FFFBEB' : isNote ? '#EFF6FF' : '#F0F9FF';
-      const textColor = isTip ? '#065F46' : isWarning ? '#92400E' : isNote ? '#1E40AF' : 'var(--color-charcoal)';
+      const kind: 'note' | 'tip' | 'warning' | 'default' = isTip ? 'tip' : isWarning ? 'warning' : isNote ? 'note' : 'default';
+      const titleText = isTip ? 'Tip & Best Practice' : isWarning ? 'Warning' : isNote ? 'Note' : undefined;
 
       elements.push(
-        <div
-          key={`quote-${i}`}
-          style={{
-            borderLeft: `4px solid ${borderColor}`,
-            backgroundColor: bgColor,
-            padding: '1rem 1.25rem',
-            borderRadius: '0 var(--radius-md) var(--radius-md) 0',
-            margin: '1.5rem 0',
-            color: textColor,
-          }}
-        >
+        <CalloutPreview key={`quote-${i}`} kind={kind} title={titleText}>
           {quoteLines.map((ql, qIdx) => (
             <p key={qIdx} style={{ margin: qIdx > 0 ? '0.4rem 0 0 0' : 0, fontSize: '0.95rem', lineHeight: 1.65 }}>
               {renderPreviewInline(ql)}
             </p>
           ))}
-        </div>
+        </CalloutPreview>
       );
       continue;
     }
