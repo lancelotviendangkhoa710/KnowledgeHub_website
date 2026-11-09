@@ -582,6 +582,7 @@ export default function ContributorCourseCreatePage() {
   }, [categories]);
 
 
+
   const selectedCategory = useMemo(() => {
     return categories.find((c) => c.id === categoryId) || null;
   }, [categories, categoryId]);
@@ -654,6 +655,51 @@ List the mathematical or operational guarantees enforced by this architecture.
 
     return items;
   }, [content]);
+
+  // Pre-flight Quality Standards Criteria
+  const contentWordCount = useMemo(() => {
+    return content.trim().split(/\s+/).filter(Boolean).length;
+  }, [content]);
+
+  const qualityChecks = useMemo(() => {
+    const titleValid = title.trim().length >= 5 && title.trim().length <= 120;
+    const categoryValid = Boolean(categoryId && categoryId.trim().length > 0);
+    const tagsValid = selectedTags.length >= 1;
+    const contentValid = contentWordCount >= 50;
+
+    const items = [
+      {
+        id: 'title',
+        label: 'Course title is between 5 and 120 characters',
+        valid: titleValid,
+        detail: `${title.trim().length}/120 characters`,
+      },
+      {
+        id: 'category',
+        label: 'Domain category is selected',
+        valid: categoryValid,
+        detail: selectedCategory ? selectedCategory.name : 'None selected',
+      },
+      {
+        id: 'tags',
+        label: 'At least 1 curriculum tag attached',
+        valid: tagsValid,
+        detail: `${selectedTags.length} tag(s)`,
+      },
+      {
+        id: 'content',
+        label: 'Substantive curriculum material (minimum 50 words)',
+        valid: contentValid,
+        detail: `${contentWordCount} words / 50 min`,
+      },
+    ];
+
+    const passedCount = items.filter((i) => i.valid).length;
+    const isAllPassed = passedCount === items.length;
+
+    return { items, passedCount, totalCount: items.length, isAllPassed };
+  }, [title, categoryId, selectedCategory, selectedTags, contentWordCount]);
+
 
     type ViewMode = 'split' | 'editor' | 'preview';
   const [viewMode, setViewMode] = useState<ViewMode>('split');
@@ -2322,6 +2368,116 @@ List the mathematical or operational guarantees enforced by this architecture.
                 resize: 'vertical',
               }}
             />
+          </div>
+
+          {/* Pre-flight Quality Standards Checklist */}
+          <div
+            style={{
+              marginBottom: '1.5rem',
+              padding: '1.25rem',
+              backgroundColor: '#F8FAFC',
+              border: qualityChecks.isAllPassed ? '1.5px solid #86EFAC' : '1.5px solid var(--color-border)',
+              borderRadius: 'var(--radius-md)',
+              transition: 'all var(--transition-fast)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={qualityChecks.isAllPassed ? '#16A34A' : 'var(--color-primary)'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--color-charcoal)' }}>
+                  Pre-flight Quality Checklist
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.55rem',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: qualityChecks.isAllPassed ? '#DCFCE7' : '#FEF3C7',
+                  color: qualityChecks.isAllPassed ? '#15803D' : '#B45309',
+                  border: qualityChecks.isAllPassed ? '1px solid #BBF7D0' : '1px solid #FDE68A',
+                }}
+              >
+                {qualityChecks.passedCount}/{qualityChecks.totalCount} Standards Met{qualityChecks.isAllPassed ? ' · Ready to Publish' : ''}
+              </span>
+            </div>
+
+            {/* Quality Progress Meter */}
+            <div
+              style={{
+                width: '100%',
+                height: '4px',
+                backgroundColor: '#E2E8F0',
+                borderRadius: '2px',
+                overflow: 'hidden',
+                marginBottom: '1rem',
+              }}
+            >
+              <div
+                style={{
+                  width: `${(qualityChecks.passedCount / qualityChecks.totalCount) * 100}%`,
+                  height: '100%',
+                  backgroundColor: qualityChecks.isAllPassed ? '#22C55E' : '#EAB308',
+                  transition: 'width 300ms ease-out',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.65rem' }}>
+              {qualityChecks.items.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.5rem',
+                    fontSize: '0.8rem',
+                    color: item.valid ? 'var(--color-charcoal)' : 'var(--color-gray)',
+                  }}
+                >
+                  <div style={{ marginTop: '2px' }}>
+                    {item.valid ? (
+                      <div
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          backgroundColor: '#22C55E',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#FFFFFF',
+                        }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: '16px',
+                          height: '16px',
+                          borderRadius: '50%',
+                          border: '1.5px solid #CBD5E1',
+                          backgroundColor: 'var(--color-white)',
+                        }}
+                      />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: item.valid ? 600 : 500 }}>{item.label}</div>
+                    <div style={{ fontSize: '0.72rem', color: item.valid ? '#16A34A' : 'var(--color-gray-light)' }}>
+                      {item.detail}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Action Buttons */}
