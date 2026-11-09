@@ -15,7 +15,7 @@
 - [x] 2.1. Tạo thanh công cụ định dạng nhanh phía trên khung Textarea
 - [x] 2.2. Tích hợp Công cụ Chèn Khối Code Đa ngôn ngữ (Code Block Inserter)
 - [x] 2.3. Tích hợp Công cụ Chèn Khối Ghi chú / Alert (Callout Box Inserter)
-- [ ] 2.4. Tích hợp Công cụ Nhúng Video YouTube (YouTube Video Modal / Inserter)
+- [x] 2.4. Tích hợp Công cụ Nhúng Video YouTube (YouTube Video Modal / Inserter)
 
 ### Giai đoạn 3: Nâng cấp Quản lý Thuộc tính Khóa học (Metadata Management)
 - [ ] 3.1. Nâng cấp Bộ chọn Thẻ thành Thẻ Tương tác (Interactive Tag Chips)

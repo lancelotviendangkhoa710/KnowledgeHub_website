@@ -1038,31 +1038,8 @@ List the mathematical or operational guarantees enforced by this architecture.
                 Curriculum Body (Markdown & Code Supported) *
               </label>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowVideoModal((prev) => !prev)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid #FECACA',
-                    backgroundColor: showVideoModal ? '#FEE2E2' : '#FFF1F2',
-                    color: '#BE123C',
-                    fontSize: '0.82rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all var(--transition-fast)',
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
-                    <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
-                  </svg>
-                  <span>{showVideoModal ? 'Close Video Tool' : 'Insert YouTube Video'}</span>
-                </button>
+              <div style={{ fontSize: '0.78rem', color: 'var(--color-gray)' }}>
+                <span>Markdown + Dracula Code + Alerts + YouTube Embed</span>
               </div>
             </div>
 
@@ -1174,20 +1151,27 @@ List the mathematical or operational guarantees enforced by this architecture.
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  <div style={{ fontSize: '0.8rem', color: detectedVideoId ? '#059669' : 'var(--color-gray)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     {detectedVideoId ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        Detected Video ID: <code>{detectedVideoId}</code>
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <img
+                          src={`https://img.youtube.com/vi/${detectedVideoId}/mqdefault.jpg`}
+                          alt="Video thumbnail preview"
+                          style={{ width: '48px', height: '32px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--color-border)' }}
+                        />
+                        <div style={{ fontSize: '0.8rem', color: '#059669' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            Valid Video: <code>{detectedVideoId}</code>
+                          </span>
+                        </div>
+                      </div>
                     ) : (
-                      videoInputUrl.trim() ? (
-                        <span style={{ color: '#DC2626' }}>Invalid YouTube URL or ID format</span>
-                      ) : (
-                        <span>Paste a YouTube URL from your lecture repository</span>
-                      )
+                      <div style={{ fontSize: '0.8rem', color: videoInputUrl.trim() ? '#DC2626' : 'var(--color-gray)' }}>
+                        {videoInputUrl.trim() ? 'Invalid YouTube URL or ID format' : 'Paste YouTube URL or ID'}
+                      </div>
                     )}
                   </div>
 
@@ -1622,6 +1606,35 @@ List the mathematical or operational guarantees enforced by this architecture.
                   </div>
                 )}
               </div>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--color-border)', margin: '0 0.25rem' }} />
+
+              {/* YouTube Video Inserter Button */}
+              <button
+                type="button"
+                title="Embed YouTube Lecture Video"
+                onClick={() => setShowVideoModal((prev) => !prev)}
+                style={{
+                  padding: '0.3rem 0.65rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  borderRadius: '4px',
+                  border: '1px solid #FECACA',
+                  backgroundColor: showVideoModal ? '#FEE2E2' : '#FFF1F2',
+                  color: '#BE123C',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.35rem',
+                  transition: 'all var(--transition-fast)',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                  <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
+                </svg>
+                <span>YouTube Video</span>
+              </button>
             </div>
 
             <textarea
