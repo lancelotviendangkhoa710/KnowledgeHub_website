@@ -164,7 +164,7 @@ export default function AccountPage() {
           gap: '2rem',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem', flexWrap: 'wrap', minWidth: 0, maxWidth: '100%' }}>
           <div
             style={{
               width: 80,
@@ -185,9 +185,19 @@ export default function AccountPage() {
             {user.name ? user.name[0].toUpperCase() : 'U'}
           </div>
 
-          <div>
+          <div style={{ minWidth: 0, flex: '1 1 240px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0, color: 'var(--color-charcoal, #242124)', letterSpacing: '-0.02em' }}>
+              <h2
+                style={{
+                  fontSize: '1.75rem',
+                  fontWeight: 800,
+                  margin: 0,
+                  color: 'var(--color-charcoal, #242124)',
+                  letterSpacing: '-0.02em',
+                  overflowWrap: 'break-word',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {user.name}
               </h2>
               {user.roles?.includes('admin') ? (
@@ -214,7 +224,7 @@ export default function AccountPage() {
               ) : user.roles?.includes('contributor') ? (
                 <span
                   style={{
-                    backgroundColor: '#EA580C',
+                    backgroundColor: '#C2410C',
                     color: '#FFFFFF',
                     fontSize: '0.75rem',
                     fontWeight: 700,
@@ -259,7 +269,7 @@ export default function AccountPage() {
               )}
             </div>
 
-            <p style={{ margin: '0 0 0.65rem 0', color: 'var(--color-gray, #706B6B)', fontSize: '0.95rem' }}>
+            <p style={{ margin: '0 0 0.65rem 0', color: 'var(--color-gray, #706B6B)', fontSize: '0.95rem', overflowWrap: 'break-word' }}>
               {user.email}
             </p>
 
