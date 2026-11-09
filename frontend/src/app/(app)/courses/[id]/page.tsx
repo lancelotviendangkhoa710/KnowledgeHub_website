@@ -9,6 +9,8 @@ import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { accountClient } from '@/lib/accountClient';
 import { getAccessToken } from '@/lib/authToken';
+import YouTubeEmbed from '@/components/content/YouTubeEmbed';
+import { extractYouTubeVideoId } from '@/lib/videoUtils';
 
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
@@ -268,6 +270,24 @@ function renderInlineFormatting(text: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
+function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Set<string>): string {
+  const base =
+    text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || `sec-${fallbackIdx}`;
+  let candidate = base;
+  let counter = 1;
+  while (seenIds.has(candidate)) {
+    candidate = `${base}-${counter}`;
+    counter++;
+  }
+  seenIds.add(candidate);
+  return candidate;
+}
+
 export default function CourseDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -337,8 +357,8 @@ export default function CourseDetailPage() {
     const v = article.published_version || article.latest_version;
     const raw = v?.content || '';
     const lines = raw.split('\n');
-    const items: { id: string; text: string; level: number }[] = [];
-    const seenIds = new Map<string, number>();
+    const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
+    const seenIds = new Set<string>();
     let inCode = false;
 
     lines.forEach((line, idx) => {
@@ -348,20 +368,34 @@ export default function CourseDetailPage() {
       }
       if (inCode) return;
 
-      if (line.startsWith('## ')) {
-        const text = line.replace('## ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
-        const count = seenIds.get(base) || 0;
-        seenIds.set(base, count + 1);
-        const id = count === 0 ? base : `${base}-${count}`;
-        items.push({ id, text, level: 2 });
-      } else if (line.startsWith('### ')) {
-        const text = line.replace('### ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
-        const count = seenIds.get(base) || 0;
-        seenIds.set(base, count + 1);
-        const id = count === 0 ? base : `${base}-${count}`;
-        items.push({ id, text, level: 3 });
+      if (line.startsWith('## ') || line.startsWith('### ')) {
+        const isH2 = line.startsWith('## ');
+        const text = line.replace(/^#{2,3}\s+/, '').trim();
+        const id = getHeadingSlug(text, idx, seenIds);
+
+        let hasVideo = /video|bài giảng|lecture/i.test(text);
+        if (!hasVideo) {
+          let inCodeFence = false;
+          for (let j = idx + 1; j < lines.length; j++) {
+            const next = lines[j].trim();
+            if (next.startsWith('```')) {
+              inCodeFence = !inCodeFence;
+              continue;
+            }
+            if (inCodeFence) continue;
+            if (next.startsWith('## ') || next.startsWith('### ')) break;
+            if (
+              next.match(/^@\[youtube\]\((.+?)\)$/i) ||
+              /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(next)
+            ) {
+              hasVideo = true;
+              break;
+            }
+          }
+        }
+
+        items.push({ id, text, level: isH2 ? 2 : 3, hasVideo });
+        return;
       }
     });
 
@@ -535,7 +569,7 @@ export default function CourseDetailPage() {
 
     if (splitIdx > 0 && splitIdx < lines.length) {
       const candidateIntro = lines.slice(0, splitIdx).join('\n');
-      if (candidateIntro.length <= 500) {
+      if (candidateIntro.length <= 1600) {
         return {
           introContent: candidateIntro,
           remainingContent: lines.slice(splitIdx).join('\n'),
@@ -584,10 +618,10 @@ export default function CourseDetailPage() {
 
 
   // Advanced parser for technical long-form reading with Dracula code blocks and alert callouts
-  const renderFormattedContent = (raw: string) => {
+  const renderFormattedContent = (raw: string, headingTracker?: Set<string>) => {
     const lines = raw.split('\n');
     const elements: React.ReactNode[] = [];
-    const seenHeadingIds = new Map<string, number>();
+    const seenHeadingIds = headingTracker || new Set<string>();
 
     let i = 0;
     while (i < lines.length) {
@@ -616,10 +650,7 @@ export default function CourseDetailPage() {
       // Headings
       if (line.startsWith('## ')) {
         const text = line.replace('## ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${i}`;
-        const count = seenHeadingIds.get(base) || 0;
-        seenHeadingIds.set(base, count + 1);
-        const headingId = count === 0 ? base : `${base}-${count}`;
+        const headingId = getHeadingSlug(text, i, seenHeadingIds);
         elements.push(
           <h2
             key={`h2-${i}`}
@@ -645,10 +676,7 @@ export default function CourseDetailPage() {
 
       if (line.startsWith('### ')) {
         const text = line.replace('### ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${i}`;
-        const count = seenHeadingIds.get(base) || 0;
-        seenHeadingIds.set(base, count + 1);
-        const headingId = count === 0 ? base : `${base}-${count}`;
+        const headingId = getHeadingSlug(text, i, seenHeadingIds);
         elements.push(
           <h3
             key={`h3-${i}`}
@@ -739,6 +767,53 @@ export default function CourseDetailPage() {
         elements.push(<hr key={`hr-${i}`} style={{ borderColor: 'var(--color-border)', margin: '2.5rem 0' }} />);
         i++;
         continue;
+      }
+
+      // YouTube Video Embed (@[youtube](...) or standalone YouTube URL)
+      const trimmedLine = line.trim();
+      const ytSyntaxMatch = trimmedLine.match(/^@\[youtube\]\((.+?)\)$/i);
+      const isStandaloneUrl =
+        !ytSyntaxMatch &&
+        /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(trimmedLine);
+
+      if (ytSyntaxMatch || isStandaloneUrl) {
+        let rawTarget = trimmedLine;
+        let customTitle: string | undefined = undefined;
+
+        if (ytSyntaxMatch) {
+          const inner = ytSyntaxMatch[1].trim();
+          const titleMatch = inner.match(/^(\S+)(?:\s+["'](.+?)["'])?$/);
+          if (titleMatch) {
+            rawTarget = titleMatch[1];
+            customTitle = titleMatch[2];
+          } else {
+            rawTarget = inner;
+          }
+        }
+
+        const videoId = extractYouTubeVideoId(rawTarget);
+        if (videoId) {
+          elements.push(
+            <YouTubeEmbed
+              key={`yt-${i}`}
+              videoId={videoId}
+              title={customTitle}
+            />
+          );
+          i++;
+          continue;
+        } else if (ytSyntaxMatch) {
+          // Explicit @[youtube](...) syntax with invalid ID or spoofed URL -> render error box
+          elements.push(
+            <YouTubeEmbed
+              key={`yt-invalid-${i}`}
+              videoId={rawTarget}
+              title={customTitle}
+            />
+          );
+          i++;
+          continue;
+        }
       }
 
       // Paragraph
@@ -933,28 +1008,38 @@ export default function CourseDetailPage() {
           {/* Prose Content */}
           <div className="prose">
             {isGuest ? (
-              <>
-                {renderFormattedContent(introContent)}
+              (() => {
+                const guestTracker = new Set<string>();
+                return (
+                  <>
+                    {renderFormattedContent(introContent, guestTracker)}
 
-                {/* Blurred preview teaser */}
-                {remainingContent && (
-                  <div
-                    aria-hidden="true"
-                    style={{
-                      filter: 'blur(5px)',
-                      opacity: 0.35,
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                      maxHeight: 220,
-                      overflow: 'hidden',
-                      marginTop: '1.5rem',
-                    }}
-                  >
-                    {renderFormattedContent(remainingContent.slice(0, 800))}
-                  </div>
-                )}
+                    {/* Blurred preview teaser with full inert focus isolation */}
+                    {remainingContent && (
+                      <div
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        inert={true as any}
+                        style={{
+                          filter: 'blur(5px)',
+                          opacity: 0.35,
+                          pointerEvents: 'none',
+                          userSelect: 'none',
+                          maxHeight: 220,
+                          overflow: 'hidden',
+                          marginTop: '1.5rem',
+                        }}
+                      >
+                        {renderFormattedContent(
+                          remainingContent.length > 800
+                            ? remainingContent.slice(0, 800).replace(/\n[^\n]*$/, '')
+                            : remainingContent,
+                          guestTracker
+                        )}
+                      </div>
+                    )}
 
-                {/* Curriculum Access Gate */}
+                    {/* Curriculum Access Gate */}
                 <div
                   id="curriculum-access-gate"
                   style={{
@@ -1027,9 +1112,11 @@ export default function CourseDetailPage() {
                   </div>
                 </div>
               </>
-            ) : (
-              renderFormattedContent(content)
-            )}
+            );
+          })()
+        ) : (
+          renderFormattedContent(content)
+        )}
           </div>
 
           {/* Completion Footer Action */}
@@ -1155,13 +1242,34 @@ export default function CourseDetailPage() {
                           fontWeight: isActive ? 600 : 400,
                           textDecoration: 'none',
                           lineHeight: 1.45,
-                          display: 'block',
+                          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem',
                           transition: 'color var(--transition-fast)',
                           borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
                           paddingLeft: '0.5rem',
                         }}
                       >
-                        {item.text}
+                        <span style={{ wordBreak: 'break-word', lineHeight: 1.45, flex: 1 }}>
+                          {item.text}
+                        </span>
+                        {item.hasVideo && (
+                          <span
+                            title="Lecture includes video"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: isActive ? 'var(--color-primary)' : '#DC2626',
+                              flexShrink: 0,
+                              backgroundColor: isActive ? 'var(--color-primary-pale, #E0F2FE)' : '#FEE2E2',
+                              borderRadius: '4px',
+                              padding: '2px 4px',
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          </span>
+                        )}
                       </a>
                     </li>
                   );

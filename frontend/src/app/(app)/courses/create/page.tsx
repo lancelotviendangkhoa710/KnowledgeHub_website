@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category } from '@/types/content';
@@ -9,8 +9,327 @@ import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
+import { extractYouTubeVideoId } from '@/lib/videoUtils';
+import YouTubeEmbed from '@/components/content/YouTubeEmbed';
 
 const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
+
+
+function renderPreviewInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    const matched = match[0];
+    if (matched.startsWith('`') && matched.endsWith('`')) {
+      parts.push(
+        <code
+          key={`code-${match.index}`}
+          style={{
+            backgroundColor: '#F1F5F9',
+            color: '#0F172A',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            fontSize: '0.88em',
+            fontFamily: 'var(--font-mono, monospace)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          {matched.slice(1, -1)}
+        </code>
+      );
+    } else if (matched.startsWith('**') && matched.endsWith('**')) {
+      parts.push(<strong key={`bold-${match.index}`}>{matched.slice(2, -2)}</strong>);
+    } else if (matched.startsWith('*') && matched.endsWith('*')) {
+      parts.push(<em key={`italic-${match.index}`}>{matched.slice(1, -1)}</em>);
+    } else if (matched.startsWith('[') && matched.includes('](')) {
+      const closingBracket = matched.indexOf('](');
+      const linkText = matched.slice(1, closingBracket);
+      const linkHref = matched.slice(closingBracket + 2, -1).trim();
+
+      const isSafe =
+        linkHref.startsWith('#') ||
+        (linkHref.startsWith('/') &&
+          !linkHref.startsWith('//') &&
+          !linkHref.startsWith('/\\') &&
+          !linkHref.includes('\\') &&
+          !/[\r\n\t]/.test(linkHref)) ||
+        linkHref.startsWith('http://') ||
+        linkHref.startsWith('https://');
+
+      if (isSafe) {
+        parts.push(
+          <a
+            key={`link-${match.index}`}
+            href={linkHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+          >
+            {linkText}
+          </a>
+        );
+      } else {
+        parts.push(linkText);
+      }
+    }
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
+function renderLivePreview(raw: string): React.ReactNode[] {
+  const lines = raw.split('\n');
+  const elements: React.ReactNode[] = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Code Block
+    if (line.startsWith('```')) {
+      const codeLanguage = line.replace('```', '').trim();
+      const codeBuffer: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        codeBuffer.push(lines[i]);
+        i++;
+      }
+      elements.push(
+        <div
+          key={`code-${i}`}
+          style={{
+            margin: '1.5rem 0',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            border: '1px solid #334155',
+            backgroundColor: '#0F172A',
+          }}
+        >
+          <div
+            style={{
+              padding: '0.45rem 1rem',
+              backgroundColor: '#1E293B',
+              borderBottom: '1px solid #334155',
+              fontSize: '0.75rem',
+              color: '#94A3B8',
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            {codeLanguage || 'code'}
+          </div>
+          <pre style={{ padding: '1.25rem', margin: 0, overflowX: 'auto', fontSize: '0.9rem', color: '#F8FAFC' }}>
+            <code>{codeBuffer.join('\n')}</code>
+          </pre>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Headings
+    if (line.startsWith('## ')) {
+      elements.push(
+        <h2
+          key={`h2-${i}`}
+          style={{
+            color: 'var(--color-charcoal)',
+            marginTop: '2.5rem',
+            marginBottom: '1rem',
+            borderBottom: '1.5px solid var(--color-border)',
+            paddingBottom: '0.5rem',
+            fontSize: '1.65rem',
+            fontWeight: 800,
+          }}
+        >
+          {line.replace('## ', '').trim()}
+        </h2>
+      );
+      i++;
+      continue;
+    }
+
+    if (line.startsWith('### ')) {
+      elements.push(
+        <h3
+          key={`h3-${i}`}
+          style={{
+            color: 'var(--color-charcoal)',
+            marginTop: '1.75rem',
+            marginBottom: '0.75rem',
+            fontSize: '1.3rem',
+            fontWeight: 700,
+          }}
+        >
+          {line.replace('### ', '').trim()}
+        </h3>
+      );
+      i++;
+      continue;
+    }
+
+    // Callout / Blockquote
+    if (line.startsWith('>')) {
+      const quoteLines: string[] = [];
+      let isNote = false;
+      let isTip = false;
+      let isWarning = false;
+
+      const firstClean = line.replace(/^>\s*/, '');
+      if (/^\[!(NOTE|IMPORTANT)\]/i.test(firstClean)) {
+        isNote = true;
+        const rest = firstClean.replace(/^\[!(NOTE|IMPORTANT)\]\s*/i, '').trim();
+        if (rest) quoteLines.push(rest);
+      } else if (/^\[!TIP\]/i.test(firstClean)) {
+        isTip = true;
+        const rest = firstClean.replace(/^\[!TIP\]\s*/i, '').trim();
+        if (rest) quoteLines.push(rest);
+      } else if (/^\[!(WARNING|CAUTION)\]/i.test(firstClean)) {
+        isWarning = true;
+        const rest = firstClean.replace(/^\[!(WARNING|CAUTION)\]\s*/i, '').trim();
+        if (rest) quoteLines.push(rest);
+      } else {
+        quoteLines.push(firstClean);
+      }
+
+      i++;
+      while (i < lines.length && lines[i].startsWith('>')) {
+        quoteLines.push(lines[i].replace(/^>\s*/, ''));
+        i++;
+      }
+
+      const borderColor = isTip ? '#10B981' : isWarning ? '#F59E0B' : isNote ? '#3B82F6' : 'var(--color-primary)';
+      const bgColor = isTip ? '#ECFDF5' : isWarning ? '#FFFBEB' : isNote ? '#EFF6FF' : '#F0F9FF';
+      const textColor = isTip ? '#065F46' : isWarning ? '#92400E' : isNote ? '#1E40AF' : 'var(--color-charcoal)';
+
+      elements.push(
+        <div
+          key={`quote-${i}`}
+          style={{
+            borderLeft: `4px solid ${borderColor}`,
+            backgroundColor: bgColor,
+            padding: '1rem 1.25rem',
+            borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+            margin: '1.5rem 0',
+            color: textColor,
+          }}
+        >
+          {quoteLines.map((ql, qIdx) => (
+            <p key={qIdx} style={{ margin: qIdx > 0 ? '0.4rem 0 0 0' : 0, fontSize: '0.95rem', lineHeight: 1.65 }}>
+              {renderPreviewInline(ql)}
+            </p>
+          ))}
+        </div>
+      );
+      continue;
+    }
+
+    // Lists
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      elements.push(
+        <li
+          key={`li-${i}`}
+          style={{
+            marginLeft: '1.5rem',
+            color: 'var(--color-charcoal)',
+            marginBottom: '0.5rem',
+            lineHeight: 1.65,
+            fontSize: '1rem',
+          }}
+        >
+          {renderPreviewInline(line.replace(/^[*-]\s+/, ''))}
+        </li>
+      );
+      i++;
+      continue;
+    }
+
+    // Horizontal Rule
+    if (line.trim() === '---') {
+      elements.push(<hr key={`hr-${i}`} style={{ borderColor: 'var(--color-border)', margin: '2rem 0' }} />);
+      i++;
+      continue;
+    }
+
+    // YouTube Embed (@[youtube](...) or standalone URL)
+    const trimmed = line.trim();
+    const ytSyntaxMatch = trimmed.match(/^@\[youtube\]\((.+?)\)$/i);
+    const isStandaloneYt =
+      !ytSyntaxMatch &&
+      /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(trimmed);
+
+    if (ytSyntaxMatch || isStandaloneYt) {
+      let rawTarget = trimmed;
+      let customTitle: string | undefined = undefined;
+
+      if (ytSyntaxMatch) {
+        const inner = ytSyntaxMatch[1].trim();
+        const titleMatch = inner.match(/^(\S+)(?:\s+["'](.+?)["'])?$/);
+        if (titleMatch) {
+          rawTarget = titleMatch[1];
+          customTitle = titleMatch[2];
+        } else {
+          rawTarget = inner;
+        }
+      }
+
+      const videoId = extractYouTubeVideoId(rawTarget);
+      if (videoId) {
+        elements.push(
+          <YouTubeEmbed
+            key={`yt-${i}`}
+            videoId={videoId}
+            title={customTitle}
+          />
+        );
+        i++;
+        continue;
+      } else if (ytSyntaxMatch) {
+        // Explicit @[youtube](...) syntax with invalid ID or spoofed URL -> render error box
+        elements.push(
+          <YouTubeEmbed
+            key={`yt-invalid-${i}`}
+            videoId={rawTarget}
+            title={customTitle}
+          />
+        );
+        i++;
+        continue;
+      }
+    }
+
+    // Paragraph
+    if (trimmed.length > 0) {
+      elements.push(
+        <p
+          key={`p-${i}`}
+          style={{
+            color: 'var(--color-charcoal)',
+            marginBottom: '1.25rem',
+            lineHeight: 1.75,
+            fontSize: '1.025rem',
+          }}
+        >
+          {renderPreviewInline(line)}
+        </p>
+      );
+    }
+
+    i++;
+  }
+
+  return elements;
+}
 
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
@@ -22,8 +341,10 @@ export default function ContributorCourseCreatePage() {
   const [categoryId, setCategoryId] = useState('');
   const [tags, setTags] = useState('distributed-systems, algorithms');
   const [content, setContent] = useState(
-`## 1. Introduction & Problem Statement
+`## 1. Introduction & Video Lecture
 Detail the systems background, failure modes, or architectural problem this course addresses.
+
+@[youtube](https://www.youtube.com/watch?v=dQw4w9WgXcQ "Lecture 1: Distributed Systems Overview")
 
 \`\`\`typescript
 // Provide executable or concrete code examples
@@ -34,10 +355,11 @@ interface ConsensusNode {
 }
 \`\`\`
 
-## 2. Invariants & Proof of Correctness
+## 2. Invariants & Operational Guarantees
 List the mathematical or operational guarantees enforced by this architecture.
 
-> **Operational Invariant**: No state machine may execute state transitions out of global log order.
+> [!NOTE]
+> Operational Invariant: No state machine may execute state transitions out of global log order.
 `
   );
   const [previewMode, setPreviewMode] = useState(false);
@@ -45,6 +367,45 @@ List the mathematical or operational guarantees enforced by this architecture.
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoInputUrl, setVideoInputUrl] = useState('');
+  const [videoCustomTitle, setVideoCustomTitle] = useState('');
+  const [videoInsertNotice, setVideoInsertNotice] = useState<string | null>(null);
+
+  const detectedVideoId = extractYouTubeVideoId(videoInputUrl);
+
+  const handleInsertVideo = () => {
+    if (!detectedVideoId) return;
+    const cleanUrl = videoInputUrl.trim();
+    const cleanTitle = videoCustomTitle.trim();
+    const snippet = cleanTitle
+      ? `\n\n@[youtube](${cleanUrl || detectedVideoId} "${cleanTitle}")\n\n`
+      : `\n\n@[youtube](${cleanUrl || detectedVideoId})\n\n`;
+
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const before = content.substring(0, start);
+      const after = content.substring(end);
+      const nextContent = before + snippet + after;
+      setContent(nextContent);
+      setTimeout(() => {
+        textarea.focus();
+        const newPos = start + snippet.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }, 50);
+    } else {
+      setContent((prev) => `${prev.trim()}${snippet}`);
+    }
+
+    setVideoInputUrl('');
+    setVideoCustomTitle('');
+    setShowVideoModal(false);
+    setVideoInsertNotice(`Embedded YouTube video (${detectedVideoId}) added to lecture content.`);
+    setTimeout(() => setVideoInsertNotice(null), 4000);
+  };
 
   useEffect(() => {
     return subscribeCurrentUser(() => setUser(getCurrentUser()));
@@ -495,28 +856,275 @@ List the mathematical or operational guarantees enforced by this architecture.
 
         {/* Content Body Editor or Preview */}
         <div style={{ marginBottom: '2rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-            Curriculum Body (Markdown & Code Supported) *
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+              Curriculum Body (Markdown & Code Supported) *
+            </label>
+
+            {!previewMode && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowVideoModal((prev) => !prev)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.35rem 0.75rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid #FECACA',
+                    backgroundColor: showVideoModal ? '#FEE2E2' : '#FFF1F2',
+                    color: '#BE123C',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                    <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
+                  </svg>
+                  <span>{showVideoModal ? 'Close Video Tool' : 'Insert YouTube Video'}</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {videoInsertNotice && (
+            <div
+              style={{
+                marginBottom: '0.75rem',
+                padding: '0.55rem 0.85rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#ECFDF5',
+                border: '1px solid #A7F3D0',
+                color: '#065F46',
+                fontSize: '0.82rem',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>{videoInsertNotice}</span>
+            </div>
+          )}
+
+          {/* YouTube Video Insertion Card */}
+          {showVideoModal && !previewMode && (
+            <div
+              style={{
+                marginBottom: '1rem',
+                padding: '1.25rem',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: '#FFF5F5',
+                border: '1.5px solid #FECDD3',
+                boxShadow: 'var(--shadow-xs)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#E11D48">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
+                  <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
+                </svg>
+                <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#9F1239' }}>
+                  Insert YouTube Video Lecture
+                </h4>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <label
+                    htmlFor="youtube-modal-video-url"
+                    style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}
+                  >
+                    YouTube Link or Video ID *
+                  </label>
+                  <input
+                    id="youtube-modal-video-url"
+                    type="text"
+                    value={videoInputUrl}
+                    onChange={(e) => setVideoInputUrl(e.target.value)}
+                    placeholder="e.g. https://youtu.be/dQw4w9WgXcQ or https://www.youtube.com/watch?v=..."
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid #FDA4AF',
+                      fontSize: '0.85rem',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      color: 'var(--color-charcoal)',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="youtube-modal-video-title"
+                    style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}
+                  >
+                    Video Lecture Title (optional)
+                  </label>
+                  <input
+                    id="youtube-modal-video-title"
+                    type="text"
+                    value={videoCustomTitle}
+                    onChange={(e) => setVideoCustomTitle(e.target.value)}
+                    placeholder="e.g. Raft Consensus Protocol Walkthrough"
+                    style={{
+                      width: '100%',
+                      padding: '0.55rem 0.75rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid #FDA4AF',
+                      fontSize: '0.85rem',
+                      color: 'var(--color-charcoal)',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Real-time Validation Feedback */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ fontSize: '0.8rem' }}>
+                  {!videoInputUrl.trim() && (
+                    <span style={{ color: 'var(--color-gray)' }}>
+                      Supports standard, short, embed, or shorts YouTube URLs.
+                    </span>
+                  )}
+                  {videoInputUrl.trim() && detectedVideoId && (
+                    <span style={{ color: '#047857', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Valid YouTube ID: <code>{detectedVideoId}</code>
+                    </span>
+                  )}
+                  {videoInputUrl.trim() && !detectedVideoId && (
+                    <span style={{ color: '#B91C1C', fontWeight: 600 }}>
+                      ⚠ Invalid YouTube link. Please check the URL or provide a valid 11-character video ID.
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVideoModal(false);
+                      setVideoInputUrl('');
+                      setVideoCustomTitle('');
+                    }}
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: '1px solid var(--color-border)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--color-charcoal)',
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!detectedVideoId}
+                    onClick={handleInsertVideo}
+                    style={{
+                      padding: '0.4rem 0.9rem',
+                      borderRadius: 'var(--radius-sm, 6px)',
+                      border: 'none',
+                      backgroundColor: detectedVideoId ? '#E11D48' : '#FDA4AF',
+                      color: 'white',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: detectedVideoId ? 'pointer' : 'not-allowed',
+                      transition: 'background-color var(--transition-fast)',
+                    }}
+                  >
+                    Insert into Lecture
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {previewMode ? (
             <div
               className="prose"
               style={{
-                minHeight: 380,
-                padding: '1.5rem',
-                background: 'var(--color-off-white)',
+                minHeight: 420,
+                padding: '2.5rem',
+                background: 'var(--color-white)',
                 border: '1.5px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <h2 style={{ color: 'var(--color-charcoal)', marginTop: 0 }}>{title || 'Untitled Course'}</h2>
-              <pre style={{ background: 'var(--color-charcoal)', color: '#F8FAFC', padding: '1.25rem', borderRadius: 'var(--radius-md)' }}>
-                <code>{content}</code>
-              </pre>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: '1.25rem',
+                  marginBottom: '2rem',
+                  borderBottom: '1px solid var(--color-border)',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <span
+                    className="badge"
+                    style={{
+                      backgroundColor: 'var(--color-primary-pale)',
+                      color: 'var(--color-primary)',
+                      border: '1px solid var(--color-border)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '0.2rem 0.65rem',
+                      borderRadius: 'var(--radius-full)',
+                    }}
+                  >
+                    Live Reader Preview
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>
+                    Interactive YouTube player & formatting simulation
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode(false)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-off-white)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: 'var(--color-charcoal)',
+                  }}
+                >
+                  Return to Markdown Editor &larr;
+                </button>
+              </div>
+
+              <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800, marginBottom: '2rem', lineHeight: 1.25 }}>
+                {title || 'Untitled Course Material'}
+              </h1>
+
+              <div>{renderLivePreview(content)}</div>
             </div>
           ) : (
             <textarea
+              ref={textareaRef}
               rows={16}
               value={content}
               onChange={(e) => setContent(e.target.value)}
