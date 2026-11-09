@@ -270,6 +270,19 @@ function renderInlineFormatting(text: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
+function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Map<string, number>): string {
+  const base =
+    text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || `sec-${fallbackIdx}`;
+  const count = seenIds.get(base) || 0;
+  seenIds.set(base, count + 1);
+  return count === 0 ? base : `${base}-${count}`;
+}
+
 export default function CourseDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -339,7 +352,7 @@ export default function CourseDetailPage() {
     const v = article.published_version || article.latest_version;
     const raw = v?.content || '';
     const lines = raw.split('\n');
-    const items: { id: string; text: string; level: number }[] = [];
+    const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
     const seenIds = new Map<string, number>();
     let inCode = false;
 
@@ -350,20 +363,28 @@ export default function CourseDetailPage() {
       }
       if (inCode) return;
 
-      if (line.startsWith('## ')) {
-        const text = line.replace('## ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
-        const count = seenIds.get(base) || 0;
-        seenIds.set(base, count + 1);
-        const id = count === 0 ? base : `${base}-${count}`;
-        items.push({ id, text, level: 2 });
-      } else if (line.startsWith('### ')) {
-        const text = line.replace('### ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${idx}`;
-        const count = seenIds.get(base) || 0;
-        seenIds.set(base, count + 1);
-        const id = count === 0 ? base : `${base}-${count}`;
-        items.push({ id, text, level: 3 });
+      if (line.startsWith('## ') || line.startsWith('### ')) {
+        const isH2 = line.startsWith('## ');
+        const text = line.replace(/^#{2,3}\s+/, '').trim();
+        const id = getHeadingSlug(text, idx, seenIds);
+
+        let hasVideo = /video|bài giảng|lecture/i.test(text);
+        if (!hasVideo) {
+          for (let j = idx + 1; j < lines.length; j++) {
+            const next = lines[j].trim();
+            if (next.startsWith('## ') || next.startsWith('### ')) break;
+            if (
+              next.match(/^@\[youtube\]\((.+?)\)$/i) ||
+              /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+$/i.test(next)
+            ) {
+              hasVideo = true;
+              break;
+            }
+          }
+        }
+
+        items.push({ id, text, level: isH2 ? 2 : 3, hasVideo });
+        return;
       }
     });
 
@@ -618,10 +639,7 @@ export default function CourseDetailPage() {
       // Headings
       if (line.startsWith('## ')) {
         const text = line.replace('## ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${i}`;
-        const count = seenHeadingIds.get(base) || 0;
-        seenHeadingIds.set(base, count + 1);
-        const headingId = count === 0 ? base : `${base}-${count}`;
+        const headingId = getHeadingSlug(text, i, seenHeadingIds);
         elements.push(
           <h2
             key={`h2-${i}`}
@@ -647,10 +665,7 @@ export default function CourseDetailPage() {
 
       if (line.startsWith('### ')) {
         const text = line.replace('### ', '').trim();
-        const base = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `sec-${i}`;
-        const count = seenHeadingIds.get(base) || 0;
-        seenHeadingIds.set(base, count + 1);
-        const headingId = count === 0 ? base : `${base}-${count}`;
+        const headingId = getHeadingSlug(text, i, seenHeadingIds);
         elements.push(
           <h3
             key={`h3-${i}`}
@@ -1198,13 +1213,34 @@ export default function CourseDetailPage() {
                           fontWeight: isActive ? 600 : 400,
                           textDecoration: 'none',
                           lineHeight: 1.45,
-                          display: 'block',
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
                           transition: 'color var(--transition-fast)',
                           borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
                           paddingLeft: '0.5rem',
                         }}
                       >
-                        {item.text}
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {item.text}
+                        </span>
+                        {item.hasVideo && (
+                          <span
+                            title="Lecture includes video"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: isActive ? 'var(--color-primary)' : '#DC2626',
+                              flexShrink: 0,
+                              backgroundColor: isActive ? 'var(--color-primary-pale, #E0F2FE)' : '#FEE2E2',
+                              borderRadius: '4px',
+                              padding: '2px 4px',
+                            }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                          </span>
+                        )}
                       </a>
                     </li>
                   );

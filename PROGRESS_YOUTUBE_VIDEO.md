@@ -12,7 +12,7 @@
 ### Giai đoạn 2: Nâng cấp Bộ đọc Markdown trên Trang Chi tiết Khóa học (`/courses/[id]`)
 - [x] **2.1. Cập nhật hàm Render Markdown nhận diện Video YouTube**
 - [x] **2.2. Xử lý trường hợp Video nằm trong vùng Curriculum Gate của Khách**
-- [ ] **2.3. Cập nhật Mục lục Động (TOC) cho phần Video**
+- [x] **2.3. Cập nhật Mục lục Động (TOC) cho phần Video**
 
 ### Giai đoạn 3: Nâng cấp Contributor Studio Soạn thảo Khóa học (`/courses/create`)
 - [ ] **3.1. Thêm công cụ chèn Video nhanh trên giao diện Soạn thảo**
