@@ -273,6 +273,24 @@ function renderPreviewInline(text: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
+function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Set<string>): string {
+  const base =
+    text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '') || `sec-${fallbackIdx}`;
+  let candidate = base;
+  let counter = 1;
+  while (seenIds.has(candidate)) {
+    candidate = `${base}-${counter}`;
+    counter++;
+  }
+  seenIds.add(candidate);
+  return candidate;
+}
+
 function renderLivePreview(raw: string): React.ReactNode[] {
   const lines = raw.split('\n');
   const elements: React.ReactNode[] = [];
@@ -303,9 +321,12 @@ function renderLivePreview(raw: string): React.ReactNode[] {
 
     // Headings
     if (line.startsWith('## ')) {
+      const text = line.replace('## ', '').trim();
+      const hId = getHeadingSlug(text, i, new Set());
       elements.push(
         <h2
           key={`h2-${i}`}
+          id={hId}
           style={{
             color: 'var(--color-charcoal)',
             marginTop: '2.5rem',
@@ -314,9 +335,10 @@ function renderLivePreview(raw: string): React.ReactNode[] {
             paddingBottom: '0.5rem',
             fontSize: '1.65rem',
             fontWeight: 800,
+            scrollMarginTop: '1rem',
           }}
         >
-          {line.replace('## ', '').trim()}
+          {text}
         </h2>
       );
       i++;
@@ -324,18 +346,22 @@ function renderLivePreview(raw: string): React.ReactNode[] {
     }
 
     if (line.startsWith('### ')) {
+      const text = line.replace('### ', '').trim();
+      const hId = getHeadingSlug(text, i, new Set());
       elements.push(
         <h3
           key={`h3-${i}`}
+          id={hId}
           style={{
             color: 'var(--color-charcoal)',
             marginTop: '1.75rem',
             marginBottom: '0.75rem',
             fontSize: '1.3rem',
             fontWeight: 700,
+            scrollMarginTop: '1rem',
           }}
         >
-          {line.replace('### ', '').trim()}
+          {text}
         </h3>
       );
       i++;
@@ -544,6 +570,7 @@ export default function ContributorCourseCreatePage() {
       }));
   }, [categories]);
 
+
   const selectedCategory = useMemo(() => {
     return categories.find((c) => c.id === categoryId) || null;
   }, [categories, categoryId]);
@@ -569,7 +596,55 @@ List the mathematical or operational guarantees enforced by this architecture.
 > Operational Invariant: No state machine may execute state transitions out of global log order.
 `
   );
-  type ViewMode = 'split' | 'editor' | 'preview';
+  // Dynamic live Table of Contents tree extracted in real-time from markdown content
+  const tocItems = useMemo(() => {
+    if (!content) return [];
+    const lines = content.split('\n');
+    const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
+    const seenIds = new Set<string>();
+    let inCode = false;
+
+    lines.forEach((line, idx) => {
+      if (line.startsWith('```')) {
+        inCode = !inCode;
+        return;
+      }
+      if (inCode) return;
+
+      if (line.startsWith('## ') || line.startsWith('### ')) {
+        const isH2 = line.startsWith('## ');
+        const text = line.replace(/^#{2,3}\s+/, '').trim();
+        const id = getHeadingSlug(text, idx, seenIds);
+
+        let hasVideo = /video|lecture|bài giảng/i.test(text);
+        if (!hasVideo) {
+          let inCodeFence = false;
+          for (let j = idx + 1; j < lines.length; j++) {
+            const next = lines[j].trim();
+            if (next.startsWith('```')) {
+              inCodeFence = !inCodeFence;
+              continue;
+            }
+            if (inCodeFence) continue;
+            if (next.startsWith('## ') || next.startsWith('### ')) break;
+            if (
+              next.match(/^@\[youtube\]\((.+?)\)$/i) ||
+              /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(next)
+            ) {
+              hasVideo = true;
+              break;
+            }
+          }
+        }
+
+        items.push({ id, text, level: isH2 ? 2 : 3, hasVideo });
+      }
+    });
+
+    return items;
+  }, [content]);
+
+    type ViewMode = 'split' | 'editor' | 'preview';
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -2264,6 +2339,110 @@ List the mathematical or operational guarantees enforced by this architecture.
               </div>
             )}
           </div>
+
+          {/* Dynamic Live Table of Contents Preview */}
+          {tocItems.length > 0 ? (
+            <div
+              style={{
+                marginBottom: '2rem',
+                padding: '1.25rem 1.5rem',
+                backgroundColor: '#F8FAFC',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.85rem',
+                  paddingBottom: '0.5rem',
+                  borderBottom: '1px solid var(--color-border)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontWeight: 700, fontSize: '0.875rem', color: 'var(--color-charcoal)' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <line x1="8" y1="6" x2="21" y2="6" />
+                    <line x1="8" y1="12" x2="21" y2="12" />
+                    <line x1="8" y1="18" x2="21" y2="18" />
+                    <line x1="3" y1="6" x2="3.01" y2="6" />
+                    <line x1="3" y1="12" x2="3.01" y2="12" />
+                    <line x1="3" y1="18" x2="3.01" y2="18" />
+                  </svg>
+                  <span>Curriculum Table of Contents ({tocItems.length})</span>
+                </div>
+                <span style={{ fontSize: '0.72rem', color: 'var(--color-gray)' }}>Live outline sync</span>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                {tocItems.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      paddingLeft: item.level === 3 ? '1.25rem' : '0.25rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      fontSize: item.level === 2 ? '0.85rem' : '0.8rem',
+                    }}
+                  >
+                    <span style={{ color: item.level === 2 ? 'var(--color-primary)' : 'var(--color-gray)' }}>
+                      {item.level === 2 ? '•' : '↳'}
+                    </span>
+                    <a
+                      href={`#${item.id}`}
+                      style={{
+                        color: 'var(--color-charcoal)',
+                        textDecoration: 'none',
+                        fontWeight: item.level === 2 ? 600 : 400,
+                        transition: 'color var(--transition-fast)',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-primary)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--color-charcoal)')}
+                    >
+                      {item.text}
+                    </a>
+                    {item.hasVideo && (
+                      <span
+                        style={{
+                          backgroundColor: '#FEE2E2',
+                          color: '#BE123C',
+                          fontSize: '0.68rem',
+                          fontWeight: 700,
+                          padding: '0.1rem 0.4rem',
+                          borderRadius: '4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                        }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="5 3 19 12 5 21 5 3" />
+                        </svg>
+                        Lecture Video
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                marginBottom: '1.5rem',
+                padding: '0.75rem 1rem',
+                backgroundColor: '#F8FAFC',
+                border: '1px dashed var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--color-gray)',
+                fontSize: '0.8rem',
+                textAlign: 'center',
+              }}
+            >
+              Tip: Add <code>## Major Section</code> and <code>### Sub-section</code> headings to automatically build the lecture Table of Contents.
+            </div>
+          )}
 
           <div>{renderLivePreview(content)}</div>
         </div>
