@@ -42,12 +42,7 @@ return [
         // Product/operator approval recorded 2026-11-08; enabled by default from this
         // release. Set AI_CHAT_ENABLED=false to disable it again (e.g. staging/incident).
         'chat_enabled' => (bool) env('AI_CHAT_ENABLED', true),
-        'chat_timeout' => (int) env('AI_CHAT_TIMEOUT', 75),
-        // After migration 2026_11_08_000001 has run everywhere, set AI_MESSAGES_M1=true
-        // to skip two information_schema probes per chat request. Null = auto-detect.
-        'messages_m1' => env('AI_MESSAGES_M1') === null
-            ? null
-            : filter_var(env('AI_MESSAGES_M1'), FILTER_VALIDATE_BOOLEAN),
+        'chat_timeout' => (int) env('AI_CHAT_TIMEOUT', 40),
         'chat_history_limit' => (int) env('AI_CHAT_HISTORY_LIMIT', 20),
         'chat_memory_limit' => (int) env('AI_CHAT_MEMORY_LIMIT', 10),
         // Shared secret for the internal retention cron endpoint; empty disables it.

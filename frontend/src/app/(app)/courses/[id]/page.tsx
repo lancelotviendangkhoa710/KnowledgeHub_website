@@ -882,6 +882,59 @@ export default function CourseDetailPage() {
           style={{ maxWidth: 'var(--max-w-reader)', background: 'var(--color-white)', padding: '2.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xs)' }}
         >
           <header style={{ marginBottom: '2.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '2rem' }}>
+            {article.status === 'draft' && (
+              <div
+                style={{
+                  backgroundColor: '#FEF3C7',
+                  color: '#92400E',
+                  border: '1px solid #FCD34D',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '0.875rem',
+                  flexWrap: 'wrap',
+                  gap: '0.5rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ fontWeight: 700 }}>Course Draft Preview</span>
+                  <span>— This course is currently unpublished and visible only to its author and platform administrators.</span>
+                </div>
+                <Link
+                  href={`/courses/create?parent_id=${article.id}`}
+                  style={{
+                    fontWeight: 600,
+                    color: '#B45309',
+                    textDecoration: 'underline',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Edit in Studio →
+                </Link>
+              </div>
+            )}
+            {article.status === 'archived' && (
+              <div
+                style={{
+                  backgroundColor: '#F1F5F9',
+                  color: '#475569',
+                  border: '1px solid #CBD5E1',
+                  padding: '0.75rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontSize: '0.875rem',
+                  gap: '0.5rem',
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>Archived Course</span>
+                <span>— This course has been archived by platform administrators and is preserved for historical reference.</span>
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
               <span
                 className="badge"
@@ -900,16 +953,36 @@ export default function CourseDetailPage() {
               <span
                 className="badge"
                 style={{
-                  backgroundColor: '#EBF5EE',
-                  color: '#1B6E34',
-                  border: '1px solid #D2EBD9',
+                  backgroundColor:
+                    article.status === 'draft'
+                      ? '#FEF3C7'
+                      : article.status === 'archived'
+                      ? '#F1F5F9'
+                      : '#EBF5EE',
+                  color:
+                    article.status === 'draft'
+                      ? '#92400E'
+                      : article.status === 'archived'
+                      ? '#475569'
+                      : '#1B6E34',
+                  border: `1px solid ${
+                    article.status === 'draft'
+                      ? '#FCD34D'
+                      : article.status === 'archived'
+                      ? '#CBD5E1'
+                      : '#D2EBD9'
+                  }`,
                   fontSize: '0.75rem',
                   fontWeight: 600,
                   padding: '0.2rem 0.65rem',
                   borderRadius: 'var(--radius-full)',
                 }}
               >
-                Verified Curriculum
+                {article.status === 'draft'
+                  ? 'Draft Material'
+                  : article.status === 'archived'
+                  ? 'Archived Course'
+                  : 'Verified Curriculum'}
               </span>
             </div>
 
@@ -941,7 +1014,11 @@ export default function CourseDetailPage() {
                     {article.author?.name || 'Staff Engineer'}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)' }}>
-                    Published on {article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Recent'}
+                    {article.status === 'draft'
+                      ? 'Unpublished Draft'
+                      : article.status === 'archived'
+                      ? 'Archived Material'
+                      : `Published on ${article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Recent'}`}
                   </div>
                 </div>
               </div>
@@ -1302,10 +1379,12 @@ export default function CourseDetailPage() {
                   {version?.id || 'Draft (No Snapshot)'}
                 </span>
               </div>
-              <div>
-                <span style={{ color: 'var(--color-gray)' }}>Peer Review: </span>
-                <span style={{ color: '#1B6E34', fontWeight: 600 }}>Internal Core Approved</span>
-              </div>
+              {article.status !== 'draft' && (
+                <div>
+                  <span style={{ color: 'var(--color-gray)' }}>Peer Review: </span>
+                  <span style={{ color: '#1B6E34', fontWeight: 600 }}>Internal Core Approved</span>
+                </div>
+              )}
             </div>
           </div>
 

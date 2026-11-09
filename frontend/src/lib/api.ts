@@ -39,7 +39,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw { ...error, status: response.status };
+    throw { status: response.status, ...error };
   }
   return response.json();
 }

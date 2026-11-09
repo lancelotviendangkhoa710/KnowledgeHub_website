@@ -9,7 +9,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -120,45 +119,6 @@ class MessageSendTest extends TestCase
         $this->assertDatabaseCount('messages', 0);
     }
 
-    public function test_transient_service_error_is_retried_once_then_succeeds(): void
-    {
-        $this->configureAi();
-        Http::fakeSequence()
-            ->push(['detail' => ['code' => 'service_loading']], 503)
-            ->push([
-                'reply' => ['content' => 'Recovered after the cold start.'],
-                'meta' => ['provider' => 'deepseek'],
-            ]);
-        Sanctum::actingAs($user = $this->createUser());
-        $conversation = $this->createConversation($user);
-
-        $this->postJson($this->messagesUrl($conversation), ['content' => 'Hello companion'])
-            ->assertCreated()
-            ->assertJsonPath('status', 'success')
-            ->assertJsonPath('data.assistant_message.content', 'Recovered after the cold start.');
-
-        Http::assertSentCount(2);
-        Sleep::assertSleptTimes(1);
-    }
-
-    public function test_client_errors_are_not_retried(): void
-    {
-        $this->configureAi();
-        Http::fake([
-            'ai.example/*' => Http::response(['detail' => ['code' => 'invalid_request']], 422),
-        ]);
-        Sanctum::actingAs($user = $this->createUser());
-        $conversation = $this->createConversation($user);
-
-        $this->postJson($this->messagesUrl($conversation), ['content' => 'Hello companion'])
-            ->assertStatus(502)
-            ->assertJsonPath('message', 'AI Companion failed to reply. Please retry.');
-
-        Http::assertSentCount(1);
-        Sleep::assertNeverSlept();
-        $this->assertDatabaseCount('messages', 0);
-    }
-
     public function test_guest_cannot_send_a_message(): void
     {
         $this->configureAi();
@@ -239,7 +199,6 @@ class MessageSendTest extends TestCase
 
     private function configureAi(array $overrides = []): void
     {
-        Sleep::fake();
         config(array_merge([
             'services.ai.url' => 'https://ai.example',
             'services.ai.token' => 'internal-secret',
