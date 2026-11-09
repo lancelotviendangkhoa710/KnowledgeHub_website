@@ -20,5 +20,5 @@
 
 ### Giai đoạn 4: Kiểm thử, Tối ưu & Đóng gói Pull Request
 - [x] **4.1. Kiểm tra Build & Type Safety trong `frontend/`**
-- [ ] **4.2. Chạy kịch bản kiểm tra Guardrails dự án**
-- [ ] **4.3. Tạo Pull Request**
+- [x] **4.2. Chạy kịch bản kiểm tra Guardrails dự án**
+- [x] **4.3. Tạo Pull Request**
