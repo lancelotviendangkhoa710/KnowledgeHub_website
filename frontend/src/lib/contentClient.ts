@@ -156,3 +156,132 @@ export async function fetchTags(): Promise<Tag[]> {
 
   return mockTags;
 }
+
+/**
+ * Fetch articles authored by the authenticated user (including drafts and archived).
+ */
+export async function fetchMyArticles(status?: string): Promise<Article[]> {
+  try {
+    const baseTarget = buildApiUrl('/articles');
+    const fallbackBase = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1';
+    const url = new URL(
+      baseTarget,
+      baseTarget.startsWith('http') ? undefined : fallbackBase
+    );
+    url.searchParams.append('my_articles', 'true');
+    if (status && status !== 'all') {
+      url.searchParams.append('status', status);
+    }
+
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const bearerSession = getAccessToken();
+    if (bearerSession) {
+      headers['Authorization'] = `Bearer ${bearerSession}`;
+    }
+
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      headers,
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data && Array.isArray(json.data)) {
+        return json.data;
+      }
+      if (Array.isArray(json)) {
+        return json;
+      }
+    }
+  } catch {
+    // Graceful fallback to rich curated mock data if backend container is offline
+  }
+
+  // Fallback client-side filtering on mock data
+  let result = [...mockArticles];
+  if (status && status !== 'all') {
+    result = result.filter((a) => a.status === status);
+  }
+
+  return result;
+}
+
+/**
+ * Publish an article with an optional specific version ID.
+ */
+export async function publishArticle(articleId: string, versionId?: string): Promise<Article> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
+
+  const body = versionId ? JSON.stringify({ version_id: versionId }) : JSON.stringify({});
+  const res = await fetch(buildApiUrl(`/articles/${articleId}/publish`), {
+    method: 'POST',
+    headers,
+    body,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to publish course.');
+  }
+
+  const json = await res.json();
+  return json.data;
+}
+
+/**
+ * Archive an article.
+ */
+export async function archiveArticle(articleId: string): Promise<Article> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
+
+  const res = await fetch(buildApiUrl(`/articles/${articleId}/archive`), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({}),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to archive course.');
+  }
+
+  const json = await res.json();
+  return json.data;
+}
+
+/**
+ * Soft delete an article.
+ */
+export async function deleteArticle(articleId: string): Promise<void> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
+
+  const res = await fetch(buildApiUrl(`/articles/${articleId}`), {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to delete course.');
+  }
+}
