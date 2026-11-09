@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category, Tag } from '@/types/content';
@@ -342,6 +342,57 @@ export default function ContributorCourseCreatePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>(['distributed-systems', 'algorithms']);
   const [tagInput, setTagInput] = useState('');
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+
+  // Category hierarchy grouping (Domains and Sub-categories)
+  const groupedCategories = useMemo(() => {
+    if (!categories || categories.length === 0) return [];
+
+    const topLevel = categories.filter((c) => !c.parent_id);
+    const subCats = categories.filter((c) => !!c.parent_id);
+
+    if (subCats.length > 0) {
+      return topLevel.map((parent) => ({
+        domainName: parent.name,
+        parentId: parent.id,
+        items: [
+          parent,
+          ...subCats.filter((s) => s.parent_id === parent.id),
+        ],
+      }));
+    }
+
+    // Flat categories: Group by domain discipline
+    const domainMap: Record<string, Category[]> = {
+      'Systems & Distributed Infrastructure': [],
+      'Database Engineering & Storage Engines': [],
+      'AI & Intelligent Learning Systems': [],
+      'Architecture & General Engineering': [],
+    };
+
+    categories.forEach((cat) => {
+      const lower = (cat.slug + ' ' + cat.name).toLowerCase();
+      if (lower.includes('distribut') || lower.includes('system') || lower.includes('infra') || lower.includes('network')) {
+        domainMap['Systems & Distributed Infrastructure'].push(cat);
+      } else if (lower.includes('data') || lower.includes('db') || lower.includes('storage') || lower.includes('postgres')) {
+        domainMap['Database Engineering & Storage Engines'].push(cat);
+      } else if (lower.includes('ai') || lower.includes('learn') || lower.includes('companion') || lower.includes('model')) {
+        domainMap['AI & Intelligent Learning Systems'].push(cat);
+      } else {
+        domainMap['Architecture & General Engineering'].push(cat);
+      }
+    });
+
+    return Object.entries(domainMap)
+      .filter(([_, list]) => list.length > 0)
+      .map(([domainName, items]) => ({
+        domainName,
+        items,
+      }));
+  }, [categories]);
+
+  const selectedCategory = useMemo(() => {
+    return categories.find((c) => c.id === categoryId) || null;
+  }, [categories, categoryId]);
   const [content, setContent] = useState(
 `## 1. Introduction & Video Lecture
 Detail the systems background, failure modes, or architectural problem this course addresses.
@@ -984,9 +1035,16 @@ List the mathematical or operational guarantees enforced by this architecture.
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-                Domain Category *
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+                  Domain Category *
+                </label>
+                {selectedCategory && (
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 600 }}>
+                    #{selectedCategory.slug}
+                  </span>
+                )}
+              </div>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
@@ -997,14 +1055,21 @@ List the mathematical or operational guarantees enforced by this architecture.
                   background: 'var(--color-white)',
                   border: '1.5px solid var(--color-border)',
                   color: 'var(--color-charcoal)',
-                  fontSize: '0.95rem',
+                  fontSize: '0.925rem',
                   outline: 'none',
+                  cursor: 'pointer',
                 }}
               >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+                <option value="" disabled>-- Select curriculum domain --</option>
+                {groupedCategories.map((group) => (
+                  <optgroup key={group.domainName} label={`Domain: ${group.domainName}`}>
+                    {group.items.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.parent_id ? `  ↳ ${cat.name}` : `• ${cat.name}`}
+                        {cat.articles_count ? ` (${cat.articles_count} courses)` : ''}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
