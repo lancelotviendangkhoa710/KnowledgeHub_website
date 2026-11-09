@@ -13,6 +13,17 @@ import { extractYouTubeVideoId } from '@/lib/videoUtils';
 import YouTubeEmbed from '@/components/content/YouTubeEmbed';
 
 const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
+const LOCAL_STUDIO_DRAFT_KEY = 'kh_studio_course_draft_v2';
+
+interface StoredDraft {
+  title: string;
+  slug: string;
+  categoryId: string;
+  tags: string[];
+  content: string;
+  isSlugLocked: boolean;
+  savedAt: number;
+}
 
 
 function CodeBlockPreview({ code, language }: { code: string; language?: string }) {
@@ -654,6 +665,8 @@ List the mathematical or operational guarantees enforced by this architecture.
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showCodeDropdown, setShowCodeDropdown] = useState(false);
   const [showCalloutDropdown, setShowCalloutDropdown] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<StoredDraft | null>(null);
+  const [lastSavedNotice, setLastSavedNotice] = useState<string | null>(null);
   const [videoInputUrl, setVideoInputUrl] = useState('');
   const [videoCustomTitle, setVideoCustomTitle] = useState('');
   const [videoInsertNotice, setVideoInsertNotice] = useState<string | null>(null);
@@ -806,6 +819,19 @@ List the mathematical or operational guarantees enforced by this architecture.
         }
       }
 
+      // Check for local auto-saved draft
+      try {
+        const rawLocal = localStorage.getItem(LOCAL_STUDIO_DRAFT_KEY);
+        if (rawLocal) {
+          const parsedLocal: StoredDraft = JSON.parse(rawLocal);
+          if (parsedLocal && (parsedLocal.title || parsedLocal.content?.length > 100)) {
+            setPendingDraft(parsedLocal);
+          }
+        }
+      } catch {
+        // ignore storage parse error
+      }
+
       const pid = params.get('parent_id');
       if (pid) {
         setParentId(pid);
@@ -827,7 +853,53 @@ List the mathematical or operational guarantees enforced by this architecture.
     }
   }, []);
 
-  const handleAddTag = (raw: string) => {
+  // Auto-save draft every 20 seconds if title or content exists
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if ((title.trim().length > 0 || content.trim().length > 50) && typeof window !== 'undefined') {
+        const draftData: StoredDraft = {
+          title,
+          slug,
+          categoryId,
+          tags: selectedTags,
+          content,
+          isSlugLocked,
+          savedAt: Date.now(),
+        };
+        try {
+          localStorage.setItem(LOCAL_STUDIO_DRAFT_KEY, JSON.stringify(draftData));
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          setLastSavedNotice(`Draft auto-saved at ${timeStr}`);
+        } catch {
+          // ignore localStorage quota error
+        }
+      }
+    }, 20000);
+
+    return () => clearInterval(timer);
+  }, [title, slug, categoryId, selectedTags, content, isSlugLocked]);
+
+  const handleRestoreDraft = () => {
+    if (!pendingDraft) return;
+    if (pendingDraft.title) setTitle(pendingDraft.title);
+    if (pendingDraft.slug) setSlug(pendingDraft.slug);
+    if (pendingDraft.categoryId) setCategoryId(pendingDraft.categoryId);
+    if (pendingDraft.tags && Array.isArray(pendingDraft.tags)) setSelectedTags(pendingDraft.tags);
+    if (pendingDraft.content) setContent(pendingDraft.content);
+    if (typeof pendingDraft.isSlugLocked === 'boolean') setIsSlugLocked(pendingDraft.isSlugLocked);
+    setPendingDraft(null);
+    setLastSavedNotice('Draft recovered successfully from local storage.');
+    setTimeout(() => setLastSavedNotice(null), 4000);
+  };
+
+  const handleDiscardDraft = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(LOCAL_STUDIO_DRAFT_KEY);
+    }
+    setPendingDraft(null);
+  };
+
+    const handleAddTag = (raw: string) => {
     const clean = raw
       .trim()
       .toLowerCase()
@@ -1149,6 +1221,88 @@ List the mathematical or operational guarantees enforced by this architecture.
           </button>
         </div>
       </div>
+
+      {/* Auto-Save Draft Recovery Banner */}
+      {pendingDraft && (
+        <div
+          role="region"
+          aria-label="Draft Recovery"
+          style={{
+            marginBottom: '1.25rem',
+            padding: '1rem 1.25rem',
+            background: '#EFF6FF',
+            border: '1.5px solid #93C5FD',
+            borderRadius: 'var(--radius-md)',
+            color: '#1E40AF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+            boxShadow: 'var(--shadow-xs)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            <div>
+              <span style={{ fontWeight: 700 }}>Unsaved Draft Found:</span>{' '}
+              <span>&ldquo;{pendingDraft.title || 'Untitled Draft'}&rdquo; (auto-saved on {new Date(pendingDraft.savedAt).toLocaleTimeString()}). Would you like to recover your work?</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={handleRestoreDraft}
+              className="btn btn-primary"
+              style={{ padding: '0.4rem 0.95rem', fontSize: '0.82rem' }}
+            >
+              Restore Draft
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              style={{
+                padding: '0.4rem 0.85rem',
+                fontSize: '0.82rem',
+                border: '1px solid var(--color-border)',
+                backgroundColor: 'var(--color-white)',
+                color: 'var(--color-charcoal)',
+                borderRadius: 'var(--radius-sm, 6px)',
+                cursor: 'pointer',
+                fontWeight: 600,
+              }}
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
+
+      {lastSavedNotice && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            padding: '0.45rem 0.85rem',
+            backgroundColor: '#F0FDF4',
+            border: '1px solid #BBF7D0',
+            borderRadius: 'var(--radius-md)',
+            color: '#166534',
+            fontSize: '0.8rem',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <span>{lastSavedNotice}</span>
+        </div>
+      )}
 
       {parentId && (
         <div

@@ -28,7 +28,7 @@
 - [x] 4.3. Hiển thị Mục lục Tự động (Dynamic Live TOC Preview)
 
 ### Giai đoạn 5: Pre-flight Validation Checklist, Auto-Save & Xuất bản
-- [ ] 5.1. Bổ sung Cơ chế Tự động Lưu Bản nháp (Auto-Save Draft Recovery)
+- [x] 5.1. Bổ sung Cơ chế Tự động Lưu Bản nháp (Auto-Save Draft Recovery)
 - [ ] 5.2. Xây dựng Bảng Kiểm tra Tiêu chuẩn (Pre-flight Quality Checklist)
 - [ ] 5.3. Hoàn thiện Hành động Lưu Nháp (Draft) và Xuất bản (Publish)
 
