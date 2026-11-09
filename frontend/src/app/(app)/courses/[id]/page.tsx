@@ -9,6 +9,8 @@ import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { accountClient } from '@/lib/accountClient';
 import { getAccessToken } from '@/lib/authToken';
+import YouTubeEmbed from '@/components/content/YouTubeEmbed';
+import { extractYouTubeVideoId } from '@/lib/videoUtils';
 
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
@@ -739,6 +741,42 @@ export default function CourseDetailPage() {
         elements.push(<hr key={`hr-${i}`} style={{ borderColor: 'var(--color-border)', margin: '2.5rem 0' }} />);
         i++;
         continue;
+      }
+
+      // YouTube Video Embed (@[youtube](...) or standalone YouTube URL)
+      const trimmedLine = line.trim();
+      const ytSyntaxMatch = trimmedLine.match(/^@\[youtube\]\((.+?)\)$/i);
+      const isStandaloneUrl =
+        !ytSyntaxMatch &&
+        /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+$/i.test(trimmedLine);
+
+      if (ytSyntaxMatch || isStandaloneUrl) {
+        let rawTarget = trimmedLine;
+        let customTitle: string | undefined = undefined;
+
+        if (ytSyntaxMatch) {
+          const inner = ytSyntaxMatch[1].trim();
+          const titleMatch = inner.match(/^(\S+)(?:\s+["'](.+?)["'])?$/);
+          if (titleMatch) {
+            rawTarget = titleMatch[1];
+            customTitle = titleMatch[2];
+          } else {
+            rawTarget = inner;
+          }
+        }
+
+        const videoId = extractYouTubeVideoId(rawTarget);
+        if (videoId) {
+          elements.push(
+            <YouTubeEmbed
+              key={`yt-${i}`}
+              videoId={videoId}
+              title={customTitle}
+            />
+          );
+          i++;
+          continue;
+        }
       }
 
       // Paragraph

@@ -10,7 +10,7 @@
 - [x] **1.2. Tạo Component `YouTubeEmbed.tsx` chuẩn UX/UI và Responsive**
 
 ### Giai đoạn 2: Nâng cấp Bộ đọc Markdown trên Trang Chi tiết Khóa học (`/courses/[id]`)
-- [ ] **2.1. Cập nhật hàm Render Markdown nhận diện Video YouTube**
+- [x] **2.1. Cập nhật hàm Render Markdown nhận diện Video YouTube**
 - [ ] **2.2. Xử lý trường hợp Video nằm trong vùng Curriculum Gate của Khách**
 - [ ] **2.3. Cập nhật Mục lục Động (TOC) cho phần Video**
 
