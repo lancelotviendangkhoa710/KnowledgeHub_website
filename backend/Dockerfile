@@ -18,7 +18,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP's built-in server is single-process unless PHP_CLI_SERVER_WORKERS is set.
-# The API previously handled one request at a time, serialising the whole app.
+# Laravel's ServeCommand reads this variable at startup and explicitly forwards
+# it to the `php -S` child; `--no-reload` also passes the rest of the runtime
+# environment through. Verified with Laravel 11.57: one master + 4 workers.
 ENV PHP_CLI_SERVER_WORKERS=4
 
 # OPcache matters for the CLI server SAPI too (enable_cli), otherwise every
@@ -52,4 +54,6 @@ RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framewor
 
 EXPOSE 10000
 
-CMD sh -c 'php artisan config:cache && php artisan route:cache && php artisan serve --no-reload --host=0.0.0.0 --port="${PORT:-10000}"'
+# Exec-form CMD avoids Docker's JSONArgsRecommended warning, and `exec` makes
+# the Laravel server receive Render's SIGTERM directly instead of a shell.
+CMD ["sh", "-c", "php artisan config:cache && php artisan route:cache && exec php artisan serve --no-reload --host=0.0.0.0 --port=${PORT:-10000}"]
