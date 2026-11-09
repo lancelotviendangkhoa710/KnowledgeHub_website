@@ -270,7 +270,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
-function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Map<string, number>): string {
+function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Set<string>): string {
   const base =
     text
       .normalize('NFD')
@@ -278,9 +278,14 @@ function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Map<string, 
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '') || `sec-${fallbackIdx}`;
-  const count = seenIds.get(base) || 0;
-  seenIds.set(base, count + 1);
-  return count === 0 ? base : `${base}-${count}`;
+  let candidate = base;
+  let counter = 1;
+  while (seenIds.has(candidate)) {
+    candidate = `${base}-${counter}`;
+    counter++;
+  }
+  seenIds.add(candidate);
+  return candidate;
 }
 
 export default function CourseDetailPage() {
@@ -353,7 +358,7 @@ export default function CourseDetailPage() {
     const raw = v?.content || '';
     const lines = raw.split('\n');
     const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
-    const seenIds = new Map<string, number>();
+    const seenIds = new Set<string>();
     let inCode = false;
 
     lines.forEach((line, idx) => {
@@ -370,12 +375,18 @@ export default function CourseDetailPage() {
 
         let hasVideo = /video|bài giảng|lecture/i.test(text);
         if (!hasVideo) {
+          let inCodeFence = false;
           for (let j = idx + 1; j < lines.length; j++) {
             const next = lines[j].trim();
+            if (next.startsWith('```')) {
+              inCodeFence = !inCodeFence;
+              continue;
+            }
+            if (inCodeFence) continue;
             if (next.startsWith('## ') || next.startsWith('### ')) break;
             if (
               next.match(/^@\[youtube\]\((.+?)\)$/i) ||
-              /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+$/i.test(next)
+              /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(next)
             ) {
               hasVideo = true;
               break;
@@ -607,10 +618,10 @@ export default function CourseDetailPage() {
 
 
   // Advanced parser for technical long-form reading with Dracula code blocks and alert callouts
-  const renderFormattedContent = (raw: string) => {
+  const renderFormattedContent = (raw: string, headingTracker?: Set<string>) => {
     const lines = raw.split('\n');
     const elements: React.ReactNode[] = [];
-    const seenHeadingIds = new Map<string, number>();
+    const seenHeadingIds = headingTracker || new Set<string>();
 
     let i = 0;
     while (i < lines.length) {
@@ -763,7 +774,7 @@ export default function CourseDetailPage() {
       const ytSyntaxMatch = trimmedLine.match(/^@\[youtube\]\((.+?)\)$/i);
       const isStandaloneUrl =
         !ytSyntaxMatch &&
-        /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+$/i.test(trimmedLine);
+        /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(trimmedLine);
 
       if (ytSyntaxMatch || isStandaloneUrl) {
         let rawTarget = trimmedLine;
@@ -786,6 +797,17 @@ export default function CourseDetailPage() {
             <YouTubeEmbed
               key={`yt-${i}`}
               videoId={videoId}
+              title={customTitle}
+            />
+          );
+          i++;
+          continue;
+        } else if (ytSyntaxMatch) {
+          // Explicit @[youtube](...) syntax with invalid ID or spoofed URL -> render error box
+          elements.push(
+            <YouTubeEmbed
+              key={`yt-invalid-${i}`}
+              videoId={rawTarget}
               title={customTitle}
             />
           );
@@ -986,33 +1008,38 @@ export default function CourseDetailPage() {
           {/* Prose Content */}
           <div className="prose">
             {isGuest ? (
-              <>
-                {renderFormattedContent(introContent)}
+              (() => {
+                const guestTracker = new Set<string>();
+                return (
+                  <>
+                    {renderFormattedContent(introContent, guestTracker)}
 
-                {/* Blurred preview teaser */}
-                {remainingContent && (
-                  <div
-                    aria-hidden="true"
-                    tabIndex={-1}
-                    style={{
-                      filter: 'blur(5px)',
-                      opacity: 0.35,
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                      maxHeight: 220,
-                      overflow: 'hidden',
-                      marginTop: '1.5rem',
-                    }}
-                  >
-                    {renderFormattedContent(
-                      remainingContent.length > 800
-                        ? remainingContent.slice(0, 800).replace(/\n[^\n]*$/, '')
-                        : remainingContent
+                    {/* Blurred preview teaser with full inert focus isolation */}
+                    {remainingContent && (
+                      <div
+                        aria-hidden="true"
+                        tabIndex={-1}
+                        inert={true as any}
+                        style={{
+                          filter: 'blur(5px)',
+                          opacity: 0.35,
+                          pointerEvents: 'none',
+                          userSelect: 'none',
+                          maxHeight: 220,
+                          overflow: 'hidden',
+                          marginTop: '1.5rem',
+                        }}
+                      >
+                        {renderFormattedContent(
+                          remainingContent.length > 800
+                            ? remainingContent.slice(0, 800).replace(/\n[^\n]*$/, '')
+                            : remainingContent,
+                          guestTracker
+                        )}
+                      </div>
                     )}
-                  </div>
-                )}
 
-                {/* Curriculum Access Gate */}
+                    {/* Curriculum Access Gate */}
                 <div
                   id="curriculum-access-gate"
                   style={{
@@ -1085,9 +1112,11 @@ export default function CourseDetailPage() {
                   </div>
                 </div>
               </>
-            ) : (
-              renderFormattedContent(content)
-            )}
+            );
+          })()
+        ) : (
+          renderFormattedContent(content)
+        )}
           </div>
 
           {/* Completion Footer Action */}
@@ -1213,13 +1242,13 @@ export default function CourseDetailPage() {
                           fontWeight: isActive ? 600 : 400,
                           textDecoration: 'none',
                           lineHeight: 1.45,
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
+                          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem',
                           transition: 'color var(--transition-fast)',
                           borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
                           paddingLeft: '0.5rem',
                         }}
                       >
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ wordBreak: 'break-word', lineHeight: 1.45, flex: 1 }}>
                           {item.text}
                         </span>
                         {item.hasVideo && (

@@ -32,12 +32,18 @@ export function extractYouTubeVideoId(input: string): string | null {
     cleanInput = mdMatch[1].trim();
   }
 
+  // Strip trailing optional quoted title: <target> "title"
+  const titleStripMatch = cleanInput.match(/^(\S+)(?:\s+["'].*?["'])?$/);
+  if (titleStripMatch) {
+    cleanInput = titleStripMatch[1].trim();
+  }
+
   // 2. Direct 11-character video ID
   if (isValidYouTubeId(cleanInput)) {
     return cleanInput;
   }
 
-  // 3. Parse URLs using standard URL constructor
+  // 3. Parse URLs using standard URL constructor with strict host validation
   try {
     const urlString =
       cleanInput.startsWith('http://') || cleanInput.startsWith('https://')
@@ -51,7 +57,8 @@ export function extractYouTubeVideoId(input: string): string | null {
     if (
       host === 'youtube.com' ||
       host === 'youtube-nocookie.com' ||
-      host === 'm.youtube.com'
+      host === 'm.youtube.com' ||
+      host === 'music.youtube.com'
     ) {
       // /watch?v=...
       if (parsed.pathname === '/watch') {
@@ -102,19 +109,7 @@ export function extractYouTubeVideoId(input: string): string | null {
       }
     }
   } catch {
-    // Fall back to regex pattern matching if URL constructor fails
-  }
-
-  // 4. Regex fallback
-  const fallbackRegexes = [
-    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|live\/|watch\?v=|watch\?.+&v=))([a-zA-Z0-9_-]{11})/,
-  ];
-
-  for (const reg of fallbackRegexes) {
-    const match = cleanInput.match(reg);
-    if (match && isValidYouTubeId(match[1])) {
-      return match[1];
-    }
+    // Malformed URL string
   }
 
   return null;

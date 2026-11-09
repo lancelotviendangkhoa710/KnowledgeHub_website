@@ -51,17 +51,32 @@ function renderPreviewInline(text: string): React.ReactNode {
       const closingBracket = matched.indexOf('](');
       const linkText = matched.slice(1, closingBracket);
       const linkHref = matched.slice(closingBracket + 2, -1).trim();
-      parts.push(
-        <a
-          key={`link-${match.index}`}
-          href={linkHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
-        >
-          {linkText}
-        </a>
-      );
+
+      const isSafe =
+        linkHref.startsWith('#') ||
+        (linkHref.startsWith('/') &&
+          !linkHref.startsWith('//') &&
+          !linkHref.startsWith('/\\') &&
+          !linkHref.includes('\\') &&
+          !/[\r\n\t]/.test(linkHref)) ||
+        linkHref.startsWith('http://') ||
+        linkHref.startsWith('https://');
+
+      if (isSafe) {
+        parts.push(
+          <a
+            key={`link-${match.index}`}
+            href={linkHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+          >
+            {linkText}
+          </a>
+        );
+      } else {
+        parts.push(linkText);
+      }
     }
     lastIndex = regex.lastIndex;
   }
@@ -251,7 +266,7 @@ function renderLivePreview(raw: string): React.ReactNode[] {
     const ytSyntaxMatch = trimmed.match(/^@\[youtube\]\((.+?)\)$/i);
     const isStandaloneYt =
       !ytSyntaxMatch &&
-      /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+$/i.test(trimmed);
+      /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(trimmed);
 
     if (ytSyntaxMatch || isStandaloneYt) {
       let rawTarget = trimmed;
@@ -274,6 +289,17 @@ function renderLivePreview(raw: string): React.ReactNode[] {
           <YouTubeEmbed
             key={`yt-${i}`}
             videoId={videoId}
+            title={customTitle}
+          />
+        );
+        i++;
+        continue;
+      } else if (ytSyntaxMatch) {
+        // Explicit @[youtube](...) syntax with invalid ID or spoofed URL -> render error box
+        elements.push(
+          <YouTubeEmbed
+            key={`yt-invalid-${i}`}
+            videoId={rawTarget}
             title={customTitle}
           />
         );
@@ -912,10 +938,14 @@ List the mathematical or operational guarantees enforced by this architecture.
 
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}>
+                  <label
+                    htmlFor="youtube-modal-video-url"
+                    style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}
+                  >
                     YouTube Link or Video ID *
                   </label>
                   <input
+                    id="youtube-modal-video-url"
                     type="text"
                     value={videoInputUrl}
                     onChange={(e) => setVideoInputUrl(e.target.value)}
@@ -933,10 +963,14 @@ List the mathematical or operational guarantees enforced by this architecture.
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}>
+                  <label
+                    htmlFor="youtube-modal-video-title"
+                    style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#881337', marginBottom: '0.25rem' }}
+                  >
                     Video Lecture Title (optional)
                   </label>
                   <input
+                    id="youtube-modal-video-title"
                     type="text"
                     value={videoCustomTitle}
                     onChange={(e) => setVideoCustomTitle(e.target.value)}
