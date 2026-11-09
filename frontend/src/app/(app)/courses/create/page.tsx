@@ -10,8 +10,300 @@ import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 import { extractYouTubeVideoId } from '@/lib/videoUtils';
+import YouTubeEmbed from '@/components/content/YouTubeEmbed';
 
 const DRAFT_STORAGE_KEY = 'kh_course_editor_draft';
+
+
+function renderPreviewInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.substring(lastIndex, match.index));
+    }
+    const matched = match[0];
+    if (matched.startsWith('`') && matched.endsWith('`')) {
+      parts.push(
+        <code
+          key={`code-${match.index}`}
+          style={{
+            backgroundColor: '#F1F5F9',
+            color: '#0F172A',
+            padding: '0.15rem 0.4rem',
+            borderRadius: '4px',
+            fontSize: '0.88em',
+            fontFamily: 'var(--font-mono, monospace)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          {matched.slice(1, -1)}
+        </code>
+      );
+    } else if (matched.startsWith('**') && matched.endsWith('**')) {
+      parts.push(<strong key={`bold-${match.index}`}>{matched.slice(2, -2)}</strong>);
+    } else if (matched.startsWith('*') && matched.endsWith('*')) {
+      parts.push(<em key={`italic-${match.index}`}>{matched.slice(1, -1)}</em>);
+    } else if (matched.startsWith('[') && matched.includes('](')) {
+      const closingBracket = matched.indexOf('](');
+      const linkText = matched.slice(1, closingBracket);
+      const linkHref = matched.slice(closingBracket + 2, -1).trim();
+      parts.push(
+        <a
+          key={`link-${match.index}`}
+          href={linkHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+        >
+          {linkText}
+        </a>
+      );
+    }
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
+function renderLivePreview(raw: string): React.ReactNode[] {
+  const lines = raw.split('\n');
+  const elements: React.ReactNode[] = [];
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Code Block
+    if (line.startsWith('```')) {
+      const codeLanguage = line.replace('```', '').trim();
+      const codeBuffer: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        codeBuffer.push(lines[i]);
+        i++;
+      }
+      elements.push(
+        <div
+          key={`code-${i}`}
+          style={{
+            margin: '1.5rem 0',
+            borderRadius: 'var(--radius-md)',
+            overflow: 'hidden',
+            border: '1px solid #334155',
+            backgroundColor: '#0F172A',
+          }}
+        >
+          <div
+            style={{
+              padding: '0.45rem 1rem',
+              backgroundColor: '#1E293B',
+              borderBottom: '1px solid #334155',
+              fontSize: '0.75rem',
+              color: '#94A3B8',
+              fontFamily: 'var(--font-mono, monospace)',
+            }}
+          >
+            {codeLanguage || 'code'}
+          </div>
+          <pre style={{ padding: '1.25rem', margin: 0, overflowX: 'auto', fontSize: '0.9rem', color: '#F8FAFC' }}>
+            <code>{codeBuffer.join('\n')}</code>
+          </pre>
+        </div>
+      );
+      i++;
+      continue;
+    }
+
+    // Headings
+    if (line.startsWith('## ')) {
+      elements.push(
+        <h2
+          key={`h2-${i}`}
+          style={{
+            color: 'var(--color-charcoal)',
+            marginTop: '2.5rem',
+            marginBottom: '1rem',
+            borderBottom: '1.5px solid var(--color-border)',
+            paddingBottom: '0.5rem',
+            fontSize: '1.65rem',
+            fontWeight: 800,
+          }}
+        >
+          {line.replace('## ', '').trim()}
+        </h2>
+      );
+      i++;
+      continue;
+    }
+
+    if (line.startsWith('### ')) {
+      elements.push(
+        <h3
+          key={`h3-${i}`}
+          style={{
+            color: 'var(--color-charcoal)',
+            marginTop: '1.75rem',
+            marginBottom: '0.75rem',
+            fontSize: '1.3rem',
+            fontWeight: 700,
+          }}
+        >
+          {line.replace('### ', '').trim()}
+        </h3>
+      );
+      i++;
+      continue;
+    }
+
+    // Callout / Blockquote
+    if (line.startsWith('>')) {
+      const quoteLines: string[] = [];
+      let isNote = false;
+      let isTip = false;
+      let isWarning = false;
+
+      const firstClean = line.replace(/^>\s*/, '');
+      if (/^\[!(NOTE|IMPORTANT)\]/i.test(firstClean)) {
+        isNote = true;
+        const rest = firstClean.replace(/^\[!(NOTE|IMPORTANT)\]\s*/i, '').trim();
+        if (rest) quoteLines.push(rest);
+      } else if (/^\[!TIP\]/i.test(firstClean)) {
+        isTip = true;
+        const rest = firstClean.replace(/^\[!TIP\]\s*/i, '').trim();
+        if (rest) quoteLines.push(rest);
+      } else if (/^\[!(WARNING|CAUTION)\]/i.test(firstClean)) {
+        isWarning = true;
+        const rest = firstClean.replace(/^\[!(WARNING|CAUTION)\]\s*/i, '').trim();
+        if (rest) quoteLines.push(rest);
+      } else {
+        quoteLines.push(firstClean);
+      }
+
+      i++;
+      while (i < lines.length && lines[i].startsWith('>')) {
+        quoteLines.push(lines[i].replace(/^>\s*/, ''));
+        i++;
+      }
+
+      const borderColor = isTip ? '#10B981' : isWarning ? '#F59E0B' : isNote ? '#3B82F6' : 'var(--color-primary)';
+      const bgColor = isTip ? '#ECFDF5' : isWarning ? '#FFFBEB' : isNote ? '#EFF6FF' : '#F0F9FF';
+      const textColor = isTip ? '#065F46' : isWarning ? '#92400E' : isNote ? '#1E40AF' : 'var(--color-charcoal)';
+
+      elements.push(
+        <div
+          key={`quote-${i}`}
+          style={{
+            borderLeft: `4px solid ${borderColor}`,
+            backgroundColor: bgColor,
+            padding: '1rem 1.25rem',
+            borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+            margin: '1.5rem 0',
+            color: textColor,
+          }}
+        >
+          {quoteLines.map((ql, qIdx) => (
+            <p key={qIdx} style={{ margin: qIdx > 0 ? '0.4rem 0 0 0' : 0, fontSize: '0.95rem', lineHeight: 1.65 }}>
+              {renderPreviewInline(ql)}
+            </p>
+          ))}
+        </div>
+      );
+      continue;
+    }
+
+    // Lists
+    if (line.startsWith('* ') || line.startsWith('- ')) {
+      elements.push(
+        <li
+          key={`li-${i}`}
+          style={{
+            marginLeft: '1.5rem',
+            color: 'var(--color-charcoal)',
+            marginBottom: '0.5rem',
+            lineHeight: 1.65,
+            fontSize: '1rem',
+          }}
+        >
+          {renderPreviewInline(line.replace(/^[*-]\s+/, ''))}
+        </li>
+      );
+      i++;
+      continue;
+    }
+
+    // Horizontal Rule
+    if (line.trim() === '---') {
+      elements.push(<hr key={`hr-${i}`} style={{ borderColor: 'var(--color-border)', margin: '2rem 0' }} />);
+      i++;
+      continue;
+    }
+
+    // YouTube Embed (@[youtube](...) or standalone URL)
+    const trimmed = line.trim();
+    const ytSyntaxMatch = trimmed.match(/^@\[youtube\]\((.+?)\)$/i);
+    const isStandaloneYt =
+      !ytSyntaxMatch &&
+      /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/[^\s]+$/i.test(trimmed);
+
+    if (ytSyntaxMatch || isStandaloneYt) {
+      let rawTarget = trimmed;
+      let customTitle: string | undefined = undefined;
+
+      if (ytSyntaxMatch) {
+        const inner = ytSyntaxMatch[1].trim();
+        const titleMatch = inner.match(/^(\S+)(?:\s+["'](.+?)["'])?$/);
+        if (titleMatch) {
+          rawTarget = titleMatch[1];
+          customTitle = titleMatch[2];
+        } else {
+          rawTarget = inner;
+        }
+      }
+
+      const videoId = extractYouTubeVideoId(rawTarget);
+      if (videoId) {
+        elements.push(
+          <YouTubeEmbed
+            key={`yt-${i}`}
+            videoId={videoId}
+            title={customTitle}
+          />
+        );
+        i++;
+        continue;
+      }
+    }
+
+    // Paragraph
+    if (trimmed.length > 0) {
+      elements.push(
+        <p
+          key={`p-${i}`}
+          style={{
+            color: 'var(--color-charcoal)',
+            marginBottom: '1.25rem',
+            lineHeight: 1.75,
+            fontSize: '1.025rem',
+          }}
+        >
+          {renderPreviewInline(line)}
+        </p>
+      );
+    }
+
+    i++;
+  }
+
+  return elements;
+}
 
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
@@ -23,8 +315,10 @@ export default function ContributorCourseCreatePage() {
   const [categoryId, setCategoryId] = useState('');
   const [tags, setTags] = useState('distributed-systems, algorithms');
   const [content, setContent] = useState(
-`## 1. Introduction & Problem Statement
+`## 1. Introduction & Video Lecture
 Detail the systems background, failure modes, or architectural problem this course addresses.
+
+@[youtube](https://www.youtube.com/watch?v=dQw4w9WgXcQ "Lecture 1: Distributed Systems Overview")
 
 \`\`\`typescript
 // Provide executable or concrete code examples
@@ -35,10 +329,11 @@ interface ConsensusNode {
 }
 \`\`\`
 
-## 2. Invariants & Proof of Correctness
+## 2. Invariants & Operational Guarantees
 List the mathematical or operational guarantees enforced by this architecture.
 
-> **Operational Invariant**: No state machine may execute state transitions out of global log order.
+> [!NOTE]
+> Operational Invariant: No state machine may execute state transitions out of global log order.
 `
   );
   const [previewMode, setPreviewMode] = useState(false);
@@ -729,17 +1024,69 @@ List the mathematical or operational guarantees enforced by this architecture.
             <div
               className="prose"
               style={{
-                minHeight: 380,
-                padding: '1.5rem',
-                background: 'var(--color-off-white)',
+                minHeight: 420,
+                padding: '2.5rem',
+                background: 'var(--color-white)',
                 border: '1.5px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-sm)',
               }}
             >
-              <h2 style={{ color: 'var(--color-charcoal)', marginTop: 0 }}>{title || 'Untitled Course'}</h2>
-              <pre style={{ background: 'var(--color-charcoal)', color: '#F8FAFC', padding: '1.25rem', borderRadius: 'var(--radius-md)' }}>
-                <code>{content}</code>
-              </pre>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingBottom: '1.25rem',
+                  marginBottom: '2rem',
+                  borderBottom: '1px solid var(--color-border)',
+                  flexWrap: 'wrap',
+                  gap: '0.75rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                  <span
+                    className="badge"
+                    style={{
+                      backgroundColor: 'var(--color-primary-pale)',
+                      color: 'var(--color-primary)',
+                      border: '1px solid var(--color-border)',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      padding: '0.2rem 0.65rem',
+                      borderRadius: 'var(--radius-full)',
+                    }}
+                  >
+                    Live Reader Preview
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--color-gray)' }}>
+                    Interactive YouTube player & formatting simulation
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewMode(false)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: 'var(--radius-sm, 6px)',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-off-white)',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: 'var(--color-charcoal)',
+                  }}
+                >
+                  Return to Markdown Editor &larr;
+                </button>
+              </div>
+
+              <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800, marginBottom: '2rem', lineHeight: 1.25 }}>
+                {title || 'Untitled Course Material'}
+              </h1>
+
+              <div>{renderLivePreview(content)}</div>
             </div>
           ) : (
             <textarea
