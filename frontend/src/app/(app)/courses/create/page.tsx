@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Category } from '@/types/content';
-import { fetchCategories, fetchArticle } from '@/lib/contentClient';
+import { Category, Tag } from '@/types/content';
+import { fetchCategories, fetchArticle, fetchTags } from '@/lib/contentClient';
 import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
@@ -339,7 +339,9 @@ export default function ContributorCourseCreatePage() {
   const [title, setTitle] = useState('');
   const [slug, setSlug] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [tags, setTags] = useState('distributed-systems, algorithms');
+  const [selectedTags, setSelectedTags] = useState<string[]>(['distributed-systems', 'algorithms']);
+  const [tagInput, setTagInput] = useState('');
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [content, setContent] = useState(
 `## 1. Introduction & Video Lecture
 Detail the systems background, failure modes, or architectural problem this course addresses.
@@ -492,11 +494,12 @@ List the mathematical or operational guarantees enforced by this architecture.
 
   useEffect(() => {
     async function load() {
-      const cats = await fetchCategories();
+      const [cats, tagsList] = await Promise.all([fetchCategories(), fetchTags()]);
       setCategories(cats);
       if (cats.length > 0) {
         setCategoryId(cats[0].id);
       }
+      setAvailableTags(tagsList || []);
     }
     load();
 
@@ -510,7 +513,13 @@ List the mathematical or operational guarantees enforced by this architecture.
           if (parsed.title) setTitle(parsed.title);
           if (parsed.slug) setSlug(parsed.slug);
           if (parsed.categoryId) setCategoryId(parsed.categoryId);
-          if (parsed.tags) setTags(parsed.tags);
+          if (parsed.tags) {
+            if (Array.isArray(parsed.tags)) {
+              setSelectedTags(parsed.tags);
+            } else if (typeof parsed.tags === 'string') {
+              setSelectedTags(parsed.tags.split(',').map((t: string) => t.trim()).filter(Boolean));
+            }
+          }
           if (parsed.content) setContent(parsed.content);
         } catch {
           // ignore corrupted draft
@@ -537,6 +546,23 @@ List the mathematical or operational guarantees enforced by this architecture.
       }
     }
   }, []);
+
+  const handleAddTag = (raw: string) => {
+    const clean = raw
+      .trim()
+      .toLowerCase()
+      .replace(/^#+/, '')
+      .replace(/[^a-z0-9-]+/g, '-')
+      .replace(/^-|-$/g, '');
+    if (clean && !selectedTags.includes(clean)) {
+      setSelectedTags((prev) => [...prev, clean]);
+    }
+    setTagInput('');
+  };
+
+  const handleRemoveTag = (tagToRemove: string) => {
+    setSelectedTags((prev) => prev.filter((t) => t !== tagToRemove));
+  };
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -596,7 +622,7 @@ List the mathematical or operational guarantees enforced by this architecture.
           slug,
           category_id: categoryId || null,
           content,
-          tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+          tags: selectedTags,
         });
 
         if (publish && data?.data?.id) {
@@ -882,7 +908,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                 if (typeof window !== 'undefined') {
                   sessionStorage.setItem(
                     DRAFT_STORAGE_KEY,
-                    JSON.stringify({ title, slug, categoryId, tags, content })
+                    JSON.stringify({ title, slug, categoryId, tags: selectedTags, content })
                   );
                 }
               }}
@@ -1009,25 +1035,136 @@ List the mathematical or operational guarantees enforced by this architecture.
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--color-charcoal)' }}>
-                Tags (comma separated)
-              </label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g., storage, lsm-trees, wal"
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', margin: 0 }}>
+                  Curriculum Tags ({selectedTags.length}) *
+                </label>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-gray)' }}>Type & press Enter or comma</span>
+              </div>
+
+              {/* Tag Chips Box */}
+              <div
                 style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
+                  minHeight: '44px',
+                  padding: '0.4rem 0.6rem',
                   borderRadius: 'var(--radius-md)',
                   background: 'var(--color-white)',
                   border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-charcoal)',
-                  fontSize: '0.95rem',
-                  outline: 'none',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: '0.4rem',
                 }}
-              />
+              >
+                {selectedTags.map((t) => (
+                  <span
+                    key={t}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.35rem',
+                      backgroundColor: 'var(--color-primary-pale, #F3E5E5)',
+                      color: 'var(--color-primary, #8B0000)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-full, 9999px)',
+                      padding: '0.2rem 0.6rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span>#{t}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remove tag ${t}`}
+                      onClick={() => handleRemoveTag(t)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--color-primary)',
+                        padding: '0 0.1rem',
+                        fontSize: '0.95rem',
+                        lineHeight: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+
+                <input
+                  type="text"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      handleAddTag(tagInput);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (tagInput.trim()) {
+                      handleAddTag(tagInput);
+                    }
+                  }}
+                  placeholder={selectedTags.length === 0 ? "Type tag and press Enter (e.g. consensus)..." : "Add tag..."}
+                  style={{
+                    flex: '1 1 120px',
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '0.875rem',
+                    color: 'var(--color-charcoal)',
+                    background: 'transparent',
+                    padding: '0.25rem 0.35rem',
+                  }}
+                />
+              </div>
+
+              {/* Tag Suggestions from DB */}
+              {availableTags.length > 0 && (
+                <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--color-gray)', fontWeight: 600 }}>Suggestions:</span>
+                  {availableTags
+                    .filter((at) => !selectedTags.includes(at.slug || at.name.toLowerCase()))
+                    .slice(0, 6)
+                    .map((at) => {
+                      const tagSlug = at.slug || at.name.toLowerCase();
+                      return (
+                        <button
+                          key={at.id || tagSlug}
+                          type="button"
+                          onClick={() => handleAddTag(tagSlug)}
+                          style={{
+                            background: '#F8FAFC',
+                            border: '1px dashed var(--color-border)',
+                            borderRadius: 'var(--radius-full, 9999px)',
+                            padding: '0.15rem 0.5rem',
+                            fontSize: '0.72rem',
+                            color: 'var(--color-charcoal)',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            transition: 'all var(--transition-fast)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--color-primary)';
+                            e.currentTarget.style.color = 'var(--color-primary)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = 'var(--color-border)';
+                            e.currentTarget.style.color = 'var(--color-charcoal)';
+                          }}
+                        >
+                          <span>+</span>
+                          <span>#{at.name}</span>
+                        </button>
+                      );
+                    })}
+                </div>
+              )}
             </div>
           </div>
 

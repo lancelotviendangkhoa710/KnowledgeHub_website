@@ -18,7 +18,7 @@
 - [x] 2.4. Tích hợp Công cụ Nhúng Video YouTube (YouTube Video Modal / Inserter)
 
 ### Giai đoạn 3: Nâng cấp Quản lý Thuộc tính Khóa học (Metadata Management)
-- [ ] 3.1. Nâng cấp Bộ chọn Thẻ thành Thẻ Tương tác (Interactive Tag Chips)
+- [x] 3.1. Nâng cấp Bộ chọn Thẻ thành Thẻ Tương tác (Interactive Tag Chips)
 - [ ] 3.2. Cải tiến Bộ chọn Danh mục (Category Selector)
 - [ ] 3.3. Tự động sinh URL Slug chuẩn SEO kèm khóa thủ công (Auto-Slug Lock/Unlock)
 
