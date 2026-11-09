@@ -330,7 +330,18 @@ class MessageService
     /** M1 columns are optional so a deploy can happen before `php artisan migrate` runs. */
     private function supportsM1(): bool
     {
-        return self::$m1Supported ??= Schema::hasColumn('messages', 'sequence')
+        if (self::$m1Supported !== null) {
+            return self::$m1Supported;
+        }
+
+        // Production can pin the answer once the migration has run, which avoids
+        // two information_schema round trips on every chat request.
+        $configured = config('services.ai.messages_m1');
+        if (is_bool($configured)) {
+            return self::$m1Supported = $configured;
+        }
+
+        return self::$m1Supported = Schema::hasColumn('messages', 'sequence')
             && Schema::hasColumn('messages', 'client_message_id');
     }
 
