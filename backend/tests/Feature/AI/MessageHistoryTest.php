@@ -20,6 +20,21 @@ class MessageHistoryTest extends TestCase
         $this->getJson('/api/ai/conversations/'.Str::uuid().'/messages')->assertUnauthorized();
     }
 
+    public function test_missing_conversation_returns_generic_json_404(): void
+    {
+        Sanctum::actingAs($this->createUser());
+
+        $response = $this->getJson('/api/ai/conversations/'.Str::uuid().'/messages')
+            ->assertNotFound()
+            ->assertHeader('Content-Type', 'application/json')
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('code', 'not_found')
+            ->assertJsonPath('message', 'Resource not found.');
+
+        $this->assertStringNotContainsString('App\\Models', (string) $response->getContent());
+        $this->assertStringNotContainsString('Conversation', (string) $response->getContent());
+    }
+
     public function test_owner_reads_the_latest_messages_in_ascending_order(): void
     {
         $user = $this->createUser();
