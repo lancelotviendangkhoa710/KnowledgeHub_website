@@ -22,7 +22,7 @@ export default function SiteHeader() {
           </span>
         </Link>
         <nav className="site-nav" aria-label="Main navigation" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Discover</Link>
+          <Link href="/" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Discover</Link>
           <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Courses</Link>
           <Link href="/bookmarks" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Saved</Link>
           <Link href="/learning/roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Roadmaps</Link>

@@ -18,10 +18,7 @@ jobs:
 
       - name: Run repository guardrails
         shell: pwsh
-        env:
-          PR_BASE_REF: ${{ github.base_ref }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/$env:PR_BASE_REF" -HeadRef "$env:PR_HEAD_SHA" -RequireTaskId
+        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/${{ github.base_ref }}" -RequireTaskId
 
   # ─── Job 1: Kiểm tra tên branch đúng convention ───────────────────────────
   branch-convention:
@@ -29,10 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check branch name
-        env:
-          PR_HEAD_REF: ${{ github.head_ref }}
         run: |
-          BRANCH="$PR_HEAD_REF"
+          BRANCH="${{ github.head_ref }}"
           echo "Branch: $BRANCH"
           # Phải bắt đầu bằng p1/, p2/, p3/, hotfix/, release/
           if [[ ! "$BRANCH" =~ ^(p1|p2|p3|hotfix|release)/.+ ]]; then
@@ -52,12 +47,9 @@ jobs:
           fetch-depth: 0
 
       - name: Check commit messages
-        env:
-          PR_BASE_REF: ${{ github.base_ref }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Lấy các commit trong PR (không có trong base branch)
-          COMMITS=$(git log "origin/$PR_BASE_REF".."$PR_HEAD_SHA" --format="%s")
+          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --format="%s")
           echo "Commits to check:"
           echo "$COMMITS"
 
@@ -82,9 +74,8 @@ jobs:
   laravel-test:
     name: Laravel Tests
     runs-on: ubuntu-latest
-    env:
-      # CI Postgres has no TLS; .env.example sets DB_SSLMODE=require. Real env wins.
-      DB_SSLMODE: disable
+    # Application source is not tracked until the approved bootstrap task lands.
+    if: hashFiles('backend/composer.json') != ''
 
     services:
       postgres:
@@ -103,14 +94,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      # Laravel boots from ./backend, but the shared schema/factories live at the
-      # repository root (Docker mounts root database/ into the container). Provide
-      # them inside backend/ so artisan migrate and the test suite can see them.
-      - name: Provide database schema to backend
-        run: |
-          mkdir -p backend/database
-          cp -R database/migrations database/seeders backend/database/
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -165,25 +148,6 @@ jobs:
             );
 
             if (coderabbitReviews.length === 0) {
-              // CodeRabbit's free OSS quota can be exhausted; an external quota
-              // notice must not turn every PR red. Keep failing for a missing
-              // review when there is no such notice.
-              const { data: comments } = await github.rest.issues.listComments({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                per_page: 100,
-              });
-              const quotaExhausted = comments.some(
-                (comment) => comment.user.login === 'coderabbitai[bot]'
-                  && /review limit reached|rate limit|does not receive automatic reviews|skip review/i.test(comment.body || '')
-              );
-
-              if (quotaExhausted) {
-                core.warning('⚠️ CodeRabbit review quota exhausted; skipping the review gate.');
-                return;
-              }
-
               core.setFailed(
                 '❌ CodeRabbit chưa review PR này.\n' +
                 'Chờ @coderabbitai[bot] comment tự động, hoặc comment "@coderabbitai review" để trigger thủ công.'

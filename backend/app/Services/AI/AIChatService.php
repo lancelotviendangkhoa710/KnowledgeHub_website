@@ -3,11 +3,9 @@
 namespace App\Services\AI;
 
 use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
-use Throwable;
 
 class AIChatService
 {
@@ -31,23 +29,14 @@ class AIChatService
 
         try {
             $response = Http::withHeader('X-Service-Token', $token)
-                ->timeout((int) config('services.ai.chat_timeout', 75))
-                // Render free-tier cold starts can answer 503 while the service boots.
-                // One quiet retry covers that window; client (4xx) errors are never retried.
-                ->retry(
-                    2,
-                    1500,
-                    static fn (Throwable $exception): bool => $exception instanceof ConnectionException
-                        || ($exception instanceof RequestException && $exception->response->serverError()),
-                    throw: false,
-                )
+                ->timeout((int) config('services.ai.chat_timeout', 40))
                 ->post(rtrim($url, '/').'/v1/chat', [
                     'messages' => array_values($messages),
                     'memory' => array_values($memory),
                 ]);
         } catch (ConnectionException $exception) {
             Log::warning('ai.chat_request_failed', ['provider' => 'fastapi', 'category' => 'service_connection']);
-            throw new RuntimeException('AI Companion failed to reply. Please retry.', 502, $exception);
+            throw new RuntimeException('AI Companion is temporarily unavailable.', 502, $exception);
         }
 
         if ($response->failed()) {

@@ -94,12 +94,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
-            // Optional for long-lived workers: reuse the PDO connection instead
-            // of paying TLS + auth to Supabase on every request. Off by default.
-            'options' => array_filter([
-                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
-            ], static fn ($value): bool => $value !== false),
+            'sslmode' => 'prefer',
         ],
 
         'sqlsrv' => [
