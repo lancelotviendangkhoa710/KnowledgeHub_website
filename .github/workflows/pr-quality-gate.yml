@@ -20,7 +20,8 @@ jobs:
         shell: pwsh
         env:
           PR_BASE_REF: ${{ github.base_ref }}
-        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/$env:PR_BASE_REF" -RequireTaskId
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: ./scripts/test-guardrails.ps1 -BaseRef "origin/$env:PR_BASE_REF" -HeadRef "$env:PR_HEAD_SHA" -RequireTaskId
 
   # ─── Job 1: Kiểm tra tên branch đúng convention ───────────────────────────
   branch-convention:
@@ -53,9 +54,10 @@ jobs:
       - name: Check commit messages
         env:
           PR_BASE_REF: ${{ github.base_ref }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           # Lấy các commit trong PR (không có trong base branch)
-          COMMITS=$(git log "origin/$PR_BASE_REF"..HEAD --format="%s")
+          COMMITS=$(git log "origin/$PR_BASE_REF".."$PR_HEAD_SHA" --format="%s")
           echo "Commits to check:"
           echo "$COMMITS"
 
@@ -80,6 +82,9 @@ jobs:
   laravel-test:
     name: Laravel Tests
     runs-on: ubuntu-latest
+    env:
+      # CI Postgres has no TLS; .env.example sets DB_SSLMODE=require. Real env wins.
+      DB_SSLMODE: disable
 
     services:
       postgres:
@@ -152,6 +157,25 @@ jobs:
             );
 
             if (coderabbitReviews.length === 0) {
+              // CodeRabbit's free OSS quota can be exhausted; an external quota
+              // notice must not turn every PR red. Keep failing for a missing
+              // review when there is no such notice.
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                per_page: 100,
+              });
+              const quotaExhausted = comments.some(
+                (comment) => comment.user.login === 'coderabbitai[bot]'
+                  && /review limit reached|rate limit/i.test(comment.body || '')
+              );
+
+              if (quotaExhausted) {
+                core.warning('⚠️ CodeRabbit review quota exhausted; skipping the review gate.');
+                return;
+              }
+
               core.setFailed(
                 '❌ CodeRabbit chưa review PR này.\n' +
                 'Chờ @coderabbitai[bot] comment tự động, hoặc comment "@coderabbitai review" để trigger thủ công.'
