@@ -537,7 +537,7 @@ export default function CourseDetailPage() {
 
     if (splitIdx > 0 && splitIdx < lines.length) {
       const candidateIntro = lines.slice(0, splitIdx).join('\n');
-      if (candidateIntro.length <= 500) {
+      if (candidateIntro.length <= 1600) {
         return {
           introContent: candidateIntro,
           remainingContent: lines.slice(splitIdx).join('\n'),
@@ -978,6 +978,7 @@ export default function CourseDetailPage() {
                 {remainingContent && (
                   <div
                     aria-hidden="true"
+                    tabIndex={-1}
                     style={{
                       filter: 'blur(5px)',
                       opacity: 0.35,
@@ -988,7 +989,11 @@ export default function CourseDetailPage() {
                       marginTop: '1.5rem',
                     }}
                   >
-                    {renderFormattedContent(remainingContent.slice(0, 800))}
+                    {renderFormattedContent(
+                      remainingContent.length > 800
+                        ? remainingContent.slice(0, 800).replace(/\n[^\n]*$/, '')
+                        : remainingContent
+                    )}
                   </div>
                 )}
 
