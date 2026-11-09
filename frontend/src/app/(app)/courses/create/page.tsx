@@ -371,6 +371,7 @@ List the mathematical or operational guarantees enforced by this architecture.
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showCodeDropdown, setShowCodeDropdown] = useState(false);
+  const [showCalloutDropdown, setShowCalloutDropdown] = useState(false);
   const [videoInputUrl, setVideoInputUrl] = useState('');
   const [videoCustomTitle, setVideoCustomTitle] = useState('');
   const [videoInsertNotice, setVideoInsertNotice] = useState<string | null>(null);
@@ -384,6 +385,19 @@ List the mathematical or operational guarantees enforced by this architecture.
     bash: `# Run infrastructure or execution command\ndocker compose exec app php artisan migrate`,
     rust: `// Write concurrent or systems logic\nfn main() {\n    println!("KnowledgeHub Engine");\n}`,
     json: `{\n  "version": "1.0",\n  "status": "success"\n}`,
+  };
+
+  const handleInsertCallout = (kind: 'NOTE' | 'TIP' | 'WARNING') => {
+    let snippet = '';
+    if (kind === 'NOTE') {
+      snippet = `\n\n> [!NOTE]\n> Note: Detail essential context, architecture invariants, or prerequisites here.\n\n`;
+    } else if (kind === 'TIP') {
+      snippet = `\n\n> [!TIP]\n> Best Practice: Recommended production setup, performance optimizations, or benchmarks.\n\n`;
+    } else if (kind === 'WARNING') {
+      snippet = `\n\n> [!WARNING]\n> Warning: High-risk operational caveats, breaking changes, or concurrency pitfalls.\n\n`;
+    }
+    insertMarkdown(snippet, '', '');
+    setShowCalloutDropdown(false);
   };
 
   const handleInsertCodeBlock = (lang: string) => {
@@ -1483,6 +1497,128 @@ List the mathematical or operational guarantees enforced by this architecture.
                         </span>
                       </button>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Callout Box Inserter with Alert Dropdown */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  title="Insert Callout or Alert Box"
+                  onClick={() => setShowCalloutDropdown((prev) => !prev)}
+                  style={{
+                    padding: '0.3rem 0.65rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    borderRadius: '4px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: showCalloutDropdown ? '#E2E8F0' : 'var(--color-white)',
+                    color: 'var(--color-charcoal)',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>Callout Box</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {showCalloutDropdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 4px)',
+                      left: 0,
+                      backgroundColor: 'var(--color-white)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: 'var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1))',
+                      zIndex: 100,
+                      minWidth: '180px',
+                      overflow: 'hidden',
+                      padding: '0.3rem 0',
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleInsertCallout('NOTE')}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '0.5rem 0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: '#1E40AF',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EFF6FF')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
+                      <span>Note ([!NOTE])</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleInsertCallout('TIP')}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '0.5rem 0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: '#065F46',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ECFDF5')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                      <span>Tip & Best Practice</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleInsertCallout('WARNING')}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        padding: '0.5rem 0.85rem',
+                        background: 'none',
+                        border: 'none',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        color: '#92400E',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FFFBEB')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+                      <span>Warning ([!WARNING])</span>
+                    </button>
                   </div>
                 )}
               </div>

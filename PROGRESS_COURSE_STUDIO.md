@@ -14,7 +14,7 @@
 ### Giai đoạn 2: Xây dựng Thanh Công cụ Soạn thảo Thông minh (Curriculum Toolbar)
 - [x] 2.1. Tạo thanh công cụ định dạng nhanh phía trên khung Textarea
 - [x] 2.2. Tích hợp Công cụ Chèn Khối Code Đa ngôn ngữ (Code Block Inserter)
-- [ ] 2.3. Tích hợp Công cụ Chèn Khối Ghi chú / Alert (Callout Box Inserter)
+- [x] 2.3. Tích hợp Công cụ Chèn Khối Ghi chú / Alert (Callout Box Inserter)
 - [ ] 2.4. Tích hợp Công cụ Nhúng Video YouTube (YouTube Video Modal / Inserter)
 
 ### Giai đoạn 3: Nâng cấp Quản lý Thuộc tính Khóa học (Metadata Management)
