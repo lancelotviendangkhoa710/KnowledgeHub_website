@@ -104,6 +104,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Laravel boots from ./backend, but the shared schema/factories live at the
+      # repository root (Docker mounts root database/ into the container). Provide
+      # them inside backend/ so artisan migrate and the test suite can see them.
+      - name: Provide database schema to backend
+        run: |
+          mkdir -p backend/database
+          cp -R database/factories database/migrations database/seeders backend/database/
+
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -168,7 +176,7 @@ jobs:
               });
               const quotaExhausted = comments.some(
                 (comment) => comment.user.login === 'coderabbitai[bot]'
-                  && /review limit reached|rate limit/i.test(comment.body || '')
+                  && /review limit reached|rate limit|does not receive automatic reviews|skip review/i.test(comment.body || '')
               );
 
               if (quotaExhausted) {
