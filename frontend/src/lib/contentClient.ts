@@ -169,6 +169,7 @@ export async function fetchMyArticles(status?: string): Promise<Article[]> {
       baseTarget.startsWith('http') ? undefined : fallbackBase
     );
     url.searchParams.append('my_articles', 'true');
+    url.searchParams.append('per_page', '100');
     if (status && status !== 'all') {
       url.searchParams.append('status', status);
     }
@@ -184,26 +185,29 @@ export async function fetchMyArticles(status?: string): Promise<Article[]> {
       headers,
     });
 
-    if (res.ok) {
-      const json = await res.json();
-      if (json.data && Array.isArray(json.data)) {
-        return json.data;
-      }
-      if (Array.isArray(json)) {
-        return json;
-      }
+    if (!res.ok) {
+      const errorJson: { message?: string } = await res.json().catch(() => ({}));
+      throw new Error(errorJson.message || `Failed to load courses (HTTP ${res.status}).`);
     }
-  } catch {
-    // Graceful fallback to rich curated mock data if backend container is offline
-  }
 
-  // Fallback client-side filtering on mock data
-  let result = [...mockArticles];
-  if (status && status !== 'all') {
-    result = result.filter((a) => a.status === status);
+    const json: { data?: Article[]; status?: string } | Article[] = await res.json();
+    if ('data' in json && Array.isArray(json.data)) {
+      return json.data;
+    }
+    if (Array.isArray(json)) {
+      return json;
+    }
+    throw new Error('Unexpected response format received from server.');
+  } catch (err) {
+    if (process.env.NEXT_PUBLIC_USE_MOCK === 'true') {
+      let result = [...mockArticles];
+      if (status && status !== 'all') {
+        result = result.filter((a) => a.status === status);
+      }
+      return result;
+    }
+    throw err;
   }
-
-  return result;
 }
 
 /**
@@ -227,11 +231,14 @@ export async function publishArticle(articleId: string, versionId?: string): Pro
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err: { message?: string } = await res.json().catch(() => ({}));
     throw new Error(err.message || 'Failed to publish course.');
   }
 
-  const json = await res.json();
+  const json: { data?: Article; message?: string } = await res.json();
+  if (!json?.data) {
+    throw new Error(json?.message || 'Publish operation completed but course data was missing from server response.');
+  }
   return json.data;
 }
 
@@ -255,11 +262,14 @@ export async function archiveArticle(articleId: string): Promise<Article> {
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err: { message?: string } = await res.json().catch(() => ({}));
     throw new Error(err.message || 'Failed to archive course.');
   }
 
-  const json = await res.json();
+  const json: { data?: Article; message?: string } = await res.json();
+  if (!json?.data) {
+    throw new Error(json?.message || 'Archive operation completed but course data was missing from server response.');
+  }
   return json.data;
 }
 
@@ -281,7 +291,7 @@ export async function deleteArticle(articleId: string): Promise<void> {
   });
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
+    const err: { message?: string } = await res.json().catch(() => ({}));
     throw new Error(err.message || 'Failed to delete course.');
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
@@ -11,12 +11,411 @@ import { accountClient } from '@/lib/accountClient';
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
+interface MetricCardProps {
+  title: string;
+  count: number | string;
+  subtitle: string;
+  active: boolean;
+  color: string;
+  activeBorderColor: string;
+  iconBg: string;
+  iconColor: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+function MetricCard({
+  title,
+  count,
+  subtitle,
+  active,
+  color,
+  activeBorderColor,
+  iconBg,
+  iconColor,
+  icon,
+  onClick,
+}: MetricCardProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={`Filter by ${title}: ${count}`}
+      style={{
+        backgroundColor: 'var(--color-white)',
+        border: active ? `2px solid ${activeBorderColor}` : '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg, 12px)',
+        padding: '1.35rem 1.5rem',
+        cursor: 'pointer',
+        transition: 'all 0.15s ease',
+        boxShadow: 'var(--shadow-xs)',
+        textAlign: 'left',
+        width: '100%',
+        display: 'block',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <span style={{ fontSize: '0.82rem', fontWeight: 600, color, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {title}
+        </span>
+        <span
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: '50%',
+            backgroundColor: iconBg,
+            color: iconColor,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {icon}
+        </span>
+      </div>
+      <div style={{ fontSize: '2rem', fontWeight: 800, color, lineHeight: 1.1 }}>
+        {count}
+      </div>
+      <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)', marginTop: '0.35rem' }}>
+        {subtitle}
+      </div>
+    </button>
+  );
+}
+
+function StatusBadge({ status }: { status: 'draft' | 'published' | 'archived' }) {
+  if (status === 'published') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          backgroundColor: '#DCFCE7',
+          color: '#15803D',
+          border: '1px solid #86EFAC',
+          padding: '0.2rem 0.6rem',
+          borderRadius: '12px',
+          fontSize: '0.76rem',
+          fontWeight: 700,
+        }}
+      >
+        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#15803D' }} />
+        Published
+      </span>
+    );
+  }
+
+  if (status === 'draft') {
+    return (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          backgroundColor: '#FEF3C7',
+          color: '#8B0000',
+          border: '1px solid #FDE68A',
+          padding: '0.2rem 0.6rem',
+          borderRadius: '12px',
+          fontSize: '0.76rem',
+          fontWeight: 700,
+        }}
+      >
+        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#D97706' }} />
+        Draft
+      </span>
+    );
+  }
+
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        backgroundColor: '#F3F4F6',
+        color: '#706B6B',
+        border: '1px solid #E5E7EB',
+        padding: '0.2rem 0.6rem',
+        borderRadius: '12px',
+        fontSize: '0.76rem',
+        fontWeight: 700,
+      }}
+    >
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#9CA3AF' }} />
+      Archived
+    </span>
+  );
+}
+
+interface CourseTableRowProps {
+  article: Article;
+  isLast: boolean;
+  isPublishing: boolean;
+  isArchiving: boolean;
+  onPublish: (id: string) => void;
+  onArchive: (id: string) => void;
+  formatDate: (date?: string | null) => string;
+  getVersionLabel: (article: Article) => string;
+}
+
+function CourseTableRow({
+  article,
+  isLast,
+  isPublishing,
+  isArchiving,
+  onPublish,
+  onArchive,
+  formatDate,
+  getVersionLabel,
+}: CourseTableRowProps) {
+  const title =
+    article.published_version?.title ||
+    article.latest_version?.title ||
+    article.slug;
+  const versionTag = getVersionLabel(article);
+  const isDraft = article.status === 'draft';
+  const isPublished = article.status === 'published';
+
+  return (
+    <tr
+      style={{
+        borderBottom: isLast ? 'none' : '1px solid var(--color-border-light, #F0E8E8)',
+        transition: 'background-color 0.15s ease',
+      }}
+    >
+      {/* Course Title & Slug */}
+      <td style={{ padding: '1.1rem 1.25rem', maxWidth: 300 }}>
+        <Link
+          href={isPublished ? `/courses/${article.slug}` : `/courses/create?parent_id=${article.id}`}
+          style={{
+            fontWeight: 700,
+            color: 'var(--color-charcoal)',
+            fontSize: '0.96rem',
+            lineHeight: 1.35,
+            display: 'block',
+            marginBottom: '0.2rem',
+            textDecoration: 'none',
+          }}
+        >
+          {title}
+        </Link>
+        <span
+          style={{
+            fontSize: '0.78rem',
+            color: 'var(--color-gray)',
+            fontFamily: 'var(--font-mono, monospace)',
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          /{article.slug}
+        </span>
+      </td>
+
+      {/* Category & Tags */}
+      <td style={{ padding: '1.1rem 1rem' }}>
+        {article.category ? (
+          <span
+            style={{
+              display: 'inline-block',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              color: 'var(--color-primary)',
+              backgroundColor: 'var(--color-primary-faint, #FBF0F0)',
+              border: '1px solid var(--color-border)',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '4px',
+              marginBottom: '0.35rem',
+            }}
+          >
+            {article.category.name}
+          </span>
+        ) : (
+          <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-light)' }}>General</span>
+        )}
+        {article.tags && article.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+            {article.tags.slice(0, 2).map((t) => (
+              <span
+                key={t.id}
+                style={{
+                  fontSize: '0.72rem',
+                  color: 'var(--color-gray)',
+                  backgroundColor: '#F3F4F6',
+                  padding: '0.1rem 0.35rem',
+                  borderRadius: '3px',
+                }}
+              >
+                #{t.name}
+              </span>
+            ))}
+            {article.tags.length > 2 && (
+              <span style={{ fontSize: '0.7rem', color: 'var(--color-gray-light)' }}>
+                +{article.tags.length - 2}
+              </span>
+            )}
+          </div>
+        )}
+      </td>
+
+      {/* Version Snapshot */}
+      <td style={{ padding: '1.1rem 1rem' }}>
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.3rem',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            fontFamily: 'var(--font-mono, monospace)',
+            color: 'var(--color-charcoal)',
+            backgroundColor: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            padding: '0.18rem 0.5rem',
+            borderRadius: '4px',
+          }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+          <span>{versionTag}</span>
+        </span>
+      </td>
+
+      {/* Status Tag */}
+      <td style={{ padding: '1.1rem 1rem' }}>
+        <StatusBadge status={article.status} />
+      </td>
+
+      {/* Last Updated Timestamp */}
+      <td style={{ padding: '1.1rem 1rem', fontSize: '0.84rem', color: 'var(--color-gray)' }}>
+        <div>{formatDate(article.updated_at || article.created_at)}</div>
+        {article.published_at && (
+          <div style={{ fontSize: '0.74rem', color: 'var(--color-gray-light)', marginTop: '0.15rem' }}>
+            Pub: {formatDate(article.published_at)}
+          </div>
+        )}
+      </td>
+
+      {/* Actions */}
+      <td style={{ padding: '1.1rem 1.25rem', textAlign: 'right' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', justifyContent: 'flex-end' }}>
+          <Link
+            href={`/courses/${article.slug}`}
+            title="View course reader"
+            style={{
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'var(--color-charcoal)',
+              backgroundColor: 'transparent',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md, 6px)',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span>View</span>
+          </Link>
+
+          <Link
+            href={`/courses/create?parent_id=${article.id}`}
+            title="Author new version snapshot"
+            style={{
+              padding: '0.35rem 0.65rem',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              color: 'var(--color-primary)',
+              backgroundColor: 'var(--color-primary-faint, #FBF0F0)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-md, 6px)',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.3rem',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+            </svg>
+            <span>New Version</span>
+          </Link>
+
+          {isDraft && (
+            <button
+              type="button"
+              onClick={() => onPublish(article.id)}
+              disabled={isPublishing}
+              title="Publish this draft course"
+              style={{
+                padding: '0.35rem 0.65rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#15803D',
+                backgroundColor: '#DCFCE7',
+                border: '1px solid #86EFAC',
+                borderRadius: 'var(--radius-md, 6px)',
+                cursor: isPublishing ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.3rem',
+              }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>{isPublishing ? 'Publishing...' : 'Publish'}</span>
+            </button>
+          )}
+
+          {isPublished && (
+            <button
+              type="button"
+              onClick={() => onArchive(article.id)}
+              disabled={isArchiving}
+              title="Archive this course"
+              style={{
+                padding: '0.35rem 0.55rem',
+                fontSize: '0.8rem',
+                fontWeight: 500,
+                color: 'var(--color-gray)',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md, 6px)',
+                cursor: isArchiving ? 'wait' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              <span>{isArchiving ? '...' : 'Archive'}</span>
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function ContributorCourseManagementPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
   const [authChecked, setAuthChecked] = useState(false);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<StatusFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [publishingId, setPublishingId] = useState<string | null>(null);
@@ -24,26 +423,69 @@ export default function ContributorCourseManagementPage() {
   const [toastNotice, setToastNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Subscribe to auth updates and verify active session
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const errorTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isCancelledRef = useRef(false);
+
+  // Clear timers on component unmount
   useEffect(() => {
-    const unsub = subscribeCurrentUser(() => setUser(getCurrentUser()));
+    isCancelledRef.current = false;
+    return () => {
+      isCancelledRef.current = true;
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
+
+  // Safe toast setter with timer cleanup
+  const showToast = useCallback((msg: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastNotice(msg);
+    toastTimerRef.current = setTimeout(() => {
+      if (!isCancelledRef.current) setToastNotice(null);
+    }, 4000);
+  }, []);
+
+  // Safe action error setter with timer cleanup
+  const showError = useCallback((msg: string) => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    setActionError(msg);
+    errorTimerRef.current = setTimeout(() => {
+      if (!isCancelledRef.current) setActionError(null);
+    }, 5000);
+  }, []);
+
+  // Subscribe to auth updates and verify active session with proper cleanup
+  useEffect(() => {
+    let cancelled = false;
+    const unsub = subscribeCurrentUser(() => {
+      if (!cancelled) {
+        setUser(getCurrentUser());
+      }
+    });
+
     const authBearer = getAccessToken();
     const currentUser = getCurrentUser();
 
     if (!authBearer && !currentUser) {
       router.push('/login?redirect=/courses/manage');
-      return;
+      return () => {
+        cancelled = true;
+        unsub();
+      };
     }
 
     if (!currentUser && authBearer) {
       accountClient
         .me()
         .then((res) => {
+          if (cancelled) return;
           setGlobalCurrentUser(res.data.user);
           setUser(res.data.user);
           setAuthChecked(true);
         })
         .catch(() => {
+          if (cancelled) return;
           router.push('/login?redirect=/courses/manage');
         });
     } else {
@@ -51,42 +493,47 @@ export default function ContributorCourseManagementPage() {
       setAuthChecked(true);
     }
 
-    return unsub;
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [router]);
 
   // Load author articles once authenticated
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await fetchMyArticles();
+      if (!isCancelledRef.current) {
+        setArticles(data || []);
+      }
+    } catch (err: unknown) {
+      if (!isCancelledRef.current) {
+        const e = err as { message?: string };
+        setLoadError(e.message || 'Unable to retrieve your courses. Please check your network and retry.');
+        setArticles([]);
+      }
+    } finally {
+      if (!isCancelledRef.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!authChecked || !user) return;
 
     const isContributorOrAdmin =
       user.roles?.includes('contributor') || user.roles?.includes('admin');
 
-    if (!isContributorOrAdmin) return;
-
-    let isMounted = true;
-    async function loadData() {
-      setLoading(true);
-      try {
-        const data = await fetchMyArticles();
-        if (isMounted) {
-          setArticles(data || []);
-        }
-      } catch {
-        if (isMounted) {
-          setArticles([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+    if (!isContributorOrAdmin) {
+      setLoading(false);
+      return;
     }
 
     loadData();
-    return () => {
-      isMounted = false;
-    };
-  }, [authChecked, user]);
+  }, [authChecked, user, loadData]);
 
   // KPI Overview Metrics
   const metrics = useMemo(() => {
@@ -100,12 +547,10 @@ export default function ContributorCourseManagementPage() {
   // Filtered & Searched Course List
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
-      // Status filter
       if (activeTab !== 'all' && article.status !== activeTab) {
         return false;
       }
 
-      // Search query filter (matches title, slug, category, or tags)
       if (searchQuery.trim().length > 0) {
         const query = searchQuery.trim().toLowerCase();
         const titleMatch = (
@@ -127,8 +572,7 @@ export default function ContributorCourseManagementPage() {
     });
   }, [articles, activeTab, searchQuery]);
 
-  // Helper to format date
-  const formatDate = (dateStr?: string | null) => {
+  const formatDate = useCallback((dateStr?: string | null) => {
     if (!dateStr) return 'N/A';
     try {
       const d = new Date(dateStr);
@@ -140,10 +584,9 @@ export default function ContributorCourseManagementPage() {
     } catch {
       return dateStr;
     }
-  };
+  }, []);
 
-  // Helper to extract version label
-  const getVersionLabel = (article: Article): string => {
+  const getVersionLabel = useCallback((article: Article): string => {
     const v = article.published_version || article.latest_version;
     if (v?.version_no) {
       return `v${v.version_no}.0`;
@@ -153,7 +596,7 @@ export default function ContributorCourseManagementPage() {
       return `v${vers[0].version_no}.0`;
     }
     return 'v1.0';
-  };
+  }, []);
 
   // Inline Publish Handler
   const handlePublish = async (courseId: string) => {
@@ -173,12 +616,10 @@ export default function ContributorCourseManagementPage() {
             : a
         )
       );
-      setToastNotice('Course successfully published to the KnowledgeHub platform!');
-      setTimeout(() => setToastNotice(null), 4000);
+      showToast('Course successfully published to the KnowledgeHub platform!');
     } catch (err: unknown) {
       const e = err as { message?: string };
-      setActionError(e.message || 'Failed to publish course. Please try again.');
-      setTimeout(() => setActionError(null), 5000);
+      showError(e.message || 'Failed to publish course. Please try again.');
     } finally {
       setPublishingId(null);
     }
@@ -197,12 +638,10 @@ export default function ContributorCourseManagementPage() {
       setArticles((prev) =>
         prev.map((a) => (a.id === courseId ? { ...a, status: 'archived' } : a))
       );
-      setToastNotice('Course has been archived.');
-      setTimeout(() => setToastNotice(null), 4000);
+      showToast('Course has been archived.');
     } catch (err: unknown) {
       const e = err as { message?: string };
-      setActionError(e.message || 'Failed to archive course.');
-      setTimeout(() => setActionError(null), 5000);
+      showError(e.message || 'Failed to archive course.');
     } finally {
       setArchivingId(null);
     }
@@ -221,7 +660,7 @@ export default function ContributorCourseManagementPage() {
   const isContributorOrAdmin =
     user?.roles?.includes('contributor') || user?.roles?.includes('admin');
 
-  // RBAC Access Restricted Card for non-contributors / regular learners
+  // RBAC Access Restricted Card for non-contributors / regular users
   if (!isContributorOrAdmin) {
     return (
       <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
@@ -294,7 +733,7 @@ export default function ContributorCourseManagementPage() {
             fontWeight: 500,
           }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <span>{toastNotice}</span>
@@ -321,9 +760,46 @@ export default function ContributorCourseManagementPage() {
           <button
             type="button"
             onClick={() => setActionError(null)}
+            aria-label="Dismiss error notification"
             style={{ background: 'none', border: 'none', color: '#991B1B', cursor: 'pointer', fontWeight: 700 }}
           >
             ✕
+          </button>
+        </div>
+      )}
+
+      {loadError && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: '1.5rem',
+            backgroundColor: '#FEF2F2',
+            border: '1px solid #F87171',
+            color: '#B91C1C',
+            padding: '1rem 1.25rem',
+            borderRadius: 'var(--radius-md, 8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span style={{ fontSize: '0.92rem' }}>{loadError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={loadData}
+            className="btn btn-secondary"
+            style={{ padding: '0.35rem 0.85rem', fontSize: '0.84rem' }}
+          >
+            Retry Loading
           </button>
         </div>
       )}
@@ -410,177 +886,77 @@ export default function ContributorCourseManagementPage() {
           marginBottom: '2.5rem',
         }}
       >
-        {/* Total Courses Card */}
-        <div
+        <MetricCard
+          title="Total Courses"
+          count={loading ? '—' : metrics.total}
+          subtitle="Authored curricula & drafts"
+          active={activeTab === 'all'}
+          color="var(--color-charcoal)"
+          activeBorderColor="var(--color-primary)"
+          iconBg="var(--color-primary-pale, #F3E5E5)"
+          iconColor="var(--color-primary)"
           onClick={() => setActiveTab('all')}
-          style={{
-            backgroundColor: 'var(--color-white)',
-            border: activeTab === 'all' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            padding: '1.35rem 1.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--color-gray)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Total Courses
-            </span>
-            <span
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-primary-pale, #F3E5E5)',
-                color: 'var(--color-primary)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-              </svg>
-            </span>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-charcoal)', lineHeight: 1.1 }}>
-            {loading ? '—' : metrics.total}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)', marginTop: '0.35rem' }}>
-            Authored curricula & drafts
-          </div>
-        </div>
+          icon={
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+            </svg>
+          }
+        />
 
-        {/* Published Curricula Card */}
-        <div
+        <MetricCard
+          title="Published Curricula"
+          count={loading ? '—' : metrics.published}
+          subtitle="Live for readers platform-wide"
+          active={activeTab === 'published'}
+          color="#15803D"
+          activeBorderColor="#15803D"
+          iconBg="#DCFCE7"
+          iconColor="#15803D"
           onClick={() => setActiveTab('published')}
-          style={{
-            backgroundColor: 'var(--color-white)',
-            border: activeTab === 'published' ? '2px solid #15803D' : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            padding: '1.35rem 1.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#15803D', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Published Curricula
-            </span>
-            <span
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                backgroundColor: '#DCFCE7',
-                color: '#15803D',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </span>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#15803D', lineHeight: 1.1 }}>
-            {loading ? '—' : metrics.published}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)', marginTop: '0.35rem' }}>
-            Live for learners platform-wide
-          </div>
-        </div>
+          icon={
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          }
+        />
 
-        {/* Drafts in Progress Card */}
-        <div
+        <MetricCard
+          title="Drafts in Progress"
+          count={loading ? '—' : metrics.drafts}
+          subtitle="Unpublished version snapshots"
+          active={activeTab === 'draft'}
+          color="#8B0000"
+          activeBorderColor="#D97706"
+          iconBg="#FEF3C7"
+          iconColor="#D97706"
           onClick={() => setActiveTab('draft')}
-          style={{
-            backgroundColor: 'var(--color-white)',
-            border: activeTab === 'draft' ? '2px solid #D97706' : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            padding: '1.35rem 1.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#D97706', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Drafts in Progress
-            </span>
-            <span
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                backgroundColor: '#FEF3C7',
-                color: '#D97706',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-            </span>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#8B0000', lineHeight: 1.1 }}>
-            {loading ? '—' : metrics.drafts}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)', marginTop: '0.35rem' }}>
-            Unpublished version snapshots
-          </div>
-        </div>
+          icon={
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          }
+        />
 
-        {/* Archived Modules Card */}
-        <div
+        <MetricCard
+          title="Archived Modules"
+          count={loading ? '—' : metrics.archived}
+          subtitle="Retired / deprecated curricula"
+          active={activeTab === 'archived'}
+          color="#706B6B"
+          activeBorderColor="#706B6B"
+          iconBg="#F3F4F6"
+          iconColor="#706B6B"
           onClick={() => setActiveTab('archived')}
-          style={{
-            backgroundColor: 'var(--color-white)',
-            border: activeTab === 'archived' ? '2px solid #706B6B' : '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            padding: '1.35rem 1.5rem',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#706B6B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Archived Modules
-            </span>
-            <span
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                backgroundColor: '#F3F4F6',
-                color: '#706B6B',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <polyline points="21 8 21 21 3 21 3 8" />
-                <rect x="1" y="3" width="22" height="5" />
-                <line x1="10" y1="12" x2="14" y2="12" />
-              </svg>
-            </span>
-          </div>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#706B6B', lineHeight: 1.1 }}>
-            {loading ? '—' : metrics.archived}
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)', marginTop: '0.35rem' }}>
-            Retired / deprecated curricula
-          </div>
-        </div>
+          icon={
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+              <polyline points="21 8 21 21 3 21 3 8" />
+              <rect x="1" y="3" width="22" height="5" />
+              <line x1="10" y1="12" x2="14" y2="12" />
+            </svg>
+          }
+        />
       </div>
 
       {/* 3. Status Filter Tabs & Real-Time Search Bar */}
@@ -660,7 +1036,7 @@ export default function ContributorCourseManagementPage() {
               alignItems: 'center',
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -670,6 +1046,7 @@ export default function ContributorCourseManagementPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search courses by title or slug..."
+            aria-label="Search courses by title or slug"
             style={{
               width: '100%',
               padding: '0.5rem 2rem 0.5rem 2.4rem',
@@ -685,6 +1062,7 @@ export default function ContributorCourseManagementPage() {
             <button
               type="button"
               onClick={() => setSearchQuery('')}
+              aria-label="Clear course search"
               style={{
                 position: 'absolute',
                 right: '0.65rem',
@@ -745,7 +1123,7 @@ export default function ContributorCourseManagementPage() {
               marginBottom: '1rem',
             }}
           >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" y1="13" x2="8" y2="13" />
@@ -758,7 +1136,7 @@ export default function ContributorCourseManagementPage() {
                 No courses authored yet
               </h3>
               <p style={{ color: 'var(--color-gray)', fontSize: '0.95rem', maxWidth: 440, margin: '0 auto 1.5rem auto', lineHeight: 1.6 }}>
-                You haven&apos;t created any courses yet. Author your first technical curriculum to share domain knowledge with learners.
+                You haven&apos;t created any courses yet. Author your first technical curriculum to share domain knowledge across the platform.
               </p>
               <Link href="/courses/create" className="btn btn-primary" style={{ padding: '0.65rem 1.4rem', fontWeight: 600 }}>
                 + Author First Course
@@ -770,8 +1148,7 @@ export default function ContributorCourseManagementPage() {
                 No courses match your filter
               </h3>
               <p style={{ color: 'var(--color-gray)', fontSize: '0.95rem', maxWidth: 420, margin: '0 auto 1.5rem auto', lineHeight: 1.6 }}>
-                No courses found matching tab &ldquo;{activeTab}&rdquo;
-                {searchQuery ? ` and search &ldquo;${searchQuery}&rdquo;` : ''}.
+                No courses found matching tab “{activeTab}”{searchQuery ? ` and search “${searchQuery}”` : ''}.
               </p>
               <button
                 type="button"
@@ -821,308 +1198,19 @@ export default function ContributorCourseManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredArticles.map((article, idx) => {
-                  const title =
-                    article.published_version?.title ||
-                    article.latest_version?.title ||
-                    article.slug;
-                  const versionTag = getVersionLabel(article);
-                  const isDraft = article.status === 'draft';
-                  const isPublished = article.status === 'published';
-                  const isArchived = article.status === 'archived';
-                  const isThisPublishing = publishingId === article.id;
-                  const isThisArchiving = archivingId === article.id;
-
-                  return (
-                    <tr
-                      key={article.id}
-                      style={{
-                        borderBottom: idx === filteredArticles.length - 1 ? 'none' : '1px solid var(--color-border-light, #F0E8E8)',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                    >
-                      {/* Course Title & Slug */}
-                      <td style={{ padding: '1.1rem 1.25rem', maxWidth: 300 }}>
-                        <Link
-                          href={isPublished ? `/courses/${article.slug}` : `/courses/create?parent_id=${article.id}`}
-                          style={{
-                            fontWeight: 700,
-                            color: 'var(--color-charcoal)',
-                            fontSize: '0.96rem',
-                            lineHeight: 1.35,
-                            display: 'block',
-                            marginBottom: '0.2rem',
-                            textDecoration: 'none',
-                          }}
-                        >
-                          {title}
-                        </Link>
-                        <span
-                          style={{
-                            fontSize: '0.78rem',
-                            color: 'var(--color-gray)',
-                            fontFamily: 'var(--font-mono, monospace)',
-                            display: 'block',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          /{article.slug}
-                        </span>
-                      </td>
-
-                      {/* Category & Tags */}
-                      <td style={{ padding: '1.1rem 1rem' }}>
-                        {article.category ? (
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              color: 'var(--color-primary)',
-                              backgroundColor: 'var(--color-primary-faint, #FBF0F0)',
-                              border: '1px solid var(--color-border)',
-                              padding: '0.15rem 0.5rem',
-                              borderRadius: '4px',
-                              marginBottom: '0.35rem',
-                            }}
-                          >
-                            {article.category.name}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '0.78rem', color: 'var(--color-gray-light)' }}>General</span>
-                        )}
-                        {article.tags && article.tags.length > 0 && (
-                          <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
-                            {article.tags.slice(0, 2).map((t) => (
-                              <span
-                                key={t.id}
-                                style={{
-                                  fontSize: '0.72rem',
-                                  color: 'var(--color-gray)',
-                                  backgroundColor: '#F3F4F6',
-                                  padding: '0.1rem 0.35rem',
-                                  borderRadius: '3px',
-                                }}
-                              >
-                                #{t.name}
-                              </span>
-                            ))}
-                            {article.tags.length > 2 && (
-                              <span style={{ fontSize: '0.7rem', color: 'var(--color-gray-light)' }}>
-                                +{article.tags.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Version Snapshot */}
-                      <td style={{ padding: '1.1rem 1rem' }}>
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.3rem',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            fontFamily: 'var(--font-mono, monospace)',
-                            color: 'var(--color-charcoal)',
-                            backgroundColor: '#F8FAFC',
-                            border: '1px solid #E2E8F0',
-                            padding: '0.18rem 0.5rem',
-                            borderRadius: '4px',
-                          }}
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <polyline points="16 18 22 12 16 6" />
-                            <polyline points="8 6 2 12 8 18" />
-                          </svg>
-                          <span>{versionTag}</span>
-                        </span>
-                      </td>
-
-                      {/* Status Tag */}
-                      <td style={{ padding: '1.1rem 1rem' }}>
-                        {isPublished && (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              backgroundColor: '#DCFCE7',
-                              color: '#15803D',
-                              border: '1px solid #86EFAC',
-                              padding: '0.2rem 0.6rem',
-                              borderRadius: '12px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#15803D' }} />
-                            Published
-                          </span>
-                        )}
-                        {isDraft && (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              backgroundColor: '#FEF3C7',
-                              color: '#8B0000',
-                              border: '1px solid #FDE68A',
-                              padding: '0.2rem 0.6rem',
-                              borderRadius: '12px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#D97706' }} />
-                            Draft
-                          </span>
-                        )}
-                        {isArchived && (
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.35rem',
-                              backgroundColor: '#F3F4F6',
-                              color: '#706B6B',
-                              border: '1px solid #E5E7EB',
-                              padding: '0.2rem 0.6rem',
-                              borderRadius: '12px',
-                              fontSize: '0.76rem',
-                              fontWeight: 700,
-                            }}
-                          >
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#9CA3AF' }} />
-                            Archived
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Last Updated Timestamp */}
-                      <td style={{ padding: '1.1rem 1rem', fontSize: '0.84rem', color: 'var(--color-gray)' }}>
-                        <div>{formatDate(article.updated_at || article.created_at)}</div>
-                        {article.published_at && (
-                          <div style={{ fontSize: '0.74rem', color: 'var(--color-gray-light)', marginTop: '0.15rem' }}>
-                            Pub: {formatDate(article.published_at)}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Action Buttons */}
-                      <td style={{ padding: '1.1rem 1.25rem', textAlign: 'right' }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', justifyContent: 'flex-end' }}>
-                          {/* View link */}
-                          <Link
-                            href={`/courses/${article.slug}`}
-                            title="View course reader"
-                            style={{
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.8rem',
-                              fontWeight: 600,
-                              color: 'var(--color-charcoal)',
-                              backgroundColor: 'transparent',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 'var(--radius-md, 6px)',
-                              textDecoration: 'none',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                            }}
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                            <span>View</span>
-                          </Link>
-
-                          {/* New Version / Edit link */}
-                          <Link
-                            href={`/courses/create?parent_id=${article.id}`}
-                            title="Author new version snapshot"
-                            style={{
-                              padding: '0.35rem 0.65rem',
-                              fontSize: '0.8rem',
-                              fontWeight: 600,
-                              color: 'var(--color-primary)',
-                              backgroundColor: 'var(--color-primary-faint, #FBF0F0)',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 'var(--radius-md, 6px)',
-                              textDecoration: 'none',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                            }}
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                            <span>New Version</span>
-                          </Link>
-
-                          {/* Publish Inline Action */}
-                          {isDraft && (
-                            <button
-                              type="button"
-                              onClick={() => handlePublish(article.id)}
-                              disabled={isThisPublishing}
-                              title="Publish this draft course"
-                              style={{
-                                padding: '0.35rem 0.65rem',
-                                fontSize: '0.8rem',
-                                fontWeight: 600,
-                                color: '#15803D',
-                                backgroundColor: '#DCFCE7',
-                                border: '1px solid #86EFAC',
-                                borderRadius: 'var(--radius-md, 6px)',
-                                cursor: isThisPublishing ? 'wait' : 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                              }}
-                            >
-                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                              <span>{isThisPublishing ? 'Publishing...' : 'Publish'}</span>
-                            </button>
-                          )}
-
-                          {/* Archive Inline Action */}
-                          {isPublished && (
-                            <button
-                              type="button"
-                              onClick={() => handleArchive(article.id)}
-                              disabled={isThisArchiving}
-                              title="Archive this course"
-                              style={{
-                                padding: '0.35rem 0.55rem',
-                                fontSize: '0.8rem',
-                                fontWeight: 500,
-                                color: 'var(--color-gray)',
-                                backgroundColor: 'transparent',
-                                border: '1px solid var(--color-border)',
-                                borderRadius: 'var(--radius-md, 6px)',
-                                cursor: isThisArchiving ? 'wait' : 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <span>{isThisArchiving ? '...' : 'Archive'}</span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredArticles.map((article, idx) => (
+                  <CourseTableRow
+                    key={article.id}
+                    article={article}
+                    isLast={idx === filteredArticles.length - 1}
+                    isPublishing={publishingId === article.id}
+                    isArchiving={archivingId === article.id}
+                    onPublish={handlePublish}
+                    onArchive={handleArchive}
+                    formatDate={formatDate}
+                    getVersionLabel={getVersionLabel}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
