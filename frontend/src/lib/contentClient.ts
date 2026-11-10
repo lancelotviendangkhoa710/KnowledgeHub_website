@@ -23,6 +23,23 @@ function buildApiUrl(path: string): string {
 }
 
 /**
+ * Extracts an array payload from either a `{ data: T[] }` envelope or a bare `T[]` response.
+ * Null-safe: returns null when the body is not a recognised list shape.
+ */
+function extractList<T>(json: unknown): T[] | null {
+  if (Array.isArray(json)) {
+    return json as T[];
+  }
+  if (json && typeof json === 'object' && 'data' in json) {
+    const data = (json as { data?: unknown }).data;
+    if (Array.isArray(data)) {
+      return data as T[];
+    }
+  }
+  return null;
+}
+
+/**
  * Parameters for querying published articles.
  */
 export interface FetchArticlesParams {
@@ -36,7 +53,7 @@ export interface FetchArticlesParams {
 
 /**
  * Fetch all published articles from the live REST API with optional domain/tag/search filters.
- * Interacts exclusively with the live backend; does not fall back to mock data.
+ * Interacts exclusively with the live backend.
  *
  * @param params Optional query filters (categoryId, tagSlug, search).
  * @returns Promise resolving to an array of published Article entities.
@@ -69,107 +86,96 @@ export async function fetchArticles(params?: FetchArticlesParams): Promise<Artic
     throw new Error(errorJson.message || `Failed to fetch articles from API (HTTP ${res.status}).`);
   }
 
-  const json: { data?: Article[]; status?: string } | Article[] = await res.json();
-  if ('data' in json && Array.isArray(json.data)) {
-    return json.data;
+  const list = extractList<Article>(await res.json());
+  if (list === null) {
+    throw new Error('Unexpected response format received from server.');
   }
-  if (Array.isArray(json)) {
-    return json;
-  }
-  return [];
+  return list;
 }
 
 /**
  * Fetch a single article by its slug or UUID identifier directly from the live REST API.
- * Returns null if the article does not exist or if the request fails (never falls back to mock entities).
  *
  * @param identifier The article slug or UUID.
- * @returns Promise resolving to the Article entity, or null if not found or unreachable.
+ * @returns Promise resolving to the Article entity, or null only when the API responds 404.
+ * @throws Error on network failure or any non-404 error status, so callers can show a retryable error.
  */
 export async function fetchArticle(identifier: string): Promise<Article | null> {
-  try {
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    const bearerSession = getAccessToken();
-    if (bearerSession) {
-      headers['Authorization'] = `Bearer ${bearerSession}`;
-    }
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
 
-    const res = await fetch(buildApiUrl(`/articles/${identifier}`), {
-      ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
-      headers,
-    });
+  const res = await fetch(buildApiUrl(`/articles/${encodeURIComponent(identifier)}`), {
+    ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
+    headers,
+  });
 
-    if (!res.ok) {
-      return null;
-    }
-
-    const json: { data?: Article } = await res.json();
-    if (json?.data) {
-      return json.data;
-    }
-    return null;
-  } catch {
+  if (res.status === 404) {
     return null;
   }
+
+  if (!res.ok) {
+    const errorJson: { message?: string } = await res.json().catch(() => ({}));
+    throw new Error(errorJson.message || `Failed to load course (HTTP ${res.status}).`);
+  }
+
+  const json: { data?: Article } | null = await res.json();
+  return json?.data ?? null;
 }
 
 /**
  * Fetch all categories tree from the live REST API.
  *
- * @returns Promise resolving to an array of Category objects, or an empty array on error.
+ * @returns Promise resolving to an array of Category objects.
+ * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
 export async function fetchCategories(): Promise<Category[]> {
-  try {
-    const res = await fetch(buildApiUrl('/categories'), {
-      next: { revalidate: 300 },
-      headers: { Accept: 'application/json' },
-    });
+  const res = await fetch(buildApiUrl('/categories'), {
+    next: { revalidate: 300 },
+    headers: { Accept: 'application/json' },
+  });
 
-    if (res.ok) {
-      const json: { data?: Category[] } | Category[] = await res.json();
-      if ('data' in json && Array.isArray(json.data)) {
-        return json.data;
-      }
-      if (Array.isArray(json)) {
-        return json;
-      }
-    }
-    return [];
-  } catch {
-    return [];
+  if (!res.ok) {
+    const errorJson: { message?: string } = await res.json().catch(() => ({}));
+    throw new Error(errorJson.message || `Failed to load categories (HTTP ${res.status}).`);
   }
+
+  const list = extractList<Category>(await res.json());
+  if (list === null) {
+    throw new Error('Unexpected categories response format received from server.');
+  }
+  return list;
 }
 
 /**
  * Fetch all content tags from the live REST API.
  *
- * @returns Promise resolving to an array of Tag objects, or an empty array on error.
+ * @returns Promise resolving to an array of Tag objects.
+ * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
 export async function fetchTags(): Promise<Tag[]> {
-  try {
-    const res = await fetch(buildApiUrl('/tags'), {
-      next: { revalidate: 300 },
-      headers: { Accept: 'application/json' },
-    });
+  const res = await fetch(buildApiUrl('/tags'), {
+    next: { revalidate: 300 },
+    headers: { Accept: 'application/json' },
+  });
 
-    if (res.ok) {
-      const json: { data?: Tag[] } | Tag[] = await res.json();
-      if ('data' in json && Array.isArray(json.data)) {
-        return json.data;
-      }
-      if (Array.isArray(json)) {
-        return json;
-      }
-    }
-    return [];
-  } catch {
-    return [];
+  if (!res.ok) {
+    const errorJson: { message?: string } = await res.json().catch(() => ({}));
+    throw new Error(errorJson.message || `Failed to load tags (HTTP ${res.status}).`);
   }
+
+  const list = extractList<Tag>(await res.json());
+  if (list === null) {
+    throw new Error('Unexpected tags response format received from server.');
+  }
+  return list;
 }
 
 /**
  * Fetch articles authored by the authenticated contributor/admin (including drafts and archived).
- * Interacts exclusively with the live REST API; never falls back to mock data.
+ * Interacts exclusively with the live REST API.
  *
  * @param status Optional filter for article lifecycle status ('draft', 'published', 'archived', 'all').
  * @returns Promise resolving to an array of author's Article entities.
@@ -204,14 +210,11 @@ export async function fetchMyArticles(status?: string): Promise<Article[]> {
     throw new Error(errorJson.message || `Failed to load courses (HTTP ${res.status}).`);
   }
 
-  const json: { data?: Article[]; status?: string } | Article[] = await res.json();
-  if ('data' in json && Array.isArray(json.data)) {
-    return json.data;
+  const list = extractList<Article>(await res.json());
+  if (list === null) {
+    throw new Error('Unexpected response format received from server.');
   }
-  if (Array.isArray(json)) {
-    return json;
-  }
-  throw new Error('Unexpected response format received from server.');
+  return list;
 }
 
 /**

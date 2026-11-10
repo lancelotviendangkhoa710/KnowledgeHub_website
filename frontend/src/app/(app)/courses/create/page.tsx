@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category, Tag } from '@/types/content';
@@ -533,6 +533,8 @@ export default function ContributorCourseCreatePage() {
   const [selectedTags, setSelectedTags] = useState<string[]>(['distributed-systems', 'algorithms']);
   const [tagInput, setTagInput] = useState('');
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
+  const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
+  const [taxonomyLoading, setTaxonomyLoading] = useState<boolean>(false);
 
   // Category hierarchy grouping (Domains and Sub-categories)
   const groupedCategories = useMemo(() => {
@@ -831,16 +833,30 @@ List the mathematical or operational guarantees enforced by this architecture.
     }
   }, [router]);
 
-  useEffect(() => {
-    async function load() {
+  const loadTaxonomy = useCallback(async () => {
+    setTaxonomyLoading(true);
+    setTaxonomyError(null);
+    try {
       const [cats, tagsList] = await Promise.all([fetchCategories(), fetchTags()]);
       setCategories(cats);
       if (cats.length > 0) {
-        setCategoryId(cats[0].id);
+        // Keep a category restored from a saved draft; otherwise default to the first one.
+        setCategoryId((prev) => prev || cats[0].id);
       }
       setAvailableTags(tagsList || []);
+    } catch (err: unknown) {
+      setTaxonomyError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Unable to load categories and tags from KnowledgeHub API.'
+      );
+    } finally {
+      setTaxonomyLoading(false);
     }
-    load();
+  }, []);
+
+  useEffect(() => {
+    loadTaxonomy();
 
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -897,7 +913,7 @@ List the mathematical or operational guarantees enforced by this architecture.
           .catch(() => {});
       }
     }
-  }, []);
+  }, [loadTaxonomy]);
 
   // Auto-save draft every 20 seconds if title or content exists and no draft restore prompt is pending
   useEffect(() => {
@@ -1436,6 +1452,40 @@ List the mathematical or operational guarantees enforced by this architecture.
               Sign In
             </Link>
           )}
+        </div>
+      )}
+
+      {taxonomyError && (
+        <div
+          role="alert"
+          style={{
+            background: 'var(--color-primary-faint)',
+            border: '1px solid var(--color-primary-pale)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.5rem',
+            color: 'var(--color-charcoal)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <span>
+            <strong style={{ color: 'var(--color-primary)' }}>Categories and tags could not be loaded.</strong>{' '}
+            {taxonomyError} You need a category before you can publish.
+          </span>
+          <button
+            type="button"
+            onClick={() => loadTaxonomy()}
+            disabled={taxonomyLoading}
+            aria-busy={taxonomyLoading}
+            className="btn btn-primary"
+            style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+          >
+            {taxonomyLoading ? 'Retrying...' : 'Retry'}
+          </button>
         </div>
       )}
 
