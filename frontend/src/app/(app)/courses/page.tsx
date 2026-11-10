@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import CourseCard from '@/components/content/CourseCard';
 import { Article, Category } from '@/types/content';
@@ -16,6 +16,7 @@ export default function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
 
   useEffect(() => {
@@ -38,10 +39,16 @@ export default function CoursesPage() {
     return unsub;
   }, []);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
-      const [arts, cats] = await Promise.all([fetchArticles(), fetchCategories()]);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      // Categories are non-critical here: a failure only hides the filter pills, never the course list.
+      const [arts, cats] = await Promise.all([
+        fetchArticles(),
+        fetchCategories().catch((): Category[] => []),
+      ]);
+      let articlesList = arts;
 
       const authBearer = getAccessToken();
       if (authBearer) {
@@ -49,22 +56,31 @@ export default function CoursesPage() {
           const bRes = await api.get<{ data: Article[] }>('/v1/bookmarks');
           if (bRes?.data && Array.isArray(bRes.data)) {
             const bIds = new Set(bRes.data.map((b) => b.id));
-            setArticles(arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) })));
-            setCategories(cats);
-            setLoading(false);
-            return;
+            articlesList = arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) }));
           }
         } catch {
           // If bookmarks endpoint is unreachable, fallback to fetched articles
         }
       }
 
-      setArticles(arts);
+      setArticles(articlesList);
       setCategories(cats);
+      // Drop a category filter that no longer exists (e.g. categories failed to load or were removed).
+      setSelectedCategory((prev) => (prev === 'all' || cats.some((c) => c.id === prev) ? prev : 'all'));
+    } catch (err: unknown) {
+      setLoadError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Unable to load courses from KnowledgeHub API.'
+      );
+    } finally {
       setLoading(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredArticles = articles.filter((article) => {
     const matchesCategory =
@@ -137,6 +153,8 @@ export default function CoursesPage() {
             }}
           />
           <svg
+            aria-hidden="true"
+            focusable="false"
             width="18"
             height="18"
             viewBox="0 0 24 24"
@@ -202,51 +220,78 @@ export default function CoursesPage() {
         })}
       </section>
 
-      {/* Course Grid */}
-      {loading ? (
+      {/* Course Grid & State Feedback */}
+      {loading && articles.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
           Loading curated courses...
         </div>
-      ) : filteredArticles.length > 0 ? (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: '1.75rem',
-          }}
-        >
-          {filteredArticles.map((article) => (
-            <CourseCard key={article.id} article={article} />
-          ))}
-        </div>
+      ) : loadError && articles.length === 0 ? (
+        <LoadErrorBanner message={loadError} onRetry={loadData} retrying={loading} />
       ) : (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-            background: 'var(--color-white)',
-            border: '1px dashed var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
-            No courses matched your query
-          </h3>
-          <p style={{ color: 'var(--color-gray)', marginBottom: '1.5rem', maxWidth: 480, margin: '0 auto 1.5rem auto' }}>
-            Try adjusting your search terms or selecting another engineering domain.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory('all');
-              setSearchQuery('');
-            }}
-            className="btn btn-secondary"
-          >
-            Reset Filters
-          </button>
-        </div>
+        <>
+          {loadError && (
+            <LoadErrorBanner message={loadError} onRetry={loadData} retrying={loading} compact />
+          )}
+          {filteredArticles.length > 0 ? (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                gap: '1.75rem',
+              }}
+            >
+              {filteredArticles.map((article) => (
+                <CourseCard key={article.id} article={article} />
+              ))}
+            </div>
+          ) : articles.length === 0 ? (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '4rem 2rem',
+                background: 'var(--color-white)',
+                border: '1px dashed var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-xs)',
+              }}
+            >
+              <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
+                No courses published yet
+              </h3>
+              <p style={{ color: 'var(--color-gray)', maxWidth: 480, margin: '0 auto' }}>
+                Published courses will appear here as soon as contributors release them.
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '4rem 2rem',
+                background: 'var(--color-white)',
+                border: '1px dashed var(--color-border)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-xs)',
+              }}
+            >
+              <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
+                No courses matched your query
+              </h3>
+              <p style={{ color: 'var(--color-gray)', marginBottom: '1.5rem', maxWidth: 480, margin: '0 auto 1.5rem auto' }}>
+                Try adjusting your search terms or selecting another engineering domain.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCategory('all');
+                  setSearchQuery('');
+                }}
+                className="btn btn-secondary"
+              >
+                Reset Filters
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Contributor Action Strip */}
@@ -332,6 +377,167 @@ export default function CoursesPage() {
           </section>
         );
       })()}
+    </div>
+  );
+}
+
+/**
+ * Error state for a failed course list load, styled with UX-01 brand tokens.
+ * `compact` renders a slim inline notice above existing (stale) results instead of a full card.
+ */
+function LoadErrorBanner({
+  message,
+  onRetry,
+  retrying,
+  compact = false,
+}: {
+  message: string;
+  onRetry: () => void;
+  retrying: boolean;
+  compact?: boolean;
+}) {
+  const retryButton = (
+    <button
+      type="button"
+      onClick={() => onRetry()}
+      disabled={retrying}
+      aria-busy={retrying}
+      className="btn btn-primary"
+      style={{
+        padding: compact ? '0.45rem 1.1rem' : '0.7rem 1.75rem',
+        fontWeight: 600,
+        fontSize: compact ? '0.85rem' : '0.95rem',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        flexShrink: 0,
+      }}
+    >
+      <svg
+        aria-hidden="true"
+        focusable="false"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <polyline points="23 4 23 10 17 10" />
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+      </svg>
+      {retrying ? 'Retrying...' : 'Retry'}
+    </button>
+  );
+
+  if (compact) {
+    return (
+      <div
+        role="alert"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+          padding: '0.85rem 1.25rem',
+          marginBottom: '1.5rem',
+          background: 'var(--color-primary-faint)',
+          border: '1px solid var(--color-primary-pale)',
+          borderRadius: 'var(--radius-lg)',
+          color: 'var(--color-charcoal)',
+          fontSize: '0.95rem',
+        }}
+      >
+        <span>
+          <strong style={{ color: 'var(--color-primary)' }}>Could not refresh courses.</strong> {message}
+          <span style={{ display: 'block', color: 'var(--color-gray)', marginTop: '0.25rem' }}>
+            Please check your connection or try again.
+          </span>
+        </span>
+        {retryButton}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="alert"
+      style={{
+        textAlign: 'center',
+        padding: '3.5rem 2rem',
+        background: 'var(--color-white)',
+        border: '1.5px solid var(--color-primary-pale)',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: 'var(--shadow-sm)',
+        maxWidth: 600,
+        margin: '0 auto',
+      }}
+    >
+      <div
+        aria-hidden="true"
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: '50%',
+          backgroundColor: 'var(--color-primary-faint)',
+          color: 'var(--color-primary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 1.25rem auto',
+        }}
+      >
+        <svg
+          aria-hidden="true"
+          focusable="false"
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      </div>
+      <h3
+        style={{
+          marginBottom: '0.75rem',
+          color: 'var(--color-charcoal)',
+          fontSize: '1.25rem',
+          fontWeight: 700,
+        }}
+      >
+        Unable to Load Courses
+      </h3>
+      <p
+        style={{
+          color: 'var(--color-charcoal)',
+          marginBottom: '0.5rem',
+          lineHeight: 1.6,
+          fontSize: '1rem',
+        }}
+      >
+        {message}
+      </p>
+      <p
+        style={{
+          color: 'var(--color-gray)',
+          marginBottom: '1.75rem',
+          lineHeight: 1.6,
+          fontSize: '0.95rem',
+        }}
+      >
+        Please check your connection or try again.
+      </p>
+      {retryButton}
     </div>
   );
 }

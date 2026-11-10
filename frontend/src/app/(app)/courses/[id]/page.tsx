@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
@@ -295,6 +295,7 @@ export default function CourseDetailPage() {
 
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
   const [isBookmarkPending, setIsBookmarkPending] = useState<boolean>(false);
@@ -325,10 +326,14 @@ export default function CourseDetailPage() {
     return unsub;
   }, []);
 
-  useEffect(() => {
-    async function loadCourse() {
-      if (!idOrSlug) return;
-      setLoading(true);
+  const loadCourse = useCallback(async () => {
+    if (!idOrSlug) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    try {
       const data = await fetchArticle(idOrSlug);
       setArticle(data);
       const user = getCurrentUser();
@@ -345,10 +350,19 @@ export default function CourseDetailPage() {
           })
           .catch(() => {});
       }
+    } catch (err: unknown) {
+      setArticle(null);
+      setLoadError(
+        err instanceof Error && err.message ? err.message : 'Unable to load this course from KnowledgeHub API.'
+      );
+    } finally {
       setLoading(false);
     }
-    loadCourse();
   }, [idOrSlug]);
+
+  useEffect(() => {
+    loadCourse();
+  }, [loadCourse]);
 
 
   // Extract dynamic table of contents from markdown with unique IDs
@@ -597,6 +611,97 @@ export default function CourseDetailPage() {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
         Loading course curriculum...
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="container" style={{ padding: '6rem 0' }}>
+        <div
+          role="alert"
+          style={{
+            textAlign: 'center',
+            padding: '3.5rem 2rem',
+            background: 'var(--color-white)',
+            border: '1.5px solid var(--color-primary-pale)',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-sm)',
+            maxWidth: 600,
+            margin: '0 auto',
+          }}
+        >
+          <div
+            aria-hidden="true"
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              backgroundColor: 'var(--color-primary-faint)',
+              color: 'var(--color-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem auto',
+            }}
+          >
+            <svg
+              aria-hidden="true"
+              focusable="false"
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h2 style={{ marginBottom: '0.75rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 700 }}>
+            Unable to Load Course
+          </h2>
+          <p style={{ color: 'var(--color-charcoal)', marginBottom: '0.5rem', lineHeight: 1.6 }}>
+            {loadError}
+          </p>
+          <p style={{ color: 'var(--color-gray)', marginBottom: '1.75rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
+            Please check your connection or try again.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => loadCourse()}
+              disabled={loading}
+              aria-busy={loading}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}
+            >
+              <svg
+                aria-hidden="true"
+                focusable="false"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Retry
+            </button>
+            <Link href="/courses" className="btn btn-secondary">
+              Back to Courses
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
