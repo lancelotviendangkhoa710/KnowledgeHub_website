@@ -1,25 +1,77 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import CourseCard from '@/components/content/CourseCard';
 import { Article, Category } from '@/types/content';
-import { fetchArticles, fetchCategories, ApiReadOptions, SERVER_WAKING_MESSAGE } from '@/lib/contentClient';
+import {
+  fetchArticlesPage,
+  fetchCategories,
+  ApiReadOptions,
+  PaginationMeta,
+  SERVER_WAKING_MESSAGE,
+} from '@/lib/contentClient';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 import { api } from '@/lib/api';
 
+/** Page size requested from `GET /api/v1/articles` (matches the backend default). */
+const COURSES_PER_PAGE = 15;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Reads `?page=` as a positive integer; anything else (missing, 0, negative, text) means page 1. */
+function parsePageParam(value: string | null): number {
+  if (!value || !/^\d+$/.test(value)) return 1;
+  const n = Number(value);
+  return Number.isSafeInteger(n) && n >= 1 ? n : 1;
+}
+
+/** Reads `?category=` as a category UUID; anything else means "all domains". */
+function parseCategoryParam(value: string | null): string {
+  return value && UUID_PATTERN.test(value) ? value : 'all';
+}
+
 export default function CoursesPage() {
+  // useSearchParams() needs a Suspense boundary so the route can still be prerendered at build time.
+  return (
+    <Suspense
+      fallback={
+        <div className="container" style={{ paddingTop: '2.5rem', textAlign: 'center', color: 'var(--color-gray)' }}>
+          Loading curated courses...
+        </div>
+      }
+    >
+      <CoursesCatalog />
+    </Suspense>
+  );
+}
+
+function CoursesCatalog() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const rawPage = searchParams.get('page');
+  const rawCategory = searchParams.get('category');
+  // The URL is the source of truth for page and category, so refresh/back keep the same view.
+  const currentPage = parsePageParam(rawPage);
+  const selectedCategory = parseCategoryParam(rawCategory);
+
   const [articles, setArticles] = useState<Article[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta | null>(null);
+  // Total number of published courses (from the last unfiltered page load) for the "All Domains" pill.
+  const [allTotal, setAllTotal] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [categoriesLoaded, setCategoriesLoaded] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [wakingUp, setWakingUp] = useState<boolean>(false);
-  // Controller of the load currently in flight; also acts as the "already loading" guard.
+  // Controller of the page load currently in flight; a newer load aborts it so rapid clicks never race.
   const loadAbortRef = useRef<AbortController | null>(null);
+  const categoriesAbortRef = useRef<AbortController | null>(null);
+  const listTopRef = useRef<HTMLElement | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
 
   useEffect(() => {
@@ -42,80 +94,168 @@ export default function CoursesPage() {
     return unsub;
   }, []);
 
-  const loadData = useCallback(async () => {
-    if (loadAbortRef.current) return; // a load (possibly retrying during cold start) is already in flight
-    const controller = new AbortController();
-    loadAbortRef.current = controller;
-    setLoading(true);
-    setLoadError(null);
-    setWakingUp(false);
-    const readOptions: ApiReadOptions = {
-      signal: controller.signal,
-      onRetry: () => {
-        if (!controller.signal.aborted) setWakingUp(true);
-      },
-    };
-    try {
-      // Categories are non-critical here: a failure only hides the filter pills, never the course list.
-      const [arts, cats] = await Promise.all([
-        fetchArticles(undefined, readOptions),
-        fetchCategories(readOptions).catch((): Category[] => []),
-      ]);
-      if (controller.signal.aborted) return;
-      let articlesList = arts;
+  /** Writes page/category to the URL with `replace`, keeping any other query params. */
+  const updateQuery = useCallback(
+    (page: number, category: string) => {
+      const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+      if (page > 1) params.set('page', String(page));
+      else params.delete('page');
+      if (category !== 'all') params.set('category', category);
+      else params.delete('category');
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+    },
+    [router, pathname]
+  );
 
-      const authBearer = getAccessToken();
-      if (authBearer) {
-        try {
-          const bRes = await api.get<{ data: Article[] }>('/v1/bookmarks');
-          if (bRes?.data && Array.isArray(bRes.data)) {
-            const bIds = new Set(bRes.data.map((b) => b.id));
-            articlesList = arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) }));
-          }
-        } catch {
-          // If bookmarks endpoint is unreachable, fallback to fetched articles
-        }
-      }
-
-      setArticles(articlesList);
-      setCategories(cats);
-      // Drop a category filter that no longer exists (e.g. categories failed to load or were removed).
-      setSelectedCategory((prev) => (prev === 'all' || cats.some((c) => c.id === prev) ? prev : 'all'));
-    } catch (err: unknown) {
-      if (controller.signal.aborted) return;
-      setLoadError(
-        err instanceof Error && err.message
-          ? err.message
-          : 'Unable to load courses from KnowledgeHub API.'
-      );
-    } finally {
-      // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
-      if (loadAbortRef.current === controller) {
-        loadAbortRef.current = null;
-        setLoading(false);
-        setWakingUp(false);
-      }
+  // Normalise invalid query values in the address bar (e.g. ?page=abc or ?page=0 → page 1).
+  useEffect(() => {
+    const pageInvalid = rawPage !== null && String(parsePageParam(rawPage)) !== rawPage;
+    const categoryInvalid = rawCategory !== null && parseCategoryParam(rawCategory) === 'all';
+    if (pageInvalid || categoryInvalid) {
+      updateQuery(currentPage, selectedCategory);
     }
+  }, [rawPage, rawCategory, currentPage, selectedCategory, updateQuery]);
+
+  const loadCategories = useCallback(async () => {
+    categoriesAbortRef.current?.abort();
+    const controller = new AbortController();
+    categoriesAbortRef.current = controller;
+    // Categories are non-critical: a failure only hides the filter pills, never the course list.
+    const cats = await fetchCategories({ signal: controller.signal }).catch((): Category[] => []);
+    if (controller.signal.aborted) return;
+    categoriesAbortRef.current = null;
+    setCategories(cats);
+    setCategoriesLoaded(true);
   }, []);
 
   useEffect(() => {
-    loadData();
+    loadCategories();
+    return () => {
+      categoriesAbortRef.current?.abort();
+      categoriesAbortRef.current = null;
+    };
+  }, [loadCategories]);
+
+  // Drop a category filter that does not exist (e.g. categories failed to load or were removed).
+  useEffect(() => {
+    if (categoriesLoaded && selectedCategory !== 'all' && !categories.some((c) => c.id === selectedCategory)) {
+      updateQuery(1, 'all');
+    }
+  }, [categoriesLoaded, categories, selectedCategory, updateQuery]);
+
+  const loadPage = useCallback(
+    async (page: number, category: string) => {
+      // Latest request wins: abort a load that is still in flight (or still retrying during cold start).
+      loadAbortRef.current?.abort();
+      const controller = new AbortController();
+      loadAbortRef.current = controller;
+      setLoading(true);
+      setLoadError(null);
+      setWakingUp(false);
+      const readOptions: ApiReadOptions = {
+        signal: controller.signal,
+        onRetry: () => {
+          if (!controller.signal.aborted) setWakingUp(true);
+        },
+      };
+      try {
+        const result = await fetchArticlesPage(
+          {
+            page,
+            perPage: COURSES_PER_PAGE,
+            categoryId: category === 'all' ? undefined : category,
+          },
+          readOptions
+        );
+        if (controller.signal.aborted) return;
+
+        // A page past the end (stale link, courses removed) is invalid: go back to page 1.
+        if (result.items.length === 0 && page > result.meta.lastPage) {
+          loadAbortRef.current = null; // keep the loading state; the URL change starts the page-1 load
+          updateQuery(1, category);
+          return;
+        }
+
+        let articlesList = result.items;
+        const authBearer = getAccessToken();
+        if (authBearer) {
+          try {
+            const bRes = await api.get<{ data: Article[] }>('/v1/bookmarks');
+            if (bRes?.data && Array.isArray(bRes.data)) {
+              const bIds = new Set(bRes.data.map((b) => b.id));
+              articlesList = result.items.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) }));
+            }
+          } catch {
+            // If bookmarks endpoint is unreachable, fallback to fetched articles
+          }
+          if (controller.signal.aborted) return;
+        }
+
+        setArticles(articlesList);
+        setMeta(result.meta);
+        if (category === 'all') setAllTotal(result.meta.total);
+      } catch (err: unknown) {
+        if (controller.signal.aborted) return;
+        setLoadError(
+          err instanceof Error && err.message
+            ? err.message
+            : 'Unable to load courses from KnowledgeHub API.'
+        );
+      } finally {
+        // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
+        if (loadAbortRef.current === controller) {
+          loadAbortRef.current = null;
+          setLoading(false);
+          setWakingUp(false);
+        }
+      }
+    },
+    [updateQuery]
+  );
+
+  useEffect(() => {
+    loadPage(currentPage, selectedCategory);
     return () => {
       loadAbortRef.current?.abort();
       loadAbortRef.current = null;
     };
-  }, [loadData]);
+  }, [loadPage, currentPage, selectedCategory]);
 
+  const retryLoad = useCallback(() => {
+    loadPage(currentPage, selectedCategory);
+    if (categoriesLoaded && categories.length === 0) loadCategories();
+  }, [loadPage, loadCategories, currentPage, selectedCategory, categoriesLoaded, categories.length]);
+
+  const scrollToList = () => {
+    const el = listTopRef.current;
+    if (!el) return;
+    const reduceMotion =
+      typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  };
+
+  const goToPage = (page: number) => {
+    const lastPage = meta?.lastPage ?? 1;
+    const target = Math.min(Math.max(1, page), lastPage);
+    if (target === currentPage) return;
+    updateQuery(target, selectedCategory);
+    scrollToList();
+  };
+
+  // Changing the domain filter always restarts at page 1.
+  const selectCategory = (categoryId: string) => {
+    if (categoryId === selectedCategory) return;
+    updateQuery(1, categoryId);
+  };
+
+  // Category filtering and pagination are server-side; search still filters the current page only.
   const filteredArticles = articles.filter((article) => {
-    const matchesCategory =
-      selectedCategory === 'all' || article.category_id === selectedCategory;
     const version = article.published_version || article.latest_version;
     const title = version?.title.toLowerCase() || '';
     const content = version?.content.toLowerCase() || '';
     const q = searchQuery.toLowerCase();
-    const matchesSearch = !q || title.includes(q) || content.includes(q);
-
-    return matchesCategory && matchesSearch;
+    return !q || title.includes(q) || content.includes(q);
   });
 
   return (
@@ -194,10 +334,22 @@ export default function CoursesPage() {
       </section>
 
       {/* Category Pills Navigation */}
-      <section style={{ marginBottom: '2.5rem', display: 'flex', gap: '0.65rem', overflowX: 'auto', paddingBottom: '0.5rem' }}>
+      <section
+        ref={listTopRef}
+        aria-label="Filter courses by domain"
+        style={{
+          marginBottom: '2.5rem',
+          display: 'flex',
+          gap: '0.65rem',
+          overflowX: 'auto',
+          paddingBottom: '0.5rem',
+          scrollMarginTop: '6rem',
+        }}
+      >
         <button
           type="button"
-          onClick={() => setSelectedCategory('all')}
+          onClick={() => selectCategory('all')}
+          aria-pressed={selectedCategory === 'all'}
           style={{
             padding: '0.55rem 1.15rem',
             borderRadius: 'var(--radius-full)',
@@ -213,7 +365,7 @@ export default function CoursesPage() {
             boxShadow: selectedCategory === 'all' ? 'var(--shadow-xs)' : 'none',
           }}
         >
-          All Domains ({articles.length})
+          All Domains{allTotal !== null ? ` (${allTotal})` : ''}
         </button>
 
         {categories.map((cat) => {
@@ -222,7 +374,8 @@ export default function CoursesPage() {
             <button
               key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => selectCategory(cat.id)}
+              aria-pressed={isSelected}
               style={{
                 padding: '0.55rem 1.15rem',
                 borderRadius: 'var(--radius-full)',
@@ -253,25 +406,38 @@ export default function CoursesPage() {
           </div>
         )
       ) : loadError && articles.length === 0 ? (
-        <LoadErrorBanner message={loadError} onRetry={loadData} retrying={loading} />
+        <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} />
       ) : (
         <>
           {loadError && (
-            <LoadErrorBanner message={loadError} onRetry={loadData} retrying={loading} compact />
+            <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} compact />
+          )}
+          {meta && meta.total > 0 && articles.length > 0 && (
+            <p
+              aria-live="polite"
+              style={{ color: 'var(--color-gray)', fontSize: '0.9rem', marginBottom: '1.25rem' }}
+            >
+              Showing {meta.from ?? 0}&ndash;{meta.to ?? 0} of {meta.total} {meta.total === 1 ? 'course' : 'courses'}
+              {loading ? ' · Loading…' : ''}
+              {searchQuery && meta.lastPage > 1 ? ' · Search filters the courses on this page only.' : ''}
+            </p>
           )}
           {filteredArticles.length > 0 ? (
             <div
+              aria-busy={loading}
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
                 gap: '1.75rem',
+                opacity: loading ? 0.55 : 1,
+                transition: 'opacity var(--transition-fast)',
               }}
             >
               {filteredArticles.map((article) => (
                 <CourseCard key={article.id} article={article} />
               ))}
             </div>
-          ) : articles.length === 0 ? (
+          ) : articles.length === 0 && selectedCategory === 'all' ? (
             <div
               style={{
                 textAlign: 'center',
@@ -309,7 +475,7 @@ export default function CoursesPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedCategory('all');
+                  selectCategory('all');
                   setSearchQuery('');
                 }}
                 className="btn btn-secondary"
@@ -317,6 +483,9 @@ export default function CoursesPage() {
                 Reset Filters
               </button>
             </div>
+          )}
+          {meta && meta.lastPage > 1 && (
+            <Pagination currentPage={currentPage} lastPage={meta.lastPage} onChange={goToPage} />
           )}
         </>
       )}
@@ -405,6 +574,138 @@ export default function CoursesPage() {
         );
       })()}
     </div>
+  );
+}
+
+type PageItem = number | 'ellipsis-start' | 'ellipsis-end';
+
+/**
+ * Compact page list: always the first and last page, a window around the current page,
+ * and ellipses for the gaps (e.g. 1 … 4 5 6 … 12). Seven or fewer pages are listed in full.
+ */
+function getPageItems(current: number, last: number): PageItem[] {
+  if (last <= 7) {
+    return Array.from({ length: last }, (_, i) => i + 1);
+  }
+  let start = Math.max(2, current - 1);
+  let end = Math.min(last - 1, current + 1);
+  if (current <= 3) {
+    start = 2;
+    end = 4;
+  } else if (current >= last - 2) {
+    start = last - 3;
+    end = last - 1;
+  }
+  // Never hide a single page behind an ellipsis.
+  if (start === 3) start = 2;
+  if (end === last - 2) end = last - 1;
+  const items: PageItem[] = [1];
+  if (start > 2) items.push('ellipsis-start');
+  for (let page = start; page <= end; page++) items.push(page);
+  if (end < last - 1) items.push('ellipsis-end');
+  items.push(last);
+  return items;
+}
+
+/** Accessible Previous / page numbers / Next control styled with UX-01 tokens. */
+function Pagination({
+  currentPage,
+  lastPage,
+  onChange,
+}: {
+  currentPage: number;
+  lastPage: number;
+  onChange: (page: number) => void;
+}) {
+  const baseStyle: CSSProperties = {
+    minWidth: '2.5rem',
+    height: '2.5rem',
+    padding: '0 0.85rem',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 'var(--radius-full)',
+    border: '1.5px solid var(--color-border)',
+    background: 'var(--color-white)',
+    color: 'var(--color-charcoal)',
+    fontWeight: 600,
+    fontSize: '0.875rem',
+    cursor: 'pointer',
+    transition: 'all var(--transition-fast)',
+  };
+  const activeStyle: CSSProperties = {
+    ...baseStyle,
+    borderColor: 'var(--color-primary)',
+    background: 'var(--color-primary)',
+    color: 'var(--color-white)',
+    boxShadow: 'var(--shadow-xs)',
+  };
+  const disabledStyle: CSSProperties = {
+    ...baseStyle,
+    background: 'var(--color-off-white)',
+    color: 'var(--color-gray-light)',
+    cursor: 'not-allowed',
+  };
+  const isFirst = currentPage <= 1;
+  const isLast = currentPage >= lastPage;
+
+  return (
+    <nav aria-label="Pagination" style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'center' }}>
+      <ul
+        style={{
+          listStyle: 'none',
+          margin: 0,
+          padding: 0,
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '0.5rem',
+        }}
+      >
+        <li>
+          <button
+            type="button"
+            onClick={() => onChange(currentPage - 1)}
+            disabled={isFirst}
+            aria-label="Previous page"
+            style={isFirst ? disabledStyle : baseStyle}
+          >
+            &larr; Previous
+          </button>
+        </li>
+        {getPageItems(currentPage, lastPage).map((item) =>
+          typeof item === 'number' ? (
+            <li key={item}>
+              <button
+                type="button"
+                onClick={() => onChange(item)}
+                aria-label={`Page ${item}`}
+                aria-current={item === currentPage ? 'page' : undefined}
+                style={item === currentPage ? activeStyle : baseStyle}
+              >
+                {item}
+              </button>
+            </li>
+          ) : (
+            <li key={item} aria-hidden="true" style={{ color: 'var(--color-gray)', padding: '0 0.25rem' }}>
+              &hellip;
+            </li>
+          )
+        )}
+        <li>
+          <button
+            type="button"
+            onClick={() => onChange(currentPage + 1)}
+            disabled={isLast}
+            aria-label="Next page"
+            style={isLast ? disabledStyle : baseStyle}
+          >
+            Next &rarr;
+          </button>
+        </li>
+      </ul>
+    </nav>
   );
 }
 
