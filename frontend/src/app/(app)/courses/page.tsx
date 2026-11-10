@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import CourseCard from '@/components/content/CourseCard';
 import { Article, Category } from '@/types/content';
@@ -16,6 +16,7 @@ export default function CoursesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
 
   useEffect(() => {
@@ -38,10 +39,12 @@ export default function CoursesPage() {
     return unsub;
   }, []);
 
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
       const [arts, cats] = await Promise.all([fetchArticles(), fetchCategories()]);
+      let articlesList = arts;
 
       const authBearer = getAccessToken();
       if (authBearer) {
@@ -49,22 +52,25 @@ export default function CoursesPage() {
           const bRes = await api.get<{ data: Article[] }>('/v1/bookmarks');
           if (bRes?.data && Array.isArray(bRes.data)) {
             const bIds = new Set(bRes.data.map((b) => b.id));
-            setArticles(arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) })));
-            setCategories(cats);
-            setLoading(false);
-            return;
+            articlesList = arts.map((a) => ({ ...a, is_bookmarked: bIds.has(a.id) }));
           }
         } catch {
           // If bookmarks endpoint is unreachable, fallback to fetched articles
         }
       }
 
-      setArticles(arts);
+      setArticles(articlesList);
       setCategories(cats);
+    } catch {
+      setLoadError('Unable to load courses from KnowledgeHub API. Please check your connection or try again.');
+    } finally {
       setLoading(false);
     }
-    loadData();
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const filteredArticles = articles.filter((article) => {
     const matchesCategory =
@@ -202,10 +208,101 @@ export default function CoursesPage() {
         })}
       </section>
 
-      {/* Course Grid */}
+      {/* Course Grid & State Feedback */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
           Loading curated courses...
+        </div>
+      ) : loadError && articles.length === 0 ? (
+        <div
+          role="alert"
+          style={{
+            textAlign: 'center',
+            padding: '3.5rem 2rem',
+            background: 'var(--color-white)',
+            border: '1.5px solid #FCA5A5',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-sm)',
+            maxWidth: 600,
+            margin: '0 auto',
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: '50%',
+              backgroundColor: '#FEE2E2',
+              color: '#DC2626',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem auto',
+            }}
+          >
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h3
+            style={{
+              marginBottom: '0.75rem',
+              color: 'var(--color-charcoal)',
+              fontSize: '1.25rem',
+              fontWeight: 700,
+            }}
+          >
+            Unable to Load Courses
+          </h3>
+          <p
+            style={{
+              color: 'var(--color-gray)',
+              marginBottom: '1.75rem',
+              lineHeight: 1.6,
+              fontSize: '1rem',
+            }}
+          >
+            Unable to load courses from KnowledgeHub API. Please check your connection or try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => loadData()}
+            className="btn btn-primary"
+            style={{
+              padding: '0.7rem 1.75rem',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            Retry
+          </button>
         </div>
       ) : filteredArticles.length > 0 ? (
         <div
