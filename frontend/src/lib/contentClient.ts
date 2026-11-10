@@ -258,7 +258,8 @@ export interface FetchArticlesPageParams extends FetchArticlesParams {
   perPage?: number;
 }
 
-function toPositiveInt(value: unknown): number | null {
+/** Parses a whole number >= 0 (numeric strings allowed); null otherwise. Callers needing >= 1 treat 0 as missing via `||`. */
+function toNonNegativeInt(value: unknown): number | null {
   const n = typeof value === 'string' ? Number(value) : value;
   return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
 }
@@ -289,12 +290,12 @@ export async function fetchArticlesPage(
 
   // Tolerate a bare array or missing fields by describing the response as a single page.
   const body = (json && typeof json === 'object' && !Array.isArray(json) ? json : {}) as Record<string, unknown>;
-  const perPage = toPositiveInt(body.per_page) || params?.perPage || items.length || 1;
-  const total = toPositiveInt(body.total) ?? items.length;
-  const currentPage = toPositiveInt(body.current_page) || requestedPage;
-  const lastPage = Math.max(1, toPositiveInt(body.last_page) ?? Math.ceil(total / perPage));
-  const fromRaw = toPositiveInt(body.from);
-  const toRaw = toPositiveInt(body.to);
+  const perPage = toNonNegativeInt(body.per_page) || params?.perPage || items.length || 1;
+  const total = toNonNegativeInt(body.total) ?? items.length;
+  const currentPage = toNonNegativeInt(body.current_page) || requestedPage;
+  const lastPage = Math.max(1, toNonNegativeInt(body.last_page) ?? Math.ceil(total / perPage));
+  const fromRaw = toNonNegativeInt(body.from);
+  const toRaw = toNonNegativeInt(body.to);
   const derivedFrom = items.length > 0 ? (currentPage - 1) * perPage + 1 : null;
 
   return {

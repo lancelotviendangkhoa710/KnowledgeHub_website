@@ -110,7 +110,8 @@ function CoursesCatalog() {
 
   // Normalise invalid query values in the address bar (e.g. ?page=abc or ?page=0 → page 1).
   useEffect(() => {
-    const pageInvalid = rawPage !== null && String(parsePageParam(rawPage)) !== rawPage;
+    // Page 1 is the default, so `?page=1` is also removed to keep one canonical URL per page.
+    const pageInvalid = rawPage !== null && (currentPage === 1 || String(currentPage) !== rawPage);
     const categoryInvalid = rawCategory !== null && parseCategoryParam(rawCategory) === 'all';
     if (pageInvalid || categoryInvalid) {
       updateQuery(currentPage, selectedCategory);
@@ -227,12 +228,15 @@ function CoursesCatalog() {
     if (categoriesLoaded && categories.length === 0) loadCategories();
   }, [loadPage, loadCategories, currentPage, selectedCategory, categoriesLoaded, categories.length]);
 
+  // Move both the viewport and keyboard focus to the results, so focus is never lost when the
+  // clicked Previous/Next button becomes disabled on the first/last page.
   const scrollToList = () => {
     const el = listTopRef.current;
     if (!el) return;
     const reduceMotion =
       typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    el.focus({ preventScroll: true });
   };
 
   const goToPage = (page: number) => {
@@ -257,6 +261,12 @@ function CoursesCatalog() {
     const q = searchQuery.toLowerCase();
     return !q || title.includes(q) || content.includes(q);
   });
+
+  // Final result range only (kept while a new page loads, then replaced once it arrives).
+  const summaryText =
+    meta && meta.total > 0 && articles.length > 0
+      ? `Showing ${meta.from ?? 0}–${meta.to ?? 0} of ${meta.total} ${meta.total === 1 ? 'course' : 'courses'}`
+      : '';
 
   return (
     <div className="container" style={{ paddingTop: '2.5rem' }}>
@@ -335,7 +345,6 @@ function CoursesCatalog() {
 
       {/* Category Pills Navigation */}
       <section
-        ref={listTopRef}
         aria-label="Filter courses by domain"
         style={{
           marginBottom: '2.5rem',
@@ -343,7 +352,6 @@ function CoursesCatalog() {
           gap: '0.65rem',
           overflowX: 'auto',
           paddingBottom: '0.5rem',
-          scrollMarginTop: '6rem',
         }}
       >
         <button
@@ -398,97 +406,113 @@ function CoursesCatalog() {
       </section>
 
       {/* Course Grid & State Feedback */}
-      <ServerWakingStatus active={wakingUp} />
-      {loading && articles.length === 0 ? (
-        wakingUp ? null : (
-          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
-            Loading curated courses...
-          </div>
-        )
-      ) : loadError && articles.length === 0 ? (
-        <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} />
-      ) : (
-        <>
-          {loadError && (
-            <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} compact />
-          )}
-          {meta && meta.total > 0 && articles.length > 0 && (
-            <p
-              aria-live="polite"
-              style={{ color: 'var(--color-gray)', fontSize: '0.9rem', marginBottom: '1.25rem' }}
-            >
-              Showing {meta.from ?? 0}&ndash;{meta.to ?? 0} of {meta.total} {meta.total === 1 ? 'course' : 'courses'}
-              {loading ? ' · Loading…' : ''}
-              {searchQuery && meta.lastPage > 1 ? ' · Search filters the courses on this page only.' : ''}
-            </p>
-          )}
-          {filteredArticles.length > 0 ? (
-            <div
-              aria-busy={loading}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-                gap: '1.75rem',
-                opacity: loading ? 0.55 : 1,
-                transition: 'opacity var(--transition-fast)',
-              }}
-            >
-              {filteredArticles.map((article) => (
-                <CourseCard key={article.id} article={article} />
-              ))}
+      <section
+        ref={listTopRef}
+        tabIndex={-1}
+        aria-label="Course results"
+        style={{ scrollMarginTop: '6rem', outline: 'none' }}
+      >
+        <ServerWakingStatus active={wakingUp} />
+        {/* Always mounted so screen readers announce each final result range; no transient loading text. */}
+        <p
+          aria-live="polite"
+          style={{
+            color: 'var(--color-gray)',
+            fontSize: '0.9rem',
+            margin: summaryText ? '0 0 0.35rem 0' : 0,
+          }}
+        >
+          {summaryText}
+        </p>
+        {loading && articles.length === 0 ? (
+          wakingUp ? null : (
+            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
+              Loading curated courses...
             </div>
-          ) : articles.length === 0 && selectedCategory === 'all' ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '4rem 2rem',
-                background: 'var(--color-white)',
-                border: '1px dashed var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-xs)',
-              }}
-            >
-              <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
-                No courses published yet
-              </h3>
-              <p style={{ color: 'var(--color-gray)', maxWidth: 480, margin: '0 auto' }}>
-                Published courses will appear here as soon as contributors release them.
+          )
+        ) : loadError && articles.length === 0 ? (
+          <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} />
+        ) : (
+          <>
+            {loadError && (
+              <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} compact />
+            )}
+            {summaryText && (
+              <p style={{ color: 'var(--color-gray)', fontSize: '0.85rem', marginBottom: '1.25rem', minHeight: '1.2em' }}>
+                {loading ? 'Loading…' : ''}
+                {!loading && searchQuery && meta && meta.lastPage > 1
+                  ? 'Search filters the courses on this page only.'
+                  : ''}
               </p>
-            </div>
-          ) : (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '4rem 2rem',
-                background: 'var(--color-white)',
-                border: '1px dashed var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-xs)',
-              }}
-            >
-              <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
-                No courses matched your query
-              </h3>
-              <p style={{ color: 'var(--color-gray)', marginBottom: '1.5rem', maxWidth: 480, margin: '0 auto 1.5rem auto' }}>
-                Try adjusting your search terms or selecting another engineering domain.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  selectCategory('all');
-                  setSearchQuery('');
+            )}
+            {filteredArticles.length > 0 ? (
+              <div
+                aria-busy={loading}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                  gap: '1.75rem',
+                  opacity: loading ? 0.55 : 1,
+                  transition: 'opacity var(--transition-fast)',
                 }}
-                className="btn btn-secondary"
               >
-                Reset Filters
-              </button>
-            </div>
-          )}
-          {meta && meta.lastPage > 1 && (
-            <Pagination currentPage={currentPage} lastPage={meta.lastPage} onChange={goToPage} />
-          )}
-        </>
-      )}
+                {filteredArticles.map((article) => (
+                  <CourseCard key={article.id} article={article} />
+                ))}
+              </div>
+            ) : articles.length === 0 && selectedCategory === 'all' ? (
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '4rem 2rem',
+                  background: 'var(--color-white)',
+                  border: '1px dashed var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  boxShadow: 'var(--shadow-xs)',
+                }}
+              >
+                <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
+                  No courses published yet
+                </h3>
+                <p style={{ color: 'var(--color-gray)', maxWidth: 480, margin: '0 auto' }}>
+                  Published courses will appear here as soon as contributors release them.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  textAlign: 'center',
+                  padding: '4rem 2rem',
+                  background: 'var(--color-white)',
+                  border: '1px dashed var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  boxShadow: 'var(--shadow-xs)',
+                }}
+              >
+                <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
+                  No courses matched your query
+                </h3>
+                <p style={{ color: 'var(--color-gray)', marginBottom: '1.5rem', maxWidth: 480, margin: '0 auto 1.5rem auto' }}>
+                  Try adjusting your search terms or selecting another engineering domain.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    selectCategory('all');
+                    setSearchQuery('');
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            )}
+            {meta && meta.lastPage > 1 && (
+              <Pagination currentPage={currentPage} lastPage={meta.lastPage} onChange={goToPage} />
+            )}
+          </>
+        )}
+      </section>
 
       {/* Contributor Action Strip */}
       {(() => {

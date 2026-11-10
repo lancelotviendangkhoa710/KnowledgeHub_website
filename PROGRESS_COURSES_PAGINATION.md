@@ -37,13 +37,15 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
   with `router.replace(..., { scroll: false })`. `replace` keeps the catalog as one history entry, so opening a
   course and pressing Back returns to the same page; refresh keeps it too. Category was added to the URL as well,
   otherwise refreshing page 3 of a category would show page 3 of *all* courses.
-- **Invalid values:** non-numeric / `0` / negative page → 1 (address bar normalised). A page past `last_page`
+- **Invalid values:** non-numeric / `0` / negative page → 1 (address bar normalised; `?page=1` is also removed
+  so each page has one canonical URL). A page past `last_page`
   (stale link, courses removed) → page 1 (spec: "invalid page → 1"). A non-UUID category is ignored; a UUID that is
   not a known top-level category resets to "All Domains" once categories have loaded (same rule as before).
   Non-UUIDs are never sent to the API (a Postgres uuid comparison would error).
 - **Category filter is server-side** via `category_id` (supported by `listPublished`), so totals and page counts
   are correct. Changing category resets to page 1.
-- **Search stays client-side** and only filters the current page (server-side search is a separate task). When
+- **Search stays client-side** and only filters the current page. Follow-up task: move search server-side
+  (the API already accepts `search`, matched on the published title) and reset to page 1 on new terms. When
   there is more than one page and a search term is set, the summary says so explicitly.
 - **"All Domains (N)" pill:** previously `articles.length` (max 15). Now the `total` from the last unfiltered
   load; hidden until known. Category pills never showed counts, so nothing to change there.
@@ -54,12 +56,16 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
   The cold-start "waking up" status from the previous branch is unchanged.
 - **Categories** are now fetched once on mount (not per page), still non-critical; Retry refetches them if they
   failed.
-- **Scroll:** on page change the view scrolls to the top of the filter/list section (`scrollMarginTop` for the
-  header; instant when `prefers-reduced-motion`).
+- **Scroll & focus:** on page change the results section (`<section aria-label="Course results" tabIndex={-1}>`)
+  is scrolled into view (`scrollMarginTop` for the header; instant when `prefers-reduced-motion`) and then
+  receives focus with `focus({ preventScroll: true })`, so keyboard focus is not lost when the clicked
+  Previous/Next becomes disabled on the first/last page.
 - **Accessibility:** `<nav aria-label="Pagination">` with a list of native `<button>`s (keyboard + global
   `:focus-visible` ring), `aria-current="page"` on the current page, `aria-label` "Page N" / "Previous page" /
   "Next page", real `disabled` on Previous at page 1 and Next at the last page; ellipses are `aria-hidden`.
-  Category pills gained `aria-pressed`. Summary line is `aria-live="polite"`.
+  Category pills gained `aria-pressed`. The "Showing X–Y of Z courses" summary is an always-mounted
+  `aria-live="polite"` element that only ever contains the final range; the transient "Loading…" text and the
+  search hint are rendered outside the live region.
 - **Compact page list:** first, last, current ±1, ellipses for gaps; ≤ 7 pages listed in full; an ellipsis never
   hides a single page (e.g. `1 … 4 5 6 … 12`, `1 2 3 4 5 … 12`). Controls hidden when `last_page ≤ 1`.
 - **Tokens:** UX-01 CSS variables only (`--color-primary`, `--color-white` on primary background,
@@ -95,6 +101,9 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
 - [ ] API down on page change → compact error banner above previous results, Retry reloads the URL page.
 - [ ] Keyboard: Tab through pills and pagination, Enter/Space activates, focus ring visible, disabled buttons
       skipped; screen reader announces "Pagination" nav and current page.
+- [ ] Press Next on the second-to-last page with the keyboard → focus moves to "Course results", not lost.
+- [ ] Screen reader announces only the final "Showing X–Y of Z courses" after each page change.
+- [ ] `?page=1` is removed from the address bar.
 - [ ] Logged-in user: bookmark flags still shown on cards for each page.
 
 ## Remaining risks
@@ -103,3 +112,6 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
   requested page (banner explains it; Retry fixes it).
 - `docs/API.md` does not list `page`, `last_page`, `from`, `to` for this endpoint — docs owner may want to add them.
 - Build/lint/guardrails not executed in this environment.
+- Bookmark flags on cards only cover the first 15 bookmarks: `/v1/bookmarks` is paginated and the catalog
+  reads only its first page (pre-existing behaviour, not changed here).
+- Search only covers the current page until the server-side search follow-up lands.
