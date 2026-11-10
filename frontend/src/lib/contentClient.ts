@@ -156,3 +156,142 @@ export async function fetchTags(): Promise<Tag[]> {
 
   return mockTags;
 }
+
+/**
+ * Fetch articles authored by the authenticated user (including drafts and archived).
+ */
+export async function fetchMyArticles(status?: string): Promise<Article[]> {
+  try {
+    const baseTarget = buildApiUrl('/articles');
+    const fallbackBase = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1';
+    const url = new URL(
+      baseTarget,
+      baseTarget.startsWith('http') ? undefined : fallbackBase
+    );
+    url.searchParams.append('my_articles', 'true');
+    url.searchParams.append('per_page', '100');
+    if (status && status !== 'all') {
+      url.searchParams.append('status', status);
+    }
+
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    const bearerSession = getAccessToken();
+    if (bearerSession) {
+      headers['Authorization'] = `Bearer ${bearerSession}`;
+    }
+
+    const res = await fetch(url.toString(), {
+      cache: 'no-store',
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorJson: { message?: string } = await res.json().catch(() => ({}));
+      throw new Error(errorJson.message || `Failed to load courses (HTTP ${res.status}).`);
+    }
+
+    const json: { data?: Article[]; status?: string } | Article[] = await res.json();
+    if ('data' in json && Array.isArray(json.data)) {
+      return json.data;
+    }
+    if (Array.isArray(json)) {
+      return json;
+    }
+    throw new Error('Unexpected response format received from server.');
+  } catch (err) {
+    if (process.env.NEXT_PUBLIC_USE_MOCK === 'true') {
+      let result = [...mockArticles];
+      if (status && status !== 'all') {
+        result = result.filter((a) => a.status === status);
+      }
+      return result;
+    }
+    throw err;
+  }
+}
+
+/**
+ * Publish an article with an optional specific version ID.
+ */
+export async function publishArticle(articleId: string, versionId?: string): Promise<Article> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
+
+  const body = versionId ? JSON.stringify({ version_id: versionId }) : JSON.stringify({});
+  const res = await fetch(buildApiUrl(`/articles/${articleId}/publish`), {
+    method: 'POST',
+    headers,
+    body,
+  });
+
+  if (!res.ok) {
+    const err: { message?: string } = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to publish course.');
+  }
+
+  const json: { data?: Article; message?: string } = await res.json();
+  if (!json?.data) {
+    throw new Error(json?.message || 'Publish operation completed but course data was missing from server response.');
+  }
+  return json.data;
+}
+
+/**
+ * Archive an article.
+ */
+export async function archiveArticle(articleId: string): Promise<Article> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
+
+  const res = await fetch(buildApiUrl(`/articles/${articleId}/archive`), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({}),
+  });
+
+  if (!res.ok) {
+    const err: { message?: string } = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to archive course.');
+  }
+
+  const json: { data?: Article; message?: string } = await res.json();
+  if (!json?.data) {
+    throw new Error(json?.message || 'Archive operation completed but course data was missing from server response.');
+  }
+  return json.data;
+}
+
+/**
+ * Soft delete an article.
+ */
+export async function deleteArticle(articleId: string): Promise<void> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  const bearerSession = getAccessToken();
+  if (bearerSession) {
+    headers['Authorization'] = `Bearer ${bearerSession}`;
+  }
+
+  const res = await fetch(buildApiUrl(`/articles/${articleId}`), {
+    method: 'DELETE',
+    headers,
+  });
+
+  if (!res.ok) {
+    const err: { message?: string } = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to delete course.');
+  }
+}
