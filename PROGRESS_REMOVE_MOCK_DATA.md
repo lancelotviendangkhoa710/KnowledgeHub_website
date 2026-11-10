@@ -41,6 +41,12 @@
   - "Start a New Course" is a button that clears revision state (parent ID, error, title, slug, content) and calls `router.replace('/courses/create')` (a same-route `<Link>` did not re-run the mount effect).
   - Save/Publish are disabled while the parent course is loading or failed to load; a late parent response only prefills an empty title/content, never overwriting author edits.
   - `apiFetch()`: network failure on a write (non-GET) reports "Could not reach the KnowledgeHub API. The result is unknown — refresh to check."
+- [x] **Step 4e: Render cold-start resilience** (prod bug: first visit showed "Unable to Load Courses — Server Error" while the free-tier Render backend was waking up)
+  - `apiFetch()`: GET/HEAD retried on network `TypeError` and HTTP 500/502/503/504 with backoff 2 s → 4 s → 8 s → 16 s (4 retries, ≈30 s). Non-GET requests are never retried.
+  - Optional `ApiReadOptions` (`signal`, `onRetry`) on `fetchArticles`, `fetchArticle`, `fetchCategories`, `fetchTags`, `fetchMyArticles`; an abort cancels the request and any pending backoff wait.
+  - Exhausted 5xx → "The KnowledgeHub server is not responding (HTTP <status>). Please try again in a minute." (no more bare "Server Error").
+  - `/courses`, `/courses/[id]` and the Studio show a calm `role="status"` / `aria-live="polite"` notice "Waking up the KnowledgeHub server… this can take up to 30 seconds (free hosting)." while retrying; the error card appears only after retries are exhausted.
+  - Loads are guarded against duplicate concurrent runs (in-flight ref; Retry reuses the same loader); `/courses` and `/courses/[id]` abort the in-flight load on unmount / route change, and only the current load clears the loading state in `finally`.
 - [ ] **Step 5: Quality & Build Verification**
   - [x] TypeScript: `node node_modules/typescript/lib/tsc.js --noEmit -p .` in `frontend/` → 0 errors (after every commit on this branch).
   - [ ] `npm run build` in `frontend/` — **to re-run on Windows** (not re-run after the review follow-ups).
@@ -51,6 +57,7 @@
   - `p2: surface API errors instead of silent fallbacks and remove mock content`
   - `p2: handle revision load failure and polish API error messaging`
   - `p2: fix revision reset link and guard saves while parent loads`
+  - `p2: retry API reads during Render cold start and show wake-up status`
   - Output standard completion report matching AGENTS.md §15.
 
 ---
@@ -65,4 +72,7 @@ Run against `npm run dev` with `NEXT_PUBLIC_API_URL` pointing at a local or prod
 - [ ] **Categories endpoint failing** (`/v1/categories` returns 500): `/courses` still lists courses; category pills are hidden and the filter is "All Domains".
 - [ ] **Studio taxonomy failing** (`/v1/categories` or `/v1/tags` returns 500): `/courses/create` shows "Categories and tags could not be loaded." + Retry; Retry fills the category dropdown once the API recovers.
 - [ ] **Revision parent missing**: `/courses/create?parent_id=<unknown-id>` shows "Parent course not found" + "Start a New Course"; Save/Publish are disabled; "Start a New Course" clears the form and drops `?parent_id`. With the API down, it shows "Could not load the course being revised: …" + Retry.
+- [ ] **Backend asleep (Render cold start)**: after ≥15 min idle, open `/courses` in a fresh tab. Expect "Waking up the KnowledgeHub server…" (no error card) and courses appear on their own within ~30 s. DevTools Network shows retried `GET /api/v1/articles` at ~2/4/8/16 s gaps; no POST/DELETE is ever retried. Repeat on `/courses/<slug>`.
+- [ ] **Backend down for good** (stop the service or point `NEXT_PUBLIC_API_URL` at a URL returning 503): after ~30 s the error card shows "The KnowledgeHub server is not responding (HTTP 503). Please try again in a minute." + Retry; clicking Retry repeatedly never starts a second parallel load.
+- [ ] **Navigate away while waking**: leave `/courses` during the wake-up wait; no further retries appear in the Network tab and no React state warnings in the console.
 - [ ] **Screen reader / keyboard**: error banners are announced (`role="alert"`); Retry is reachable by Tab and reports busy state while retrying.

@@ -29,19 +29,110 @@ export const API_UNREACHABLE_MESSAGE = 'Cannot reach the KnowledgeHub API.';
 export const API_UNREACHABLE_WRITE_MESSAGE =
   'Could not reach the KnowledgeHub API. The result is unknown — refresh to check.';
 
-/**
- * Wraps `fetch` so low-level network failures (e.g. TypeError "Failed to fetch")
- * surface as a readable error instead of a browser-specific message.
- */
-async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
-  try {
-    return await fetch(input, init);
-  } catch (err: unknown) {
-    if (err instanceof TypeError) {
-      const method = (init?.method ?? 'GET').toUpperCase();
-      throw new Error(method === 'GET' || method === 'HEAD' ? API_UNREACHABLE_MESSAGE : API_UNREACHABLE_WRITE_MESSAGE);
+/** Shown while GET requests are being retried (Render free tier cold start can take ~30 s). */
+export const SERVER_WAKING_MESSAGE =
+  'Waking up the KnowledgeHub server… this can take up to 30 seconds (free hosting).';
+
+/** HTTP statuses that a sleeping / starting backend returns transiently. */
+const RETRYABLE_STATUSES = new Set([500, 502, 503, 504]);
+/** Backoff between attempts for idempotent reads: 2 s, 4 s, 8 s, 16 s (≈30 s total). */
+const READ_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000];
+
+/** Details passed to `onRetry` before each wait. */
+export interface ApiRetryInfo {
+  /** 1-based number of the retry about to happen. */
+  attempt: number;
+  /** Maximum number of retries that will be attempted. */
+  maxRetries: number;
+  /** Delay before the next attempt, in milliseconds. */
+  delayMs: number;
+  /** HTTP status that triggered the retry, or null for a network failure. */
+  status: number | null;
+}
+
+/** Optional controls for read (GET) requests. */
+export interface ApiReadOptions {
+  /** Aborts the request and any pending retry wait. */
+  signal?: AbortSignal;
+  /** Called before each retry wait so the UI can show a truthful "waking up" status. */
+  onRetry?: (info: ApiRetryInfo) => void;
+}
+
+function isAbortError(err: unknown): boolean {
+  return err instanceof Error && err.name === 'AbortError';
+}
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
     }
-    throw err;
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, ms);
+    function onAbort() {
+      clearTimeout(timer);
+      reject(new DOMException('Aborted', 'AbortError'));
+    }
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+/**
+ * Wraps `fetch` with readable network errors and cold-start resilience.
+ *
+ * - GET/HEAD: retried on network failure and on HTTP 500/502/503/504 with backoff
+ *   (2 s, 4 s, 8 s, 16 s). When retries are exhausted it throws a readable error that includes the status.
+ * - Other methods are never retried (they are not idempotent); a network failure reports an unknown result.
+ * - Abort (via `options.signal`) is propagated as an AbortError and stops any pending retry.
+ */
+async function apiFetch(input: string, init?: RequestInit, options?: ApiReadOptions): Promise<Response> {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  const isRead = method === 'GET' || method === 'HEAD';
+  const signal = options?.signal ?? init?.signal ?? undefined;
+  const requestInit: RequestInit = signal ? { ...init, signal } : { ...init };
+
+  if (!isRead) {
+    try {
+      return await fetch(input, requestInit);
+    } catch (err: unknown) {
+      if (err instanceof TypeError) {
+        throw new Error(API_UNREACHABLE_WRITE_MESSAGE);
+      }
+      throw err;
+    }
+  }
+
+  const maxRetries = READ_RETRY_DELAYS_MS.length;
+  for (let attempt = 0; ; attempt++) {
+    let res: Response | null = null;
+    try {
+      res = await fetch(input, requestInit);
+    } catch (err: unknown) {
+      if (isAbortError(err) || !(err instanceof TypeError)) {
+        throw err;
+      }
+      // Network failure (DNS, connection reset, CORS during restart): retry below.
+    }
+
+    if (res && !RETRYABLE_STATUSES.has(res.status)) {
+      return res;
+    }
+
+    if (attempt >= maxRetries) {
+      if (!res) {
+        throw new Error(API_UNREACHABLE_MESSAGE);
+      }
+      throw new Error(
+        `The KnowledgeHub server is not responding (HTTP ${res.status}). Please try again in a minute.`
+      );
+    }
+
+    const delayMs = READ_RETRY_DELAYS_MS[attempt];
+    options?.onRetry?.({ attempt: attempt + 1, maxRetries, delayMs, status: res ? res.status : null });
+    await wait(delayMs, signal);
   }
 }
 
@@ -79,10 +170,11 @@ export interface FetchArticlesParams {
  * Interacts exclusively with the live backend.
  *
  * @param params Optional query filters (categoryId, tagSlug, search).
+ * @param options Optional abort signal and retry-progress callback.
  * @returns Promise resolving to an array of published Article entities.
  * @throws Error if network fails or API responds with an error status.
  */
-export async function fetchArticles(params?: FetchArticlesParams): Promise<Article[]> {
+export async function fetchArticles(params?: FetchArticlesParams, options?: ApiReadOptions): Promise<Article[]> {
   const baseTarget = buildApiUrl('/articles');
   const fallbackBase = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1';
   const url = new URL(
@@ -102,7 +194,7 @@ export async function fetchArticles(params?: FetchArticlesParams): Promise<Artic
   const res = await apiFetch(url.toString(), {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
     headers,
-  });
+  }, options);
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
@@ -120,10 +212,11 @@ export async function fetchArticles(params?: FetchArticlesParams): Promise<Artic
  * Fetch a single article by its slug or UUID identifier directly from the live REST API.
  *
  * @param identifier The article slug or UUID.
+ * @param options Optional abort signal and retry-progress callback.
  * @returns Promise resolving to the Article entity, or null only when the API responds 404.
  * @throws Error on network failure, any non-404 error status, or a 200 response without `data`.
  */
-export async function fetchArticle(identifier: string): Promise<Article | null> {
+export async function fetchArticle(identifier: string, options?: ApiReadOptions): Promise<Article | null> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   const bearerSession = getAccessToken();
   if (bearerSession) {
@@ -133,7 +226,7 @@ export async function fetchArticle(identifier: string): Promise<Article | null> 
   const res = await apiFetch(buildApiUrl(`/articles/${encodeURIComponent(identifier)}`), {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
     headers,
-  });
+  }, options);
 
   if (res.status === 404) {
     return null;
@@ -157,11 +250,11 @@ export async function fetchArticle(identifier: string): Promise<Article | null> 
  * @returns Promise resolving to an array of Category objects.
  * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
-export async function fetchCategories(): Promise<Category[]> {
+export async function fetchCategories(options?: ApiReadOptions): Promise<Category[]> {
   const res = await apiFetch(buildApiUrl('/categories'), {
     next: { revalidate: 300 },
     headers: { Accept: 'application/json' },
-  });
+  }, options);
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
@@ -181,11 +274,11 @@ export async function fetchCategories(): Promise<Category[]> {
  * @returns Promise resolving to an array of Tag objects.
  * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
-export async function fetchTags(): Promise<Tag[]> {
+export async function fetchTags(options?: ApiReadOptions): Promise<Tag[]> {
   const res = await apiFetch(buildApiUrl('/tags'), {
     next: { revalidate: 300 },
     headers: { Accept: 'application/json' },
-  });
+  }, options);
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
@@ -207,7 +300,7 @@ export async function fetchTags(): Promise<Tag[]> {
  * @returns Promise resolving to an array of author's Article entities.
  * @throws Error if unauthenticated or if the API returns an error.
  */
-export async function fetchMyArticles(status?: string): Promise<Article[]> {
+export async function fetchMyArticles(status?: string, options?: ApiReadOptions): Promise<Article[]> {
   const baseTarget = buildApiUrl('/articles');
   const fallbackBase = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1';
   const url = new URL(
@@ -229,7 +322,7 @@ export async function fetchMyArticles(status?: string): Promise<Article[]> {
   const res = await apiFetch(url.toString(), {
     cache: 'no-store',
     headers,
-  });
+  }, options);
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));

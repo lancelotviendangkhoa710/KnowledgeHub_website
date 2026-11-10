@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
-import { fetchArticle, fetchArticles } from '@/lib/contentClient';
+import { fetchArticle, fetchArticles, SERVER_WAKING_MESSAGE } from '@/lib/contentClient';
 import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { accountClient } from '@/lib/accountClient';
@@ -296,6 +296,9 @@ export default function CourseDetailPage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [wakingUp, setWakingUp] = useState<boolean>(false);
+  // Controller of the load currently in flight; also acts as the "already loading" guard.
+  const loadAbortRef = useRef<AbortController | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
   const [isBookmarkPending, setIsBookmarkPending] = useState<boolean>(false);
@@ -331,10 +334,20 @@ export default function CourseDetailPage() {
       setLoading(false);
       return;
     }
+    if (loadAbortRef.current) return; // a load (possibly retrying during cold start) is already in flight
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     setLoading(true);
     setLoadError(null);
+    setWakingUp(false);
     try {
-      const data = await fetchArticle(idOrSlug);
+      const data = await fetchArticle(idOrSlug, {
+        signal: controller.signal,
+        onRetry: () => {
+          if (!controller.signal.aborted) setWakingUp(true);
+        },
+      });
+      if (controller.signal.aborted) return;
       setArticle(data);
       const user = getCurrentUser();
       const authBearer = getAccessToken();
@@ -344,24 +357,34 @@ export default function CourseDetailPage() {
         setBookmarked(false);
       }
       if (data?.category_id) {
-        fetchArticles({ categoryId: data.category_id })
+        fetchArticles({ categoryId: data.category_id }, { signal: controller.signal })
           .then((list) => {
             setRelatedArticles(list.filter((a) => a.id !== data.id).slice(0, 3));
           })
           .catch(() => {});
       }
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       setArticle(null);
       setLoadError(
         err instanceof Error && err.message ? err.message : 'Unable to load this course from KnowledgeHub API.'
       );
     } finally {
-      setLoading(false);
+      // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
+      if (loadAbortRef.current === controller) {
+        loadAbortRef.current = null;
+        setLoading(false);
+        setWakingUp(false);
+      }
     }
   }, [idOrSlug]);
 
   useEffect(() => {
     loadCourse();
+    return () => {
+      loadAbortRef.current?.abort();
+      loadAbortRef.current = null;
+    };
   }, [loadCourse]);
 
 
@@ -608,6 +631,28 @@ export default function CourseDetailPage() {
   }, [content, article]);
 
   if (loading) {
+    if (wakingUp) {
+      return (
+        <div className="container" style={{ padding: '6rem 0' }}>
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              maxWidth: 600,
+              margin: '0 auto',
+              padding: '1.25rem 1.5rem',
+              textAlign: 'center',
+              background: 'var(--color-white)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-lg)',
+              color: 'var(--color-charcoal)',
+            }}
+          >
+            {SERVER_WAKING_MESSAGE}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
         Loading course curriculum...

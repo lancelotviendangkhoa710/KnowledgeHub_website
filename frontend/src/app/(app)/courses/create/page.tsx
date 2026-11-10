@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Category, Tag } from '@/types/content';
-import { fetchCategories, fetchArticle, fetchTags } from '@/lib/contentClient';
+import { fetchCategories, fetchArticle, fetchTags, ApiReadOptions, SERVER_WAKING_MESSAGE } from '@/lib/contentClient';
 import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
@@ -537,6 +537,11 @@ export default function ContributorCourseCreatePage() {
   const [taxonomyLoading, setTaxonomyLoading] = useState<boolean>(false);
   const [parentLoadError, setParentLoadError] = useState<{ message: string; retryable: boolean } | null>(null);
   const [parentLoading, setParentLoading] = useState<boolean>(false);
+  // Cold-start status (backend waking up) and in-flight guards against duplicate concurrent loads.
+  const [taxonomyWaking, setTaxonomyWaking] = useState<boolean>(false);
+  const [parentWaking, setParentWaking] = useState<boolean>(false);
+  const taxonomyInFlightRef = useRef<boolean>(false);
+  const parentInFlightRef = useRef<boolean>(false);
 
   // Category hierarchy grouping (Domains and Sub-categories)
   const groupedCategories = useMemo(() => {
@@ -836,10 +841,14 @@ List the mathematical or operational guarantees enforced by this architecture.
   }, [router]);
 
   const loadTaxonomy = useCallback(async () => {
+    if (taxonomyInFlightRef.current) return;
+    taxonomyInFlightRef.current = true;
     setTaxonomyLoading(true);
     setTaxonomyError(null);
+    setTaxonomyWaking(false);
+    const readOptions: ApiReadOptions = { onRetry: () => setTaxonomyWaking(true) };
     try {
-      const [cats, tagsList] = await Promise.all([fetchCategories(), fetchTags()]);
+      const [cats, tagsList] = await Promise.all([fetchCategories(readOptions), fetchTags(readOptions)]);
       setCategories(cats);
       if (cats.length > 0) {
         // Keep a category restored from a saved draft; otherwise default to the first one.
@@ -853,7 +862,9 @@ List the mathematical or operational guarantees enforced by this architecture.
           : 'Unable to load categories and tags from KnowledgeHub API.'
       );
     } finally {
+      taxonomyInFlightRef.current = false;
       setTaxonomyLoading(false);
+      setTaxonomyWaking(false);
     }
   }, []);
 
@@ -862,10 +873,13 @@ List the mathematical or operational guarantees enforced by this architecture.
    * Failures are surfaced so a revision is never silently written from scratch.
    */
   const loadParentCourse = useCallback(async (pid: string) => {
+    if (parentInFlightRef.current) return;
+    parentInFlightRef.current = true;
     setParentLoading(true);
     setParentLoadError(null);
+    setParentWaking(false);
     try {
-      const art = await fetchArticle(pid);
+      const art = await fetchArticle(pid, { onRetry: () => setParentWaking(true) });
       if (!art) {
         setParentLoadError({
           message: 'Parent course not found. It may have been deleted or the link is incorrect.',
@@ -889,7 +903,9 @@ List the mathematical or operational guarantees enforced by this architecture.
         retryable: true,
       });
     } finally {
+      parentInFlightRef.current = false;
       setParentLoading(false);
+      setParentWaking(false);
     }
   }, []);
 
@@ -1552,6 +1568,24 @@ List the mathematical or operational guarantees enforced by this architecture.
               Sign In
             </Link>
           )}
+        </div>
+      )}
+
+      {(taxonomyWaking || parentWaking) && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '0.85rem 1.25rem',
+            color: 'var(--color-charcoal)',
+            marginBottom: '1.5rem',
+            fontSize: '0.9rem',
+          }}
+        >
+          {SERVER_WAKING_MESSAGE}
         </div>
       )}
 

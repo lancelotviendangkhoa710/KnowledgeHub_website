@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import CourseCard from '@/components/content/CourseCard';
 import { Article, Category } from '@/types/content';
-import { fetchArticles, fetchCategories } from '@/lib/contentClient';
+import { fetchArticles, fetchCategories, ApiReadOptions, SERVER_WAKING_MESSAGE } from '@/lib/contentClient';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
@@ -17,6 +17,9 @@ export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [wakingUp, setWakingUp] = useState<boolean>(false);
+  // Controller of the load currently in flight; also acts as the "already loading" guard.
+  const loadAbortRef = useRef<AbortController | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
 
   useEffect(() => {
@@ -40,14 +43,25 @@ export default function CoursesPage() {
   }, []);
 
   const loadData = useCallback(async () => {
+    if (loadAbortRef.current) return; // a load (possibly retrying during cold start) is already in flight
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
     setLoading(true);
     setLoadError(null);
+    setWakingUp(false);
+    const readOptions: ApiReadOptions = {
+      signal: controller.signal,
+      onRetry: () => {
+        if (!controller.signal.aborted) setWakingUp(true);
+      },
+    };
     try {
       // Categories are non-critical here: a failure only hides the filter pills, never the course list.
       const [arts, cats] = await Promise.all([
-        fetchArticles(),
-        fetchCategories().catch((): Category[] => []),
+        fetchArticles(undefined, readOptions),
+        fetchCategories(readOptions).catch((): Category[] => []),
       ]);
+      if (controller.signal.aborted) return;
       let articlesList = arts;
 
       const authBearer = getAccessToken();
@@ -68,18 +82,28 @@ export default function CoursesPage() {
       // Drop a category filter that no longer exists (e.g. categories failed to load or were removed).
       setSelectedCategory((prev) => (prev === 'all' || cats.some((c) => c.id === prev) ? prev : 'all'));
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       setLoadError(
         err instanceof Error && err.message
           ? err.message
           : 'Unable to load courses from KnowledgeHub API.'
       );
     } finally {
-      setLoading(false);
+      // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
+      if (loadAbortRef.current === controller) {
+        loadAbortRef.current = null;
+        setLoading(false);
+        setWakingUp(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     loadData();
+    return () => {
+      loadAbortRef.current?.abort();
+      loadAbortRef.current = null;
+    };
   }, [loadData]);
 
   const filteredArticles = articles.filter((article) => {
@@ -221,10 +245,13 @@ export default function CoursesPage() {
       </section>
 
       {/* Course Grid & State Feedback */}
+      {wakingUp && <ServerWakingStatus />}
       {loading && articles.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
-          Loading curated courses...
-        </div>
+        wakingUp ? null : (
+          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
+            Loading curated courses...
+          </div>
+        )
       ) : loadError && articles.length === 0 ? (
         <LoadErrorBanner message={loadError} onRetry={loadData} retrying={loading} />
       ) : (
@@ -538,6 +565,46 @@ function LoadErrorBanner({
         Please check your connection or try again.
       </p>
       {retryButton}
+    </div>
+  );
+}
+
+/**
+ * Calm, non-error status shown while GET requests are retried during a backend cold start.
+ * Uses a polite live region so screen readers announce it without interrupting.
+ */
+function ServerWakingStatus() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '0.75rem',
+        maxWidth: 600,
+        margin: '0 auto 1.5rem auto',
+        padding: '1rem 1.25rem',
+        background: 'var(--color-white)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-lg)',
+        color: 'var(--color-charcoal)',
+        fontSize: '0.95rem',
+        textAlign: 'center',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 10,
+          height: 10,
+          borderRadius: '50%',
+          background: 'var(--color-primary)',
+          flexShrink: 0,
+        }}
+      />
+      <span>{SERVER_WAKING_MESSAGE}</span>
     </div>
   );
 }
