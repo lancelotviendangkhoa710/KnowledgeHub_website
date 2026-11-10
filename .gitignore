@@ -57,5 +57,9 @@ venv/
 # Personal learning notes (local only)
 /personal-notes/ai-service-engineer-study-guide.md
 
+# Generated browser and review artifacts
+/.playwright-cli/
+/reviews/**/*.png
+
 # Binaries
 *.exe
