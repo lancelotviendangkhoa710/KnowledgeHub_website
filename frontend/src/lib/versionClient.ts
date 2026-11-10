@@ -41,9 +41,9 @@ export interface ArticleVersionEntry extends ArticleVersion {
 
 function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { Accept: 'application/json' };
-  const token = getAccessToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  const bearer = getAccessToken();
+  if (bearer) {
+    headers['Authorization'] = `Bearer ${bearer}`;
   }
   return headers;
 }
