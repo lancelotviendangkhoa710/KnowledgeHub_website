@@ -24,7 +24,7 @@ const ALLOWED_ROLES = ['contributor', 'admin'];
 
 type CreateResult =
   | { kind: 'created'; tag: TagRecord }
-  | { kind: 'exists'; tag: TagRecord | null; name: string }
+  | { kind: 'exists'; tag: TagRecord; name: string }
   | { kind: 'error'; message: string; retryable: boolean };
 
 function canManageTags(user: AuthUser | null): boolean {
@@ -113,6 +113,7 @@ function TagLibrary() {
   const [tags, setTags] = useState<TagRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [truncated, setTruncated] = useState(false);
   const [filter, setFilter] = useState('');
   const [name, setName] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -126,7 +127,10 @@ function TagLibrary() {
     setLoadError(null);
     try {
       const list = await tagAdminClient.listAll();
-      if (requestId === latestLoad.current) setTags(list);
+      if (requestId === latestLoad.current) {
+        setTags(list.tags);
+        setTruncated(list.truncated);
+      }
     } catch (error) {
       if (requestId === latestLoad.current) setLoadError(describeError(error, 'Unable to load tags.'));
     } finally {
@@ -151,7 +155,10 @@ function TagLibrary() {
   const existing = cleanName ? findExistingTag(tags, cleanName) : null;
   const tooLong = cleanName.length > TAG_NAME_MAX;
   const noSlug = cleanName !== '' && slug === '';
-  const canSubmit = cleanName !== '' && !existing && !tooLong && !noSlug && !submitting && !loading && !loadError;
+  // The slug can outgrow the name (e.g. "@" becomes "-at-"); the API rejects slugs over 100 characters.
+  const slugTooLong = !tooLong && slug.length > TAG_NAME_MAX;
+  const canSubmit =
+    cleanName !== '' && !existing && !tooLong && !slugTooLong && !noSlug && !submitting && !loading && !loadError;
 
   async function createTag(event?: FormEvent) {
     event?.preventDefault();
@@ -169,10 +176,15 @@ function TagLibrary() {
     } catch (error) {
       const e = error as TagError;
       if (e?.status === 422 && e.errors?.slug) {
-        // Someone created the same tag meanwhile: refresh and show it as existing.
+        // Possibly created meanwhile: report "exists" only if the refreshed list really has a match.
         const fresh = await tagAdminClient.listAll().catch(() => null);
-        if (fresh) setTags(fresh);
-        setResult({ kind: 'exists', tag: fresh ? findExistingTag(fresh, cleanName) : null, name: cleanName });
+        if (fresh) {
+          setTags(fresh.tags);
+          setTruncated(fresh.truncated);
+        }
+        const match = fresh ? findExistingTag(fresh.tags, cleanName) : null;
+        if (match) setResult({ kind: 'exists', tag: match, name: cleanName });
+        else setResult({ kind: 'error', message: describeError(error, 'Unable to create this tag.'), retryable: false });
       } else if (isNetworkError(error)) {
         setResult({
           kind: 'error',
@@ -215,36 +227,38 @@ function TagLibrary() {
             autoComplete="off"
             disabled={submitting}
             aria-describedby="tag-name-hint"
-            aria-invalid={!!existing || tooLong || noSlug}
+            aria-invalid={!!existing || tooLong || slugTooLong || noSlug}
           />
           <small id="tag-name-hint" className="account-hint">
             {existing
               ? `Already exists as "${existing.name}" (${existing.slug}). Use the existing tag instead.`
               : tooLong
                 ? `Use at most ${TAG_NAME_MAX} characters.`
-                : noSlug
+                : slugTooLong
+                  ? `The generated slug would be ${slug.length} characters; shorten the name so it stays within ${TAG_NAME_MAX}.`
+                  : noSlug
                   ? 'Include at least one Latin letter or number.'
                   : cleanName
                     ? `Slug: ${slug}`
                     : `Up to ${TAG_NAME_MAX} characters.`}
           </small>
-          <span className="visually-hidden" aria-live="polite">{existing ? 'This tag already exists.' : ''}</span>
         </label>
+        <span className="visually-hidden" aria-live="polite">{existing ? 'This tag already exists.' : ''}</span>
         <div className="account-actions">
           <button className="button button--primary account-submit" type="submit" disabled={!canSubmit}>
             {submitting ? 'Creating...' : 'Create tag'}
           </button>
         </div>
 
-        <div aria-live="polite">
+        <div role="status">
           {result?.kind === 'created' && (
-            <p className="auth-message" role="status">
+            <p className="auth-message">
               Created tag &quot;{result.tag.name}&quot; ({result.tag.slug}).
             </p>
           )}
           {result?.kind === 'exists' && (
-            <p className="auth-message" role="status">
-              &quot;{result.name}&quot; already existed{result.tag ? ` as "${result.tag.name}" (${result.tag.slug})` : ''}. No new tag was created.
+            <p className="auth-message">
+              &quot;{result.name}&quot; already existed as &quot;{result.tag.name}&quot; ({result.tag.slug}). No new tag was created.
             </p>
           )}
         </div>
@@ -271,6 +285,12 @@ function TagLibrary() {
           maxLength={TAG_NAME_MAX}
         />
       </div>
+
+      {truncated && !loadError && (
+        <p className="auth-error" role="alert">
+          Only the first {tags.length} tags were loaded. The list and the duplicate check may be incomplete.
+        </p>
+      )}
 
       {loadError ? (
         <div className="auth-error" role="alert">

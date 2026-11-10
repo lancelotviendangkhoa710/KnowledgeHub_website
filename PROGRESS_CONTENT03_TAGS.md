@@ -24,10 +24,12 @@
 
 ## Design decisions
 
-1. **Explicit slug on create.** The client always sends `slug = tagSlug(name)` (JS port of `Str::slug`). A collision (e.g. a concurrent create) then fails with **422 `errors.slug`** instead of producing a `-1` copy. The UI treats that 422 as "already existed", refetches and shows the existing tag.
+1. **Explicit slug on create.** The client always sends `slug = tagSlug(name)` (JS port of `Str::slug`). A collision (e.g. a concurrent create) then fails with **422 `errors.slug`** instead of producing a `-1` copy. On that 422 the UI refetches the list and shows "already existed" **only if the refreshed list really contains a matching tag**; otherwise it shows the real validation message.
+   - Slug port parity (voku/portable-ascii latin table used by `Str::ascii`): `đ/ð→d`, `ł→l`, `ß→ss`, `æ→ae`, `œ→oe`, `þ→th`, `ø→o`, en/em dash → `-`, `€→EUR`, then NFKD + strip combining marks. Spot-checked with node outside the repo: `Łódź→lodz`, `Œuvre→oeuvre`, `Þór→thor`, `Straße→strasse`, `A–B — C→a-b-c`, `Price €5→price-eur5`.
+   - A name whose generated slug exceeds 100 characters (e.g. many `@` → `-at-`) is blocked with its own hint, since the API rule is `slug max:100`.
 2. **Client duplicate check** before submit: same normalised name (whitespace collapsed, trimmed, NFKC, case-insensitive) **or** same slug as an existing tag → live hint "Already exists as …", submit disabled.
 3. **Names whose slug is empty** (e.g. only CJK characters or only symbols like `+++`) are blocked client-side: backend would store an empty slug and the next one as `-1`. Limitation: Laravel's ASCII transliteration can romanise some non-Latin scripts that the JS port drops; such names are blocked rather than risk a mismatch.
-4. Whole list is loaded (paginated at 100/page, safety stop 50 pages) so duplicate detection and filtering cover all tags. Create is disabled while the list is loading or failed to load (no reliable duplicate check).
+4. Whole list is loaded (paginated at 100/page, safety stop 50 pages) so duplicate detection and filtering cover all tags. If the safety stop is hit, a warning says the list and the duplicate check may be incomplete. Create is disabled while the list is loading or failed to load (no reliable duplicate check).
 5. Guard mirrors `CreateTagRequest::authorize`: contributor/admin. Page title "Tag Library" (contributors are allowed). Guest → `router.replace('/login?redirect=/admin/tags')`; token-only session → profile restored via `GET /me` (same pattern as `/courses/manage`); other roles → "Access restricted" card.
 6. Network failure on create = unknown result → message + **Retry** that refetches the list first (duplicate hint then shows if the first attempt landed).
 
@@ -69,7 +71,14 @@ Filter: typing `ph` shows PHP only; `hoc-may` matches by slug; empty filter show
 
 ## Follow-ups (need approval, out of scope)
 
+Backend (TEAM_MEMBER_B backend work, needs API approval):
+- **Non-idempotent `POST /tags`**: without `slug`, `TagService::create` silently suffixes `-1`, `-2`… and returns 201, creating duplicates. Should return the existing tag (200) or reject (422).
+- **Name uniqueness**: no unique/normalised rule on `tags.name`; add a normalised (trim, case, Unicode) uniqueness check.
+- **`per_page` cap**: `TagController::index` accepts any `per_page`; cap it (e.g. 100).
+- **`resolveTagIds` race**: article tagging does find-then-create without locking/unique handling; concurrent saves can create duplicate tags or hit a unique-slug exception.
+
+Frontend / other:
+
 - Nav link to `/admin/tags` in `SiteHeader` / `AuthActions` (shared file, not in allowed list).
 - Rename / merge / delete / hide tags: no backend endpoints; need backend + API contract approval (CONTENT-03 "Chờ duyệt"; tag FK is RESTRICT).
-- Backend: make `POST /tags` idempotent or reject duplicates (currently suffixes `-1` silently when slug omitted); add a unique/normalised `name` rule; cap `per_page`. Article tagging via `resolveTagIds` has the same race.
 - CONTENT-03 gate items (article tag sync atomicity, ownership, visibility) are backend work and remain open; this branch only covers the Tag Library UI.

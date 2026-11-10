@@ -49,10 +49,17 @@ export function nameKey(raw: string): string {
  */
 export function tagSlug(raw: string): string {
   const ascii = raw
-    .replace(/[đĐ]/g, (c) => (c === 'đ' ? 'd' : 'D'))
-    .replace(/[ßẞ]/g, 'ss')
-    .replace(/[æÆ]/g, 'ae')
-    .replace(/[øØ]/g, 'o')
+    // Latin letters that do not decompose under NFKD (voku/portable-ascii "en" table used by Str::ascii).
+    .replace(/[đĐðÐ]/g, (c) => (c === 'đ' || c === 'ð' ? 'd' : 'D'))
+    .replace(/[łŁ]/g, (c) => (c === 'ł' ? 'l' : 'L'))
+    .replace(/ß/g, 'ss')
+    .replace(/ẞ/g, 'SS')
+    .replace(/[æÆ]/g, (c) => (c === 'æ' ? 'ae' : 'AE'))
+    .replace(/[œŒ]/g, (c) => (c === 'œ' ? 'oe' : 'OE'))
+    .replace(/[þÞ]/g, (c) => (c === 'þ' ? 'th' : 'TH'))
+    .replace(/[øØ]/g, (c) => (c === 'ø' ? 'o' : 'O'))
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/€/g, 'EUR')
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^\x00-\x7F]/g, '');
@@ -74,8 +81,11 @@ export function findExistingTag(tags: TagRecord[], rawName: string): TagRecord |
 }
 
 export const tagAdminClient = {
-  /** Every tag, following the paginator; sorted alphabetically (case-insensitive). */
-  async listAll(): Promise<TagRecord[]> {
+  /**
+   * Every tag, following the paginator; sorted alphabetically (case-insensitive).
+   * `truncated` is true when the safety stop (MAX_PAGES) was hit before the last page.
+   */
+  async listAll(): Promise<{ tags: TagRecord[]; truncated: boolean }> {
     const all: TagRecord[] = [];
     let page = 1;
     let lastPage = 1;
@@ -88,7 +98,8 @@ export const tagAdminClient = {
       lastPage = Number(response.last_page) || 1;
       page += 1;
     } while (page <= lastPage && page <= MAX_PAGES);
-    return all.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+    const truncated = page <= lastPage;
+    return { tags: all.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })), truncated };
   },
 
   create(name: string): Promise<CreateTagResponse> {
