@@ -51,7 +51,18 @@ Behaviour notes:
 - After every successful mutation the tree is refetched. Buttons are disabled while a request runs.
 - Network down: load shows the error with a Retry button; writes say the result is unknown and suggest reload.
 - Styling: existing classes (`account-page`, `auth-card`, `auth-field`, `auth-error`, `auth-message`, `button`)
-  plus inline styles using UX-01 tokens only (`--color-*`, `--radius-*`, `--shadow-*`, `--text-*`).
+  plus inline styles using UX-01 tokens (`--color-*`, `--radius-*`, `--shadow-*`, `--text-*`). One exception:
+  the modal backdrop uses a literal `rgba(36, 33, 36, 0.45)` (charcoal at 45 %), because UX-01 has no overlay/scrim token.
+- Hardening (follow-up commit):
+  - Client validation: a non-empty slug must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`, and the name must contain at
+    least one letter or digit (otherwise `Str::slug` gives an empty slug). Errors are shown as field errors and
+    focus moves to the field.
+  - Field errors and hints sit outside the `<label>` and are still linked with `aria-describedby`.
+  - Dialog buttons use `aria-disabled` + a click guard while busy, so focus never leaves the dialog; a new error
+    message gets focus (`tabIndex=-1`).
+  - After a successful delete, focus moves to the status message (`tabIndex=-1`) because the row is removed.
+  - Tree expansion runs at most 5 `GET /categories/{slug}` requests at a time.
+  - Edit/Delete row buttons are disabled while the list is loading or a request is running.
 
 ## Tests run
 
@@ -80,6 +91,16 @@ Behaviour notes:
 - [ ] Modal keyboard: Tab cycles inside, Escape cancels, focus returns to the Delete button.
 - [ ] Stop the API → load shows error + Retry; Retry works after API restarts. Save while down → "result unknown" message.
 - [ ] Token expired/revoked mid-session → 401 → "Sign in required / session expired" card.
+
+## Backend follow-ups (Content backend task, not done here)
+
+- [ ] `CategoryService::update`: reject a `parent_id` that is the category itself **or any descendant**
+      (walk up from the new parent; run in a transaction) — currently only self-parent is rejected.
+- [ ] Slug format rule on create and update (`regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/`) plus a `unique` rule on update,
+      and reject names whose `Str::slug` is empty.
+- [ ] A flat list endpoint (or recursive `children` in `GET /categories`) so the admin UI does not need one
+      `GET /categories/{slug}` per nested category.
+- [ ] Document `PUT` and `DELETE /api/v1/categories/{category}` in `docs/API.md` (protected — needs coordination).
 
 ## Findings / follow-ups (not done here — out of scope)
 

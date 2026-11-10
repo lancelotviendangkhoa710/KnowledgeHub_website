@@ -32,6 +32,8 @@ const panelStyle: React.CSSProperties = {
   color: 'var(--color-charcoal)',
 };
 
+const busyStyle: React.CSSProperties = { opacity: 0.55, cursor: 'not-allowed' };
+
 /**
  * Accessible, non-native confirmation modal: focus moves to Cancel on open, Tab is trapped inside,
  * Escape cancels (unless a request is running) and focus returns to the opener on close.
@@ -41,6 +43,7 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
   const bodyId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const busyRef = useRef(busy);
   busyRef.current = busy;
   const cancelHandler = useRef(onCancel);
@@ -51,6 +54,11 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
     cancelRef.current?.focus();
     return () => opener?.focus?.();
   }, []);
+
+  // A new error (e.g. a 422 conflict) gets focus so it is announced and focus stays in the dialog.
+  useEffect(() => {
+    if (error && !busy) errorRef.current?.focus();
+  }, [error, busy]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -86,12 +94,31 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
       <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId} style={panelStyle}>
         <h2 id={titleId} style={{ margin: '0 0 0.75rem', fontSize: 'var(--text-xl)' }}>{title}</h2>
         <div id={bodyId} style={{ color: 'var(--color-gray)' }}>{children}</div>
-        {error && <p className="auth-error" role="alert" style={{ marginTop: '1rem' }}>{error}</p>}
+        {error && (
+          <p ref={errorRef} tabIndex={-1} className="auth-error" role="alert" style={{ marginTop: '1rem' }}>
+            {error}
+          </p>
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
-          <button ref={cancelRef} type="button" className="button button--secondary" onClick={onCancel} disabled={busy}>
+          {/* aria-disabled + click guard (not `disabled`) so the focused button keeps focus while a request runs. */}
+          <button
+            ref={cancelRef}
+            type="button"
+            className="button button--secondary"
+            onClick={() => { if (!busy) onCancel(); }}
+            aria-disabled={busy}
+            style={busy ? busyStyle : undefined}
+          >
             Cancel
           </button>
-          <button type="button" className="button button--primary" onClick={onConfirm} disabled={busy} aria-busy={busy}>
+          <button
+            type="button"
+            className="button button--primary"
+            onClick={() => { if (!busy) onConfirm(); }}
+            aria-disabled={busy}
+            aria-busy={busy}
+            style={busy ? busyStyle : undefined}
+          >
             {busy ? 'Working...' : confirmLabel}
           </button>
         </div>

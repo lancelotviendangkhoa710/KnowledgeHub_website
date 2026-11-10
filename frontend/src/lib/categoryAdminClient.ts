@@ -73,12 +73,44 @@ function normalize(raw: AdminCategory): AdminCategory {
 /** Max levels fetched below the list endpoint's two levels; guards against bad data looping forever. */
 const MAX_EXTRA_DEPTH = 8;
 
+/** At most this many GET /categories/{slug} lookups are in flight at once. */
+const MAX_CONCURRENT_LOOKUPS = 5;
+
+type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
+
+/**
+ * Small promise pool shared by one tree load. Only the request itself holds a slot (not the
+ * recursion into children), so nested lookups can never deadlock waiting for their parents.
+ */
+function createLimiter(max: number): Limiter {
+  let active = 0;
+  const queue: Array<() => void> = [];
+  const next = () => {
+    if (active >= max) return;
+    const start = queue.shift();
+    if (start) start();
+  };
+  return <T>(task: () => Promise<T>) =>
+    new Promise<T>((resolve, reject) => {
+      queue.push(() => {
+        active += 1;
+        task()
+          .then(resolve, reject)
+          .finally(() => {
+            active -= 1;
+            next();
+          });
+      });
+      next();
+    });
+}
+
 /**
  * The list endpoint only returns roots and their direct children. To show the real tree (and to
  * know every descendant when preventing cycles), each second-level node is expanded through
  * GET /categories/{slug}, level by level. Returns `complete: false` if any expansion failed.
  */
-async function hydrate(nodes: AdminCategory[], depth: number, seen: Set<string>): Promise<boolean> {
+async function hydrate(nodes: AdminCategory[], depth: number, seen: Set<string>, limit: Limiter): Promise<boolean> {
   if (depth > MAX_EXTRA_DEPTH) return nodes.length === 0;
   let complete = true;
   await Promise.all(
@@ -95,7 +127,7 @@ async function hydrate(nodes: AdminCategory[], depth: number, seen: Set<string>)
         return;
       }
       try {
-        const response = await api.get<Envelope<AdminCategory>>(`${BASE}/${encodeURIComponent(node.slug)}`);
+        const response = await limit(() => api.get<Envelope<AdminCategory>>(`${BASE}/${encodeURIComponent(node.slug)}`));
         node.children = (response.data.children ?? []).map(normalize);
         // Keep the count the list endpoint gave us; the slug endpoint does not count children's articles.
         if (node.articles_count === undefined && typeof response.data.articles_count === 'number') {
@@ -107,7 +139,7 @@ async function hydrate(nodes: AdminCategory[], depth: number, seen: Set<string>)
         return;
       }
       if (node.children.length > 0) {
-        const childComplete = await hydrate(node.children, depth + 1, seen);
+        const childComplete = await hydrate(node.children, depth + 1, seen, limit);
         if (!childComplete) complete = false;
       }
     }),
@@ -122,7 +154,7 @@ export const categoryAdminClient = {
     const roots = (Array.isArray(response.data) ? response.data : []).map(normalize);
     const seen = new Set<string>(roots.map((root) => root.id));
     const secondLevel = roots.flatMap((root) => root.children ?? []);
-    const complete = await hydrate(secondLevel, 1, seen);
+    const complete = await hydrate(secondLevel, 1, seen, createLimiter(MAX_CONCURRENT_LOOKUPS));
     return { roots, complete };
   },
 

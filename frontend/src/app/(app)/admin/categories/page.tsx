@@ -79,6 +79,16 @@ export default function AdminCategoriesPage() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const latestLoad = useRef(0);
+  const noticeRef = useRef<HTMLParagraphElement>(null);
+  // Set after a delete: the row (and its Delete button) goes away, so focus moves to the status message.
+  const [focusNotice, setFocusNotice] = useState(false);
+
+  useEffect(() => {
+    if (focusNotice && notice) {
+      noticeRef.current?.focus();
+      setFocusNotice(false);
+    }
+  }, [focusNotice, notice]);
 
   // ── Session: in-memory token; resolve the user via /me when only the token is known ─────────
   useEffect(() => {
@@ -196,6 +206,7 @@ export default function AdminCategoriesPage() {
     try {
       await categoryAdminClient.remove(toDelete.id);
       setNotice(`Deleted "${toDelete.name}".`);
+      setFocusNotice(true);
       setToDelete(null);
       if (form?.kind === 'edit' && form.category.id === toDelete.id) setForm(null);
       void load();
@@ -264,7 +275,7 @@ export default function AdminCategoriesPage() {
                     className="button button--secondary"
                     style={smallButton}
                     onClick={() => openForm({ kind: 'edit', category: node })}
-                    disabled={busy}
+                    disabled={busy || loading}
                     aria-label={`Edit ${node.name}`}
                   >
                     Edit
@@ -274,7 +285,7 @@ export default function AdminCategoriesPage() {
                     className="button button--secondary"
                     style={smallButton}
                     onClick={() => { setDeleteError(null); setNotice(null); setToDelete(node); }}
-                    disabled={busy}
+                    disabled={busy || loading}
                     aria-label={`Delete ${node.name}`}
                   >
                     Delete
@@ -307,7 +318,7 @@ export default function AdminCategoriesPage() {
         </button>
       </div>
 
-      {notice && <p className="auth-message" role="status">{notice}</p>}
+      {notice && <p ref={noticeRef} tabIndex={-1} className="auth-message" role="status">{notice}</p>}
 
       {form && (
         <CategoryForm

@@ -35,6 +35,14 @@ const controlStyle: React.CSSProperties = {
   font: 'inherit',
 };
 
+/** Same shape `Str::slug` produces; the backend does not enforce it, so the form does. */
+const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/**
+ * A name without any letter or digit gives an empty `Str::slug`, i.e. an empty slug on the server.
+ * Built with the RegExp constructor because Unicode property escapes need an ES2018 regex literal.
+ */
+const HAS_LETTER_OR_DIGIT = new RegExp('[\\p{L}\\p{N}]', 'u');
+
 function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null;
   return (
@@ -49,7 +57,19 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
   const [name, setName] = useState(editing?.name ?? '');
   const [slug, setSlug] = useState(editing?.slug ?? '');
   const [parentId, setParentId] = useState(editing?.parent_id ?? '');
+  const [localErrors, setLocalErrors] = useState<Record<string, string[]>>({});
   const nameRef = useRef<HTMLInputElement>(null);
+  // Client checks win over stale server errors for the same field until the field is edited.
+  const errors = { ...fieldErrors, ...localErrors };
+
+  function clearLocal(field: string) {
+    setLocalErrors((current) => {
+      if (!(field in current)) return current;
+      const next = { ...current };
+      delete next[field];
+      return next;
+    });
+  }
 
   useEffect(() => {
     nameRef.current?.focus();
@@ -62,7 +82,22 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
     event.preventDefault();
     if (busy) return;
     if (parentId && blocked.has(parentId)) return; // the select already disables these; belt and braces
-    onSubmit({ name: name.trim(), slug: slug.trim() || null, parent_id: parentId || null });
+    const trimmedName = name.trim();
+    const trimmedSlug = slug.trim();
+    const problems: Record<string, string[]> = {};
+    if (!HAS_LETTER_OR_DIGIT.test(trimmedName)) {
+      problems.name = ['The name must contain at least one letter or digit.'];
+    }
+    if (trimmedSlug && !SLUG_PATTERN.test(trimmedSlug)) {
+      problems.slug = ['Use lowercase letters, digits and single hyphens only (e.g. web-development).'];
+    }
+    setLocalErrors(problems);
+    if (Object.keys(problems).length > 0) {
+      const first = problems.name ? ids.name : ids.slug;
+      document.getElementById(first)?.focus();
+      return;
+    }
+    onSubmit({ name: trimmedName, slug: trimmedSlug || null, parent_id: parentId || null });
   }
 
   // The server only rejects "own parent"; it does not detect deeper cycles. Without the full tree we
@@ -77,52 +112,55 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
 
       {error && <p className="auth-error" role="alert" style={{ marginTop: '0.75rem' }}>{error}</p>}
 
-      <label className="auth-field" htmlFor={ids.name}>
-        Name
+      <div className="auth-field">
+        <label htmlFor={ids.name}>Name</label>
         <input
           ref={nameRef}
           id={ids.name}
           style={controlStyle}
           value={name}
-          onChange={(event) => setName(event.target.value)}
+          onChange={(event) => { setName(event.target.value); clearLocal('name'); }}
           required
           maxLength={255}
-          aria-invalid={Boolean(fieldErrors.name?.length)}
-          aria-describedby={fieldErrors.name?.length ? ids.nameErr : undefined}
+          aria-invalid={Boolean(errors.name?.length)}
+          aria-describedby={errors.name?.length ? ids.nameErr : undefined}
           disabled={busy}
         />
-        <FieldError id={ids.nameErr} messages={fieldErrors.name} />
-      </label>
+        <FieldError id={ids.nameErr} messages={errors.name} />
+      </div>
 
-      <label className="auth-field" htmlFor={ids.slug}>
-        Slug <span className="account-hint">(optional)</span>
+      <div className="auth-field">
+        <label htmlFor={ids.slug}>
+          Slug <span className="account-hint">(optional)</span>
+        </label>
         <input
           id={ids.slug}
           style={controlStyle}
           value={slug}
-          onChange={(event) => setSlug(event.target.value)}
+          onChange={(event) => { setSlug(event.target.value); clearLocal('slug'); }}
           maxLength={255}
-          aria-invalid={Boolean(fieldErrors.slug?.length)}
-          aria-describedby={[ids.slugHint, fieldErrors.slug?.length ? ids.slugErr : ''].filter(Boolean).join(' ')}
+          aria-invalid={Boolean(errors.slug?.length)}
+          aria-describedby={[ids.slugHint, errors.slug?.length ? ids.slugErr : ''].filter(Boolean).join(' ')}
           disabled={busy}
         />
         <small id={ids.slugHint} className="account-hint">
+          Lowercase letters, digits and single hyphens (e.g. <code>web-development</code>).{' '}
           {editing
             ? 'Leave empty to regenerate it from the name. If the slug is taken, the server adds a numeric suffix.'
             : 'Leave empty to generate it from the name.'}
         </small>
-        <FieldError id={ids.slugErr} messages={fieldErrors.slug} />
-      </label>
+        <FieldError id={ids.slugErr} messages={errors.slug} />
+      </div>
 
-      <label className="auth-field" htmlFor={ids.parent}>
-        Parent category
+      <div className="auth-field">
+        <label htmlFor={ids.parent}>Parent category</label>
         <select
           id={ids.parent}
           style={controlStyle}
           value={parentId}
           onChange={(event) => setParentId(event.target.value)}
-          aria-invalid={Boolean(fieldErrors.parent_id?.length)}
-          aria-describedby={fieldErrors.parent_id?.length ? ids.parentErr : undefined}
+          aria-invalid={Boolean(errors.parent_id?.length)}
+          aria-describedby={errors.parent_id?.length ? ids.parentErr : undefined}
           disabled={busy || parentLocked}
         >
           <option value="">None (top level)</option>
@@ -130,13 +168,13 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
             const disabled = blocked.has(node.id);
             return (
               <option key={node.id} value={node.id} disabled={disabled}>
-                {`${'— '.repeat(depth)}${node.name}${disabled ? (node.id === editing?.id ? ' (this category)' : ' (descendant)') : ''}`}
+                {`${'\u2014 '.repeat(depth)}${node.name}${disabled ? (node.id === editing?.id ? ' (this category)' : ' (descendant)') : ''}`}
               </option>
             );
           })}
         </select>
-        <FieldError id={ids.parentErr} messages={fieldErrors.parent_id} />
-      </label>
+        <FieldError id={ids.parentErr} messages={errors.parent_id} />
+      </div>
 
       {editing && !treeComplete && (
         <p className="auth-message" style={{ marginTop: '1rem' }}>
