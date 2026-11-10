@@ -166,15 +166,9 @@ export interface FetchArticlesParams {
 }
 
 /**
- * Fetch all published articles from the live REST API with optional domain/tag/search filters.
- * Interacts exclusively with the live backend.
- *
- * @param params Optional query filters (categoryId, tagSlug, search).
- * @param options Optional abort signal and retry-progress callback.
- * @returns Promise resolving to an array of published Article entities.
- * @throws Error if network fails or API responds with an error status.
+ * Builds the `/articles` list URL with the given query filters.
  */
-export async function fetchArticles(params?: FetchArticlesParams, options?: ApiReadOptions): Promise<Article[]> {
+function buildArticlesUrl(params?: FetchArticlesParams, extra?: Record<string, string>): string {
   const baseTarget = buildApiUrl('/articles');
   const fallbackBase = typeof window !== 'undefined' ? window.location.origin : 'http://127.0.0.1';
   const url = new URL(
@@ -184,14 +178,27 @@ export async function fetchArticles(params?: FetchArticlesParams, options?: ApiR
   if (params?.categoryId) url.searchParams.append('category_id', params.categoryId);
   if (params?.tagSlug) url.searchParams.append('tag_slug', params.tagSlug);
   if (params?.search) url.searchParams.append('search', params.search);
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      url.searchParams.append(key, value);
+    }
+  }
+  return url.toString();
+}
 
+/**
+ * Performs the GET request for an `/articles` list URL and returns the parsed JSON body.
+ *
+ * @throws Error if network fails or API responds with an error status.
+ */
+async function requestArticlesJson(url: string, options?: ApiReadOptions): Promise<unknown> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   const bearerSession = getAccessToken();
   if (bearerSession) {
     headers['Authorization'] = `Bearer ${bearerSession}`;
   }
 
-  const res = await apiFetch(url.toString(), {
+  const res = await apiFetch(url, {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
     headers,
   }, options);
@@ -201,11 +208,106 @@ export async function fetchArticles(params?: FetchArticlesParams, options?: ApiR
     throw new Error(errorJson.message || `Failed to fetch articles from API (HTTP ${res.status}).`);
   }
 
-  const list = extractList<Article>(await res.json());
+  return res.json();
+}
+
+/**
+ * Fetch all published articles from the live REST API with optional domain/tag/search filters.
+ * Interacts exclusively with the live backend.
+ *
+ * @param params Optional query filters (categoryId, tagSlug, search).
+ * @param options Optional abort signal and retry-progress callback.
+ * @returns Promise resolving to an array of published Article entities.
+ * @throws Error if network fails or API responds with an error status.
+ */
+export async function fetchArticles(params?: FetchArticlesParams, options?: ApiReadOptions): Promise<Article[]> {
+  const list = extractList<Article>(await requestArticlesJson(buildArticlesUrl(params), options));
   if (list === null) {
     throw new Error('Unexpected response format received from server.');
   }
   return list;
+}
+
+/** Pagination metadata of a list page (mapped from the Laravel length-aware paginator). */
+export interface PaginationMeta {
+  /** 1-based page number returned by the API. */
+  currentPage: number;
+  /** Last available page (always >= 1, also when there are no results). */
+  lastPage: number;
+  /** Page size used by the API. */
+  perPage: number;
+  /** Total number of matching records across all pages. */
+  total: number;
+  /** 1-based index of the first record on this page, or null when the page is empty. */
+  from: number | null;
+  /** 1-based index of the last record on this page, or null when the page is empty. */
+  to: number | null;
+}
+
+/** One page of published articles plus its pagination metadata. */
+export interface ArticlesPage {
+  items: Article[];
+  meta: PaginationMeta;
+}
+
+/** Parameters for querying one page of published articles. */
+export interface FetchArticlesPageParams extends FetchArticlesParams {
+  /** 1-based page number (defaults to 1). */
+  page?: number;
+  /** Page size (defaults to the API default of 15). */
+  perPage?: number;
+}
+
+function toPositiveInt(value: unknown): number | null {
+  const n = typeof value === 'string' ? Number(value) : value;
+  return typeof n === 'number' && Number.isFinite(n) && n >= 0 ? Math.floor(n) : null;
+}
+
+/**
+ * Fetch one page of published articles from the live REST API (`GET /api/v1/articles?page=N`).
+ * Unlike `fetchArticles`, this keeps the paginator metadata so the UI can render page controls.
+ *
+ * @param params Optional filters plus `page` / `perPage`.
+ * @param options Optional abort signal and retry-progress callback.
+ * @returns Promise resolving to `{ items, meta }`.
+ * @throws Error if network fails, the API responds with an error status, or the body is not a list.
+ */
+export async function fetchArticlesPage(
+  params?: FetchArticlesPageParams,
+  options?: ApiReadOptions
+): Promise<ArticlesPage> {
+  const extra: Record<string, string> = {};
+  const requestedPage = params?.page && params.page > 0 ? Math.floor(params.page) : 1;
+  extra.page = String(requestedPage);
+  if (params?.perPage && params.perPage > 0) extra.per_page = String(Math.floor(params.perPage));
+
+  const json = await requestArticlesJson(buildArticlesUrl(params, extra), options);
+  const items = extractList<Article>(json);
+  if (items === null) {
+    throw new Error('Unexpected response format received from server.');
+  }
+
+  // Tolerate a bare array or missing fields by describing the response as a single page.
+  const body = (json && typeof json === 'object' && !Array.isArray(json) ? json : {}) as Record<string, unknown>;
+  const perPage = toPositiveInt(body.per_page) || params?.perPage || items.length || 1;
+  const total = toPositiveInt(body.total) ?? items.length;
+  const currentPage = toPositiveInt(body.current_page) || requestedPage;
+  const lastPage = Math.max(1, toPositiveInt(body.last_page) ?? Math.ceil(total / perPage));
+  const fromRaw = toPositiveInt(body.from);
+  const toRaw = toPositiveInt(body.to);
+  const derivedFrom = items.length > 0 ? (currentPage - 1) * perPage + 1 : null;
+
+  return {
+    items,
+    meta: {
+      currentPage,
+      lastPage,
+      perPage,
+      total,
+      from: items.length > 0 ? fromRaw || derivedFrom : null,
+      to: items.length > 0 ? toRaw || (derivedFrom !== null ? derivedFrom + items.length - 1 : null) : null,
+    },
+  };
 }
 
 /**
