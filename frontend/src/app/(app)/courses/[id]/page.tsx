@@ -299,6 +299,8 @@ export default function CourseDetailPage() {
   const [wakingUp, setWakingUp] = useState<boolean>(false);
   // Controller of the load currently in flight; also acts as the "already loading" guard.
   const loadAbortRef = useRef<AbortController | null>(null);
+  // Related-courses request is independent of the main load; aborted whenever a new course load starts.
+  const relatedAbortRef = useRef<AbortController | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
   const [isBookmarkPending, setIsBookmarkPending] = useState<boolean>(false);
@@ -337,6 +339,8 @@ export default function CourseDetailPage() {
     if (loadAbortRef.current) return; // a load (possibly retrying during cold start) is already in flight
     const controller = new AbortController();
     loadAbortRef.current = controller;
+    relatedAbortRef.current?.abort();
+    relatedAbortRef.current = null;
     setLoading(true);
     setLoadError(null);
     setWakingUp(false);
@@ -357,11 +361,17 @@ export default function CourseDetailPage() {
         setBookmarked(false);
       }
       if (data?.category_id) {
-        fetchArticles({ categoryId: data.category_id }, { signal: controller.signal })
+        const relatedController = new AbortController();
+        relatedAbortRef.current = relatedController;
+        fetchArticles({ categoryId: data.category_id }, { signal: relatedController.signal })
           .then((list) => {
+            if (relatedController.signal.aborted) return;
             setRelatedArticles(list.filter((a) => a.id !== data.id).slice(0, 3));
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            if (relatedAbortRef.current === relatedController) relatedAbortRef.current = null;
+          });
       }
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
@@ -384,6 +394,8 @@ export default function CourseDetailPage() {
     return () => {
       loadAbortRef.current?.abort();
       loadAbortRef.current = null;
+      relatedAbortRef.current?.abort();
+      relatedAbortRef.current = null;
     };
   }, [loadCourse]);
 
@@ -631,31 +643,33 @@ export default function CourseDetailPage() {
   }, [content, article]);
 
   if (loading) {
-    if (wakingUp) {
-      return (
-        <div className="container" style={{ padding: '6rem 0' }}>
-          <div
-            role="status"
-            aria-live="polite"
-            style={{
-              maxWidth: 600,
-              margin: '0 auto',
-              padding: '1.25rem 1.5rem',
-              textAlign: 'center',
-              background: 'var(--color-white)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              color: 'var(--color-charcoal)',
-            }}
-          >
-            {SERVER_WAKING_MESSAGE}
-          </div>
-        </div>
-      );
-    }
+    // The live region stays mounted for the whole loading phase; only its content toggles,
+    // so screen readers announce the wake-up notice when it appears.
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
-        Loading course curriculum...
+      <div className="container" style={{ padding: '6rem 0' }}>
+        <div
+          role="status"
+          aria-live="polite"
+          style={
+            wakingUp
+              ? {
+                  maxWidth: 600,
+                  margin: '0 auto',
+                  padding: '1.25rem 1.5rem',
+                  textAlign: 'center',
+                  background: 'var(--color-white)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  color: 'var(--color-charcoal)',
+                }
+              : undefined
+          }
+        >
+          {wakingUp ? SERVER_WAKING_MESSAGE : null}
+        </div>
+        {!wakingUp && (
+          <div style={{ textAlign: 'center', color: 'var(--color-gray)' }}>Loading course curriculum...</div>
+        )}
       </div>
     );
   }

@@ -29,14 +29,14 @@ export const API_UNREACHABLE_MESSAGE = 'Cannot reach the KnowledgeHub API.';
 export const API_UNREACHABLE_WRITE_MESSAGE =
   'Could not reach the KnowledgeHub API. The result is unknown — refresh to check.';
 
-/** Shown while GET requests are being retried (Render free tier cold start can take ~30 s). */
+/** Shown while GET requests are being retried (Render free tier cold start can take up to ~1 min). */
 export const SERVER_WAKING_MESSAGE =
-  'Waking up the KnowledgeHub server… this can take up to 30 seconds (free hosting).';
+  'Waking up the KnowledgeHub server… this can take up to a minute (free hosting).';
 
 /** HTTP statuses that a sleeping / starting backend returns transiently. */
 const RETRYABLE_STATUSES = new Set([500, 502, 503, 504]);
-/** Backoff between attempts for idempotent reads: 2 s, 4 s, 8 s, 16 s (≈30 s total). */
-const READ_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000];
+/** Backoff between attempts for idempotent reads: 2 s, 4 s, 8 s, 16 s, 30 s (≈60 s total). */
+const READ_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000];
 
 /** Details passed to `onRetry` before each wait. */
 export interface ApiRetryInfo {
@@ -84,7 +84,7 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
  * Wraps `fetch` with readable network errors and cold-start resilience.
  *
  * - GET/HEAD: retried on network failure and on HTTP 500/502/503/504 with backoff
- *   (2 s, 4 s, 8 s, 16 s). When retries are exhausted it throws a readable error that includes the status.
+ *   (2 s, 4 s, 8 s, 16 s, 30 s). When retries are exhausted it throws a readable error that includes the status.
  * - Other methods are never retried (they are not idempotent); a network failure reports an unknown result.
  * - Abort (via `options.signal`) is propagated as an AbortError and stops any pending retry.
  */

@@ -540,8 +540,9 @@ export default function ContributorCourseCreatePage() {
   // Cold-start status (backend waking up) and in-flight guards against duplicate concurrent loads.
   const [taxonomyWaking, setTaxonomyWaking] = useState<boolean>(false);
   const [parentWaking, setParentWaking] = useState<boolean>(false);
-  const taxonomyInFlightRef = useRef<boolean>(false);
-  const parentInFlightRef = useRef<boolean>(false);
+  // Controller of each load in flight (null when idle); doubles as the duplicate-load guard and is aborted on unmount.
+  const taxonomyAbortRef = useRef<AbortController | null>(null);
+  const parentAbortRef = useRef<AbortController | null>(null);
 
   // Category hierarchy grouping (Domains and Sub-categories)
   const groupedCategories = useMemo(() => {
@@ -841,14 +842,21 @@ List the mathematical or operational guarantees enforced by this architecture.
   }, [router]);
 
   const loadTaxonomy = useCallback(async () => {
-    if (taxonomyInFlightRef.current) return;
-    taxonomyInFlightRef.current = true;
+    if (taxonomyAbortRef.current) return;
+    const controller = new AbortController();
+    taxonomyAbortRef.current = controller;
     setTaxonomyLoading(true);
     setTaxonomyError(null);
     setTaxonomyWaking(false);
-    const readOptions: ApiReadOptions = { onRetry: () => setTaxonomyWaking(true) };
+    const readOptions: ApiReadOptions = {
+      signal: controller.signal,
+      onRetry: () => {
+        if (!controller.signal.aborted) setTaxonomyWaking(true);
+      },
+    };
     try {
       const [cats, tagsList] = await Promise.all([fetchCategories(readOptions), fetchTags(readOptions)]);
+      if (controller.signal.aborted) return;
       setCategories(cats);
       if (cats.length > 0) {
         // Keep a category restored from a saved draft; otherwise default to the first one.
@@ -856,15 +864,19 @@ List the mathematical or operational guarantees enforced by this architecture.
       }
       setAvailableTags(tagsList || []);
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       setTaxonomyError(
         err instanceof Error && err.message
           ? err.message
           : 'Unable to load categories and tags from KnowledgeHub API.'
       );
     } finally {
-      taxonomyInFlightRef.current = false;
-      setTaxonomyLoading(false);
-      setTaxonomyWaking(false);
+      // Only the current load may clear its state (an aborted one was unmounted or superseded).
+      if (taxonomyAbortRef.current === controller) {
+        taxonomyAbortRef.current = null;
+        setTaxonomyLoading(false);
+        setTaxonomyWaking(false);
+      }
     }
   }, []);
 
@@ -873,13 +885,20 @@ List the mathematical or operational guarantees enforced by this architecture.
    * Failures are surfaced so a revision is never silently written from scratch.
    */
   const loadParentCourse = useCallback(async (pid: string) => {
-    if (parentInFlightRef.current) return;
-    parentInFlightRef.current = true;
+    if (parentAbortRef.current) return;
+    const controller = new AbortController();
+    parentAbortRef.current = controller;
     setParentLoading(true);
     setParentLoadError(null);
     setParentWaking(false);
     try {
-      const art = await fetchArticle(pid, { onRetry: () => setParentWaking(true) });
+      const art = await fetchArticle(pid, {
+        signal: controller.signal,
+        onRetry: () => {
+          if (!controller.signal.aborted) setParentWaking(true);
+        },
+      });
+      if (controller.signal.aborted) return;
       if (!art) {
         setParentLoadError({
           message: 'Parent course not found. It may have been deleted or the link is incorrect.',
@@ -897,15 +916,18 @@ List the mathematical or operational guarantees enforced by this architecture.
         setCategoryId(art.category_id);
       }
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       const detail = err instanceof Error && err.message ? err.message : 'Unknown error.';
       setParentLoadError({
         message: `Could not load the course being revised: ${detail}`,
         retryable: true,
       });
     } finally {
-      parentInFlightRef.current = false;
-      setParentLoading(false);
-      setParentWaking(false);
+      if (parentAbortRef.current === controller) {
+        parentAbortRef.current = null;
+        setParentLoading(false);
+        setParentWaking(false);
+      }
     }
   }, []);
 
@@ -954,6 +976,15 @@ List the mathematical or operational guarantees enforced by this architecture.
         loadParentCourse(pid);
       }
     }
+
+    return () => {
+      // Abort in-flight loads (and any cold-start backoff) on unmount; resetting the refs lets the
+      // StrictMode re-run of this effect start fresh loads instead of being blocked by the guards.
+      taxonomyAbortRef.current?.abort();
+      taxonomyAbortRef.current = null;
+      parentAbortRef.current?.abort();
+      parentAbortRef.current = null;
+    };
   }, [loadTaxonomy, loadParentCourse]);
 
   // Auto-save draft every 20 seconds if title or content exists and no draft restore prompt is pending
@@ -1050,6 +1081,8 @@ List the mathematical or operational guarantees enforced by this architecture.
   const isRevisionBlocked = Boolean(parentId && (parentLoading || parentLoadError));
 
   const resetToNewCourse = () => {
+    parentAbortRef.current?.abort();
+    parentAbortRef.current = null;
     setParentId(null);
     setParentLoadError(null);
     setParentLoading(false);
@@ -1571,23 +1604,26 @@ List the mathematical or operational guarantees enforced by this architecture.
         </div>
       )}
 
-      {(taxonomyWaking || parentWaking) && (
-        <div
-          role="status"
-          aria-live="polite"
-          style={{
-            background: 'var(--color-white)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '0.85rem 1.25rem',
-            color: 'var(--color-charcoal)',
-            marginBottom: '1.5rem',
-            fontSize: '0.9rem',
-          }}
-        >
-          {SERVER_WAKING_MESSAGE}
-        </div>
-      )}
+      {/* Always-mounted live region: only its content toggles so the wake-up notice is announced reliably. */}
+      <div
+        role="status"
+        aria-live="polite"
+        style={
+          taxonomyWaking || parentWaking
+            ? {
+                background: 'var(--color-white)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '0.85rem 1.25rem',
+                color: 'var(--color-charcoal)',
+                marginBottom: '1.5rem',
+                fontSize: '0.9rem',
+              }
+            : undefined
+        }
+      >
+        {taxonomyWaking || parentWaking ? SERVER_WAKING_MESSAGE : null}
+      </div>
 
       {taxonomyError && (
         <div

@@ -245,7 +245,7 @@ export default function CoursesPage() {
       </section>
 
       {/* Course Grid & State Feedback */}
-      {wakingUp && <ServerWakingStatus />}
+      <ServerWakingStatus active={wakingUp} />
       {loading && articles.length === 0 ? (
         wakingUp ? null : (
           <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
@@ -571,9 +571,13 @@ function LoadErrorBanner({
 
 /**
  * Calm, non-error status shown while GET requests are retried during a backend cold start.
- * Uses a polite live region so screen readers announce it without interrupting.
+ * The polite live region is always mounted and only its content toggles, so screen readers
+ * reliably announce the message when it appears.
  */
-function ServerWakingStatus() {
+function ServerWakingStatus({ active }: { active: boolean }) {
+  if (!active) {
+    return <div role="status" aria-live="polite" />;
+  }
   return (
     <div
       role="status"
