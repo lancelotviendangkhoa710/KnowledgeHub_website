@@ -535,6 +535,8 @@ export default function ContributorCourseCreatePage() {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [taxonomyError, setTaxonomyError] = useState<string | null>(null);
   const [taxonomyLoading, setTaxonomyLoading] = useState<boolean>(false);
+  const [parentLoadError, setParentLoadError] = useState<{ message: string; retryable: boolean } | null>(null);
+  const [parentLoading, setParentLoading] = useState<boolean>(false);
 
   // Category hierarchy grouping (Domains and Sub-categories)
   const groupedCategories = useMemo(() => {
@@ -855,6 +857,41 @@ List the mathematical or operational guarantees enforced by this architecture.
     }
   }, []);
 
+  /**
+   * Prefills the editor from the parent course in revision mode (`?parent_id=`).
+   * Failures are surfaced so a revision is never silently written from scratch.
+   */
+  const loadParentCourse = useCallback(async (pid: string) => {
+    setParentLoading(true);
+    setParentLoadError(null);
+    try {
+      const art = await fetchArticle(pid);
+      if (!art) {
+        setParentLoadError({
+          message: 'Parent course not found. It may have been deleted or the link is incorrect.',
+          retryable: false,
+        });
+        return;
+      }
+      const v = art.published_version || art.latest_version;
+      if (v) {
+        setTitle(`Revision: ${v.title}`);
+        setContent(v.content);
+      }
+      if (art.category_id) {
+        setCategoryId(art.category_id);
+      }
+    } catch (err: unknown) {
+      const detail = err instanceof Error && err.message ? err.message : 'Unknown error.';
+      setParentLoadError({
+        message: `Could not load the course being revised: ${detail}`,
+        retryable: true,
+      });
+    } finally {
+      setParentLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadTaxonomy();
 
@@ -897,23 +934,10 @@ List the mathematical or operational guarantees enforced by this architecture.
       const pid = params.get('parent_id');
       if (pid) {
         setParentId(pid);
-        fetchArticle(pid)
-          .then((art) => {
-            if (art) {
-              const v = art.published_version || art.latest_version;
-              if (v) {
-                setTitle(`Revision: ${v.title}`);
-                setContent(v.content);
-              }
-              if (art.category_id) {
-                setCategoryId(art.category_id);
-              }
-            }
-          })
-          .catch(() => {});
+        loadParentCourse(pid);
       }
     }
-  }, [loadTaxonomy]);
+  }, [loadTaxonomy, loadParentCourse]);
 
   // Auto-save draft every 20 seconds if title or content exists and no draft restore prompt is pending
   useEffect(() => {
@@ -1006,6 +1030,13 @@ List the mathematical or operational guarantees enforced by this architecture.
   };
 
   const handleSubmit = async (publish: boolean) => {
+    if (parentId && parentLoadError) {
+      setErrorMessage(
+        'The course being revised could not be loaded, so this revision cannot be saved. Retry loading it or start a new course instead.'
+      );
+      return;
+    }
+
     if (!title.trim() || !content.trim()) {
       setErrorMessage('Please provide both a course title and curriculum content body.');
       return;
@@ -1417,6 +1448,54 @@ List the mathematical or operational guarantees enforced by this architecture.
         </div>
       )}
 
+      {parentId && parentLoadError && (
+        <div
+          role="alert"
+          style={{
+            background: 'var(--color-primary-faint)',
+            border: '1px solid var(--color-primary-pale)',
+            borderRadius: 'var(--radius-md)',
+            padding: '1rem 1.5rem',
+            color: 'var(--color-charcoal)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+          }}
+        >
+          <span>
+            <strong style={{ color: 'var(--color-primary)' }}>{parentLoadError.message}</strong>
+            <span style={{ display: 'block', color: 'var(--color-gray)', marginTop: '0.25rem' }}>
+              {parentLoadError.retryable
+                ? 'Please check your connection or try again. Saving is disabled until the course loads.'
+                : 'Saving is disabled for this revision. Start a new course instead.'}
+            </span>
+          </span>
+          {parentLoadError.retryable ? (
+            <button
+              type="button"
+              onClick={() => loadParentCourse(parentId)}
+              disabled={parentLoading}
+              aria-busy={parentLoading}
+              className="btn btn-primary"
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+            >
+              {parentLoading ? 'Retrying...' : 'Retry'}
+            </button>
+          ) : (
+            <Link
+              href="/courses/create"
+              className="btn btn-secondary"
+              style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+            >
+              Start a New Course
+            </Link>
+          )}
+        </div>
+      )}
+
       {errorMessage && (
         <div
           role="alert"
@@ -1474,7 +1553,10 @@ List the mathematical or operational guarantees enforced by this architecture.
         >
           <span>
             <strong style={{ color: 'var(--color-primary)' }}>Categories and tags could not be loaded.</strong>{' '}
-            {taxonomyError} You need a category before you can publish.
+            {taxonomyError}
+            <span style={{ display: 'block', color: 'var(--color-gray)', marginTop: '0.25rem' }}>
+              Please check your connection or try again. You need a category before you can publish.
+            </span>
           </span>
           <button
             type="button"

@@ -22,6 +22,24 @@ function buildApiUrl(path: string): string {
   return fullPath;
 }
 
+/** User-facing message used when the API cannot be reached at all (network/CORS/DNS failure). */
+export const API_UNREACHABLE_MESSAGE = 'Cannot reach the KnowledgeHub API.';
+
+/**
+ * Wraps `fetch` so low-level network failures (e.g. TypeError "Failed to fetch")
+ * surface as a readable error instead of a browser-specific message.
+ */
+async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (err: unknown) {
+    if (err instanceof TypeError) {
+      throw new Error(API_UNREACHABLE_MESSAGE);
+    }
+    throw err;
+  }
+}
+
 /**
  * Extracts an array payload from either a `{ data: T[] }` envelope or a bare `T[]` response.
  * Null-safe: returns null when the body is not a recognised list shape.
@@ -76,7 +94,7 @@ export async function fetchArticles(params?: FetchArticlesParams): Promise<Artic
     headers['Authorization'] = `Bearer ${bearerSession}`;
   }
 
-  const res = await fetch(url.toString(), {
+  const res = await apiFetch(url.toString(), {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
     headers,
   });
@@ -98,7 +116,7 @@ export async function fetchArticles(params?: FetchArticlesParams): Promise<Artic
  *
  * @param identifier The article slug or UUID.
  * @returns Promise resolving to the Article entity, or null only when the API responds 404.
- * @throws Error on network failure or any non-404 error status, so callers can show a retryable error.
+ * @throws Error on network failure, any non-404 error status, or a 200 response without `data`.
  */
 export async function fetchArticle(identifier: string): Promise<Article | null> {
   const headers: Record<string, string> = { Accept: 'application/json' };
@@ -107,7 +125,7 @@ export async function fetchArticle(identifier: string): Promise<Article | null> 
     headers['Authorization'] = `Bearer ${bearerSession}`;
   }
 
-  const res = await fetch(buildApiUrl(`/articles/${encodeURIComponent(identifier)}`), {
+  const res = await apiFetch(buildApiUrl(`/articles/${encodeURIComponent(identifier)}`), {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
     headers,
   });
@@ -122,7 +140,10 @@ export async function fetchArticle(identifier: string): Promise<Article | null> 
   }
 
   const json: { data?: Article } | null = await res.json();
-  return json?.data ?? null;
+  if (!json?.data) {
+    throw new Error('Unexpected course response format received from server.');
+  }
+  return json.data;
 }
 
 /**
@@ -132,7 +153,7 @@ export async function fetchArticle(identifier: string): Promise<Article | null> 
  * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch(buildApiUrl('/categories'), {
+  const res = await apiFetch(buildApiUrl('/categories'), {
     next: { revalidate: 300 },
     headers: { Accept: 'application/json' },
   });
@@ -156,7 +177,7 @@ export async function fetchCategories(): Promise<Category[]> {
  * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
 export async function fetchTags(): Promise<Tag[]> {
-  const res = await fetch(buildApiUrl('/tags'), {
+  const res = await apiFetch(buildApiUrl('/tags'), {
     next: { revalidate: 300 },
     headers: { Accept: 'application/json' },
   });
@@ -200,7 +221,7 @@ export async function fetchMyArticles(status?: string): Promise<Article[]> {
     headers['Authorization'] = `Bearer ${bearerSession}`;
   }
 
-  const res = await fetch(url.toString(), {
+  const res = await apiFetch(url.toString(), {
     cache: 'no-store',
     headers,
   });
@@ -236,7 +257,7 @@ export async function publishArticle(articleId: string, versionId?: string): Pro
   }
 
   const body = versionId ? JSON.stringify({ version_id: versionId }) : JSON.stringify({});
-  const res = await fetch(buildApiUrl(`/articles/${articleId}/publish`), {
+  const res = await apiFetch(buildApiUrl(`/articles/${articleId}/publish`), {
     method: 'POST',
     headers,
     body,
@@ -271,7 +292,7 @@ export async function archiveArticle(articleId: string): Promise<Article> {
     headers['Authorization'] = `Bearer ${bearerSession}`;
   }
 
-  const res = await fetch(buildApiUrl(`/articles/${articleId}/archive`), {
+  const res = await apiFetch(buildApiUrl(`/articles/${articleId}/archive`), {
     method: 'POST',
     headers,
     body: JSON.stringify({}),
@@ -305,7 +326,7 @@ export async function deleteArticle(articleId: string): Promise<void> {
     headers['Authorization'] = `Bearer ${bearerSession}`;
   }
 
-  const res = await fetch(buildApiUrl(`/articles/${articleId}`), {
+  const res = await apiFetch(buildApiUrl(`/articles/${articleId}`), {
     method: 'DELETE',
     headers,
   });

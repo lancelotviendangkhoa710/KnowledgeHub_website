@@ -65,6 +65,8 @@ export default function CoursesPage() {
 
       setArticles(articlesList);
       setCategories(cats);
+      // Drop a category filter that no longer exists (e.g. categories failed to load or were removed).
+      setSelectedCategory((prev) => (prev === 'all' || cats.some((c) => c.id === prev) ? prev : 'all'));
     } catch (err: unknown) {
       setLoadError(
         err instanceof Error && err.message
@@ -151,6 +153,8 @@ export default function CoursesPage() {
             }}
           />
           <svg
+            aria-hidden="true"
+            focusable="false"
             width="18"
             height="18"
             viewBox="0 0 24 24"
@@ -449,6 +453,9 @@ function LoadErrorBanner({
       >
         <span>
           <strong style={{ color: 'var(--color-primary)' }}>Could not refresh courses.</strong> {message}
+          <span style={{ display: 'block', color: 'var(--color-gray)', marginTop: '0.25rem' }}>
+            Please check your connection or try again.
+          </span>
         </span>
         {retryButton}
       </div>
@@ -512,13 +519,23 @@ function LoadErrorBanner({
       </h3>
       <p
         style={{
-          color: 'var(--color-gray)',
-          marginBottom: '1.75rem',
+          color: 'var(--color-charcoal)',
+          marginBottom: '0.5rem',
           lineHeight: 1.6,
           fontSize: '1rem',
         }}
       >
-        {message} Please check your connection or try again.
+        {message}
+      </p>
+      <p
+        style={{
+          color: 'var(--color-gray)',
+          marginBottom: '1.75rem',
+          lineHeight: 1.6,
+          fontSize: '0.95rem',
+        }}
+      >
+        Please check your connection or try again.
       </p>
       {retryButton}
     </div>

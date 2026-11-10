@@ -327,7 +327,10 @@ export default function CourseDetailPage() {
   }, []);
 
   const loadCourse = useCallback(async () => {
-    if (!idOrSlug) return;
+    if (!idOrSlug) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setLoadError(null);
     try {
@@ -662,8 +665,11 @@ export default function CourseDetailPage() {
           <h2 style={{ marginBottom: '0.75rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 700 }}>
             Unable to Load Course
           </h2>
-          <p style={{ color: 'var(--color-gray)', marginBottom: '1.75rem', lineHeight: 1.6 }}>
-            {loadError} Please check your connection or try again.
+          <p style={{ color: 'var(--color-charcoal)', marginBottom: '0.5rem', lineHeight: 1.6 }}>
+            {loadError}
+          </p>
+          <p style={{ color: 'var(--color-gray)', marginBottom: '1.75rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
+            Please check your connection or try again.
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button

@@ -31,15 +31,33 @@
   - `courses/[id]/page.tsx`: `loadError` state, try/catch/finally; API failure shows "Unable to Load Course" with Retry + Back to Courses; a real 404 still shows "Course Material Not Found".
   - `courses/create/page.tsx` (Studio): categories/tags load wrapped in `loadTaxonomy()` with try/catch; failure shows an inline notice with Retry (a category is required to publish). A category restored from a saved draft is no longer overwritten by the default first category.
   - `courses/manage/page.tsx` already handled `fetchMyArticles` errors (unchanged).
-- [x] **Step 5: Quality & Build Verification**
-  - Ran `npx tsc --noEmit` in `frontend/` (0 errors).
-  - Ran `npm run build` in `frontend/` (successful static generation across 16 routes).
-  - Verified 0 lint errors, 0 TypeScript errors, and successful production build.
-- [x] **Step 6: Atomic Commit & Output Report**
-  - Commit message format: `p2: eradicate mock data fallback and connect live API directly`.
-- [x] **Step 7: Review follow-up**
-  - Applied review findings #1–#9 (see Steps 2–4b).
-  - `node node_modules/typescript/lib/tsc.js --noEmit -p .` in `frontend/`: 0 errors.
-  - Not re-run after follow-up: `npm run build` and ESLint (run on Windows before opening the PR).
-  - Commit: `p2: surface API errors instead of silent fallbacks and remove mock content`.
+- [x] **Step 4c: Second review follow-up**
+  - `contentClient.ts`: `apiFetch()` wrapper maps network `TypeError` ("Failed to fetch") to "Cannot reach the KnowledgeHub API."; `fetchArticle` throws on a 200 response without `data`.
+  - Error banners (`courses/page.tsx`, `courses/[id]/page.tsx`, Studio taxonomy notice) show the API message and the "Please check your connection or try again." hint on separate lines.
+  - `courses/page.tsx`: a selected category that is no longer in the loaded list resets to "All Domains"; search icon SVG is `aria-hidden`.
+  - `courses/[id]/page.tsx`: a missing route param ends the loading state instead of spinning forever.
+  - `courses/create/page.tsx` revision mode (`?parent_id=`): load failure shows "Could not load the course being revised: <message>" with Retry; a missing parent shows "Parent course not found" with "Start a New Course"; saving is blocked while the parent is not loaded, so a revision is never silently written from scratch.
+- [ ] **Step 5: Quality & Build Verification**
+  - [x] TypeScript: `node node_modules/typescript/lib/tsc.js --noEmit -p .` in `frontend/` → 0 errors (after every commit on this branch).
+  - [ ] `npm run build` in `frontend/` — **to re-run on Windows** (not re-run after the review follow-ups).
+  - [ ] ESLint (`npm run lint`) — **to re-run on Windows** (not re-run after the review follow-ups).
+  - Note: `frontend/` has no test runner configured, so this change is covered by the manual test checklist below instead of automated tests.
+- [x] **Step 6: Atomic Commits & Output Report**
+  - `p2: eradicate mock data fallback and connect live API directly`
+  - `p2: surface API errors instead of silent fallbacks and remove mock content`
+  - `p2: handle revision load failure and polish API error messaging`
   - Output standard completion report matching AGENTS.md §15.
+
+---
+
+## Manual Test Checklist
+
+Run against `npm run dev` with `NEXT_PUBLIC_API_URL` pointing at a local or prod backend.
+
+- [ ] **API down** (stop backend or set an unreachable `NEXT_PUBLIC_API_URL`): `/courses` shows "Unable to Load Courses" + "Cannot reach the KnowledgeHub API." + Retry; Retry re-fetches once the API is back. `/courses/<slug>` shows "Unable to Load Course" + Retry (not "Not Found").
+- [ ] **404**: `/courses/does-not-exist` shows "Course Material Not Found".
+- [ ] **Empty DB** (no published courses): `/courses` shows "No courses published yet" (not "No courses matched your query").
+- [ ] **Categories endpoint failing** (`/v1/categories` returns 500): `/courses` still lists courses; category pills are hidden and the filter is "All Domains".
+- [ ] **Studio taxonomy failing** (`/v1/categories` or `/v1/tags` returns 500): `/courses/create` shows "Categories and tags could not be loaded." + Retry; Retry fills the category dropdown once the API recovers.
+- [ ] **Revision parent missing**: `/courses/create?parent_id=<unknown-id>` shows "Parent course not found" + "Start a New Course"; Save/Publish shows a blocking error. With the API down, it shows "Could not load the course being revised: …" + Retry.
+- [ ] **Screen reader / keyboard**: error banners are announced (`role="alert"`); Retry is reachable by Tab and reports busy state while retrying.
