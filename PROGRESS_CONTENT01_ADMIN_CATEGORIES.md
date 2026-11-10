@@ -31,7 +31,7 @@ Behaviour notes:
   Update → if `name` is sent and `slug` is empty, slug is **regenerated from the name**; a taken slug is
   silently suffixed (`-1`, `-2`, …). The UI therefore pre-fills and re-sends the current slug on edit.
 - Who may write: **admin only** (all three writes). Contributors and users get 403.
-- Cycle protection: backend only rejects `parent_id === self`. **Descendant cycles are NOT rejected server-side.**
+- Cycle protection: backend only rejects `parent_id === self`. **Descendant cycles are NOT blocked server-side.**
 - Delete: hard delete; refused (422) while the category has children or articles (FK children = RESTRICT).
 - No soft delete on `categories`.
 
@@ -95,7 +95,7 @@ Behaviour notes:
 ## Backend follow-ups (Content backend task, not done here)
 
 - [ ] `CategoryService::update`: reject a `parent_id` that is the category itself **or any descendant**
-      (walk up from the new parent; run in a transaction) — currently only self-parent is rejected.
+      (walk up from the new parent; run in a transaction) — currently only self-parent is refused.
 - [ ] Slug format rule on create and update (`regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/`) plus a `unique` rule on update,
       and reject names whose `Str::slug` is empty.
 - [ ] A flat list endpoint (or recursive `children` in `GET /categories`) so the admin UI does not need one
