@@ -5,6 +5,9 @@ import Link from 'next/link';
 import AuthActions from '@/components/auth/AuthActions';
 import { getCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 
+/**
+ * Renders the brand logo icon mark with animated nodes.
+ */
 function BrandMark() {
   return (
     <span className="nav-logo__mark" aria-hidden="true">
@@ -15,6 +18,9 @@ function BrandMark() {
   );
 }
 
+/**
+ * Main navigation shell header displaying platform branding, links, and role-based Studio shortcut.
+ */
 export default function SiteHeader() {
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
 

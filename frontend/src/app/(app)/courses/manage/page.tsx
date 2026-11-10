@@ -11,6 +11,13 @@ import { accountClient } from '@/lib/accountClient';
 
 type StatusFilter = 'all' | 'published' | 'draft' | 'archived';
 
+interface MetricCounts {
+  total: number;
+  published: number;
+  drafts: number;
+  archived: number;
+}
+
 interface MetricCardProps {
   title: string;
   count: number | string;
@@ -24,6 +31,9 @@ interface MetricCardProps {
   onClick: () => void;
 }
 
+/**
+ * Interactive KPI metric card supporting keyboard navigation and filter toggling.
+ */
 function MetricCard({
   title,
   count,
@@ -84,6 +94,9 @@ function MetricCard({
   );
 }
 
+/**
+ * Visual badge indicating course lifecycle status (published, draft, or archived).
+ */
 function StatusBadge({ status }: { status: 'draft' | 'published' | 'archived' }) {
   if (status === 'published') {
     return (
@@ -161,6 +174,9 @@ interface CourseTableRowProps {
   getVersionLabel: (article: Article) => string;
 }
 
+/**
+ * Individual row within the course management table displaying metadata and inline actions.
+ */
 function CourseTableRow({
   article,
   isLast,
@@ -409,6 +425,367 @@ function CourseTableRow({
   );
 }
 
+/**
+ * Top header component with eyebrow, page title, subtitle, and primary call to action.
+ */
+function CourseManagementHeader() {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        flexWrap: 'wrap',
+        gap: '1.25rem',
+        marginBottom: '2.25rem',
+      }}
+    >
+      <div>
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.45rem',
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--color-primary)',
+            marginBottom: '0.35rem',
+          }}
+        >
+          <span>CONTRIBUTOR WORKBENCH</span>
+        </div>
+        <h1
+          style={{
+            fontSize: '2.15rem',
+            fontWeight: 800,
+            color: 'var(--color-charcoal)',
+            letterSpacing: '-0.025em',
+            lineHeight: 1.2,
+            margin: '0 0 0.45rem 0',
+          }}
+        >
+          My Curricula & Courses
+        </h1>
+        <p
+          style={{
+            color: 'var(--color-gray)',
+            fontSize: '1rem',
+            lineHeight: 1.5,
+            margin: 0,
+            maxWidth: 620,
+          }}
+        >
+          Manage drafts, monitor published version snapshots, and author technical curricula.
+        </p>
+      </div>
+
+      <Link
+        href="/courses/create"
+        className="btn btn-primary"
+        style={{
+          padding: '0.75rem 1.45rem',
+          fontSize: '0.925rem',
+          fontWeight: 600,
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          boxShadow: 'var(--shadow-xs)',
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>+ Author New Course</span>
+      </Link>
+    </div>
+  );
+}
+
+interface CourseFilterBarProps {
+  activeTab: StatusFilter;
+  onSelectTab: (tab: StatusFilter) => void;
+  metrics: MetricCounts;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  onClearSearch: () => void;
+}
+
+/**
+ * Filter bar presenting status tabs and a real-time search input.
+ */
+function CourseFilterBar({
+  activeTab,
+  onSelectTab,
+  metrics,
+  searchQuery,
+  onSearchChange,
+  onClearSearch,
+}: CourseFilterBarProps) {
+  const tabs = [
+    { id: 'all' as StatusFilter, label: 'All Courses', count: metrics.total },
+    { id: 'published' as StatusFilter, label: 'Published', count: metrics.published },
+    { id: 'draft' as StatusFilter, label: 'Drafts', count: metrics.drafts },
+    { id: 'archived' as StatusFilter, label: 'Archived', count: metrics.archived },
+  ];
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '1rem',
+        backgroundColor: 'var(--color-white)',
+        padding: '0.75rem 1rem',
+        borderRadius: 'var(--radius-lg, 12px)',
+        border: '1px solid var(--color-border)',
+        marginBottom: '1.5rem',
+        boxShadow: 'var(--shadow-xs)',
+      }}
+    >
+      <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onSelectTab(tab.id)}
+              style={{
+                padding: '0.45rem 0.95rem',
+                borderRadius: 'var(--radius-md, 6px)',
+                fontSize: '0.88rem',
+                fontWeight: isActive ? 700 : 500,
+                backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
+                color: isActive ? '#FFFFFF' : 'var(--color-gray)',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>{tab.label}</span>
+              <span
+                style={{
+                  fontSize: '0.75rem',
+                  padding: '0.1rem 0.4rem',
+                  borderRadius: '10px',
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
+                  color: isActive ? '#FFFFFF' : 'var(--color-charcoal)',
+                  fontWeight: 600,
+                }}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ position: 'relative', minWidth: 260, flex: '1 1 260px', maxWidth: 380 }}>
+        <span
+          style={{
+            position: 'absolute',
+            left: '0.85rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--color-gray-light)',
+            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </span>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="Search courses by title or slug..."
+          aria-label="Search courses by title or slug"
+          style={{
+            width: '100%',
+            padding: '0.5rem 2rem 0.5rem 2.4rem',
+            fontSize: '0.88rem',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-md, 6px)',
+            backgroundColor: 'var(--color-off-white)',
+            color: 'var(--color-charcoal)',
+            outline: 'none',
+          }}
+        />
+        {searchQuery && (
+          <button
+            type="button"
+            onClick={onClearSearch}
+            aria-label="Clear course search"
+            style={{
+              position: 'absolute',
+              right: '0.65rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-gray)',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              padding: '0.2rem',
+            }}
+            title="Clear search"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface CourseEmptyStateProps {
+  isTotalZero: boolean;
+  activeTab: StatusFilter;
+  searchQuery: string;
+  onResetFilters: () => void;
+}
+
+/**
+ * Empty state card rendered when no courses exist or when filters produce zero matches.
+ */
+function CourseEmptyState({
+  isTotalZero,
+  activeTab,
+  searchQuery,
+  onResetFilters,
+}: CourseEmptyStateProps) {
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--color-white)',
+        borderRadius: 'var(--radius-lg, 12px)',
+        border: '1px solid var(--color-border)',
+        padding: '4rem 2rem',
+        textAlign: 'center',
+        boxShadow: 'var(--shadow-xs)',
+      }}
+    >
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: '50%',
+          backgroundColor: 'var(--color-primary-pale, #F3E5E5)',
+          color: 'var(--color-primary)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '1rem',
+        }}
+      >
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+      </div>
+      {isTotalZero ? (
+        <>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>
+            No courses authored yet
+          </h3>
+          <p style={{ color: 'var(--color-gray)', fontSize: '0.95rem', maxWidth: 440, margin: '0 auto 1.5rem auto', lineHeight: 1.6 }}>
+            You haven&apos;t created any courses yet. Author your first technical curriculum to share domain knowledge across the platform.
+          </p>
+          <Link href="/courses/create" className="btn btn-primary" style={{ padding: '0.65rem 1.4rem', fontWeight: 600 }}>
+            + Author First Course
+          </Link>
+        </>
+      ) : (
+        <>
+          <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>
+            No courses match your filter
+          </h3>
+          <p style={{ color: 'var(--color-gray)', fontSize: '0.95rem', maxWidth: 420, margin: '0 auto 1.5rem auto', lineHeight: 1.6 }}>
+            No courses found matching tab “{activeTab}”{searchQuery ? ` and search “${searchQuery}”` : ''}.
+          </p>
+          <button
+            type="button"
+            onClick={onResetFilters}
+            className="btn btn-secondary"
+            style={{ padding: '0.55rem 1.25rem', fontSize: '0.88rem' }}
+          >
+            Reset Filters
+          </button>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Access restricted card shown to standard users lacking contributor or administrator privileges.
+ */
+function CourseRestrictedAccessCard() {
+  return (
+    <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
+      <div
+        style={{
+          background: 'var(--color-white)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-lg, 12px)',
+          padding: '3.5rem 2.5rem',
+          boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05))',
+        }}
+      >
+        <div
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: '50%',
+            backgroundColor: '#FEF3C7',
+            color: '#D97706',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '1.5rem',
+          }}
+        >
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+        <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-charcoal)', marginBottom: '0.85rem', letterSpacing: '-0.02em' }}>
+          Contributor Privileges Required
+        </h2>
+        <p style={{ color: 'var(--color-gray)', lineHeight: 1.7, marginBottom: '2.25rem', fontSize: '1.025rem' }}>
+          Your account currently has the standard user role. The Contributor Workbench is reserved for verified domain experts and curriculum authors. You can request contributor access through your account settings.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <Link href="/courses" className="btn btn-secondary" style={{ padding: '0.75rem 1.5rem', fontWeight: 600 }}>
+            Explore Courses
+          </Link>
+          <Link href="/account" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontWeight: 600 }}>
+            Apply on Account Page
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Main workbench dashboard allowing contributors and admins to view, filter, and manage courses.
+ */
 export default function ContributorCourseManagementPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
@@ -427,7 +804,6 @@ export default function ContributorCourseManagementPage() {
   const errorTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isCancelledRef = useRef(false);
 
-  // Clear timers on component unmount
   useEffect(() => {
     isCancelledRef.current = false;
     return () => {
@@ -437,7 +813,6 @@ export default function ContributorCourseManagementPage() {
     };
   }, []);
 
-  // Safe toast setter with timer cleanup
   const showToast = useCallback((msg: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastNotice(msg);
@@ -446,7 +821,6 @@ export default function ContributorCourseManagementPage() {
     }, 4000);
   }, []);
 
-  // Safe action error setter with timer cleanup
   const showError = useCallback((msg: string) => {
     if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
     setActionError(msg);
@@ -455,7 +829,6 @@ export default function ContributorCourseManagementPage() {
     }, 5000);
   }, []);
 
-  // Subscribe to auth updates and verify active session with proper cleanup
   useEffect(() => {
     let cancelled = false;
     const unsub = subscribeCurrentUser(() => {
@@ -499,7 +872,6 @@ export default function ContributorCourseManagementPage() {
     };
   }, [router]);
 
-  // Load author articles once authenticated
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -535,8 +907,7 @@ export default function ContributorCourseManagementPage() {
     loadData();
   }, [authChecked, user, loadData]);
 
-  // KPI Overview Metrics
-  const metrics = useMemo(() => {
+  const metrics = useMemo<MetricCounts>(() => {
     const total = articles.length;
     const published = articles.filter((a) => a.status === 'published').length;
     const drafts = articles.filter((a) => a.status === 'draft').length;
@@ -544,7 +915,6 @@ export default function ContributorCourseManagementPage() {
     return { total, published, drafts, archived };
   }, [articles]);
 
-  // Filtered & Searched Course List
   const filteredArticles = useMemo(() => {
     return articles.filter((article) => {
       if (activeTab !== 'all' && article.status !== activeTab) {
@@ -598,7 +968,6 @@ export default function ContributorCourseManagementPage() {
     return 'v1.0';
   }, []);
 
-  // Inline Publish Handler
   const handlePublish = async (courseId: string) => {
     setPublishingId(courseId);
     setActionError(null);
@@ -625,7 +994,6 @@ export default function ContributorCourseManagementPage() {
     }
   };
 
-  // Inline Archive Handler
   const handleArchive = async (courseId: string) => {
     if (!window.confirm('Are you sure you want to archive this course? It will be removed from public listings.')) {
       return;
@@ -647,7 +1015,6 @@ export default function ContributorCourseManagementPage() {
     }
   };
 
-  // Loading skeleton state while verifying session
   if (!authChecked) {
     return (
       <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
@@ -660,59 +1027,12 @@ export default function ContributorCourseManagementPage() {
   const isContributorOrAdmin =
     user?.roles?.includes('contributor') || user?.roles?.includes('admin');
 
-  // RBAC Access Restricted Card for non-contributors / regular users
   if (!isContributorOrAdmin) {
-    return (
-      <div className="container" style={{ paddingTop: '5rem', paddingBottom: '5rem', maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
-        <div
-          style={{
-            background: 'var(--color-white)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            padding: '3.5rem 2.5rem',
-            boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05))',
-          }}
-        >
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              backgroundColor: '#FEF3C7',
-              color: '#D97706',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-            </svg>
-          </div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--color-charcoal)', marginBottom: '0.85rem', letterSpacing: '-0.02em' }}>
-            Contributor Privileges Required
-          </h2>
-          <p style={{ color: 'var(--color-gray)', lineHeight: 1.7, marginBottom: '2.25rem', fontSize: '1.025rem' }}>
-            Your account currently has the standard user role. The Contributor Workbench is reserved for verified domain experts and curriculum authors. You can request contributor access through your account settings.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <Link href="/courses" className="btn btn-secondary" style={{ padding: '0.75rem 1.5rem', fontWeight: 600 }}>
-              Explore Courses
-            </Link>
-            <Link href="/account" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', fontWeight: 600 }}>
-              Apply on Account Page
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
+    return <CourseRestrictedAccessCard />;
   }
 
   return (
     <div className="container" style={{ paddingTop: '2.5rem', paddingBottom: '5rem', maxWidth: 1180, margin: '0 auto' }}>
-      {/* Toast and Alert Messages */}
       {toastNotice && (
         <div
           role="status"
@@ -805,77 +1125,7 @@ export default function ContributorCourseManagementPage() {
       )}
 
       {/* 1. Header & Navigation */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          flexWrap: 'wrap',
-          gap: '1.25rem',
-          marginBottom: '2.25rem',
-        }}
-      >
-        <div>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: 'var(--color-primary)',
-              marginBottom: '0.35rem',
-            }}
-          >
-            <span>CONTRIBUTOR WORKBENCH</span>
-          </div>
-          <h1
-            style={{
-              fontSize: '2.15rem',
-              fontWeight: 800,
-              color: 'var(--color-charcoal)',
-              letterSpacing: '-0.025em',
-              lineHeight: 1.2,
-              margin: '0 0 0.45rem 0',
-            }}
-          >
-            My Curricula & Courses
-          </h1>
-          <p
-            style={{
-              color: 'var(--color-gray)',
-              fontSize: '1rem',
-              lineHeight: 1.5,
-              margin: 0,
-              maxWidth: 620,
-            }}
-          >
-            Manage drafts, monitor published version snapshots, and author technical curricula.
-          </p>
-        </div>
-
-        <Link
-          href="/courses/create"
-          className="btn btn-primary"
-          style={{
-            padding: '0.75rem 1.45rem',
-            fontSize: '0.925rem',
-            fontWeight: 600,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>+ Author New Course</span>
-        </Link>
-      </div>
+      <CourseManagementHeader />
 
       {/* 2. KPI Metrics Overview (4 Metric Cards) */}
       <div
@@ -960,128 +1210,14 @@ export default function ContributorCourseManagementPage() {
       </div>
 
       {/* 3. Status Filter Tabs & Real-Time Search Bar */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '1rem',
-          backgroundColor: 'var(--color-white)',
-          padding: '0.75rem 1rem',
-          borderRadius: 'var(--radius-lg, 12px)',
-          border: '1px solid var(--color-border)',
-          marginBottom: '1.5rem',
-          boxShadow: 'var(--shadow-xs)',
-        }}
-      >
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-          {[
-            { id: 'all', label: 'All Courses', count: metrics.total },
-            { id: 'published', label: 'Published', count: metrics.published },
-            { id: 'draft', label: 'Drafts', count: metrics.drafts },
-            { id: 'archived', label: 'Archived', count: metrics.archived },
-          ].map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id as StatusFilter)}
-                style={{
-                  padding: '0.45rem 0.95rem',
-                  borderRadius: 'var(--radius-md, 6px)',
-                  fontSize: '0.88rem',
-                  fontWeight: isActive ? 700 : 500,
-                  backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
-                  color: isActive ? '#FFFFFF' : 'var(--color-gray)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.45rem',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <span>{tab.label}</span>
-                <span
-                  style={{
-                    fontSize: '0.75rem',
-                    padding: '0.1rem 0.4rem',
-                    borderRadius: '10px',
-                    backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
-                    color: isActive ? '#FFFFFF' : 'var(--color-charcoal)',
-                    fontWeight: 600,
-                  }}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search Input */}
-        <div style={{ position: 'relative', minWidth: 260, flex: '1 1 260px', maxWidth: 380 }}>
-          <span
-            style={{
-              position: 'absolute',
-              left: '0.85rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: 'var(--color-gray-light)',
-              pointerEvents: 'none',
-              display: 'flex',
-              alignItems: 'center',
-            }}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search courses by title or slug..."
-            aria-label="Search courses by title or slug"
-            style={{
-              width: '100%',
-              padding: '0.5rem 2rem 0.5rem 2.4rem',
-              fontSize: '0.88rem',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md, 6px)',
-              backgroundColor: 'var(--color-off-white)',
-              color: 'var(--color-charcoal)',
-              outline: 'none',
-            }}
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery('')}
-              aria-label="Clear course search"
-              style={{
-                position: 'absolute',
-                right: '0.65rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-gray)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                padding: '0.2rem',
-              }}
-              title="Clear search"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      </div>
+      <CourseFilterBar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        metrics={metrics}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        onClearSearch={() => setSearchQuery('')}
+      />
 
       {/* 4. Courses Management Table / Cards */}
       {loading ? (
@@ -1099,73 +1235,16 @@ export default function ContributorCourseManagementPage() {
           <p style={{ marginTop: '0.85rem', fontSize: '0.92rem' }}>Loading course inventory...</p>
         </div>
       ) : filteredArticles.length === 0 ? (
-        /* Empty State */
-        <div
-          style={{
-            backgroundColor: 'var(--color-white)',
-            borderRadius: 'var(--radius-lg, 12px)',
-            border: '1px solid var(--color-border)',
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            boxShadow: 'var(--shadow-xs)',
+        <CourseEmptyState
+          isTotalZero={articles.length === 0}
+          activeTab={activeTab}
+          searchQuery={searchQuery}
+          onResetFilters={() => {
+            setActiveTab('all');
+            setSearchQuery('');
           }}
-        >
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-primary-pale, #F3E5E5)',
-              color: 'var(--color-primary)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '1rem',
-            }}
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-            </svg>
-          </div>
-          {articles.length === 0 ? (
-            <>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>
-                No courses authored yet
-              </h3>
-              <p style={{ color: 'var(--color-gray)', fontSize: '0.95rem', maxWidth: 440, margin: '0 auto 1.5rem auto', lineHeight: 1.6 }}>
-                You haven&apos;t created any courses yet. Author your first technical curriculum to share domain knowledge across the platform.
-              </p>
-              <Link href="/courses/create" className="btn btn-primary" style={{ padding: '0.65rem 1.4rem', fontWeight: 600 }}>
-                + Author First Course
-              </Link>
-            </>
-          ) : (
-            <>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>
-                No courses match your filter
-              </h3>
-              <p style={{ color: 'var(--color-gray)', fontSize: '0.95rem', maxWidth: 420, margin: '0 auto 1.5rem auto', lineHeight: 1.6 }}>
-                No courses found matching tab “{activeTab}”{searchQuery ? ` and search “${searchQuery}”` : ''}.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('all');
-                  setSearchQuery('');
-                }}
-                className="btn btn-secondary"
-                style={{ padding: '0.55rem 1.25rem', fontSize: '0.88rem' }}
-              >
-                Reset Filters
-              </button>
-            </>
-          )}
-        </div>
+        />
       ) : (
-        /* Course Table */
         <div
           style={{
             backgroundColor: 'var(--color-white)',
