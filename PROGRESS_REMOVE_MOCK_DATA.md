@@ -37,6 +37,10 @@
   - `courses/page.tsx`: a selected category that is no longer in the loaded list resets to "All Domains"; search icon SVG is `aria-hidden`.
   - `courses/[id]/page.tsx`: a missing route param ends the loading state instead of spinning forever.
   - `courses/create/page.tsx` revision mode (`?parent_id=`): load failure shows "Could not load the course being revised: <message>" with Retry; a missing parent shows "Parent course not found" with "Start a New Course"; saving is blocked while the parent is not loaded, so a revision is never silently written from scratch.
+- [x] **Step 4d: Third review follow-up**
+  - "Start a New Course" is a button that clears revision state (parent ID, error, title, slug, content) and calls `router.replace('/courses/create')` (a same-route `<Link>` did not re-run the mount effect).
+  - Save/Publish are disabled while the parent course is loading or failed to load; a late parent response only prefills an empty title/content, never overwriting author edits.
+  - `apiFetch()`: network failure on a write (non-GET) reports "Could not reach the KnowledgeHub API. The result is unknown — refresh to check."
 - [ ] **Step 5: Quality & Build Verification**
   - [x] TypeScript: `node node_modules/typescript/lib/tsc.js --noEmit -p .` in `frontend/` → 0 errors (after every commit on this branch).
   - [ ] `npm run build` in `frontend/` — **to re-run on Windows** (not re-run after the review follow-ups).
@@ -46,6 +50,7 @@
   - `p2: eradicate mock data fallback and connect live API directly`
   - `p2: surface API errors instead of silent fallbacks and remove mock content`
   - `p2: handle revision load failure and polish API error messaging`
+  - `p2: fix revision reset link and guard saves while parent loads`
   - Output standard completion report matching AGENTS.md §15.
 
 ---
@@ -59,5 +64,5 @@ Run against `npm run dev` with `NEXT_PUBLIC_API_URL` pointing at a local or prod
 - [ ] **Empty DB** (no published courses): `/courses` shows "No courses published yet" (not "No courses matched your query").
 - [ ] **Categories endpoint failing** (`/v1/categories` returns 500): `/courses` still lists courses; category pills are hidden and the filter is "All Domains".
 - [ ] **Studio taxonomy failing** (`/v1/categories` or `/v1/tags` returns 500): `/courses/create` shows "Categories and tags could not be loaded." + Retry; Retry fills the category dropdown once the API recovers.
-- [ ] **Revision parent missing**: `/courses/create?parent_id=<unknown-id>` shows "Parent course not found" + "Start a New Course"; Save/Publish shows a blocking error. With the API down, it shows "Could not load the course being revised: …" + Retry.
+- [ ] **Revision parent missing**: `/courses/create?parent_id=<unknown-id>` shows "Parent course not found" + "Start a New Course"; Save/Publish are disabled; "Start a New Course" clears the form and drops `?parent_id`. With the API down, it shows "Could not load the course being revised: …" + Retry.
 - [ ] **Screen reader / keyboard**: error banners are announced (`role="alert"`); Retry is reachable by Tab and reports busy state while retrying.

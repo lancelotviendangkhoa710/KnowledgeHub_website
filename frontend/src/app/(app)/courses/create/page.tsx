@@ -875,8 +875,9 @@ List the mathematical or operational guarantees enforced by this architecture.
       }
       const v = art.published_version || art.latest_version;
       if (v) {
-        setTitle(`Revision: ${v.title}`);
-        setContent(v.content);
+        // Prefill only empty fields so a late response never overwrites what the author already typed or restored.
+        setTitle((prev) => (prev.trim() ? prev : `Revision: ${v.title}`));
+        setContent((prev) => (prev.trim() ? prev : v.content));
       }
       if (art.category_id) {
         setCategoryId(art.category_id);
@@ -1029,7 +1030,26 @@ List the mathematical or operational guarantees enforced by this architecture.
     }
   };
 
+  /** True while revision mode cannot safely save (parent still loading or failed to load). */
+  const isRevisionBlocked = Boolean(parentId && (parentLoading || parentLoadError));
+
+  const resetToNewCourse = () => {
+    setParentId(null);
+    setParentLoadError(null);
+    setParentLoading(false);
+    setErrorMessage(null);
+    setTitle('');
+    setSlug('');
+    setContent('');
+    router.replace('/courses/create');
+  };
+
   const handleSubmit = async (publish: boolean) => {
+    if (parentId && parentLoading) {
+      setErrorMessage('The course being revised is still loading. Please wait a moment before saving.');
+      return;
+    }
+
     if (parentId && parentLoadError) {
       setErrorMessage(
         'The course being revised could not be loaded, so this revision cannot be saved. Retry loading it or start a new course instead.'
@@ -1485,13 +1505,14 @@ List the mathematical or operational guarantees enforced by this architecture.
               {parentLoading ? 'Retrying...' : 'Retry'}
             </button>
           ) : (
-            <Link
-              href="/courses/create"
+            <button
+              type="button"
+              onClick={resetToNewCourse}
               className="btn btn-secondary"
               style={{ padding: '0.45rem 1rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
             >
               Start a New Course
-            </Link>
+            </button>
           )}
         </div>
       )}
@@ -2653,7 +2674,7 @@ List the mathematical or operational guarantees enforced by this architecture.
             <div style={{ display: 'flex', gap: '0.85rem' }}>
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isRevisionBlocked}
                 onClick={() => handleSubmit(false)}
                 className="btn btn-secondary"
                 style={{ fontSize: '0.875rem' }}
@@ -2663,7 +2684,7 @@ List the mathematical or operational guarantees enforced by this architecture.
 
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isRevisionBlocked}
                 onClick={() => handleSubmit(true)}
                 className="btn btn-primary"
                 style={{ fontSize: '0.875rem' }}

@@ -25,6 +25,10 @@ function buildApiUrl(path: string): string {
 /** User-facing message used when the API cannot be reached at all (network/CORS/DNS failure). */
 export const API_UNREACHABLE_MESSAGE = 'Cannot reach the KnowledgeHub API.';
 
+/** Used for writes (POST/PUT/PATCH/DELETE): the request may or may not have been applied server-side. */
+export const API_UNREACHABLE_WRITE_MESSAGE =
+  'Could not reach the KnowledgeHub API. The result is unknown — refresh to check.';
+
 /**
  * Wraps `fetch` so low-level network failures (e.g. TypeError "Failed to fetch")
  * surface as a readable error instead of a browser-specific message.
@@ -34,7 +38,8 @@ async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
     return await fetch(input, init);
   } catch (err: unknown) {
     if (err instanceof TypeError) {
-      throw new Error(API_UNREACHABLE_MESSAGE);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      throw new Error(method === 'GET' || method === 'HEAD' ? API_UNREACHABLE_MESSAGE : API_UNREACHABLE_WRITE_MESSAGE);
     }
     throw err;
   }
