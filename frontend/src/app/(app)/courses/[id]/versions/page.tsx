@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { Article } from '@/types/content';
 import { getAccessToken } from '@/lib/authToken';
+import { getCurrentUser, setCurrentUser, type AuthUser } from '@/lib/auth';
+import { accountClient } from '@/lib/accountClient';
 import {
   fetchArticleForHistory,
   fetchArticleVersions,
@@ -23,6 +25,38 @@ type LoadState =
   | { kind: 'error'; message: string };
 
 type Mode = 'view' | 'compare';
+
+/** Current signed-in user, fetched once from /me when only a token is held in memory. */
+async function resolveViewer(): Promise<AuthUser | null> {
+  if (!getAccessToken()) return null;
+  const cached = getCurrentUser();
+  if (cached) return cached;
+  try {
+    const res = await accountClient.me();
+    setCurrentUser(res.data.user);
+    return res.data.user;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Client-side mitigation only: readers (guests, or signed-in users who are neither the author nor an Admin)
+ * see versions up to the published one. The API currently returns newer unpublished revisions to everyone;
+ * the real fix belongs in the backend versions visibility rules.
+ */
+function visibleVersionsFor(
+  article: Article,
+  list: ArticleVersionEntry[],
+  viewer: AuthUser | null
+): { visible: ArticleVersionEntry[]; hiddenCount: number } {
+  const canSeeAll = !!viewer && (viewer.roles?.includes('admin') || viewer.id === article.author_id);
+  if (canSeeAll) return { visible: list, hiddenCount: 0 };
+  const published = list.find((v) => v.id === article.published_version_id);
+  const limit = published ? published.version_no : 0;
+  const visible = list.filter((v) => v.version_no <= limit);
+  return { visible, hiddenCount: list.length - visible.length };
+}
 
 const cardStyle: React.CSSProperties = {
   backgroundColor: 'var(--color-white)',
@@ -80,6 +114,7 @@ export default function CourseVersionHistoryPage() {
   const idOrSlug = (params?.id as string) || '';
   const courseHref = `/courses/${encodeURIComponent(idOrSlug)}`;
   const historyHref = `${courseHref}/versions`;
+  const loginHref = `/login?redirect=${encodeURIComponent(historyHref)}`;
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [article, setArticle] = useState<Article | null>(null);
@@ -88,6 +123,7 @@ export default function CourseVersionHistoryPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [baseId, setBaseId] = useState<string | null>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
+  const [hiddenCount, setHiddenCount] = useState<number>(0);
   const requestSeq = useRef(0);
 
   const load = useCallback(async () => {
@@ -99,11 +135,13 @@ export default function CourseVersionHistoryPage() {
     setState({ kind: 'loading' });
     try {
       const resolved = await fetchArticleForHistory(idOrSlug);
-      const list = await fetchArticleVersions(resolved.id);
+      const [all, viewer] = await Promise.all([fetchArticleVersions(resolved.id), resolveViewer()]);
       if (seq !== requestSeq.current) return;
 
+      const { visible: list, hiddenCount: hidden } = visibleVersionsFor(resolved, all, viewer);
       setArticle(resolved);
       setVersions(list);
+      setHiddenCount(hidden);
       const published = list.find((v) => v.id === resolved.published_version_id) ?? null;
       const latest = list[0] ?? null;
       setSelectedId((published ?? latest)?.id ?? null);
@@ -178,7 +216,7 @@ export default function CourseVersionHistoryPage() {
         title="Sign in to view this history"
         actions={
           <>
-            <Link href={`/login?redirect=${historyHref}`} className="btn btn-primary">
+            <Link href={loginHref} className="btn btn-primary">
               Sign in
             </Link>
             <Link href="/courses" className="btn btn-secondary">
@@ -281,6 +319,21 @@ export default function CourseVersionHistoryPage() {
         <p style={{ margin: 0, color: 'var(--color-gray)', fontSize: 'var(--text-sm)' }}>
           Every saved version is kept as a read-only snapshot. Readers see the published version.
         </p>
+        {hiddenCount > 0 && (
+          <p
+            role="note"
+            style={{
+              margin: '0.75rem 0 0 0',
+              padding: '0.5rem 0.75rem',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--color-primary-faint)',
+              color: 'var(--color-charcoal)',
+              fontSize: 'var(--text-sm)',
+            }}
+          >
+            Newer unpublished drafts are hidden. Only the author and Admins can see them.
+          </p>
+        )}
       </header>
 
       {versions.length === 0 ? (

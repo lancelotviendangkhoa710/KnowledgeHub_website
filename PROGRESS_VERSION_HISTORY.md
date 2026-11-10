@@ -31,7 +31,8 @@
 - Timeline newest first: `v{n}`, title, creator **name only** (email never rendered), formatted `created_at`, "Published" badge for `article.published_version_id` ("Last published" when the article is not currently published), "Latest" badge.
 - View mode: version title/meta + content as preformatted text (no HTML rendering, no `dangerouslySetInnerHTML`).
 - Compare mode: base/compared selects, swap, "Compare with previous version" shortcut; unified line diff with old/new line numbers, `+`/`−` markers and screen-reader labels (not colour only), title change shown separately, unchanged runs collapsed (3 context lines, expandable), rows rendered in pages of 1500.
-- Diff: common prefix/suffix trimmed, then Myers O(ND) with edit-distance budget 2000; above budget the changed block is shown as a full replacement with a notice.
+- Diff: common prefix/suffix trimmed, then Myers O(ND) with edit-distance budget D = 2000 (bounds time to O((N+M)·D) and trace memory to O(D²), ~16 MB worst case). When the middle block needs more than 2000 line edits, the diff is **approximate**: every line of the changed middle block is listed as removed then added (prefix/suffix still matched), and the UI shows a notice. Counts are then upper bounds, not minimal.
+- Reader filter (client-side mitigation, follow-up commit): when the viewer has no token, or is signed in but is neither the article author nor an Admin (`getCurrentUser()` / `GET /me`), only versions with `version_no` ≤ the published version's `version_no` are shown, with a note that newer drafts are hidden. This is **UI only**: the data is still in the API response.
 - Accessibility: all controls are native buttons/selects/links; `aria-pressed` for selection and mode, `role="status"` live regions, labelled nav/section, focusable scrollable `<pre>`.
 
 ## Verification run
@@ -48,7 +49,8 @@
 
 | # | Scenario | Expected |
 |---|---|---|
-| 1 | Guest on a published course with ≥2 versions | List + published badge; view/compare work |
+| 1 | Guest on a published course with ≥2 versions | Only versions ≤ published shown; "newer drafts hidden" note when a newer revision exists |
+| 1b | Signed-in non-author User/Contributor on published course | Same as 1 |
 | 2 | Author (contributor) on own draft | Expected: list. **Currently likely 403 → restricted card** (see Risk 1) |
 | 3 | Other contributor on someone else's draft | Restricted card (403) |
 | 4 | Admin on any draft/archived course | Expected: list. **Currently likely 403** (Risk 1) |
@@ -67,6 +69,13 @@
 2. **Unpublished revisions exposed to guests.** For a published article the endpoint returns *all* versions, including newer unpublished revisions, to anyone. This conflicts with CONTENT-02 ("Guest/User never see drafts"). The page relies on the API as specified, so it shows whatever the API returns. Fix (backend): filter to versions ≤ published for non-authors, or require authorship.
 3. **`creator` serialises the full User row** (incl. email) to guests. UI shows name only, but the data is in the response. Fix (backend): select `id,name` only.
 4. Token is in memory (`authToken.ts`): a hard reload of this page loses the session → guest view.
+
+### Required backend fix (p2 backend follow-up; real fix for Risks 1–3)
+
+- `ArticlePolicy` / `ArticleController::versions`: return only versions ≤ the published version to non-authors/non-admins.
+- Route auth: move `GET articles/{article}/versions` (and `show`) under `auth:sanctum` or an optional-bearer resolution (`auth('sanctum')->user()`), so authors/admins are recognised.
+- Hide creator contact data: eager-load `creator:id,name` (no email).
+- After that, the client-side filter can stay as defence in depth or be removed.
 
 ## Follow-ups
 

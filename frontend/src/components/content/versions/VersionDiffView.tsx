@@ -47,13 +47,15 @@ const markerFor: Record<DiffLine['kind'], { symbol: string; label: string }> = {
 };
 
 const rowStyle: Record<DiffLine['kind'], React.CSSProperties> = {
+  // Added: warm-paper surface, solid charcoal bar, bold text. Removed: pale burgundy surface, dashed burgundy bar.
   added: {
-    backgroundColor: 'var(--color-primary-faint)',
-    boxShadow: 'inset 4px 0 0 var(--color-charcoal)',
+    backgroundColor: 'var(--color-off-white)',
+    boxShadow: 'inset 6px 0 0 var(--color-charcoal)',
+    fontWeight: 600,
   },
   removed: {
     backgroundColor: 'var(--color-primary-pale)',
-    boxShadow: 'inset 4px 0 0 var(--color-primary)',
+    borderLeft: '6px dashed var(--color-primary)',
   },
   equal: { backgroundColor: 'var(--color-white)' },
 };
@@ -142,12 +144,12 @@ export default function VersionDiffView({ base, target }: VersionDiffViewProps) 
           <div style={{ ...rowStyle.removed, padding: '0.35rem 0.75rem', color: 'var(--color-charcoal)' }}>
             <span aria-hidden="true">{'−'} </span>
             <span className="visually-hidden">Old title: </span>
-            {base.title}
+            {base.title || 'Untitled'}
           </div>
           <div style={{ ...rowStyle.added, padding: '0.35rem 0.75rem', color: 'var(--color-charcoal)' }}>
             <span aria-hidden="true">+ </span>
             <span className="visually-hidden">New title: </span>
-            {target.title}
+            {target.title || 'Untitled'}
           </div>
         </div>
       )}

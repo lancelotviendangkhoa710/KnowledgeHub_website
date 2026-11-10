@@ -38,7 +38,7 @@ export default function VersionTimeline({
   onSelect,
 }: VersionTimelineProps) {
   return (
-    <nav aria-label="Course versions">
+    <section aria-label="Course versions">
       <h2
         style={{
           fontSize: 'var(--text-sm)',
@@ -63,9 +63,7 @@ export default function VersionTimeline({
                 type="button"
                 onClick={() => onSelect(version.id)}
                 aria-pressed={isSelected}
-                aria-label={`Version ${version.version_no}: ${version.title || 'Untitled'}${
-                  isPublished ? `, ${publishedLabel.toLowerCase()}` : ''
-                }${isLatest ? ', latest' : ''}`}
+                aria-describedby={`version-meta-${version.id}`}
                 style={{
                   width: '100%',
                   textAlign: 'left',
@@ -108,7 +106,7 @@ export default function VersionTimeline({
                 >
                   {version.title || 'Untitled'}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray)' }}>
+                <span id={`version-meta-${version.id}`} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray)' }}>
                   {author ? `${author} · ` : ''}
                   <time dateTime={version.created_at}>{formatVersionDate(version.created_at)}</time>
                 </span>
@@ -117,6 +115,6 @@ export default function VersionTimeline({
           );
         })}
       </ol>
-    </nav>
+    </section>
   );
 }
