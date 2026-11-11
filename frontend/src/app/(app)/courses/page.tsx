@@ -1017,6 +1017,8 @@ function LoadErrorBanner({
  * Calm, non-error status shown while GET requests are retried during a backend cold start.
  * The polite live region is always mounted and only its content toggles, so screen readers
  * reliably announce the message when it appears.
+ *
+ * @param props.active Whether the backend is currently being retried (cold start in progress).
  */
 function ServerWakingStatus({ active }: { active: boolean }) {
   if (!active) {

@@ -521,6 +521,11 @@ function renderLivePreview(raw: string): React.ReactNode[] {
   return elements;
 }
 
+/**
+ * Contributor Studio (`/courses/create`): authors new courses or revisions (`?parent_id=`),
+ * loading categories/tags and the parent course from the live API with cold-start retries,
+ * retryable error notices, and save guards while revision data is not available.
+ */
 export default function ContributorCourseCreatePage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
@@ -841,6 +846,10 @@ List the mathematical or operational guarantees enforced by this architecture.
     }
   }, [router]);
 
+  /**
+   * Loads categories and tags together. Guarded against concurrent runs (Retry reuses it);
+   * the shared controller is aborted on unmount and whenever one of the two requests fails.
+   */
   const loadTaxonomy = useCallback(async () => {
     if (taxonomyAbortRef.current) return;
     const controller = new AbortController();
@@ -865,6 +874,9 @@ List the mathematical or operational guarantees enforced by this architecture.
       setAvailableTags(tagsList || []);
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
+      // Promise.all failed fast on the first error: abort the sibling request (which may still be
+      // retrying a 503) so it stops and its onRetry can no longer set taxonomyWaking after this load ended.
+      controller.abort();
       setTaxonomyError(
         err instanceof Error && err.message
           ? err.message
@@ -1080,6 +1092,10 @@ List the mathematical or operational guarantees enforced by this architecture.
   /** True while revision mode cannot safely save (parent still loading or failed to load). */
   const isRevisionBlocked = Boolean(parentId && (parentLoading || parentLoadError));
 
+  /**
+   * Leaves revision mode: aborts any parent load, clears revision state and the editor,
+   * and drops `?parent_id` from the URL.
+   */
   const resetToNewCourse = () => {
     parentAbortRef.current?.abort();
     parentAbortRef.current = null;
