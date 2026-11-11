@@ -58,10 +58,23 @@ export interface ApiReadOptions {
   onRetry?: (info: ApiRetryInfo) => void;
 }
 
+/**
+ * Detects an abort raised by `fetch` or `wait` (DOMException / Error named "AbortError").
+ *
+ * @param err Any thrown value.
+ * @returns True when the value represents an aborted request.
+ */
 function isAbortError(err: unknown): boolean {
   return err instanceof Error && err.name === 'AbortError';
 }
 
+/**
+ * Abortable sleep used between retry attempts.
+ *
+ * @param ms Delay in milliseconds.
+ * @param signal Optional signal; aborting it clears the timer and rejects with an AbortError.
+ * @returns Promise that resolves after `ms`, or rejects immediately if/when `signal` is aborted.
+ */
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -72,6 +85,7 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
       signal?.removeEventListener('abort', onAbort);
       resolve();
     }, ms);
+    /** Cancels the pending timer and rejects the wait when the signal aborts. */
     function onAbort() {
       clearTimeout(timer);
       reject(new DOMException('Aborted', 'AbortError'));
@@ -87,6 +101,13 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
  *   (2 s, 4 s, 8 s, 16 s, 30 s). When retries are exhausted it throws a readable error that includes the status.
  * - Other methods are never retried (they are not idempotent); a network failure reports an unknown result.
  * - Abort (via `options.signal`) is propagated as an AbortError and stops any pending retry.
+ *
+ * @param input Fully qualified request URL.
+ * @param init Standard fetch options (method, headers, cache, body, ...).
+ * @param options Optional abort signal and retry-progress callback (only used for GET/HEAD retries).
+ * @returns The final Response (non-retryable status, or success).
+ * @throws Error with a readable message when retries are exhausted or a write cannot reach the API;
+ *   AbortError when aborted.
  */
 async function apiFetch(input: string, init?: RequestInit, options?: ApiReadOptions): Promise<Response> {
   const method = (init?.method ?? 'GET').toUpperCase();
@@ -247,6 +268,7 @@ export async function fetchArticle(identifier: string, options?: ApiReadOptions)
 /**
  * Fetch all categories tree from the live REST API.
  *
+ * @param options Optional abort signal and retry-progress callback.
  * @returns Promise resolving to an array of Category objects.
  * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
@@ -271,6 +293,7 @@ export async function fetchCategories(options?: ApiReadOptions): Promise<Categor
 /**
  * Fetch all content tags from the live REST API.
  *
+ * @param options Optional abort signal and retry-progress callback.
  * @returns Promise resolving to an array of Tag objects.
  * @throws Error on network failure, non-OK status, or an unexpected response shape.
  */
@@ -297,6 +320,7 @@ export async function fetchTags(options?: ApiReadOptions): Promise<Tag[]> {
  * Interacts exclusively with the live REST API.
  *
  * @param status Optional filter for article lifecycle status ('draft', 'published', 'archived', 'all').
+ * @param options Optional abort signal and retry-progress callback.
  * @returns Promise resolving to an array of author's Article entities.
  * @throws Error if unauthenticated or if the API returns an error.
  */

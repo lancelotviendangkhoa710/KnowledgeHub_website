@@ -288,6 +288,10 @@ function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Set<string>)
   return candidate;
 }
 
+/**
+ * Course reader (`/courses/[id]`): loads one course by slug or ID from the live API, with a
+ * cold-start "waking up" status, a retryable error state, and an abortable related-courses request.
+ */
 export default function CourseDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -331,6 +335,10 @@ export default function CourseDetailPage() {
     return unsub;
   }, []);
 
+  /**
+   * Loads the course for the current route param. Guarded against concurrent runs (the Retry
+   * button reuses it); aborts any previous related-courses request; aborted on unmount/route change.
+   */
   const loadCourse = useCallback(async () => {
     if (!idOrSlug) {
       setLoading(false);

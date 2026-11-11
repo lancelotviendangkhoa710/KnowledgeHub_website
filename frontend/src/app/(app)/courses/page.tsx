@@ -10,6 +10,10 @@ import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 import { api } from '@/lib/api';
 
+/**
+ * Public course catalogue (`/courses`): lists published courses from the live API with
+ * category/search filters, a cold-start "waking up" status, and a retryable error state.
+ */
 export default function CoursesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -42,6 +46,10 @@ export default function CoursesPage() {
     return unsub;
   }, []);
 
+  /**
+   * Loads courses (+ categories and bookmark flags). Guarded against concurrent runs; the
+   * Retry button reuses it. The in-flight controller is aborted on unmount and on failure.
+   */
   const loadData = useCallback(async () => {
     if (loadAbortRef.current) return; // a load (possibly retrying during cold start) is already in flight
     const controller = new AbortController();
@@ -83,6 +91,9 @@ export default function CoursesPage() {
       setSelectedCategory((prev) => (prev === 'all' || cats.some((c) => c.id === prev) ? prev : 'all'));
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
+      // Promise.all settled early: abort the sibling request (e.g. categories still retrying a 503)
+      // so it stops retrying and its onRetry can no longer flip the waking status after this load ended.
+      controller.abort();
       setLoadError(
         err instanceof Error && err.message
           ? err.message
@@ -573,6 +584,8 @@ function LoadErrorBanner({
  * Calm, non-error status shown while GET requests are retried during a backend cold start.
  * The polite live region is always mounted and only its content toggles, so screen readers
  * reliably announce the message when it appears.
+ *
+ * @param props.active Whether the backend is currently being retried (cold start in progress).
  */
 function ServerWakingStatus({ active }: { active: boolean }) {
   if (!active) {
