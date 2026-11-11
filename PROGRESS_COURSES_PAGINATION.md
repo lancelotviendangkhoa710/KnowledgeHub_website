@@ -126,7 +126,10 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
 
 - `create/page.tsx` taxonomy load abort finding → belongs to the cold-start commits (PR #47), fixed on that branch.
 - Stable secondary ordering in `ArticleService::listPublished` (ties on `published_at` can shift items between
-  pages) → separate backend branch.
+  pages; review thread on `contentClient.ts`) → separate backend branch `p2/BE-article-list-stable-order`.
+- The `create/page.tsx` fix (commit 6ae4ca7 on `p2/FE-api-cold-start-retry`) is brought into this branch by a
+  `--no-ff` merge (no history rewrite). Conflicts in `courses/page.tsx` were resolved in favour of the paginated
+  catalog, because the old `loadData`/`Promise.all` it patched no longer exists here.
 
 ## Remaining risks
 

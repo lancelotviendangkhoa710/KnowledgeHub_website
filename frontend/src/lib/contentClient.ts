@@ -1,8 +1,11 @@
 import { Article, Category, Tag } from '@/types/content';
 import { getAccessToken } from '@/lib/authToken';
 
+/** API base from the environment (`NEXT_PUBLIC_API_URL`), defaulting to the same-origin `/api` proxy. */
 const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+/** API base without a trailing slash. */
 const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
+/** Versioned REST root used by every content request. */
 const API_BASE = `${BASE_URL}/v1`;
 
 /**

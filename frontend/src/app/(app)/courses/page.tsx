@@ -96,6 +96,7 @@ function CoursesCatalog() {
   const listTopRef = useRef<HTMLElement | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
 
+  /** Keeps `currentUser` in sync with the auth store and resolves the profile when only a token exists. */
   useEffect(() => {
     const unsub = subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
     const authBearer = getAccessToken();
@@ -130,7 +131,7 @@ function CoursesCatalog() {
     [router, pathname]
   );
 
-  // Normalise invalid query values in the address bar (e.g. ?page=abc or ?page=0 → page 1).
+  /** Normalises invalid query values in the address bar (e.g. `?page=abc` or `?page=0` → page 1). */
   useEffect(() => {
     // Page 1 is the default, so `?page=1` is also removed to keep one canonical URL per page.
     const pageInvalid = rawPage !== null && (currentPage === 1 || String(currentPage) !== rawPage);
@@ -166,6 +167,7 @@ function CoursesCatalog() {
     }
   }, []);
 
+  /** Loads the categories once on mount and aborts that request on unmount. */
   useEffect(() => {
     loadCategories();
     return () => {
@@ -174,7 +176,7 @@ function CoursesCatalog() {
     };
   }, [loadCategories]);
 
-  // Drop a category filter only when a successful categories load proves it does not exist.
+  /** Drops a category filter only when a successful categories load proves it does not exist. */
   useEffect(() => {
     if (categoriesLoaded && selectedCategory !== 'all' && !categories.some((c) => c.id === selectedCategory)) {
       updateQuery(1, 'all');
@@ -256,6 +258,7 @@ function CoursesCatalog() {
     [updateQuery]
   );
 
+  /** Loads the page/category from the URL whenever either changes; aborts the load on change or unmount. */
   useEffect(() => {
     loadPage(currentPage, selectedCategory);
     return () => {
@@ -304,7 +307,7 @@ function CoursesCatalog() {
     updateQuery(1, categoryId);
   };
 
-  // Category filtering and pagination are server-side; search still filters the current page only.
+  /** Courses of the current page matching the search box (category filter and pagination are server-side). */
   const filteredArticles = articles.filter((article) => {
     const version = article.published_version || article.latest_version;
     const title = version?.title.toLowerCase() || '';
@@ -760,6 +763,7 @@ function Pagination({
   lastPage: number;
   onChange: (page: number) => void;
 }) {
+  /** Default look of a pagination button (UX-01 tokens). */
   const baseStyle: CSSProperties = {
     minWidth: '2.5rem',
     height: '2.5rem',
@@ -776,6 +780,7 @@ function Pagination({
     cursor: 'pointer',
     transition: 'all var(--transition-fast)',
   };
+  /** Current page: brand background with inverted text. */
   const activeStyle: CSSProperties = {
     ...baseStyle,
     borderColor: 'var(--color-primary)',
@@ -783,6 +788,7 @@ function Pagination({
     color: 'var(--color-white)',
     boxShadow: 'var(--shadow-xs)',
   };
+  /** Unavailable Previous/Next: muted text on the paper background. */
   const disabledStyle: CSSProperties = {
     ...baseStyle,
     background: 'var(--color-off-white)',
@@ -867,6 +873,7 @@ function LoadErrorBanner({
   retrying: boolean;
   compact?: boolean;
 }) {
+  /** Retry action shared by the compact and full layouts. */
   const retryButton = (
     <button
       type="button"
