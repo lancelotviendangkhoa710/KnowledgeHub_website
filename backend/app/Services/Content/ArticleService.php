@@ -7,12 +7,19 @@ use App\Models\ArticleVersion;
 use App\Models\Category;
 use App\Models\Tag;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class ArticleService
 {
+    /**
+     * Public-safe user columns for eager loads (never email or other private fields).
+     */
+    protected const SAFE_AUTHOR = 'author:id,name';
+    protected const SAFE_CREATOR = 'creator:id,name';
+
     public function __construct(
         protected TagService $tagService
     ) {}
@@ -31,7 +38,7 @@ class ArticleService
     public function listPublished(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Article::published()
-            ->with(['author', 'category', 'publishedVersion', 'tags']);
+            ->with([self::SAFE_AUTHOR, 'category', 'publishedVersion', 'tags']);
 
         if (!empty($filters['category_slug'])) {
             $query->whereHas('category', function ($q) use ($filters) {
@@ -94,7 +101,7 @@ class ArticleService
     {
         return Article::published()
             ->where('slug', $slug)
-            ->with(['author', 'category', 'publishedVersion.attachments', 'tags'])
+            ->with([self::SAFE_AUTHOR, 'category', 'publishedVersion.attachments', 'tags'])
             ->first();
     }
 
@@ -104,7 +111,7 @@ class ArticleService
     public function getBySlug(string $slug): ?Article
     {
         return Article::where('slug', $slug)
-            ->with(['author', 'category', 'publishedVersion.attachments', 'tags', 'versions'])
+            ->with([self::SAFE_AUTHOR, 'category', 'publishedVersion.attachments', 'tags'])
             ->first();
     }
 
@@ -113,8 +120,28 @@ class ArticleService
      */
     public function getById(string $id): ?Article
     {
-        return Article::with(['author', 'category', 'publishedVersion.attachments', 'tags', 'versions'])
+        return Article::with([self::SAFE_AUTHOR, 'category', 'publishedVersion.attachments', 'tags'])
             ->find($id);
+    }
+
+    /**
+     * Versions of an article visible to the caller, newest first, with only
+     * safe creator columns. Without $includeUnpublished (readers) only the
+     * currently published version is returned.
+     */
+    public function listVisibleVersions(Article $article, bool $includeUnpublished): EloquentCollection
+    {
+        $query = $article->versions()->with(self::SAFE_CREATOR);
+
+        if (!$includeUnpublished) {
+            if (!$article->published_version_id) {
+                return new EloquentCollection();
+            }
+
+            $query->where('id', $article->published_version_id);
+        }
+
+        return $query->get();
     }
 
     /**
