@@ -246,7 +246,9 @@ export interface PaginationMeta {
 
 /** One page of published articles plus its pagination metadata. */
 export interface ArticlesPage {
+  /** Published articles on this page, in API order. */
   items: Article[];
+  /** Paginator metadata for rendering page controls and the result range. */
   meta: PaginationMeta;
 }
 

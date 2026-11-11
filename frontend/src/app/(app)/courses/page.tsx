@@ -19,6 +19,7 @@ import { api } from '@/lib/api';
 
 /** Page size requested from `GET /api/v1/articles` (matches the backend default). */
 const COURSES_PER_PAGE = 15;
+/** Shape of a category UUID accepted in `?category=`; anything else is ignored and never sent to the API. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Reads `?page=` as a positive integer; anything else (missing, 0, negative, text) means page 1. */
@@ -33,6 +34,18 @@ function parseCategoryParam(value: string | null): string {
   return value && UUID_PATTERN.test(value) ? value : 'all';
 }
 
+/** Identifies which request produced the course data on screen: 1-based page plus category id or `'all'`. */
+interface ResultsKey {
+  /** 1-based page number that was requested. */
+  page: number;
+  /** Category UUID that was requested, or `'all'` for no filter. */
+  category: string;
+}
+
+/**
+ * Public course catalog route (`/courses`). Wraps the catalog in a Suspense boundary because it reads
+ * `useSearchParams()`.
+ */
 export default function CoursesPage() {
   // useSearchParams() needs a Suspense boundary so the route can still be prerendered at build time.
   return (
@@ -48,6 +61,10 @@ export default function CoursesPage() {
   );
 }
 
+/**
+ * Catalog content: server-paginated course grid synced to `?page=` / `?category=`, domain filter pills,
+ * client-side search over the current page and the contributor call-to-action strip.
+ */
 function CoursesCatalog() {
   const router = useRouter();
   const pathname = usePathname();
@@ -63,7 +80,12 @@ function CoursesCatalog() {
   // Total number of published courses (from the last unfiltered page load) for the "All Domains" pill.
   const [allTotal, setAllTotal] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  // True only after a SUCCESSFUL categories load; a failure never counts as "loaded".
   const [categoriesLoaded, setCategoriesLoaded] = useState<boolean>(false);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [categoriesLoading, setCategoriesLoading] = useState<boolean>(false);
+  // Which request (page + category) produced `articles` / `meta`; differs from the URL after a failed load.
+  const [resultsKey, setResultsKey] = useState<ResultsKey | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -118,16 +140,30 @@ function CoursesCatalog() {
     }
   }, [rawPage, rawCategory, currentPage, selectedCategory, updateQuery]);
 
+  /**
+   * Loads the domain filter pills. Categories are non-critical: on failure the course list, the active
+   * category filter and the page stay as they are, and a non-blocking notice offers its own Retry.
+   */
   const loadCategories = useCallback(async () => {
     categoriesAbortRef.current?.abort();
     const controller = new AbortController();
     categoriesAbortRef.current = controller;
-    // Categories are non-critical: a failure only hides the filter pills, never the course list.
-    const cats = await fetchCategories({ signal: controller.signal }).catch((): Category[] => []);
-    if (controller.signal.aborted) return;
-    categoriesAbortRef.current = null;
-    setCategories(cats);
-    setCategoriesLoaded(true);
+    setCategoriesLoading(true);
+    try {
+      const cats = await fetchCategories({ signal: controller.signal });
+      if (controller.signal.aborted) return;
+      setCategories(cats);
+      setCategoriesError(null);
+      setCategoriesLoaded(true);
+    } catch (err: unknown) {
+      if (controller.signal.aborted) return;
+      setCategoriesError(err instanceof Error && err.message ? err.message : 'Unable to load course domains.');
+    } finally {
+      if (categoriesAbortRef.current === controller) {
+        categoriesAbortRef.current = null;
+        setCategoriesLoading(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -138,13 +174,17 @@ function CoursesCatalog() {
     };
   }, [loadCategories]);
 
-  // Drop a category filter that does not exist (e.g. categories failed to load or were removed).
+  // Drop a category filter only when a successful categories load proves it does not exist.
   useEffect(() => {
     if (categoriesLoaded && selectedCategory !== 'all' && !categories.some((c) => c.id === selectedCategory)) {
       updateQuery(1, 'all');
     }
   }, [categoriesLoaded, categories, selectedCategory, updateQuery]);
 
+  /**
+   * Loads one page of published courses for a category (`'all'` = no filter). The newest call aborts any
+   * load still in flight; on failure the previously shown results and their `resultsKey` are kept.
+   */
   const loadPage = useCallback(
     async (page: number, category: string) => {
       // Latest request wins: abort a load that is still in flight (or still retrying during cold start).
@@ -195,6 +235,7 @@ function CoursesCatalog() {
 
         setArticles(articlesList);
         setMeta(result.meta);
+        setResultsKey({ page, category });
         if (category === 'all') setAllTotal(result.meta.total);
       } catch (err: unknown) {
         if (controller.signal.aborted) return;
@@ -223,13 +264,16 @@ function CoursesCatalog() {
     };
   }, [loadPage, currentPage, selectedCategory]);
 
+  /** Retries the page/category currently in the URL (and the categories if they failed too). */
   const retryLoad = useCallback(() => {
     loadPage(currentPage, selectedCategory);
-    if (categoriesLoaded && categories.length === 0) loadCategories();
-  }, [loadPage, loadCategories, currentPage, selectedCategory, categoriesLoaded, categories.length]);
+    if (categoriesError) loadCategories();
+  }, [loadPage, loadCategories, currentPage, selectedCategory, categoriesError]);
 
-  // Move both the viewport and keyboard focus to the results, so focus is never lost when the
-  // clicked Previous/Next button becomes disabled on the first/last page.
+  /**
+   * Moves both the viewport and keyboard focus to the results, so focus is never lost when the
+   * clicked Previous/Next button becomes disabled on the first/last page.
+   */
   const scrollToList = () => {
     const el = listTopRef.current;
     if (!el) return;
@@ -239,15 +283,22 @@ function CoursesCatalog() {
     el.focus({ preventScroll: true });
   };
 
+  /**
+   * Navigates to a page (clamped to the last page of the shown results). Choosing the page that is
+   * already requested but failed to load retries it instead of doing nothing.
+   */
   const goToPage = (page: number) => {
     const lastPage = meta?.lastPage ?? 1;
     const target = Math.min(Math.max(1, page), lastPage);
-    if (target === currentPage) return;
+    if (target === currentPage) {
+      if (resultsStale && !loading) retryLoad();
+      return;
+    }
     updateQuery(target, selectedCategory);
     scrollToList();
   };
 
-  // Changing the domain filter always restarts at page 1.
+  /** Selects a domain filter (`'all'` clears it); changing the domain always restarts at page 1. */
   const selectCategory = (categoryId: string) => {
     if (categoryId === selectedCategory) return;
     updateQuery(1, categoryId);
@@ -262,7 +313,26 @@ function CoursesCatalog() {
     return !q || title.includes(q) || content.includes(q);
   });
 
-  // Final result range only (kept while a new page loads, then replaced once it arrives).
+  /** True when the shown results came from a different page/category than the URL now asks for. */
+  const resultsStale =
+    resultsKey !== null && (resultsKey.page !== currentPage || resultsKey.category !== selectedCategory);
+  /** True when the shown results belong to another domain, so their page count does not apply. */
+  const resultsFromOtherCategory = resultsKey !== null && resultsKey.category !== selectedCategory;
+
+  /** Plain-language label for results kept on screen after the requested page/category failed to load. */
+  const staleLabel = (() => {
+    if (!resultsStale || loading || !resultsKey) return '';
+    if (resultsFromOtherCategory) {
+      const previousDomain =
+        resultsKey.category === 'all'
+          ? 'All Domains'
+          : categories.find((c) => c.id === resultsKey.category)?.name ?? 'the previous domain';
+      return `Still showing courses from ${previousDomain}${resultsKey.page > 1 ? `, page ${resultsKey.page}` : ''}: the selected domain could not be loaded.`;
+    }
+    return `Still showing page ${resultsKey.page}: page ${currentPage} could not be loaded.`;
+  })();
+
+  /** Final result range only (kept while a new page loads, then replaced once it arrives). */
   const summaryText =
     meta && meta.total > 0 && articles.length > 0
       ? `Showing ${meta.from ?? 0}–${meta.to ?? 0} of ${meta.total} ${meta.total === 1 ? 'course' : 'courses'}`
@@ -405,6 +475,40 @@ function CoursesCatalog() {
         })}
       </section>
 
+      {categoriesError && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '0.75rem',
+            margin: '-1.5rem 0 2rem 0',
+            padding: '0.65rem 1rem',
+            background: 'var(--color-white)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-lg)',
+            color: 'var(--color-gray)',
+            fontSize: '0.875rem',
+          }}
+        >
+          <span>
+            Course domains could not be loaded{selectedCategory !== 'all' ? ' — your domain filter is still applied' : ''}.
+          </span>
+          <button
+            type="button"
+            onClick={() => loadCategories()}
+            disabled={categoriesLoading}
+            aria-busy={categoriesLoading}
+            className="btn btn-secondary"
+            style={{ padding: '0.35rem 0.95rem', fontSize: '0.8rem', fontWeight: 600 }}
+          >
+            {categoriesLoading ? 'Retrying...' : 'Retry domains'}
+          </button>
+        </div>
+      )}
+
       {/* Course Grid & State Feedback */}
       <section
         ref={listTopRef}
@@ -438,9 +542,17 @@ function CoursesCatalog() {
               <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} compact />
             )}
             {summaryText && (
-              <p style={{ color: 'var(--color-gray)', fontSize: '0.85rem', marginBottom: '1.25rem', minHeight: '1.2em' }}>
-                {loading ? 'Loading…' : ''}
-                {!loading && searchQuery && meta && meta.lastPage > 1
+              <p
+                style={{
+                  color: staleLabel ? 'var(--color-primary)' : 'var(--color-gray)',
+                  fontWeight: staleLabel ? 600 : 400,
+                  fontSize: '0.85rem',
+                  marginBottom: '1.25rem',
+                  minHeight: '1.2em',
+                }}
+              >
+                {loading ? 'Loading…' : staleLabel}
+                {!loading && !staleLabel && searchQuery && meta && meta.lastPage > 1
                   ? 'Search filters the courses on this page only.'
                   : ''}
               </p>
@@ -507,8 +619,14 @@ function CoursesCatalog() {
                 </button>
               </div>
             )}
-            {meta && meta.lastPage > 1 && (
-              <Pagination currentPage={currentPage} lastPage={meta.lastPage} onChange={goToPage} />
+            {/* While loading, follow the requested page; after a failed load, mark the page actually shown.
+                Hidden when the shown data belongs to another domain (its page count does not apply). */}
+            {meta && resultsKey && !resultsFromOtherCategory && meta.lastPage > 1 && (
+              <Pagination
+                currentPage={resultsStale && !loading ? resultsKey.page : currentPage}
+                lastPage={meta.lastPage}
+                onChange={goToPage}
+              />
             )}
           </>
         )}
@@ -601,6 +719,7 @@ function CoursesCatalog() {
   );
 }
 
+/** One entry of the compact page list: a page number or a gap marker (distinct keys for React). */
 type PageItem = number | 'ellipsis-start' | 'ellipsis-end';
 
 /**

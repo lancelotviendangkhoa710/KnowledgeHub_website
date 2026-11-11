@@ -54,8 +54,19 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
   results stay visible but dimmed (`aria-busy`) with "Loading…" in the summary — no full-page error flash.
   A failed page change shows the existing compact error banner above the previous results with Retry.
   The cold-start "waking up" status from the previous branch is unchanged.
-- **Categories** are now fetched once on mount (not per page), still non-critical; Retry refetches them if they
-  failed.
+- **Categories** are fetched once on mount (not per page) and stay non-critical. A failure is tracked in its own
+  `categoriesError` state and is never treated as "loaded": the active category filter and page are kept, the
+  course list keeps working, and a non-blocking notice offers a separate "Retry domains" button. A category UUID
+  is dropped (→ All Domains) only after a *successful* categories load shows it does not exist.
+- **Honest state after failed loads:** the shown `articles`/`meta` are tagged with the `{ page, category }` of the
+  request that produced them (`resultsKey`). If that differs from the URL after a failed load, a label says so
+  ("Still showing page 1: page 2 could not be loaded." / "Still showing courses from All Domains: the selected
+  domain could not be loaded."), next to the existing error banner with Retry. Pagination then highlights the page
+  actually shown (choosing the failed page retries it), and is hidden entirely when the shown data belongs to
+  another domain, because its page count does not apply. While a load is in flight, pagination follows the
+  requested page so rapid Next clicks keep working.
+- **Docstrings:** every function, component, type and helper added in `contentClient.ts` and `courses/page.tsx`
+  has a JSDoc comment (pre-merge Docstring Coverage check).
 - **Scroll & focus:** on page change the results section (`<section aria-label="Course results" tabIndex={-1}>`)
   is scrolled into view (`scrollMarginTop` for the header; instant when `prefers-reduced-motion`) and then
   receives focus with `focus({ preventScroll: true })`, so keyboard focus is not lost when the clicked
@@ -104,12 +115,21 @@ so published courses beyond the 15th were invisible. The catalog now pages throu
 - [ ] Press Next on the second-to-last page with the keyboard → focus moves to "Course results", not lost.
 - [ ] Screen reader announces only the final "Showing X–Y of Z courses" after each page change.
 - [ ] `?page=1` is removed from the address bar.
+- [ ] Categories API down, deep link `?category=<uuid>&page=2` → filter and page kept, "Course domains could not be
+      loaded" notice with Retry domains; course list still loads.
+- [ ] Page 1 loaded, page 2 fails → "Still showing page 1: page 2 could not be loaded.", pagination marks 1,
+      choosing 2 again retries.
+- [ ] Category change fails → "Still showing courses from …" label, pagination hidden, Retry loads the new domain.
 - [ ] Logged-in user: bookmark flags still shown on cards for each page.
+
+## Handled elsewhere (not in this branch)
+
+- `create/page.tsx` taxonomy load abort finding → belongs to the cold-start commits (PR #47), fixed on that branch.
+- Stable secondary ordering in `ArticleService::listPublished` (ties on `published_at` can shift items between
+  pages) → separate backend branch.
 
 ## Remaining risks
 
-- After a failed page change, the old page's cards stay visible while the controls already highlight the
-  requested page (banner explains it; Retry fixes it).
 - `docs/API.md` does not list `page`, `last_page`, `from`, `to` for this endpoint — docs owner may want to add them.
 - Build/lint/guardrails not executed in this environment.
 - Bookmark flags on cards only cover the first 15 bookmarks: `/v1/bookmarks` is paginated and the catalog
