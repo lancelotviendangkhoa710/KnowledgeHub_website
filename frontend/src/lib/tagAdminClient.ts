@@ -16,8 +16,10 @@
 import { api } from '@/lib/api';
 import type { Tag } from '@/types/content';
 
+/** A tag as returned by `GET /api/v1/tags` (includes `articles_count` and `created_at`). */
 export type TagRecord = Tag & { created_at?: string | null };
 
+/** One page of the Laravel paginator returned by `GET /api/v1/tags`. */
 type TagPage = {
   data: TagRecord[];
   current_page: number;
@@ -25,11 +27,15 @@ type TagPage = {
   total: number;
 };
 
+/** Envelope returned by `POST /api/v1/tags` (201 Created). */
 type CreateTagResponse = { status: 'success' | 'error'; message?: string; data: TagRecord };
 
+/** Maximum length of a tag name and slug (`CreateTagRequest`: `max:100`). */
 export const TAG_NAME_MAX = 100;
+/** Tags requested per page when loading the full list. */
 const PAGE_SIZE = 100;
-const MAX_PAGES = 50; // safety stop: 5,000 tags
+/** Safety stop for the paginator loop: at most 50 pages (5,000 tags). */
+const MAX_PAGES = 50;
 
 /** Collapse inner whitespace and trim, as the name will be stored. */
 export function cleanTagName(raw: string): string {
@@ -80,6 +86,7 @@ export function findExistingTag(tags: TagRecord[], rawName: string): TagRecord |
   return tags.find((tag) => nameKey(tag.name) === key || (slug !== '' && tag.slug === slug)) ?? null;
 }
 
+/** API calls used by the Tag Library page. */
 export const tagAdminClient = {
   /**
    * Every tag, following the paginator; sorted alphabetically (case-insensitive).
@@ -102,12 +109,20 @@ export const tagAdminClient = {
     return { tags: all.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })), truncated };
   },
 
+  /**
+   * Create a tag with an explicit slug, so a slug collision returns 422 `errors.slug`
+   * instead of a silently suffixed copy. Callers keep handling that 422 as a possible
+   * concurrent duplicate. The server-side race (check-then-insert in TagService) is
+   * being fixed separately on branch `p2/BE-tag-explicit-slug-conflict`; this client
+   * does not depend on that fix.
+   */
   create(name: string): Promise<CreateTagResponse> {
     const clean = cleanTagName(name);
     return api.post<CreateTagResponse>('/v1/tags', { name: clean, slug: tagSlug(clean) });
   },
 };
 
+/** Error shape thrown by `api.ts`: HTTP status plus Laravel `message`/`errors` when the API answered. */
 export type TagError = { status?: number; message?: string; errors?: Record<string, string[]> };
 
 /** True when the request never reached the API (api.ts throws without a status). */

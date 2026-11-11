@@ -18,19 +18,23 @@ import {
   tagSlug,
 } from '@/lib/tagAdminClient';
 
+/** Login URL that brings the visitor back to this page after signing in. */
 const LOGIN_PATH = '/login?redirect=/admin/tags';
-// Mirrors CreateTagRequest::authorize on the backend.
+/** Roles allowed to create tags; mirrors `CreateTagRequest::authorize` on the backend. */
 const ALLOWED_ROLES = ['contributor', 'admin'];
 
+/** Outcome of the last create attempt, shown under the form. */
 type CreateResult =
   | { kind: 'created'; tag: TagRecord }
   | { kind: 'exists'; tag: TagRecord; name: string }
-  | { kind: 'error'; message: string; retryable: boolean };
+  | { kind: 'error'; message: string };
 
+/** True when the user holds a role the backend accepts for creating tags. */
 function canManageTags(user: AuthUser | null): boolean {
   return !!user && (user.roles ?? []).some((role) => ALLOWED_ROLES.includes(role));
 }
 
+/** Human-readable message for an API error (network, 401, 403, 429 or Laravel validation). */
 function describeError(error: unknown, fallback: string): string {
   const e = error as TagError;
   if (isNetworkError(error)) return e?.message ?? 'Unable to reach the KnowledgeHub API.';
@@ -41,10 +45,18 @@ function describeError(error: unknown, fallback: string): string {
   return first ?? e.message ?? fallback;
 }
 
+/**
+ * `/admin/tags` route: resolves the signed-in user, then renders the Tag Library for
+ * contributors/admins, a restricted card for other roles, or redirects guests to login.
+ */
 export default function TagLibraryPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(() => getCurrentUser());
   const [authChecked, setAuthChecked] = useState(false);
+  // Set when the profile could not be loaded for a transient reason (network/5xx); the session is kept.
+  const [profileError, setProfileError] = useState<string | null>(null);
+  // Bumped by the Retry button to re-run the profile load.
+  const [profileAttempt, setProfileAttempt] = useState(0);
 
   // Resolve the signed-in user (token is in memory; restore the profile if only the token is known).
   useEffect(() => {
@@ -59,6 +71,7 @@ export default function TagLibraryPage() {
     } else if (!getAccessToken()) {
       router.replace(LOGIN_PATH);
     } else {
+      setProfileError(null);
       accountClient
         .me()
         .then((response) => {
@@ -67,20 +80,43 @@ export default function TagLibraryPage() {
           setUser(response.data.user);
           setAuthChecked(true);
         })
-        .catch(() => {
-          if (!cancelled) router.replace(LOGIN_PATH);
+        .catch((error: unknown) => {
+          if (cancelled) return;
+          const status = (error as TagError)?.status;
+          // Only an invalid session goes back to login; transient failures keep the page and offer Retry.
+          if (status === 401 || status === 403) router.replace(LOGIN_PATH);
+          else setProfileError(describeError(error, 'Unable to load your profile.'));
         });
     }
     return () => {
       cancelled = true;
       unsubscribe();
     };
-  }, [router]);
+  }, [router, profileAttempt]);
 
   // Signing out while on the page sends the visitor to the login screen.
   useEffect(() => {
     if (authChecked && !user) router.replace(LOGIN_PATH);
   }, [authChecked, user, router]);
+
+  if (profileError) {
+    return (
+      <section className="auth-page content-container">
+        <div className="auth-card">
+          <p className="eyebrow">Tag Library</p>
+          <h1>Could not check your access</h1>
+          <p className="auth-error" role="alert">{profileError}</p>
+          <button
+            className="button button--primary auth-submit"
+            type="button"
+            onClick={() => setProfileAttempt((attempt) => attempt + 1)}
+          >
+            Retry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   if (!authChecked || !user) {
     return (
@@ -109,6 +145,7 @@ export default function TagLibraryPage() {
   return <TagLibrary />;
 }
 
+/** Tag list with client-side filter and the create form; rendered only for allowed roles. */
 function TagLibrary() {
   const [tags, setTags] = useState<TagRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,20 +156,24 @@ function TagLibrary() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<CreateResult | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  // A create ended with an unknown result (network error): submit stays locked until the list is reloaded.
+  const [needsRecheck, setNeedsRecheck] = useState(false);
   const latestLoad = useRef(0);
 
-  const load = useCallback(async () => {
+  /** Load every tag; resolves true only when this (latest) request succeeded. */
+  const load = useCallback(async (): Promise<boolean> => {
     const requestId = ++latestLoad.current;
     setLoading(true);
     setLoadError(null);
     try {
       const list = await tagAdminClient.listAll();
-      if (requestId === latestLoad.current) {
-        setTags(list.tags);
-        setTruncated(list.truncated);
-      }
+      if (requestId !== latestLoad.current) return false;
+      setTags(list.tags);
+      setTruncated(list.truncated);
+      return true;
     } catch (error) {
       if (requestId === latestLoad.current) setLoadError(describeError(error, 'Unable to load tags.'));
+      return false;
     } finally {
       if (requestId === latestLoad.current) setLoading(false);
     }
@@ -142,6 +183,7 @@ function TagLibrary() {
     void load();
   }, [load]);
 
+  /** Tags matching the filter box by normalised name or by slug. */
   const visibleTags = useMemo(() => {
     const key = nameKey(filter);
     if (!key) return tags;
@@ -158,8 +200,17 @@ function TagLibrary() {
   // The slug can outgrow the name (e.g. "@" becomes "-at-"); the API rejects slugs over 100 characters.
   const slugTooLong = !tooLong && slug.length > TAG_NAME_MAX;
   const canSubmit =
-    cleanName !== '' && !existing && !tooLong && !slugTooLong && !noSlug && !submitting && !loading && !loadError;
+    cleanName !== '' &&
+    !existing &&
+    !tooLong &&
+    !slugTooLong &&
+    !noSlug &&
+    !submitting &&
+    !needsRecheck &&
+    !loading &&
+    !loadError;
 
+  /** Validate locally, POST the tag, then show created / already existed / error and refresh the list. */
   async function createTag(event?: FormEvent) {
     event?.preventDefault();
     if (!canSubmit) {
@@ -184,26 +235,27 @@ function TagLibrary() {
         }
         const match = fresh ? findExistingTag(fresh.tags, cleanName) : null;
         if (match) setResult({ kind: 'exists', tag: match, name: cleanName });
-        else setResult({ kind: 'error', message: describeError(error, 'Unable to create this tag.'), retryable: false });
+        else setResult({ kind: 'error', message: describeError(error, 'Unable to create this tag.') });
       } else if (isNetworkError(error)) {
-        setResult({
-          kind: 'error',
-          message: 'Could not reach the KnowledgeHub API, so the tag may or may not have been created. Retry to check and try again.',
-          retryable: true,
-        });
+        // Lock before `finally` releases `submitting`, so Create cannot be pressed until the list is reloaded.
+        setNeedsRecheck(true);
       } else {
         if (e?.status === 401) setSessionExpired(true);
-        setResult({ kind: 'error', message: describeError(error, 'Unable to create this tag.'), retryable: false });
+        setResult({ kind: 'error', message: describeError(error, 'Unable to create this tag.') });
       }
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function retryCreate() {
-    // The earlier attempt may have reached the server: refresh first so the duplicate check sees it.
+  /**
+   * Reload the list; when it succeeds, release the post-network-error lock so the duplicate
+   * hint is re-evaluated against fresh data (the earlier attempt may have reached the server).
+   */
+  async function reloadTags() {
     setResult(null);
-    await load();
+    const ok = await load();
+    if (ok) setNeedsRecheck(false);
   }
 
   return (
@@ -262,15 +314,21 @@ function TagLibrary() {
             </p>
           )}
         </div>
+        {needsRecheck && (
+          <div className="auth-error" role="alert">
+            <p>
+              Could not reach the KnowledgeHub API, so the tag may or may not have been created. Retry reloads
+              the tag list first; Create stays locked until it succeeds.
+            </p>
+            <button className="button button--secondary" type="button" disabled={loading} onClick={() => void reloadTags()}>
+              {loading ? 'Reloading...' : 'Retry'}
+            </button>
+          </div>
+        )}
         {result?.kind === 'error' && (
           <div className="auth-error" role="alert">
             <p>{result.message}</p>
-            {result.retryable && (
-              <button className="button button--secondary" type="button" onClick={() => void retryCreate()}>
-                Retry
-              </button>
-            )}
-            {sessionExpired && <Link href="/login?redirect=/admin/tags">Sign in again</Link>}
+            {sessionExpired && <Link href={LOGIN_PATH}>Sign in again</Link>}
           </div>
         )}
       </form>
@@ -295,7 +353,7 @@ function TagLibrary() {
       {loadError ? (
         <div className="auth-error" role="alert">
           <p>{loadError}</p>
-          <button className="button button--secondary" type="button" onClick={() => void load()}>Retry</button>
+          <button className="button button--secondary" type="button" onClick={() => void reloadTags()}>Retry</button>
         </div>
       ) : loading && tags.length === 0 ? (
         <p className="auth-lead" role="status">Loading tags...</p>

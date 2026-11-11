@@ -31,7 +31,9 @@
 3. **Names whose slug is empty** (e.g. only CJK characters or only symbols like `+++`) are blocked client-side: backend would store an empty slug and the next one as `-1`. Limitation: Laravel's ASCII transliteration can romanise some non-Latin scripts that the JS port drops; such names are blocked rather than risk a mismatch.
 4. Whole list is loaded (paginated at 100/page, safety stop 50 pages) so duplicate detection and filtering cover all tags. If the safety stop is hit, a warning says the list and the duplicate check may be incomplete. Create is disabled while the list is loading or failed to load (no reliable duplicate check).
 5. Guard mirrors `CreateTagRequest::authorize`: contributor/admin. Page title "Tag Library" (contributors are allowed). Guest → `router.replace('/login?redirect=/admin/tags')`; token-only session → profile restored via `GET /me` (same pattern as `/courses/manage`); other roles → "Access restricted" card.
-6. Network failure on create = unknown result → message + **Retry** that refetches the list first (duplicate hint then shows if the first attempt landed).
+6. Network failure on create = unknown result → message + **Retry** that refetches the list first (duplicate hint then shows if the first attempt landed). **Create stays locked** (`needsRecheck`) until that reload succeeds, so the same name cannot be sent twice before the duplicate check sees fresh data.
+7. Profile restore (`GET /me`) failing: only **401/403** redirect to login; a network/5xx failure keeps the session and shows a "Could not check your access" card with **Retry** that re-runs the profile load.
+8. Server-side create race (check-then-insert in `TagService`) is fixed separately on branch `p2/BE-tag-explicit-slug-conflict`; this branch does not touch backend and keeps the 422 `errors.slug` handling (comment in `tagAdminClient.create`).
 
 ## Manual tests (to run on a local stack)
 
@@ -42,6 +44,7 @@ Actors:
 | A2 | `user` role | "Access restricted" card, no list/form, no API POST. |
 | A3 | `contributor` | List + form; can create. |
 | A4 | `admin` | Same as contributor. |
+| A5 | Token kept, `GET /me` fails (API down / 5xx) | "Could not check your access" card + Retry; no redirect. `GET /me` 401/403 → redirect to login. |
 
 Create / duplicates (as contributor, with existing tag "PHP" slug `php`):
 | Input | Expected |
