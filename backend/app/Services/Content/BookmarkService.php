@@ -17,7 +17,7 @@ class BookmarkService
             ->whereHas('bookmarks', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
             })
-            ->with(['author', 'category', 'publishedVersion', 'tags'])
+            ->with([ArticleService::SAFE_AUTHOR, 'category', 'publishedVersion', 'tags'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }

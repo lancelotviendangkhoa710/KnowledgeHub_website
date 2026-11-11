@@ -17,8 +17,8 @@ class ArticleService
     /**
      * Public-safe user columns for eager loads (never email or other private fields).
      */
-    protected const SAFE_AUTHOR = 'author:id,name';
-    protected const SAFE_CREATOR = 'creator:id,name';
+    public const SAFE_AUTHOR = 'author:id,name';
+    public const SAFE_CREATOR = 'creator:id,name';
 
     public function __construct(
         protected TagService $tagService
@@ -253,7 +253,7 @@ class ArticleService
             $article->published_at = now();
             $article->save();
 
-            return $article->fresh(['publishedVersion', 'category', 'tags', 'author']);
+            return $article->fresh(['publishedVersion', 'category', 'tags', self::SAFE_AUTHOR]);
         });
     }
 

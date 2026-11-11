@@ -24,28 +24,32 @@
   - other contributor with bearer on someone's draft -> 403 (show and versions); guest on draft versions -> 403
   - admin with bearer: all versions
 - [x] **Self-review** - `git diff --check` clean, no CRLF churn, forbidden-term grep clean.
+- [x] **Follow-up commit (author email + draft attachment leaks)**
+  - `BookmarkService::getUserBookmarks` and `ArticleService::publish()` now load `ArticleService::SAFE_AUTHOR` (`author:id,name`; constants made public).
+  - `ArticleAttachmentController::index` (public `GET /api/v1/versions/{versionId}/attachments`): loads the version with its article (404 when missing or the article is soft-deleted); allowed when the version is the article's `published_version_id` and the caller may `view` the article, otherwise only for the author/admin (`update` ability); else 403. Uses the same optional-bearer resolver.
+  - `ArticleController::resolveUser()` takes a non-null `Request` (dropped `$request?->`).
+  - Tests added to `ArticleVersionVisibilityTest`: bookmarks list has no author email; guest 200 on published-version attachments and 403 on unpublished/draft versions; author with bearer 200 on own draft version; other contributor with bearer 403 on an unpublished revision; unknown version 404. One bearer identity per test.
 
 ## Files Changed
 
 - `backend/app/Http/Controllers/Content/ArticleController.php`
+- `backend/app/Http/Controllers/Content/ArticleAttachmentController.php`
 - `backend/app/Services/Content/ArticleService.php`
+- `backend/app/Services/Content/BookmarkService.php`
 - `backend/tests/Feature/Content/ArticleVersionVisibilityTest.php` (new)
 - `PROGRESS_BE_ARTICLE_VERSIONS_VISIBILITY.md` (new)
 
 ## API / DB Impact
 
 - DB: none. Routes: unchanged.
-- Behaviour: Bearer tokens are now honoured on the public article routes (also `my_articles=true` on the list). Readers no longer see unpublished versions; `author`/`creator` objects contain only `id` and `name`.
+- Behaviour: Bearer tokens are now honoured on the public article routes (also `my_articles=true` on the list). Readers no longer see unpublished versions; `author`/`creator` objects contain only `id` and `name` (also in `GET /bookmarks` and the publish response). `GET /versions/{versionId}/attachments` now returns 403 for readers on unpublished versions and 404 for unknown versions (previously 200 with an empty list).
 
 ## Needed docs/API.md Update (protected - not edited here)
 
 - `GET /api/v1/articles/{slugOrId}`: state that authentication may be supplied as a Bearer token (optional); when a `versions` array is present it lists all versions only for the author/admin, otherwise only the published version; `author` is `{ id, name }`.
 - Add a section for `GET /api/v1/articles/{article}/versions` (currently undocumented): optional Bearer; 200 `{status, data: [version...]}` newest first, each with `creator: { id, name }`; author/admin get all versions, everyone else only the published version (empty list never happens for a published article); 403 for draft/archived when not author/admin; 404 when not found.
 - `GET /api/v1/articles`: note `my_articles=true` accepts a Bearer token.
-
-## Follow-up (out of scope, not changed)
-
-- `GET /api/v1/versions/{versionId}/attachments` (`ArticleAttachmentController::index`) is public and returns attachments for any version id, including unpublished ones; it should apply the same visibility rule.
+- `GET /api/v1/versions/{versionId}/attachments`: optional Bearer; readers only for the published version of a viewable article, author/admin for any version; add 403 and 404 errors.
 
 ## How to Run (NOT run in the agent environment - PHP unavailable)
 

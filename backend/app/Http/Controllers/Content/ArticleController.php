@@ -27,9 +27,9 @@ class ArticleController extends Controller
      * auth:sanctum and the default guard is web, so a Bearer token is only
      * identified through the sanctum guard. Returns null for guests.
      */
-    protected function resolveUser(?Request $request): ?User
+    protected function resolveUser(Request $request): ?User
     {
-        $user = $request?->user() ?? Auth::guard('sanctum')->user();
+        $user = $request->user() ?? Auth::guard('sanctum')->user();
 
         return $user instanceof User ? $user : null;
     }
@@ -44,7 +44,7 @@ class ArticleController extends Controller
 
     protected function getUserId(?Request $request): ?string
     {
-        $user = $this->resolveUser($request);
+        $user = $request ? $this->resolveUser($request) : null;
         if (!$user) {
             return null;
         }

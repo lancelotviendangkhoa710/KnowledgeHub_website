@@ -4,7 +4,9 @@ namespace Tests\Feature\Content;
 
 use App\Models\Article;
 use App\Models\User;
+use App\Services\Content\ArticleAttachmentService;
 use App\Services\Content\ArticleService;
+use App\Services\Content\BookmarkService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -170,5 +172,108 @@ class ArticleVersionVisibilityTest extends TestCase
         $this->getJson("/api/v1/articles/{$draft->id}")
             ->assertOk()
             ->assertJsonCount(2, 'data.versions');
+    }
+
+    /**
+     * Attach one file to every version of the article; returns [published, unpublished] version ids.
+     */
+    protected function attachToVersions(Article $article): array
+    {
+        $attachmentService = app(ArticleAttachmentService::class);
+        $published = null;
+        $unpublished = null;
+
+        foreach ($article->versions()->get() as $version) {
+            $attachmentService->addAttachment($version, [
+                'object_key' => "articles/{$version->id}.pdf",
+                'file_name' => "v{$version->version_no}.pdf",
+                'mime_type' => 'application/pdf',
+                'size_bytes' => 1024,
+            ]);
+
+            if ($version->id === $article->published_version_id) {
+                $published = $version->id;
+            } else {
+                $unpublished = $version->id;
+            }
+        }
+
+        return [$published, $unpublished];
+    }
+
+    public function test_bookmarks_list_does_not_expose_author_email(): void
+    {
+        $author = $this->createUserWithRole('contributor');
+        $reader = $this->createUserWithRole('user');
+        $article = $this->publishedArticleWithRevision($author);
+
+        app(BookmarkService::class)->bookmark((string) $reader->id, $article->id);
+
+        $response = $this->withHeader('Authorization', $this->bearer($reader))
+            ->getJson('/api/v1/bookmarks');
+
+        $response->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.author.name', $author->name)
+            ->assertJsonMissingPath('data.0.author.email');
+        $this->assertStringNotContainsString($author->email, $response->getContent());
+    }
+
+    public function test_guest_can_list_attachments_of_published_version_only(): void
+    {
+        $author = $this->createUserWithRole('contributor');
+        $article = $this->publishedArticleWithRevision($author);
+        [$publishedId, $unpublishedId] = $this->attachToVersions($article);
+
+        $this->assertNotNull($publishedId);
+        $this->assertNotNull($unpublishedId);
+
+        $this->getJson("/api/v1/versions/{$publishedId}/attachments")
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+
+        $this->getJson("/api/v1/versions/{$unpublishedId}/attachments")
+            ->assertStatus(403);
+    }
+
+    public function test_guest_cannot_list_attachments_of_draft_version(): void
+    {
+        $author = $this->createUserWithRole('contributor');
+        $article = $this->draftWithTwoVersions($author);
+        $version = $article->versions()->first();
+
+        $this->getJson("/api/v1/versions/{$version->id}/attachments")
+            ->assertStatus(403);
+    }
+
+    public function test_author_with_bearer_can_list_attachments_of_own_draft_version(): void
+    {
+        $author = $this->createUserWithRole('contributor');
+        $article = $this->draftWithTwoVersions($author);
+        $this->attachToVersions($article);
+        $version = $article->versions()->first();
+
+        $this->withHeader('Authorization', $this->bearer($author))
+            ->getJson("/api/v1/versions/{$version->id}/attachments")
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_other_contributor_with_bearer_cannot_list_unpublished_version_attachments(): void
+    {
+        $author = $this->createUserWithRole('contributor');
+        $other = $this->createUserWithRole('contributor');
+        $article = $this->publishedArticleWithRevision($author);
+        [, $unpublishedId] = $this->attachToVersions($article);
+
+        $this->withHeader('Authorization', $this->bearer($other))
+            ->getJson("/api/v1/versions/{$unpublishedId}/attachments")
+            ->assertStatus(403);
+    }
+
+    public function test_attachments_of_unknown_version_return_404(): void
+    {
+        $this->getJson('/api/v1/versions/00000000-0000-0000-0000-000000000000/attachments')
+            ->assertStatus(404);
     }
 }
