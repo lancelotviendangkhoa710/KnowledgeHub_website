@@ -62,12 +62,12 @@ class ArticleService
             });
         }
 
+        // Articles can share the same published_at, so id is added as a unique
+        // tie-breaker to keep pagination stable (no duplicates or gaps across pages).
         $sort = $filters['sort'] ?? 'latest';
-        if ($sort === 'oldest') {
-            $query->orderBy('published_at', 'asc');
-        } else {
-            $query->orderBy('published_at', 'desc');
-        }
+        $direction = $sort === 'oldest' ? 'asc' : 'desc';
+        $query->orderBy('published_at', $direction)
+            ->orderBy('id', $direction);
 
         return $query->paginate($perPage);
     }
@@ -84,7 +84,10 @@ class ArticleService
             $query->where('status', $filters['status']);
         }
 
-        return $query->orderBy('updated_at', 'desc')->paginate($perPage);
+        // id is a unique tie-breaker for rows sharing the same updated_at.
+        return $query->orderBy('updated_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->paginate($perPage);
     }
 
     /**
