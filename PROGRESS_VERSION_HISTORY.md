@@ -32,7 +32,9 @@
 - View mode: version title/meta + content as preformatted text (no HTML rendering, no `dangerouslySetInnerHTML`).
 - Compare mode: base/compared selects, swap, "Compare with previous version" shortcut; unified line diff with old/new line numbers, `+`/`−` markers and screen-reader labels (not colour only), title change shown separately, unchanged runs collapsed (3 context lines, expandable), rows rendered in pages of 1500.
 - Diff: common prefix/suffix trimmed, then Myers O(ND) with edit-distance budget D = 2000 (bounds time to O((N+M)·D) and trace memory to O(D²), ~16 MB worst case). When the middle block needs more than 2000 line edits, the diff is **approximate**: every line of the changed middle block is listed as removed then added (prefix/suffix still matched), and the UI shows a notice. Counts are then upper bounds, not minimal.
-- Reader filter (client-side mitigation, follow-up commit): when the viewer has no token, or is signed in but is neither the article author nor an Admin (`getCurrentUser()` / `GET /me`), only versions with `version_no` ≤ the published version's `version_no` are shown, with a note that newer drafts are hidden. This is **UI only**: the data is still in the API response.
+- Reader filter (client-side mitigation): when the viewer has no token, or is signed in but is neither the article author nor an Admin (`getCurrentUser()` / `GET /me`), **only the version whose id equals `article.published_version_id`** is shown (no older or newer versions, since the API exposes no verifiable publication history), with a note that other versions are visible to the author and Admins. This is **UI only**: the data is still in the API response.
+- Identity changes: the page subscribes to `subscribeCurrentUser`; when the in-memory Bearer credential differs from the one the data was loaded under (sign-in/sign-out), loaded versions and selections are cleared immediately and reloaded. Responses from superseded requests or from a session that changed mid-flight are ignored (request sequence + credential check). A `/me` result is only stored if the credential is unchanged when it returns.
+- Entry point: a "Version history" link next to the version badge on the course detail page (`frontend/src/app/(app)/courses/[id]/page.tsx`, one self-contained insertion), visible to everyone; this page enforces visibility.
 - Accessibility: all controls are native buttons/selects/links; `aria-pressed` for selection and mode, `role="status"` live regions, labelled nav/section, focusable scrollable `<pre>`.
 
 ## Verification run
@@ -49,7 +51,7 @@
 
 | # | Scenario | Expected |
 |---|---|---|
-| 1 | Guest on a published course with ≥2 versions | Only versions ≤ published shown; "newer drafts hidden" note when a newer revision exists |
+| 1 | Guest on a published course with ≥2 versions | Only the published version shown; "Only the published version is shown…" note |
 | 1b | Signed-in non-author User/Contributor on published course | Same as 1 |
 | 2 | Author (contributor) on own draft | Expected: list. **Currently likely 403 → restricted card** (see Risk 1) |
 | 3 | Other contributor on someone else's draft | Restricted card (403) |
@@ -62,6 +64,8 @@
 | 10 | Very different long versions | Approximate notice, "Show more" paging |
 | 11 | API down → Retry | Error card; Retry reloads |
 | 12 | Keyboard only | Tab through timeline, mode buttons, selects, swap, expand buttons |
+| 13 | Author signs out in another part of the app while on the page | Data cleared at once, reloaded as guest (published version only) |
+| 14 | Course detail page | "Version history" link next to the version badge opens this page |
 
 ## Risks found (backend, out of scope — not changed)
 
@@ -72,13 +76,15 @@
 
 ### Required backend fix (p2 backend follow-up; real fix for Risks 1–3)
 
-- `ArticlePolicy` / `ArticleController::versions`: return only versions ≤ the published version to non-authors/non-admins.
-- Route auth: move `GET articles/{article}/versions` (and `show`) under `auth:sanctum` or an optional-bearer resolution (`auth('sanctum')->user()`), so authors/admins are recognised.
-- Hide creator contact data: eager-load `creator:id,name` (no email).
-- After that, the client-side filter can stay as defence in depth or be removed.
+Tracked on branch **`p2/BE-article-versions-visibility`**.
+
+- `ArticlePolicy` / `ArticleController::versions`: filter unpublished versions server-side for non-authors/non-admins (publication history must be verifiable server-side before readers see more than the published version).
+- **Optional bearer identification** on `GET articles/{slugOrId}` and `GET articles/{article}/versions`: resolve the Sanctum user when a Bearer token is present (e.g. `auth('sanctum')->user()`), otherwise treat the request as a guest. The routes stay public; they are **not** moved into `auth:sanctum`.
+- Limit creator columns: eager-load `creator:id,name` (no email).
+- After that, the client-side filter stays as defence in depth.
 
 ## Follow-ups
 
-- Link to `/courses/{id}/versions` from the course detail page and the manage/studio pages (not done: editing existing files was out of scope).
+- Detail page link: **done** (minimal insertion). A link from the manage/studio pages is still open.
 - Restore/rollback action — needs an approved endpoint (none today).
 - Optional: side-by-side diff view; deep-linking selected versions via query string.

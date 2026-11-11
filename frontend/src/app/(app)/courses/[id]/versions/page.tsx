@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { Article } from '@/types/content';
 import { getAccessToken } from '@/lib/authToken';
-import { getCurrentUser, setCurrentUser, type AuthUser } from '@/lib/auth';
+import { getCurrentUser, setCurrentUser, subscribeCurrentUser, type AuthUser } from '@/lib/auth';
 import { accountClient } from '@/lib/accountClient';
 import {
   fetchArticleForHistory,
@@ -26,13 +26,23 @@ type LoadState =
 
 type Mode = 'view' | 'compare';
 
-/** Current signed-in user, fetched once from /me when only a token is held in memory. */
+/**
+ * Resolve the signed-in viewer for the current session.
+ *
+ * Uses the cached user when present, otherwise asks `/me`. The bearer credential in use when the
+ * request starts is captured; if it changed meanwhile (sign-out or another sign-in), the stale
+ * result is discarded and neither stored globally nor returned.
+ *
+ * @returns The viewer, or null for guests, failed lookups and superseded sessions.
+ */
 async function resolveViewer(): Promise<AuthUser | null> {
-  if (!getAccessToken()) return null;
+  const bearerAtStart = getAccessToken();
+  if (!bearerAtStart) return null;
   const cached = getCurrentUser();
   if (cached) return cached;
   try {
     const res = await accountClient.me();
+    if (getAccessToken() !== bearerAtStart) return null;
     setCurrentUser(res.data.user);
     return res.data.user;
   } catch {
@@ -41,9 +51,16 @@ async function resolveViewer(): Promise<AuthUser | null> {
 }
 
 /**
- * Client-side mitigation only: readers (guests, or signed-in users who are neither the author nor an Admin)
- * see versions up to the published one. The API currently returns newer unpublished revisions to everyone;
- * the real fix belongs in the backend versions visibility rules.
+ * Client-side mitigation only (defence in depth until p2/BE-article-versions-visibility lands).
+ *
+ * Authors of the article and Admins see every version. Everyone else (guests, other users and
+ * contributors) sees only the version whose id equals `article.published_version_id`, because the
+ * API does not yet expose verifiable publication history for older versions.
+ *
+ * @param article The resolved article.
+ * @param list Versions returned by the API, newest first.
+ * @param viewer Signed-in viewer, or null for guests.
+ * @returns Versions to display and how many were withheld.
  */
 function visibleVersionsFor(
   article: Article,
@@ -52,9 +69,9 @@ function visibleVersionsFor(
 ): { visible: ArticleVersionEntry[]; hiddenCount: number } {
   const canSeeAll = !!viewer && (viewer.roles?.includes('admin') || viewer.id === article.author_id);
   if (canSeeAll) return { visible: list, hiddenCount: 0 };
-  const published = list.find((v) => v.id === article.published_version_id);
-  const limit = published ? published.version_no : 0;
-  const visible = list.filter((v) => v.version_no <= limit);
+  const visible = article.published_version_id
+    ? list.filter((v) => v.id === article.published_version_id)
+    : [];
   return { visible, hiddenCount: list.length - visible.length };
 }
 
@@ -85,6 +102,13 @@ const selectStyle: React.CSSProperties = {
   fontWeight: 400,
 };
 
+/**
+ * Centered card used for sign-in, restricted, not-found and error states.
+ *
+ * @param props.title Card heading.
+ * @param props.children Explanatory text.
+ * @param props.actions Optional buttons/links rendered under the text.
+ */
 function StateCard({
   title,
   children,
@@ -109,6 +133,10 @@ function StateCard({
   );
 }
 
+/**
+ * `/courses/{idOrSlug}/versions`: read-only version history with view and line-diff compare modes.
+ * Visibility is enforced by the API; readers are additionally limited to the published version client-side.
+ */
 export default function CourseVersionHistoryPage() {
   const params = useParams();
   const idOrSlug = (params?.id as string) || '';
@@ -125,18 +153,45 @@ export default function CourseVersionHistoryPage() {
   const [targetId, setTargetId] = useState<string | null>(null);
   const [hiddenCount, setHiddenCount] = useState<number>(0);
   const requestSeq = useRef(0);
+  /** Bearer credential (or null for guests) the currently displayed data was loaded under. */
+  const loadedBearerRef = useRef<string | null>(null);
 
+  /** Drop everything loaded under a previous identity so it is never shown under the new one. */
+  const resetLoaded = useCallback(() => {
+    setArticle(null);
+    setVersions([]);
+    setSelectedId(null);
+    setBaseId(null);
+    setTargetId(null);
+    setHiddenCount(0);
+    setMode('view');
+  }, []);
+
+  /**
+   * Load the article and its versions for the current identity.
+   * Responses from superseded requests, or from a session that changed mid-flight, are ignored;
+   * in the latter case a fresh load is started under the new identity.
+   */
   const load = useCallback(async () => {
     if (!idOrSlug) {
       setState({ kind: 'notfound' });
       return;
     }
     const seq = ++requestSeq.current;
+    const bearerAtStart = getAccessToken();
+    loadedBearerRef.current = bearerAtStart;
     setState({ kind: 'loading' });
+    const isStale = () => seq !== requestSeq.current || getAccessToken() !== bearerAtStart;
     try {
       const resolved = await fetchArticleForHistory(idOrSlug);
       const [all, viewer] = await Promise.all([fetchArticleVersions(resolved.id), resolveViewer()]);
-      if (seq !== requestSeq.current) return;
+      if (isStale()) {
+        if (seq === requestSeq.current) {
+          resetLoaded();
+          void load();
+        }
+        return;
+      }
 
       const { visible: list, hiddenCount: hidden } = visibleVersionsFor(resolved, all, viewer);
       setArticle(resolved);
@@ -150,7 +205,13 @@ export default function CourseVersionHistoryPage() {
       setBaseId(defaultBase?.id ?? null);
       setState({ kind: 'ready' });
     } catch (err: unknown) {
-      if (seq !== requestSeq.current) return;
+      if (isStale()) {
+        if (seq === requestSeq.current) {
+          resetLoaded();
+          void load();
+        }
+        return;
+      }
       const status = err instanceof VersionApiError ? err.status : null;
       if (status === 401 || (status === 403 && !getAccessToken())) {
         // Guests receive 403 for non-public content; signing in is the only way forward for them.
@@ -166,11 +227,23 @@ export default function CourseVersionHistoryPage() {
         });
       }
     }
-  }, [idOrSlug]);
+  }, [idOrSlug, resetLoaded]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Sign-in / sign-out: clear data loaded under the old identity and reload with the new permissions.
+  useEffect(
+    () =>
+      subscribeCurrentUser(() => {
+        if (getAccessToken() !== loadedBearerRef.current) {
+          resetLoaded();
+          void load();
+        }
+      }),
+    [load, resetLoaded]
+  );
 
   const byId = useMemo(() => new Map(versions.map((v) => [v.id, v])), [versions]);
   const selected = selectedId ? byId.get(selectedId) ?? null : null;
@@ -181,6 +254,7 @@ export default function CourseVersionHistoryPage() {
   const courseTitle =
     article?.published_version?.title || article?.latest_version?.title || versions[0]?.title || 'Course';
 
+  /** Switch to compare mode with the given version against the one saved just before it. */
   const compareWithPrevious = (versionId: string) => {
     const index = versions.findIndex((v) => v.id === versionId);
     const previous = index >= 0 ? versions[index + 1] : undefined;
@@ -190,11 +264,13 @@ export default function CourseVersionHistoryPage() {
     setMode('compare');
   };
 
+  /** Label for a version in the compare selects, e.g. "v3 — Title (published)". */
   const versionOptionLabel = (v: ArticleVersionEntry) =>
     `v${v.version_no} — ${v.title || 'Untitled'}${
       v.id === publishedVersionId ? ` (${publishedLabel.toLowerCase()})` : ''
     }`;
 
+  /** Swap the base and compared versions. */
   const swapCompare = () => {
     setBaseId(targetId);
     setTargetId(baseId);
@@ -280,6 +356,7 @@ export default function CourseVersionHistoryPage() {
     );
   }
 
+  /** Toggle button for the view/compare display mode. */
   const modeButton = (value: Mode, label: string) => (
     <button
       type="button"
@@ -331,7 +408,7 @@ export default function CourseVersionHistoryPage() {
               fontSize: 'var(--text-sm)',
             }}
           >
-            Newer unpublished drafts are hidden. Only the author and Admins can see them.
+            Only the published version is shown. Other versions are visible to the author and Admins.
           </p>
         )}
       </header>

@@ -97,6 +97,7 @@ export default function VersionDiffView({ base, target }: VersionDiffViewProps) 
   const titleChanged = (base.title ?? '') !== (target.title ?? '');
   const identical = result.added === 0 && result.removed === 0 && !titleChanged;
 
+  /** Reveal a collapsed run of unchanged lines. */
   const expandGap = (id: number) => {
     setExpanded((prev) => {
       const next = new Set(prev);

@@ -39,6 +39,7 @@ export interface ArticleVersionEntry extends ArticleVersion {
   creator?: VersionCreator | null;
 }
 
+/** JSON Accept header plus the in-memory Bearer credential when the viewer is signed in. */
 function authHeaders(): Record<string, string> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   const bearer = getAccessToken();
@@ -48,6 +49,13 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
+/**
+ * GET a JSON endpoint under `/api/v1` without caching.
+ *
+ * @param path Path relative to `/api/v1`.
+ * @param fallbackMessage Message prefix used when the error body has no `message`.
+ * @throws VersionApiError carrying the HTTP status (null for network failures).
+ */
 async function getJson(path: string, fallbackMessage: string): Promise<unknown> {
   let res: Response;
   try {
@@ -120,6 +128,7 @@ export interface LineDiffResult {
 /** Maximum edit distance explored by Myers before falling back (bounds time and the O(D^2) trace memory). */
 const MAX_EDIT_DISTANCE = 2000;
 
+/** Split text into lines, normalising CRLF/CR to LF; empty text has no lines. */
 function splitLines(text: string): string[] {
   if (text === '') return [];
   return text.replace(/\r\n?/g, '\n').split('\n');
