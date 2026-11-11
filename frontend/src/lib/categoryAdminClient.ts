@@ -55,10 +55,12 @@ export function toCategoryApiError(error: unknown, fallback: string): CategoryAp
   return { status, message, fieldErrors };
 }
 
+/** True when the request never reached the API (the shared helper throws without an HTTP status). */
 export function isNetworkError(error: CategoryApiError): boolean {
   return error.status === undefined;
 }
 
+/** Copies only the known fields from an API category, recursively, with `parent_id` defaulting to null. */
 function normalize(raw: AdminCategory): AdminCategory {
   return {
     id: raw.id,
@@ -85,6 +87,7 @@ type Limiter = <T>(task: () => Promise<T>) => Promise<T>;
 function createLimiter(max: number): Limiter {
   let active = 0;
   const queue: Array<() => void> = [];
+  /** Starts the next queued task when a slot is free. */
   const next = () => {
     if (active >= max) return;
     const start = queue.shift();
@@ -158,6 +161,7 @@ export const categoryAdminClient = {
     return { roots, complete };
   },
 
+  /** POST /categories (admin only). An empty slug lets the backend generate one from the name. */
   create: (input: CategoryInput) =>
     api.post<Envelope<AdminCategory>>(BASE, {
       name: input.name,
@@ -176,12 +180,14 @@ export const categoryAdminClient = {
       parent_id: input.parent_id,
     }),
 
+  /** DELETE /categories/{id} (admin only). The API answers 422 while the category has children or articles. */
   remove: (id: string) => api.delete<{ status: string; message?: string }>(`${BASE}/${encodeURIComponent(id)}`),
 };
 
 /** Flattens the tree depth-first, keeping each node's depth for indented option lists. */
 export function flattenTree(roots: AdminCategory[]): Array<{ node: AdminCategory; depth: number }> {
   const out: Array<{ node: AdminCategory; depth: number }> = [];
+  /** Depth-first visit of one level, recording each node before its children. */
   const walk = (nodes: AdminCategory[], depth: number) => {
     for (const node of nodes) {
       out.push({ node, depth });
@@ -195,6 +201,7 @@ export function flattenTree(roots: AdminCategory[]): Array<{ node: AdminCategory
 /** Ids of the node itself plus all known descendants: none of them may become its parent. */
 export function selfAndDescendantIds(node: AdminCategory): Set<string> {
   const ids = new Set<string>();
+  /** Adds a node and its children; the visited check stops on malformed (cyclic) data. */
   const walk = (current: AdminCategory) => {
     if (ids.has(current.id)) return;
     ids.add(current.id);

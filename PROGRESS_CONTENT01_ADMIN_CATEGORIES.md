@@ -9,7 +9,7 @@ Branch: `p2/CONTENT-01-admin-category-management` (from `origin/dev`) · Owner: 
 - [x] Step 3: `frontend/src/app/(app)/admin/categories/page.tsx` — guard, tree, create/edit/delete flows
       (+ `frontend/src/components/content/admin/CategoryForm.tsx`, `ConfirmDialog.tsx`).
 - [x] Step 4: `tsc --noEmit` 0 errors; `tsconfig.tsbuildinfo` restored; `git diff --check` clean; diff self-reviewed.
-- [x] Step 5: Manual test checklist below (not yet executed — needs a running stack).
+- [ ] Step 5: Manual test checklist below — written, NOT yet executed (needs a running stack).
 - [x] Step 6: Atomic `p2:` commits.
 
 ## Contract (from implemented code — ranks above docs/API.md, AGENTS.md §3)

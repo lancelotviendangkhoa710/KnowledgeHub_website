@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import ConfirmDialog from '@/components/content/admin/ConfirmDialog';
 import CategoryForm from '@/components/content/admin/CategoryForm';
 import { accountClient } from '@/lib/accountClient';
@@ -27,6 +28,7 @@ function isAdmin(user: AuthUser | null): boolean {
   return Boolean(user?.roles?.includes('admin'));
 }
 
+/** Full-page card for the sign-in, checking and admin-required states. */
 function GateCard({ title, lead, action }: { title: string; lead: string; action?: React.ReactNode }) {
   return (
     <section className="auth-page content-container">
@@ -40,6 +42,7 @@ function GateCard({ title, lead, action }: { title: string; lead: string; action
   );
 }
 
+/** User-facing text for a failed write; API messages (422 validation/conflicts) are kept verbatim. */
 function writeErrorMessage(error: CategoryApiError, fallback: string): string {
   if (isNetworkError(error)) return `${error.message} The change may or may not have been saved; reload the list to check.`;
   if (error.status === 403) return 'Admin access required. Your account is not allowed to change categories.';
@@ -59,6 +62,10 @@ const rowStyle: React.CSSProperties = {
 
 const smallButton: React.CSSProperties = { minHeight: '2.25rem', padding: '0.4rem 0.8rem' };
 
+/**
+ * /admin/categories — admin-only category management: tree view plus create, edit and delete.
+ * The client-side gate mirrors the backend; the API remains the real authority (401/403 handled).
+ */
 export default function AdminCategoriesPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
@@ -80,6 +87,8 @@ export default function AdminCategoriesPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const latestLoad = useRef(0);
   const noticeRef = useRef<HTMLParagraphElement>(null);
+  // The button that opened the form; focus goes back to it when the form closes.
+  const formOpenerRef = useRef<HTMLElement | null>(null);
   // Set after a delete: the row (and its Delete button) goes away, so focus moves to the status message.
   const [focusNotice, setFocusNotice] = useState(false);
 
@@ -129,6 +138,7 @@ export default function AdminCategoriesPage() {
     if (authState === 'guest') router.replace(LOGIN_URL);
   }, [authState, router]);
 
+  /** Switches to the session-expired (401) or admin-required (403) card; returns true when handled. */
   const handleAuthError = useCallback((error: CategoryApiError): boolean => {
     if (error.status === 401) {
       setSessionExpired(true);
@@ -142,6 +152,7 @@ export default function AdminCategoriesPage() {
   }, []);
 
   // ── Data ─────────────────────────────────────────────────────────────────────────────────────
+  /** Loads the full tree; stale responses are ignored when a newer load has started. */
   const load = useCallback(async () => {
     const requestId = ++latestLoad.current;
     setLoading(true);
@@ -166,13 +177,32 @@ export default function AdminCategoriesPage() {
   }, [authState, admin, load]);
 
   // ── Mutations (refetch after each; no optimistic updates) ────────────────────────────────────
-  function openForm(mode: FormMode) {
+  /** Opens the create/edit form and remembers which button opened it. */
+  function openForm(mode: FormMode, opener: HTMLElement) {
+    formOpenerRef.current = opener;
     setForm(mode);
     setFormError(null);
     setFieldErrors({});
     setNotice(null);
   }
 
+  /**
+   * Closes the form (rendering synchronously so the DOM is current), then returns focus to the opener.
+   * If the opener is gone or disabled (e.g. row buttons while the list reloads), the status message
+   * gets focus instead, as in the delete flow.
+   */
+  function closeForm(afterClose?: () => void) {
+    flushSync(() => {
+      setForm(null);
+      afterClose?.();
+    });
+    const opener = formOpenerRef.current;
+    formOpenerRef.current = null;
+    if (opener && opener.isConnected && !(opener as HTMLButtonElement).disabled) opener.focus();
+    else noticeRef.current?.focus();
+  }
+
+  /** Sends create or update, then closes the form and refetches; on failure keeps the form open with errors. */
   async function submitForm(input: CategoryInput) {
     if (!form || busy) return;
     setBusy(true);
@@ -186,8 +216,10 @@ export default function AdminCategoriesPage() {
         const response = await categoryAdminClient.update(form.category.id, input);
         setNotice(`Saved "${response.data.name}" (slug: ${response.data.slug}).`);
       }
-      setForm(null);
-      void load();
+      closeForm(() => {
+        setBusy(false);
+        void load();
+      });
     } catch (e) {
       const error = toCategoryApiError(e, 'Unable to save this category.');
       if (handleAuthError(error)) return;
@@ -199,6 +231,7 @@ export default function AdminCategoriesPage() {
     }
   }
 
+  /** Deletes the category chosen in the dialog; a 422 conflict stays visible inside the dialog. */
   async function confirmDelete() {
     if (!toDelete || busy) return;
     setBusy(true);
@@ -250,6 +283,7 @@ export default function AdminCategoriesPage() {
   }
 
   // ── Page ─────────────────────────────────────────────────────────────────────────────────────
+  /** Renders one tree level as a nested list with Edit/Delete actions per category. */
   function renderNodes(nodes: AdminCategory[], depth: number): React.ReactNode {
     return (
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -274,7 +308,7 @@ export default function AdminCategoriesPage() {
                     type="button"
                     className="button button--secondary"
                     style={smallButton}
-                    onClick={() => openForm({ kind: 'edit', category: node })}
+                    onClick={(event) => openForm({ kind: 'edit', category: node }, event.currentTarget)}
                     disabled={busy || loading}
                     aria-label={`Edit ${node.name}`}
                   >
@@ -310,7 +344,7 @@ export default function AdminCategoriesPage() {
       <p className="auth-lead">Organise courses into a category tree. Changes take effect immediately for all visitors.</p>
 
       <div className="account-actions" style={{ marginTop: 0 }}>
-        <button type="button" className="button button--primary" onClick={() => openForm({ kind: 'create' })} disabled={busy || form?.kind === 'create'}>
+        <button type="button" className="button button--primary" onClick={(event) => openForm({ kind: 'create' }, event.currentTarget)} disabled={busy || form?.kind === 'create'}>
           New category
         </button>
         <button type="button" className="button button--secondary" onClick={() => void load()} disabled={loading || busy}>
@@ -330,7 +364,7 @@ export default function AdminCategoriesPage() {
           error={formError}
           fieldErrors={fieldErrors}
           onSubmit={(input) => void submitForm(input)}
-          onCancel={() => setForm(null)}
+          onCancel={() => closeForm()}
         />
       )}
 

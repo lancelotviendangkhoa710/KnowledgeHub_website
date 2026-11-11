@@ -43,6 +43,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  */
 const HAS_LETTER_OR_DIGIT = new RegExp('[\\p{L}\\p{N}]', 'u');
 
+/** Field-level error text, referenced by the control's `aria-describedby`; renders nothing without messages. */
 function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null;
   return (
@@ -52,17 +53,31 @@ function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   );
 }
 
+/**
+ * Inline create/edit form for a category: name, optional slug and parent. In edit mode the category
+ * itself and its known descendants cannot be chosen as parent; the parent is locked when the tree is incomplete.
+ */
 export default function CategoryForm({ editing, roots, treeComplete, busy, error, fieldErrors, onSubmit, onCancel }: CategoryFormProps) {
   const ids = { name: useId(), slug: useId(), parent: useId(), slugHint: useId(), nameErr: useId(), slugErr: useId(), parentErr: useId() };
   const [name, setName] = useState(editing?.name ?? '');
   const [slug, setSlug] = useState(editing?.slug ?? '');
   const [parentId, setParentId] = useState(editing?.parent_id ?? '');
   const [localErrors, setLocalErrors] = useState<Record<string, string[]>>({});
+  // Fields changed since the last server response: their server errors no longer apply.
+  const [edited, setEdited] = useState<Set<string>>(() => new Set());
   const nameRef = useRef<HTMLInputElement>(null);
-  // Client checks win over stale server errors for the same field until the field is edited.
-  const errors = { ...fieldErrors, ...localErrors };
 
-  function clearLocal(field: string) {
+  useEffect(() => {
+    setEdited(new Set());
+  }, [fieldErrors]);
+
+  const serverErrors = Object.fromEntries(Object.entries(fieldErrors).filter(([field]) => !edited.has(field)));
+  // Client checks win over server errors for the same field until the field is edited.
+  const errors: Record<string, string[]> = { ...serverErrors, ...localErrors };
+
+  /** Records that a field changed: hides its server error and clears its client-side error. */
+  function markEdited(field: string) {
+    setEdited((current) => (current.has(field) ? current : new Set(current).add(field)));
     setLocalErrors((current) => {
       if (!(field in current)) return current;
       const next = { ...current };
@@ -78,6 +93,7 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
   const options = useMemo(() => flattenTree(roots), [roots]);
   const blocked = useMemo(() => (editing ? selfAndDescendantIds(editing) : new Set<string>()), [editing]);
 
+  /** Runs the client checks (name has a letter/digit, slug format), then hands trimmed values to `onSubmit`. */
   function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
@@ -119,7 +135,7 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
           id={ids.name}
           style={controlStyle}
           value={name}
-          onChange={(event) => { setName(event.target.value); clearLocal('name'); }}
+          onChange={(event) => { setName(event.target.value); markEdited('name'); }}
           required
           maxLength={255}
           aria-invalid={Boolean(errors.name?.length)}
@@ -137,7 +153,7 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
           id={ids.slug}
           style={controlStyle}
           value={slug}
-          onChange={(event) => { setSlug(event.target.value); clearLocal('slug'); }}
+          onChange={(event) => { setSlug(event.target.value); markEdited('slug'); }}
           maxLength={255}
           aria-invalid={Boolean(errors.slug?.length)}
           aria-describedby={[ids.slugHint, errors.slug?.length ? ids.slugErr : ''].filter(Boolean).join(' ')}
@@ -158,7 +174,7 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
           id={ids.parent}
           style={controlStyle}
           value={parentId}
-          onChange={(event) => setParentId(event.target.value)}
+          onChange={(event) => { setParentId(event.target.value); markEdited('parent_id'); }}
           aria-invalid={Boolean(errors.parent_id?.length)}
           aria-describedby={errors.parent_id?.length ? ids.parentErr : undefined}
           disabled={busy || parentLocked}

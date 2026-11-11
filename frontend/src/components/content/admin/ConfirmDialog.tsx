@@ -44,10 +44,22 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
   const panelRef = useRef<HTMLDivElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
   const errorRef = useRef<HTMLParagraphElement>(null);
+  // Latest props for the document-level key handler; refreshed after every render, never during it.
   const busyRef = useRef(busy);
-  busyRef.current = busy;
   const cancelHandler = useRef(onCancel);
-  cancelHandler.current = onCancel;
+  useEffect(() => {
+    busyRef.current = busy;
+    cancelHandler.current = onCancel;
+  });
+
+  // Lock background scrolling while the dialog is open; restore the previous value on close/unmount.
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -61,6 +73,7 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
   }, [error, busy]);
 
   useEffect(() => {
+    /** Escape cancels (unless busy); Tab and Shift+Tab wrap around inside the panel. */
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -90,7 +103,7 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
   }, []);
 
   return (
-    <div style={overlayStyle} onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
+    <div role="presentation" style={overlayStyle} onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
       <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId} style={panelStyle}>
         <h2 id={titleId} style={{ margin: '0 0 0.75rem', fontSize: 'var(--text-xl)' }}>{title}</h2>
         <div id={bodyId} style={{ color: 'var(--color-gray)' }}>{children}</div>
