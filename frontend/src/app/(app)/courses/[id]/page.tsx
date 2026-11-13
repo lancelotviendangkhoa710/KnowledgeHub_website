@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
-import { fetchArticle, fetchArticles } from '@/lib/contentClient';
+import { fetchArticle, fetchArticles, SERVER_WAKING_MESSAGE } from '@/lib/contentClient';
 import { api } from '@/lib/api';
 import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 import { accountClient } from '@/lib/accountClient';
@@ -288,6 +288,10 @@ function getHeadingSlug(text: string, fallbackIdx: number, seenIds: Set<string>)
   return candidate;
 }
 
+/**
+ * Course reader (`/courses/[id]`): loads one course by slug or ID from the live API, with a
+ * cold-start "waking up" status, a retryable error state, and an abortable related-courses request.
+ */
 export default function CourseDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -296,6 +300,11 @@ export default function CourseDetailPage() {
   const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [wakingUp, setWakingUp] = useState<boolean>(false);
+  // Controller of the load currently in flight; also acts as the "already loading" guard.
+  const loadAbortRef = useRef<AbortController | null>(null);
+  // Related-courses request is independent of the main load; aborted whenever a new course load starts.
+  const relatedAbortRef = useRef<AbortController | null>(null);
   const [bookmarked, setBookmarked] = useState<boolean>(false);
   const [bookmarkNotice, setBookmarkNotice] = useState<string | null>(null);
   const [isBookmarkPending, setIsBookmarkPending] = useState<boolean>(false);
@@ -326,15 +335,31 @@ export default function CourseDetailPage() {
     return unsub;
   }, []);
 
+  /**
+   * Loads the course for the current route param. Guarded against concurrent runs (the Retry
+   * button reuses it); aborts any previous related-courses request; aborted on unmount/route change.
+   */
   const loadCourse = useCallback(async () => {
     if (!idOrSlug) {
       setLoading(false);
       return;
     }
+    if (loadAbortRef.current) return; // a load (possibly retrying during cold start) is already in flight
+    const controller = new AbortController();
+    loadAbortRef.current = controller;
+    relatedAbortRef.current?.abort();
+    relatedAbortRef.current = null;
     setLoading(true);
     setLoadError(null);
+    setWakingUp(false);
     try {
-      const data = await fetchArticle(idOrSlug);
+      const data = await fetchArticle(idOrSlug, {
+        signal: controller.signal,
+        onRetry: () => {
+          if (!controller.signal.aborted) setWakingUp(true);
+        },
+      });
+      if (controller.signal.aborted) return;
       setArticle(data);
       const user = getCurrentUser();
       const authBearer = getAccessToken();
@@ -344,24 +369,42 @@ export default function CourseDetailPage() {
         setBookmarked(false);
       }
       if (data?.category_id) {
-        fetchArticles({ categoryId: data.category_id })
+        const relatedController = new AbortController();
+        relatedAbortRef.current = relatedController;
+        fetchArticles({ categoryId: data.category_id }, { signal: relatedController.signal })
           .then((list) => {
+            if (relatedController.signal.aborted) return;
             setRelatedArticles(list.filter((a) => a.id !== data.id).slice(0, 3));
           })
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => {
+            if (relatedAbortRef.current === relatedController) relatedAbortRef.current = null;
+          });
       }
     } catch (err: unknown) {
+      if (controller.signal.aborted) return;
       setArticle(null);
       setLoadError(
         err instanceof Error && err.message ? err.message : 'Unable to load this course from KnowledgeHub API.'
       );
     } finally {
-      setLoading(false);
+      // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
+      if (loadAbortRef.current === controller) {
+        loadAbortRef.current = null;
+        setLoading(false);
+        setWakingUp(false);
+      }
     }
   }, [idOrSlug]);
 
   useEffect(() => {
     loadCourse();
+    return () => {
+      loadAbortRef.current?.abort();
+      loadAbortRef.current = null;
+      relatedAbortRef.current?.abort();
+      relatedAbortRef.current = null;
+    };
   }, [loadCourse]);
 
 
@@ -608,9 +651,33 @@ export default function CourseDetailPage() {
   }, [content, article]);
 
   if (loading) {
+    // The live region stays mounted for the whole loading phase; only its content toggles,
+    // so screen readers announce the wake-up notice when it appears.
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '6rem 0', color: 'var(--color-gray)' }}>
-        Loading course curriculum...
+      <div className="container" style={{ padding: '6rem 0' }}>
+        <div
+          role="status"
+          aria-live="polite"
+          style={
+            wakingUp
+              ? {
+                  maxWidth: 600,
+                  margin: '0 auto',
+                  padding: '1.25rem 1.5rem',
+                  textAlign: 'center',
+                  background: 'var(--color-white)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-lg)',
+                  color: 'var(--color-charcoal)',
+                }
+              : undefined
+          }
+        >
+          {wakingUp ? SERVER_WAKING_MESSAGE : null}
+        </div>
+        {!wakingUp && (
+          <div style={{ textAlign: 'center', color: 'var(--color-gray)' }}>Loading course curriculum...</div>
+        )}
       </div>
     );
   }
