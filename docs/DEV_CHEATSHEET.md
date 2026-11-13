@@ -53,7 +53,7 @@ Nút "Continue with Google" cần OAuth client riêng, không có thì nút báo
 4. `docker compose up -d --force-recreate app nginx`, rồi mở http://localhost:3000/login.
 
 Chỉ dùng http://localhost:3000 cho cả đăng nhập và duyệt web (cookie không chia sẻ giữa các địa chỉ khác nhau).
-Email Google chưa có tài khoản sẽ tạo tài khoản `active`, nhưng chỉ với tên miền được phép: biến `GOOGLE_ALLOWED_DOMAINS` (mặc định `gmail.com,*.edu,*.edu.vn`; `*.edu` khớp mọi tên miền kết thúc bằng `.edu`; để trống = không giới hạn). Tài khoản đã có và `active` thì không bị giới hạn tên miền; tài khoản `pending`, `inactive`, `banned` bị từ chối.
+Email Google chưa có tài khoản sẽ tạo tài khoản `active`, nhưng chỉ với tên miền được phép: biến `GOOGLE_ALLOWED_DOMAINS` (mặc định chỉ `*.edu,*.edu.vn`; muốn thử bằng Gmail thì đặt `GOOGLE_ALLOWED_DOMAINS=gmail.com,*.edu,*.edu.vn`; `*.edu` khớp mọi tên miền kết thúc bằng `.edu`; để trống = không giới hạn). Giới hạn tài khoản mới: `GOOGLE_MAX_NEW_ACCOUNTS_PER_IP` (mặc định 3 mỗi IP mỗi ngày, chỉ có tác dụng khi API thấy IP thật của khách, xem ADR) và `GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR` (mặc định 30 tài khoản mới mỗi giờ cho cả hệ thống). Admin xem tài khoản mới ở trang Users (mới nhất lên đầu, lọc theo ngày tham gia) và khóa được tài khoản đáng ngờ. Tài khoản đã có và `active` thì không bị giới hạn tên miền; tài khoản `pending`, `inactive`, `banned` bị từ chối.
 
 ## Kiểm tra và xử lý lỗi
 

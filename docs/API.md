@@ -137,8 +137,8 @@ They are web routes, not JSON endpoints, and are reached through the same `/api`
 - `redirect`: `302` to Google's consent screen. Without `GOOGLE_CLIENT_ID` it answers `302 /login?error=google_not_configured`.
 - `callback` (throttled to 20 per minute): needs the `state` Google echoes back. Always answers `302` to a relative URL:
   - `/login` on success: a cookie session is started (same limits as the password login) and the login page forwards the signed-in visitor.
-  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`).
-- A verified email without an account, on an allowed domain (default `gmail.com`, `*.edu`, `*.edu.vn`; configurable, empty = no limit), creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
+  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`) or `google_too_many_signups` (the per-IP or overall hourly limit on new accounts is reached).
+- A verified email without an account, on an allowed domain (default `*.edu`, `*.edu.vn`; configurable, empty = no limit) and under the new-account limits (per public IP per day, default 3; overall per hour, default 30), creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
 - A Google-only account has no usable password, so password login, change-password, account deletion and admin role changes (which ask for the current password) are not possible for it yet.
 
 ### IMPLEMENTED - GET `/api/me`
@@ -178,8 +178,9 @@ returns `422`. Throttled to 6 requests per minute.
 
 Admin only (`403` for User/Contributor, `401` for Guest). Query: `status`
 (`active|inactive|banned|pending`), `role` (`user|contributor|admin`),
-`search` (name/email substring, max 100), `per_page` (1-100, default 20).
-Soft-deleted users are excluded. Returns
+`search` (name/email substring, max 100), `per_page` (1-100, default 20),
+`sort` (`oldest` default, or `newest`) and `created_within_days` (1-365, only users who joined
+in the last N days; used to review new sign-ups). Soft-deleted users are excluded. Returns
 `{ status, data: [user...], meta: { current_page, last_page, per_page, total } }`.
 
 ### IMPLEMENTED - GET `/api/admin/users/{id}`

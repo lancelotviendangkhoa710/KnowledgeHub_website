@@ -23,7 +23,11 @@ Users can only sign in with email and password, and a new account stays `pending
    | Account exists and is `active` | Signed in as that account; its roles are unchanged |
    | Account exists but is `pending`, `inactive` or `banned` | Refused (`/login?error=google_unavailable`): Google must not lift a ban or skip the admin gate |
 
-5. **Anti-spam: allowed email domains for new accounts.** The intended use is production with open sign-up and no admin approval, so account creation is limited by `GOOGLE_ALLOWED_DOMAINS` (default `gmail.com,*.edu,*.edu.vn`): a plain entry matches the domain exactly, `*.x` matches any domain ending in `.x`, an empty value removes the limit. Existing `active` accounts are not restricted, so older registered users can still use Google. This stops throwaway-domain sign-ups; it does not stop someone with many free Gmail accounts (see limits).
+5. **Anti-spam controls for new accounts.** The intended use is production with open sign-up and no admin approval, so account creation is limited in three ways (existing `active` accounts are never affected):
+   - **Allowed email domains:** `GOOGLE_ALLOWED_DOMAINS`, default `*.edu,*.edu.vn` (school addresses only; add `gmail.com` for development or a wider audience): a plain entry matches the domain exactly, `*.x` matches any domain ending in `.x`, an empty value removes the limit.
+   - **Per-IP limit:** `GOOGLE_MAX_NEW_ACCOUNTS_PER_IP` new accounts per public IP per day (default 3, `0` = off). It counts creations only, never sign-ins, and is skipped for private/internal addresses, otherwise a proxy in front of the API would turn it into one global limit. **It only works if the API sees real client IPs**: list the real edge proxies in `TRUSTED_PROXIES` (comma separated, CIDR allowed; default none). The Next.js `/api` rewrite does **not** forward the client IP and a trusted proxy that does not overwrite `X-Forwarded-For` lets a client fake its IP, so do not list it; a production edge proxy (nginx, load balancer) that sets the header is required. Verified locally: through the rewrite Laravel only sees the proxy address, so the limit is inactive there.
+   - **Overall brake:** `GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR` new Google accounts per hour in total (default 30, `0` = off). It needs no client IP, so it limits a sign-up wave today. Both limits answer `/login?error=google_too_many_signups`.
+   - **Admin review:** the admin user list can be sorted newest first and filtered by sign-up date (`sort`, `created_within_days`); an admin can ban an account, which ends its sessions and tokens at the next request.
 6. **No schema change.** Accounts are matched by verified email only; nothing is stored about the Google identity. A Google-created account gets a random 64-character password that nobody knows, so password login for it is impossible.
 7. **Configuration** (private env, never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, optional `GOOGLE_ALLOWED_DOMAINS` (the web origin plus `/api/auth/google/callback`, registered in Google Cloud). Without a client id the redirect route sends the user back to `/login?error=google_not_configured`.
 
@@ -40,7 +44,7 @@ Users can only sign in with email and password, and a new account stays `pending
 - New runtime dependency: `laravel/socialite` v5 (6 packages added to `composer.lock`, no existing package changed).
 
 ### Risks
-- Open sign-up with Gmail allowed is still abusable by people with many free accounts. Existing controls: Google's own checks, the callback throttle (20 per minute per IP) and the admin's ability to ban an account. Stronger controls (per-IP creation limits, a stricter allowlist, admin review of new accounts) can be added without redesign.
+- Open sign-up is still abusable by someone with many accounts on an allowed domain. Layers: domain allowlist, per-IP limit (needs an edge proxy), the overall hourly brake, the callback throttle, Google's own checks, and admin review plus ban. Rate-limit counters live in the app cache; with the file cache they reset if the cache is cleared.
 - Callback failures (denied consent, expired state, Google outage) all land on `/login?error=google_failed`; they are not logged in detail.
 - The Google Cloud OAuth client must list the exact redirect URI per environment.
 
@@ -52,6 +56,6 @@ Users can only sign in with email and password, and a new account stays `pending
 
 ## Validation
 
-- Feature tests with Google mocked (`tests/Feature/Auth/GoogleLoginTest.php`): new verified email, reuse of an active account, refusal of `pending`/`inactive`/`banned`, unverified email, Google failure, not configured, soft-deleted email, no usable password, domain allowlist (exact, wildcard, existing accounts exempt, empty list).
+- Feature tests with Google mocked (`tests/Feature/Auth/GoogleLoginTest.php`): new verified email, reuse of an active account, refusal of `pending`/`inactive`/`banned`, unverified email, Google failure, not configured, soft-deleted email, no usable password, domain allowlist (exact, wildcard, existing accounts exempt, empty list), per-IP limit (counts creations only, internal addresses skipped, other addresses unaffected) and the overall hourly brake; admin list sorting and date window in `AdminUserTest`.
 - Redirect step and failed callback checked through the Next.js `/api` proxy.
 - Real Google sign-in needs Google Cloud credentials and must be verified manually per environment.
