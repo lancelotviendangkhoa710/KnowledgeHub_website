@@ -11,7 +11,7 @@
  */
 
 import { Article, ArticleVersion } from '@/types/content';
-import { getAccessToken } from '@/lib/authToken';
+import { sessionFetch } from '@/lib/api';
 
 const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
 const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
@@ -39,14 +39,9 @@ export interface ArticleVersionEntry extends ArticleVersion {
   creator?: VersionCreator | null;
 }
 
-/** JSON Accept header plus the in-memory Bearer credential when the viewer is signed in. */
+/** JSON Accept header; the session cookie is added by sessionFetch. */
 function authHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  const bearer = getAccessToken();
-  if (bearer) {
-    headers['Authorization'] = `Bearer ${bearer}`;
-  }
-  return headers;
+  return { Accept: 'application/json' };
 }
 
 /**
@@ -59,7 +54,7 @@ function authHeaders(): Record<string, string> {
 async function getJson(path: string, fallbackMessage: string): Promise<unknown> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, { cache: 'no-store', headers: authHeaders() });
+    res = await sessionFetch(`${API_BASE}${path}`, { cache: 'no-store', headers: authHeaders() });
   } catch {
     throw new VersionApiError('Cannot reach the KnowledgeHub API.', null);
   }

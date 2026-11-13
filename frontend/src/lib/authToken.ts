@@ -1,24 +1,35 @@
 /**
- * authToken.ts -- in-memory bearer token store.
+ * authToken.ts -- "signed in" marker for the cookie session (AUTH-06).
  *
- * The token is deliberately kept in a module variable instead of web storage.
- * `localStorage`/`sessionStorage` are readable by any script on the origin, so
- * a token kept there survives XSS and browser restarts. The trade-off is that
- * a full page reload drops the session; moving the token to an HttpOnly cookie
- * requires a backend + API-contract decision (docs/API.md documents the
- * `Authorization: Bearer` contract), so it is tracked as a follow-up.
+ * The credential is the HttpOnly session cookie, which JavaScript cannot read. This module only
+ * remembers the signed-in user's id so pages can ask "am I signed in?" synchronously (and detect
+ * a change of user) before `/api/me` answers. The id is not a secret and grants nothing; the
+ * server decides on every request. The names are kept so existing callers did not have to change.
  */
 
-let accessToken: string | null = null;
+const KEY = 'kh_signed_in';
+let memory: string | null = null;
 
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') {
     return null;
   }
 
-  return accessToken;
+  try {
+    return window.localStorage.getItem(KEY) ?? memory;
+  } catch {
+    return memory; // storage blocked: the marker lasts until reload
+  }
 }
 
-export function setAccessToken(token: string | null): void {
-  accessToken = token;
+export function setAccessToken(marker: string | null): void {
+  memory = marker;
+  if (typeof window === 'undefined') return;
+
+  try {
+    if (marker) window.localStorage.setItem(KEY, marker);
+    else window.localStorage.removeItem(KEY);
+  } catch {
+    // ignore: the in-memory copy above still works
+  }
 }

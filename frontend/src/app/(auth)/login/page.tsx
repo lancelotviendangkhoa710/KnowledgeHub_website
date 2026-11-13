@@ -35,8 +35,6 @@ export default function LoginPage() {
 
     try {
       await login({ email, password });
-      // Client-side navigation keeps the in-memory bearer token (lib/authToken.ts)
-      // available for the next page; a full reload would drop the session.
       const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const targetUrl = getSafeRedirectUrl(searchParams?.get('redirect') ?? null);
       router.push(targetUrl);
