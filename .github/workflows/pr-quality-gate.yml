@@ -82,67 +82,41 @@ jobs:
   laravel-test:
     name: Laravel Tests
     runs-on: ubuntu-latest
-    env:
-      # CI Postgres has no TLS; .env.example sets DB_SSLMODE=require. Real env wins.
-      DB_SSLMODE: disable
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: knowledgehub_test
-          POSTGRES_USER: knowledgehub
-          POSTGRES_PASSWORD: secret
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
-      # Laravel boots from ./backend, but the shared schema/factories live at the
-      # repository root (Docker mounts root database/ into the container). Provide
-      # them inside backend/ so artisan migrate and the test suite can see them.
-      - name: Provide database schema to backend
+      - name: Prepare isolated environment
+        run: cp backend/.env.example backend/.env
+
+      - name: Start disposable test database
+        run: docker compose --profile test up -d --wait test-db
+
+      - name: Generate test application key
+        run: docker compose run --rm --no-deps app php artisan key:generate --force
+
+      - name: Verify inherited database settings cannot redirect tests
+        run: >-
+          docker compose run --rm --no-deps
+          -e DB_HOST=blocked.invalid -e DB_DATABASE=shared
+          -e DB_URL=postgresql://blocked.invalid/shared
+          app php vendor/bin/phpunit tests/Unit/Content/TagModelTest.php
+
+      - name: Verify cached configuration is blocked
         run: |
-          mkdir -p backend/database
-          cp -R database/migrations database/seeders backend/database/
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.3"
-          extensions: pdo, pdo_pgsql
-          coverage: none
-
-      - name: Install Composer dependencies
-        working-directory: ./backend
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Copy .env
-        working-directory: ./backend
-        run: cp .env.example .env
-
-      - name: Configure test DB
-        working-directory: ./backend
-        run: |
-          php artisan key:generate
-          sed -i 's/DB_DATABASE=.*/DB_DATABASE=knowledgehub_test/' .env
-          sed -i 's/DB_USERNAME=.*/DB_USERNAME=knowledgehub/' .env
-          sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=secret/' .env
-          sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env
-
-      - name: Run migrations
-        working-directory: ./backend
-        run: php artisan migrate --force
+          docker compose run --rm --no-deps app php artisan config:cache
+          trap 'docker compose run --rm --no-deps app php artisan config:clear' EXIT
+          if docker compose run --rm --no-deps app php vendor/bin/phpunit --list-tests > /tmp/phpunit-cache-guard.log 2>&1; then
+            echo "PHPUnit unexpectedly accepted cached configuration"
+            exit 1
+          fi
+          grep -q 'Clear Laravel config cache before running tests' /tmp/phpunit-cache-guard.log
 
       - name: Run tests
-        working-directory: ./backend
-        run: php artisan test --stop-on-failure
+        run: docker compose run --rm --no-deps app php vendor/bin/phpunit --stop-on-failure
+
+      - name: Stop test containers
+        if: always()
+        run: docker compose --profile test down
 
   # ─── Job 4: Block merge nếu chưa có CodeRabbit approve ───────────────────
   coderabbit-approved:

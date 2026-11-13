@@ -8,36 +8,22 @@ KnowledgeHub is operated by an internal content team. Contributors create and pu
 
 - **Frontend**: Next.js / React
 - **Backend**: Laravel 11 REST API
-- **Database**: PostgreSQL 16 / Supabase PostgreSQL (production); Docker PostgreSQL (local)
+- **Database**: Supabase PostgreSQL (shared development); disposable Docker PostgreSQL (tests)
 - **AI Service**: Python + FastAPI (future)
 - **File Storage**: Amazon S3 (future)
 - **Dev Environment**: Docker Compose
 
 ## Quick Start
 
-```bash
-# 1. Start services
-docker compose up -d
-
-# 2. Install Laravel dependencies (first run only â€“ entrypoint handles it)
-# Wait ~60s for Laravel to be installed and for postgres to be healthy
-
-# 3. Copy env
-docker compose exec app cp .env.example .env
-docker compose exec app php artisan key:generate
-
-# 4. Run migrations
-docker compose exec app php artisan migrate
-
-# 5. Seed development data
-docker compose exec app php artisan db:seed
-```
+Follow [`docs/DEV_CHEATSHEET.md`](docs/DEV_CHEATSHEET.md) to configure private
+environment values and start the application. The shared database contains team
+data: do not run migrations, seeders, resets, or automated tests against it.
 
 ## Documentation
 
 ### For Developers
 - [`docs/PROJECT-ARCHITECTURE.md`](docs/PROJECT-ARCHITECTURE.md) — Concise project architecture and implementation status
-- [`docs/SETUP.md`](docs/SETUP.md) â€“ Complete development environment setup guide
+- [`docs/DEV_CHEATSHEET.md`](docs/DEV_CHEATSHEET.md) - Current development setup guide
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) â€“ System architecture, components, domain boundaries
 - [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Deployment guide and production checklist
 - [`docs/DATABASE.md`](docs/DATABASE.md) â€“ Schema design, constraints, deletion policies
@@ -62,15 +48,12 @@ docker compose exec app php artisan db:seed
 # Shell into app container
 docker compose exec app sh
 
-# Run all migrations fresh with seed data
-docker compose exec app php artisan migrate:fresh --seed
-
-# Inspect PostgreSQL schema
-docker compose exec postgres psql -U knowledgehub -d knowledgehub -c "\dt"
-
-# Run tests
-docker compose exec app php artisan test
+# Read-only check of the shared database through the API
+curl -f http://localhost:8080/api/v1/categories
 ```
+
+For isolated tests, follow [`docs/AGENT_RUNBOOK.md`](docs/AGENT_RUNBOOK.md).
+The `test-db` service is disposable and is not the shared development database.
 
 ## Project Structure
 
@@ -110,7 +93,7 @@ knowledgehub/
 
 ## Contributing
 
-1. Read [`docs/SETUP.md`](docs/SETUP.md) for environment setup
+1. Read [`docs/DEV_CHEATSHEET.md`](docs/DEV_CHEATSHEET.md) for environment setup
 2. Review [`AGENTS.md`](AGENTS.md) if using AI coding assistants
 3. Check [`docs/DATABASE.md`](docs/DATABASE.md) for schema conventions
 4. Create a task branch from `dev` (never work directly on `main` or `dev`)

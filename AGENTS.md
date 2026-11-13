@@ -378,13 +378,21 @@ Do NOT auto-fix application code. Flag for team review. Each requires a team-app
 
 ```powershell
 docker compose up -d
-docker compose exec app php artisan migrate
-docker compose exec app php artisan db:seed
-docker compose exec app php artisan migrate:fresh --seed
-docker compose exec postgres psql -U knowledgehub -d knowledgehub
-docker compose exec app php artisan test
 ```
+
+See `docs/DEV_CHEATSHEET.md` for setup and read-only database checks, and
+`docs/AGENT_RUNBOOK.md` for tests against the disposable database.
 
 ---
 
 *Priority: Correctness > Speed. Read before writing. Test thoroughly. Minimal diff.*
+
+## Runtime, testing and deployment
+
+Read `docs/AGENT_RUNBOOK.md` before runtime, testing, or deployment tasks.
+
+Never run automated tests, `migrate:fresh`, `migrate:refresh`, `db:wipe`,
+`db:seed`, or other destructive/reset commands against shared or cloud data.
+PHPUnit must use only the disposable Compose `test-db` database. Verify the
+actual connection before running tests; never bypass the test bootstrap or
+database guard. A unit-test label does not imply a test is read-only.

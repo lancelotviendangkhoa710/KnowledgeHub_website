@@ -1,97 +1,77 @@
 services:
+  test-db:
+    profiles: [test]
+    image: postgres:16.10-alpine3.21
+    environment:
+      POSTGRES_DB: knowledgehub_test
+      POSTGRES_USER: knowledgehub_test
+      POSTGRES_PASSWORD: local-test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U knowledgehub_test -d knowledgehub_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    networks: [knowledgehub]
+
   app:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    container_name: knowledgehub_app
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
       - ./database:/var/www/html/database
+      - backend_vendor:/var/www/html/vendor
+    env_file: ./backend/.env
     environment:
-      - APP_ENV=local
-      - DB_CONNECTION=pgsql
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_DATABASE=knowledgehub
-      - DB_USERNAME=knowledgehub
-      - DB_PASSWORD=secret
-      - AI_SERVICE_URL=http://ai-service:8000
-      - AI_SERVICE_TOKEN=${AI_SERVICE_TOKEN:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - knowledgehub
-
-  postgres:
-    image: postgres:16.10-alpine3.21
-    container_name: knowledgehub_postgres
-    environment:
-      POSTGRES_DB: knowledgehub
-      POSTGRES_USER: knowledgehub
-      POSTGRES_PASSWORD: secret
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U knowledgehub -d knowledgehub"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - knowledgehub
+      AI_SERVICE_URL: http://ai-service:8000
+    networks: [knowledgehub]
 
   nginx:
     image: nginx:1.27.4-alpine3.21
-    container_name: knowledgehub_nginx
     ports:
       - "8080:80"
     volumes:
       - ./backend:/var/www/html
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
-    depends_on:
-      - app
-    networks:
-      - knowledgehub
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [app]
+    networks: [knowledgehub]
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: knowledgehub_frontend
     working_dir: /app
     volumes:
       - ./frontend:/app
       - frontend_node_modules:/app/node_modules
       - frontend_next:/app/.next
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080/api
+      NEXT_PUBLIC_API_URL: /api
+      BACKEND_INTERNAL_URL: http://nginx
       WATCHPACK_POLLING: "true"
     ports:
       - "3000:3000"
-    depends_on:
-      - nginx
-    networks:
-      - knowledgehub
+    depends_on: [nginx]
+    networks: [knowledgehub]
 
   ai-service:
-    profiles: ["ai"]
-    stop_grace_period: 45s
+    environment:
+      LOG_LEVEL: INFO
     build:
       context: ./ai-service
       dockerfile: Dockerfile
-    environment:
-      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
-      # The service validates this override and falls back if it belongs to another provider.
-      AI_MODEL: ${AI_MODEL:-deepseek-flash}
-    networks:
-      - knowledgehub
+    env_file: ./backend/.env
+    volumes:
+      - ./ai-service/app:/app/app
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    stop_grace_period: 45s
+    networks: [knowledgehub]
 
 volumes:
-  postgres_data:
+  backend_vendor:
   frontend_node_modules:
   frontend_next:
 

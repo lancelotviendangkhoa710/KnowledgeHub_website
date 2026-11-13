@@ -5,6 +5,9 @@
 **Author**: Project owner  
 **Related**: `docs/decisions/2026-10-06-architecture-techstack-locked.md`, `docs/ARCHITECTURE.md`, `docs/DATABASE.md`
 
+**Later amendment:** The local development database decision below is superseded
+by `2026-11-13-shared-cloud-development-database.md`; the other decisions remain.
+
 ## Context
 
 KnowledgeHub requires managed PostgreSQL for production while retaining Laravel 11 as the REST API, application authorization, and database client.
