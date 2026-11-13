@@ -3,12 +3,14 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccountUser, AdminUserFilters, adminUserClient, AssignableRole, ASSIGNABLE_ROLES, errorMessage, UserStatus } from '@/lib/accountClient';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser, subscribeCurrentUser } from '@/lib/auth';
 
 const STATUSES: UserStatus[] = ['active', 'pending', 'inactive', 'banned'];
 
 export default function AdminUsersPage() {
-  const me = getCurrentUser();
+  const [me, setMe] = useState(getCurrentUser);
+  // After a reload the header restores the user from the session cookie; follow that change.
+  useEffect(() => subscribeCurrentUser(() => setMe(getCurrentUser())), []);
   const [users, setUsers] = useState<AccountUser[]>([]);
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
   const [filters, setFilters] = useState<AdminUserFilters>({ page: 1 });
