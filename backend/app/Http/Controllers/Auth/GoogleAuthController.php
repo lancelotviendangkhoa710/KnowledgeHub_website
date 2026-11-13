@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Exceptions\Auth\GoogleDomainNotAllowed;
+use App\Exceptions\Auth\GoogleSignupLimitReached;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\RedirectResponse;
@@ -42,9 +43,11 @@ class GoogleAuthController extends Controller
         }
 
         try {
-            $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail());
+            $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail(), $request->ip());
         } catch (GoogleDomainNotAllowed) {
             return $this->toLogin('google_domain_not_allowed');
+        } catch (GoogleSignupLimitReached) {
+            return $this->toLogin('google_too_many_signups');
         }
         if ($user === null) {
             return $this->toLogin('google_unavailable'); // existing account that is not active

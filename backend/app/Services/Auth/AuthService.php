@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Exceptions\Auth\GoogleDomainNotAllowed;
+use App\Exceptions\Auth\GoogleSignupLimitReached;
 use App\Models\PersonalAccessToken;
 use App\Models\Role;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Hashing\HashManager;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
@@ -35,7 +37,7 @@ class AuthService
      * but only for an allowed email domain (GoogleDomainNotAllowed otherwise).
      * Linking is by verified email only (no schema change, see the ADR).
      */
-    public function userForGoogle(string $email, string $name): ?User
+    public function userForGoogle(string $email, string $name, ?string $ip = null): ?User
     {
         // shortcut: linked by verified email, not Google's stable id; add a google_id column when a schema change is approved.
         $email = Str::lower(trim($email));
@@ -49,19 +51,42 @@ class AuthService
             throw new GoogleDomainNotAllowed($email);
         }
 
+        $limitKey = $this->googleSignupLimitKey($ip);
+        $limit = (int) config('services.google.max_new_accounts_per_ip_per_day');
+        $hourly = (int) config('services.google.max_new_accounts_per_hour');
+        if (($limitKey !== null && $limit > 0 && RateLimiter::tooManyAttempts($limitKey, $limit))
+            || ($hourly > 0 && RateLimiter::tooManyAttempts('google-signup:all', $hourly))) {
+            throw new GoogleSignupLimitReached($ip ?? 'unknown');
+        }
+
         try {
             // Google-only accounts get a random password nobody knows, so password login is impossible.
-            return $this->createWithDefaultRole(
+            $created = $this->createWithDefaultRole(
                 ['name' => $name, 'email' => $email, 'password' => Str::random(64)],
                 'active',
                 verified: true,
             );
+            // Count creations only, not sign-ins.
+            if ($limitKey !== null) {
+                RateLimiter::hit($limitKey, 86400);
+            }
+            RateLimiter::hit('google-signup:all', 3600);
+
+            return $created;
         } catch (ValidationException) {
             // Lost a race with another sign-in for the same email: use the account that won.
             $user = $existing();
 
             return $user && $user->status === 'active' ? $user->load('roles') : null;
         }
+    }
+
+    /** Per-IP counter key, or null when the address is missing or internal (a proxy IP would make the limit global). */
+    private function googleSignupLimitKey(?string $ip): ?string
+    {
+        $public = $ip !== null && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+
+        return $public ? 'google-signup:'.$ip : null;
     }
 
     private function googleDomainAllowed(string $email): bool

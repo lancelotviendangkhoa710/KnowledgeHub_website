@@ -36,7 +36,13 @@ return [
         'redirect' => env('GOOGLE_REDIRECT_URI'),
         // Email domains that may CREATE an account through Google (existing active accounts are not
         // restricted). Comma separated; "*.edu" matches any subdomain suffix; empty = no restriction.
-        'allowed_domains' => env('GOOGLE_ALLOWED_DOMAINS', 'gmail.com,*.edu,*.edu.vn'),
+        'allowed_domains' => env('GOOGLE_ALLOWED_DOMAINS', '*.edu,*.edu.vn'),
+        // New Google accounts one public IP address may create per day; 0 = unlimited. Ignored for
+        // private/internal addresses (a proxy in front of the API would otherwise make it global).
+        'max_new_accounts_per_ip_per_day' => (int) env('GOOGLE_MAX_NEW_ACCOUNTS_PER_IP', 3),
+        // Brake for a sign-up wave from any number of addresses (the IP limit needs real client IPs,
+        // which the Next.js /api proxy does not forward). New Google accounts per hour overall; 0 = unlimited.
+        'max_new_accounts_per_hour' => (int) env('GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR', 30),
     ],
 
     'slack' => [

@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\Provider;
@@ -26,8 +27,12 @@ class GoogleLoginTest extends TestCase
         parent::setUp();
 
         config(['services.google.allowed_domains' => 'example.com,*.edu.vn']);
-        // The throttle counts in the file cache that backend/.env selects, so reruns would add up.
+        // Rate limits count in the cache that backend/.env selects (file), so reruns would add up:
+        // skip the route throttle and reset the per-IP signup counters.
         $this->withoutMiddleware(ThrottleRequests::class);
+        foreach (['8.8.4.4', '1.1.1.1', '9.9.9.9', 'all'] as $key) {
+            RateLimiter::clear('google-signup:'.$key);
+        }
 
         Role::insert([
             ['id' => (string) Str::uuid(), 'name' => 'user', 'description' => 'Default user role'],
@@ -174,6 +179,73 @@ class GoogleLoginTest extends TestCase
         $this->get('/api/auth/google/callback')->assertRedirect('/login');
 
         $this->assertDatabaseHas('users', ['email' => 'anyone@anywhere.test']);
+    }
+
+    public function test_new_accounts_per_public_ip_are_limited_but_sign_ins_are_not(): void
+    {
+        config(['services.google.max_new_accounts_per_ip_per_day' => 2]);
+        $ip = ['REMOTE_ADDR' => '8.8.4.4'];
+
+        foreach (['a@example.com', 'b@example.com'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'New');
+            $this->withServerVariables($ip)->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('c@example.com', 'Third');
+        $this->withServerVariables($ip)->get('/api/auth/google/callback')->assertRedirect('/login?error=google_too_many_signups');
+        $this->assertDatabaseMissing('users', ['email' => 'c@example.com']);
+
+        // An existing account still signs in from the same address, and another address may still sign up.
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('a@example.com', 'New');
+        $this->withServerVariables($ip)->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('c@example.com', 'Third');
+        $this->withServerVariables(['REMOTE_ADDR' => '1.1.1.1'])->get('/api/auth/google/callback')->assertRedirect('/login');
+    }
+
+    public function test_a_sign_up_wave_is_stopped_whatever_the_addresses(): void
+    {
+        config(['services.google.max_new_accounts_per_hour' => 2]);
+
+        foreach (['w1@example.com', 'w2@example.com'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'W');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login'); // internal address: only the overall limit counts
+        }
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('w3@example.com', 'W');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_too_many_signups');
+        $this->assertDatabaseMissing('users', ['email' => 'w3@example.com']);
+    }
+
+    public function test_internal_addresses_and_a_zero_limit_are_never_limited(): void
+    {
+        config(['services.google.max_new_accounts_per_ip_per_day' => 1, 'services.google.max_new_accounts_per_hour' => 0]);
+
+        foreach (['p1@example.com', 'p2@example.com', 'p3@example.com'] as $email) { // 127.0.0.1 = a proxy, not a person
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'P');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+
+        config(['services.google.max_new_accounts_per_ip_per_day' => 0]);
+        foreach (['q1@example.com', 'q2@example.com'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'Q');
+            $this->withServerVariables(['REMOTE_ADDR' => '9.9.9.9'])->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
     }
 
     public function test_email_of_a_deleted_account_gets_a_fresh_account(): void
