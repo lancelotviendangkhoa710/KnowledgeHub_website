@@ -246,5 +246,49 @@ class ArticleApiTest extends TestCase
 
         $this->assertSoftDeleted('articles', ['id' => $article->id]);
     }
-}
 
+    public function test_published_list_pagination_is_stable_when_published_at_ties(): void
+    {
+        $contributor = $this->createUserWithRole('contributor');
+        $articleService = app(ArticleService::class);
+
+        $ids = [];
+        for ($i = 1; $i <= 5; $i++) {
+            $article = $articleService->create([
+                'title' => "Tied Course {$i}",
+                'content' => 'Content.',
+            ], $contributor);
+
+            $articleService->publish($article);
+            $ids[] = $article->id;
+        }
+
+        // Force every article to share the exact same published_at.
+        Article::whereIn('id', $ids)->update(['published_at' => now()->startOfSecond()]);
+
+        $collectIds = function (string $sort): array {
+            $collected = [];
+            for ($page = 1; $page <= 3; $page++) {
+                $response = $this->getJson("/api/v1/articles?sort={$sort}&per_page=2&page={$page}");
+                $response->assertStatus(200);
+                $this->assertEquals(5, $response->json('total'));
+                $collected = array_merge($collected, array_column($response->json('data'), 'id'));
+            }
+
+            return $collected;
+        };
+
+        $latest = $collectIds('latest');
+
+        // No duplicates or gaps across pages.
+        $this->assertCount(5, $latest);
+        $this->assertSame($latest, array_values(array_unique($latest)));
+        $this->assertEqualsCanonicalizing($ids, $latest);
+
+        // Repeated requests return the same order.
+        $this->assertSame($latest, $collectIds('latest'));
+
+        // sort=oldest uses the same tie-breaker in the opposite direction.
+        $this->assertSame(array_reverse($latest), $collectIds('oldest'));
+    }
+}
