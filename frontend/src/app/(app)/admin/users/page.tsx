@@ -13,7 +13,7 @@ export default function AdminUsersPage() {
   useEffect(() => subscribeCurrentUser(() => setMe(getCurrentUser())), []);
   const [users, setUsers] = useState<AccountUser[]>([]);
   const [meta, setMeta] = useState({ current_page: 1, last_page: 1, total: 0 });
-  const [filters, setFilters] = useState<AdminUserFilters>({ page: 1 });
+  const [filters, setFilters] = useState<AdminUserFilters>({ page: 1, sort: 'newest' }); // newest first: admins review new sign-ups
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +138,12 @@ export default function AdminUsersPage() {
           <option value="contributor">contributor</option>
           <option value="admin">admin</option>
         </select>
+        <select aria-label="Filter by sign-up date" value={filters.created_within_days ?? ''} onChange={(event) => setFilters({ ...filters, created_within_days: event.target.value ? Number(event.target.value) : undefined, page: 1 })}>
+          <option value="">Joined any time</option>
+          <option value="1">Joined in the last day</option>
+          <option value="7">Joined in the last 7 days</option>
+          <option value="30">Joined in the last 30 days</option>
+        </select>
         <button className="button button--secondary" type="submit">Search</button>
       </form>
 
@@ -151,7 +157,7 @@ export default function AdminUsersPage() {
         <div className="users-table-wrap">
           <table className="users-table">
             <thead>
-              <tr><th>Name</th><th>Email</th><th>Roles</th><th>Status</th><th>Action</th></tr>
+              <tr><th>Name</th><th>Email</th><th>Joined</th><th>Roles</th><th>Status</th><th>Action</th></tr>
             </thead>
             <tbody>
               {users.map((user) => {
@@ -160,6 +166,7 @@ export default function AdminUsersPage() {
                   <tr key={user.id}>
                     <td data-label="Name">{user.name}</td>
                     <td data-label="Email">{user.email}</td>
+                    <td data-label="Joined">{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
                     <td data-label="Roles">
                       {self || user.status === 'pending' || user.status === 'banned' ? (
                         user.roles.join(', ')

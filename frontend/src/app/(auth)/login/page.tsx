@@ -27,6 +27,7 @@ const GOOGLE_ERRORS: Record<string, string> = {
   google_unverified: 'Your Google email address is not verified, so it cannot be used to sign in.',
   google_unavailable: 'This account cannot sign in with Google. It may be pending approval or suspended; contact an administrator.',
   google_domain_not_allowed: 'New accounts can only be created with approved email domains (for example Gmail or a school address). Use one of those or ask an administrator.',
+  google_too_many_signups: 'Too many new accounts were created recently. Please try again later.',
   google_not_configured: 'Google sign-in is not set up on this server.',
 };
 
