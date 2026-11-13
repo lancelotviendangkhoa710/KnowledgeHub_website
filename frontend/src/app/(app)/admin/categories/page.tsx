@@ -99,7 +99,7 @@ export default function AdminCategoriesPage() {
     }
   }, [focusNotice, notice]);
 
-  // ── Session: in-memory token; resolve the user via /me when only the token is known ─────────
+  // ── Session: signed-in marker; resolve the user via /me when only the marker is known ─────────
   useEffect(() => {
     let cancelled = false;
     const unsubscribe = subscribeCurrentUser(() => {

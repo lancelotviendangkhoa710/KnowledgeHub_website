@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
-import { login } from '@/lib/auth';
+import { FormEvent, useEffect, useState } from 'react';
+import { login, probeSession } from '@/lib/auth';
 
 function getSafeRedirectUrl(param: string | null): string {
   if (!param) return '/courses';
@@ -28,6 +28,13 @@ export default function LoginPage() {
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  // Already signed in (cookie session still valid): the API refuses a second login, so skip this page.
+  useEffect(() => {
+    void probeSession().then((user) => {
+      if (user) router.replace(getSafeRedirectUrl(new URLSearchParams(window.location.search).get('redirect')));
+    });
+  }, [router]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
@@ -35,8 +42,6 @@ export default function LoginPage() {
 
     try {
       await login({ email, password });
-      // Client-side navigation keeps the in-memory bearer token (lib/authToken.ts)
-      // available for the next page; a full reload would drop the session.
       const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
       const targetUrl = getSafeRedirectUrl(searchParams?.get('redirect') ?? null);
       router.push(targetUrl);

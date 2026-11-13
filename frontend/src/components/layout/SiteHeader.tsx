@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AuthActions from '@/components/auth/AuthActions';
-import { getCurrentUser, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import { getCurrentUser, restoreSession, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 
 /**
  * Renders the brand logo icon mark with animated nodes.
@@ -26,7 +26,9 @@ export default function SiteHeader() {
 
   useEffect(() => {
     setUser(getCurrentUser());
-    return subscribeCurrentUser(() => setUser(getCurrentUser()));
+    const unsubscribe = subscribeCurrentUser(() => setUser(getCurrentUser()));
+    void restoreSession(); // keeps the session after a page reload (AUTH-06)
+    return unsubscribe;
   }, []);
 
   const isContributorOrAdmin =

@@ -1,5 +1,6 @@
 import { Article, Category, Tag } from '@/types/content';
 import { getAccessToken } from '@/lib/authToken';
+import { sessionFetch } from '@/lib/api';
 
 /** API base from the environment (`NEXT_PUBLIC_API_URL`), defaulting to the same-origin `/api` proxy. */
 const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -120,7 +121,7 @@ async function apiFetch(input: string, init?: RequestInit, options?: ApiReadOpti
 
   if (!isRead) {
     try {
-      return await fetch(input, requestInit);
+      return await sessionFetch(input, requestInit);
     } catch (err: unknown) {
       if (err instanceof TypeError) {
         throw new Error(API_UNREACHABLE_WRITE_MESSAGE);
@@ -133,7 +134,7 @@ async function apiFetch(input: string, init?: RequestInit, options?: ApiReadOpti
   for (let attempt = 0; ; attempt++) {
     let res: Response | null = null;
     try {
-      res = await fetch(input, requestInit);
+      res = await sessionFetch(input, requestInit);
     } catch (err: unknown) {
       if (isAbortError(err) || !(err instanceof TypeError)) {
         throw err;
@@ -217,10 +218,8 @@ function buildArticlesUrl(params?: FetchArticlesParams, extra?: Record<string, s
  */
 async function requestArticlesJson(url: string, options?: ApiReadOptions): Promise<unknown> {
   const headers: Record<string, string> = { Accept: 'application/json' };
+  // Only picks the cache mode: the credential is the session cookie added by sessionFetch.
   const bearerSession = getAccessToken();
-  if (bearerSession) {
-    headers['Authorization'] = `Bearer ${bearerSession}`;
-  }
 
   const res = await apiFetch(url, {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
@@ -347,10 +346,8 @@ export async function fetchArticlesPage(
  */
 export async function fetchArticle(identifier: string, options?: ApiReadOptions): Promise<Article | null> {
   const headers: Record<string, string> = { Accept: 'application/json' };
+  // Only picks the cache mode: the credential is the session cookie added by sessionFetch.
   const bearerSession = getAccessToken();
-  if (bearerSession) {
-    headers['Authorization'] = `Bearer ${bearerSession}`;
-  }
 
   const res = await apiFetch(buildApiUrl(`/articles/${encodeURIComponent(identifier)}`), {
     ...(bearerSession ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
@@ -446,10 +443,6 @@ export async function fetchMyArticles(status?: string, options?: ApiReadOptions)
   }
 
   const headers: Record<string, string> = { Accept: 'application/json' };
-  const bearerSession = getAccessToken();
-  if (bearerSession) {
-    headers['Authorization'] = `Bearer ${bearerSession}`;
-  }
 
   const res = await apiFetch(url.toString(), {
     cache: 'no-store',
@@ -481,10 +474,6 @@ export async function publishArticle(articleId: string, versionId?: string): Pro
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-  const bearerSession = getAccessToken();
-  if (bearerSession) {
-    headers['Authorization'] = `Bearer ${bearerSession}`;
-  }
 
   const body = versionId ? JSON.stringify({ version_id: versionId }) : JSON.stringify({});
   const res = await apiFetch(buildApiUrl(`/articles/${articleId}/publish`), {
@@ -517,10 +506,6 @@ export async function archiveArticle(articleId: string): Promise<Article> {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   };
-  const bearerSession = getAccessToken();
-  if (bearerSession) {
-    headers['Authorization'] = `Bearer ${bearerSession}`;
-  }
 
   const res = await apiFetch(buildApiUrl(`/articles/${articleId}/archive`), {
     method: 'POST',
@@ -551,10 +536,6 @@ export async function deleteArticle(articleId: string): Promise<void> {
   const headers: Record<string, string> = {
     Accept: 'application/json',
   };
-  const bearerSession = getAccessToken();
-  if (bearerSession) {
-    headers['Authorization'] = `Bearer ${bearerSession}`;
-  }
 
   const res = await apiFetch(buildApiUrl(`/articles/${articleId}`), {
     method: 'DELETE',
