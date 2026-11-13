@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { getAccessToken, setAccessToken } from '@/lib/authToken';
+import { getAccessToken, setAccessToken, setFallbackBearer } from '@/lib/authToken';
 
 export type AuthUser = {
   id: string;
@@ -24,6 +24,7 @@ const listeners = new Set<() => void>();
 export function setCurrentUser(user: AuthUser | null): void {
   currentUser = user;
   setAccessToken(user?.id ?? null); // keep the signed-in marker in step with the user
+  if (!user) setFallbackBearer(null);
   listeners.forEach((listener) => listener());
 }
 
@@ -45,6 +46,7 @@ export async function register(input: {
 export async function login(input: { email: string; password: string }): Promise<AuthResponse> {
   // The server answers with a session cookie; the body carries the user only.
   const response = await api.post<AuthResponse>('/auth/login', input);
+  setFallbackBearer(response.data.token ?? null); // only set when the API did not start a cookie session
   setCurrentUser(response.data.user);
 
   return response;

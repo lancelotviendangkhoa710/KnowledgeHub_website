@@ -5,6 +5,8 @@
  * All endpoints defined in docs/API.md.
  */
 
+import { getFallbackBearer } from '@/lib/authToken';
+
 const rawBase = process.env.NEXT_PUBLIC_API_URL || '/api';
 const BASE_URL = rawBase.endsWith('/') ? rawBase.slice(0, -1) : rawBase;
 
@@ -16,7 +18,11 @@ function readXsrfCookie(): string | null {
 
 /** Fetches Sanctum's CSRF cookie (same origin through the /api proxy). */
 async function refreshCsrfCookie(): Promise<void> {
-  await fetch(`${BASE_URL}/sanctum/csrf-cookie`, { credentials: 'include', headers: { Accept: 'application/json' } });
+  try {
+    await fetch(`${BASE_URL}/sanctum/csrf-cookie`, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+  } catch {
+    // Cross-origin API (no proxy): there is no cookie session to protect, the bearer fallback applies.
+  }
 }
 
 /**
@@ -29,12 +35,14 @@ export async function sessionFetch(input: string, init: RequestInit = {}): Promi
 
   const send = async (): Promise<Response> => {
     const headers = new Headers(init.headers);
-    if (isWrite) {
+    const fallbackBearer = getFallbackBearer();
+    if (fallbackBearer) headers.set('Authorization', `Bearer ${fallbackBearer}`);
+    if (isWrite && !fallbackBearer) {
       if (!readXsrfCookie()) await refreshCsrfCookie();
       const xsrf = readXsrfCookie();
       if (xsrf) headers.set('X-XSRF-TOKEN', xsrf);
     }
-    return fetch(input, { ...init, headers, credentials: 'include' });
+    return fetch(input, { ...init, headers, credentials: 'same-origin' });
   };
 
   const response = await send();

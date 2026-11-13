@@ -23,6 +23,18 @@ export function getAccessToken(): string | null {
   }
 }
 
+// Fallback for a deployment where the API is not reached through the same-origin /api proxy: the
+// backend then answers login with a bearer token instead of a cookie. Memory only (lost on reload).
+let fallbackBearer: string | null = null;
+
+export function getFallbackBearer(): string | null {
+  return fallbackBearer;
+}
+
+export function setFallbackBearer(token: string | null): void {
+  fallbackBearer = token;
+}
+
 export function setAccessToken(marker: string | null): void {
   memory = marker;
   if (typeof window === 'undefined') return;

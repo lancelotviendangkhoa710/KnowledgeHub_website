@@ -218,6 +218,7 @@ function buildArticlesUrl(params?: FetchArticlesParams, extra?: Record<string, s
  */
 async function requestArticlesJson(url: string, options?: ApiReadOptions): Promise<unknown> {
   const headers: Record<string, string> = { Accept: 'application/json' };
+  // Only picks the cache mode: the credential is the session cookie added by sessionFetch.
   const bearerSession = getAccessToken();
 
   const res = await apiFetch(url, {
@@ -345,6 +346,7 @@ export async function fetchArticlesPage(
  */
 export async function fetchArticle(identifier: string, options?: ApiReadOptions): Promise<Article | null> {
   const headers: Record<string, string> = { Accept: 'application/json' };
+  // Only picks the cache mode: the credential is the session cookie added by sessionFetch.
   const bearerSession = getAccessToken();
 
   const res = await apiFetch(buildApiUrl(`/articles/${encodeURIComponent(identifier)}`), {
