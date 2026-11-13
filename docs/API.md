@@ -67,6 +67,36 @@ Identity/Auth, Content, and Learning progress endpoints are documented below.
 **Owner**: `TEAM_MEMBER_A`  
 **Authentication**: Laravel Sanctum personal access tokens in `Authorization: Bearer <token>`.
 
+### IMPLEMENTED (backend) - Cookie session mode (AUTH-06)
+
+Backend implemented per `docs/decisions/2026-11-03-session-policy.md` (status Proposed). Bearer tokens
+above remain valid for non-browser clients; the web frontend still migrates in a
+separate PR, and the endpoint sections after it describe the Bearer behavior.
+
+- **Same origin**: the web app calls `/api/*` (including `/api/sanctum/csrf-cookie`) on its own
+  origin; the Next.js server forwards them to the Laravel API. Browsers never call
+  the API host directly.
+- **CSRF**: `GET /api/sanctum/csrf-cookie` (`204`) sets the `XSRF-TOKEN` cookie. Every
+  state-changing request (`POST`, `PUT`, `PATCH`, `DELETE`) from the web app sends
+  its value in `X-XSRF-TOKEN` and uses `credentials: 'include'`. A missing or wrong
+  value returns `419`.
+- **Login** (`POST /api/auth/login`): a stateful web request starts a session cookie
+  (`HttpOnly`, `Secure` outside local dev, `SameSite=Lax`) and returns `200` with
+  `data.user` and **no** `data.token`. A request without stateful headers keeps the
+  current behavior and receives `data.token`.
+- **Logout** (`POST /api/auth/logout`): invalidates the current session (or deletes
+  the current token for Bearer clients); `200`, `data: null`.
+- **Current user** (`GET /api/me`): the web app uses it at startup to learn whether
+  it is signed in; `401` means no valid session.
+- **Lifetime**: idle timeout 30 minutes (renewed on activity, value to be confirmed)
+  and absolute lifetime 12 hours; an expired session returns `401`. Personal access
+  tokens expire after 720 minutes.
+- **Revocation**: password change, status change away from `active`, role change and
+  account deletion end the affected user's other sessions and tokens, as they do for
+  tokens today.
+- **Error format**: unchanged (`401` unauthenticated, `403` forbidden, `419` CSRF,
+  `422` validation, `429` throttled).
+
 ### IMPLEMENTED - POST `/api/auth/register`
 
 Guest-only registration accepts `name`, `email`, `password`, and
