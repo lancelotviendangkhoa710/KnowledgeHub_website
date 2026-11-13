@@ -164,6 +164,34 @@ class AuthTest extends TestCase
         ])->assertStatus(429);
     }
 
+    public function test_login_is_capped_per_public_address_across_accounts(): void
+    {
+        // A fresh address per run: the counters live in the cache the environment selects, so a fixed one
+        // would still be counting from the previous run.
+        $ip = '8.8.'.random_int(1, 254).'.'.random_int(1, 254);
+
+        for ($attempt = 1; $attempt <= 25; $attempt++) {
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->postJson('/api/auth/login', ['email' => "nobody{$attempt}@example.com", 'password' => 'wrong-password'])
+                ->assertUnprocessable();
+        }
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->postJson('/api/auth/login', ['email' => 'nobody26@example.com', 'password' => 'wrong-password'])
+            ->assertStatus(429);
+    }
+
+    public function test_internal_proxy_address_is_not_one_shared_login_cap_for_everybody(): void
+    {
+        // 127.0.0.1 stands for the proxy: many different visitors must not exhaust a shared per-address cap.
+        $marker = Str::random(8);
+
+        for ($attempt = 1; $attempt <= 30; $attempt++) {
+            $this->postJson('/api/auth/login', ['email' => "visitor{$attempt}-{$marker}@example.com", 'password' => 'wrong-password'])
+                ->assertUnprocessable();
+        }
+    }
+
     private function createUser(string $email, string $status): User
     {
         $user = new User([
