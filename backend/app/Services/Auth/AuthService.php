@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Exceptions\Auth\GoogleDomainNotAllowed;
 use App\Models\PersonalAccessToken;
 use App\Models\Role;
 use App\Models\User;
@@ -30,7 +31,8 @@ class AuthService
     /**
      * AUTH-07: the account for an email Google has verified. An existing active account is reused;
      * an existing account in any other status is refused (null) so Google cannot lift a ban or
-     * skip the admin gate; an unknown email gets a new active account with the default role.
+     * skip the admin gate; an unknown email gets a new active account with the default role,
+     * but only for an allowed email domain (GoogleDomainNotAllowed otherwise).
      * Linking is by verified email only (no schema change, see the ADR).
      */
     public function userForGoogle(string $email, string $name): ?User
@@ -41,6 +43,10 @@ class AuthService
 
         if ($user = $existing()) {
             return $user->status === 'active' ? $user->load('roles') : null;
+        }
+
+        if (! $this->googleDomainAllowed($email)) {
+            throw new GoogleDomainNotAllowed($email);
         }
 
         try {
@@ -56,6 +62,24 @@ class AuthService
 
             return $user && $user->status === 'active' ? $user->load('roles') : null;
         }
+    }
+
+    private function googleDomainAllowed(string $email): bool
+    {
+        $allowed = array_filter(array_map('trim', explode(',', Str::lower((string) config('services.google.allowed_domains')))));
+        if ($allowed === []) {
+            return true;
+        }
+
+        $domain = Str::after($email, '@');
+        foreach ($allowed as $pattern) {
+            $matches = str_starts_with($pattern, '*.') ? str_ends_with($domain, substr($pattern, 1)) : $domain === $pattern;
+            if ($matches) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Starts the cookie session for the web app: login, fresh session id, absolute-lifetime stamp, password hash. */

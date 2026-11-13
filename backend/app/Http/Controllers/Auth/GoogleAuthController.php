@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Exceptions\Auth\GoogleDomainNotAllowed;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\RedirectResponse;
@@ -40,7 +41,11 @@ class GoogleAuthController extends Controller
             return $this->toLogin('google_unverified');
         }
 
-        $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail());
+        try {
+            $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail());
+        } catch (GoogleDomainNotAllowed) {
+            return $this->toLogin('google_domain_not_allowed');
+        }
         if ($user === null) {
             return $this->toLogin('google_unavailable'); // existing account that is not active
         }

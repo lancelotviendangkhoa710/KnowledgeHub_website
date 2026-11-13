@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\Provider;
@@ -23,6 +24,10 @@ class GoogleLoginTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config(['services.google.allowed_domains' => 'example.com,*.edu.vn']);
+        // The throttle counts in the file cache that backend/.env selects, so reruns would add up.
+        $this->withoutMiddleware(ThrottleRequests::class);
 
         Role::insert([
             ['id' => (string) Str::uuid(), 'name' => 'user', 'description' => 'Default user role'],
@@ -121,6 +126,56 @@ class GoogleLoginTest extends TestCase
         $this->assertGuest('web');
     }
 
+    public function test_new_accounts_are_limited_to_the_allowed_domains(): void
+    {
+        $this->mockGoogle('student@hcmus.edu.vn', 'Student');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->assertDatabaseHas('users', ['email' => 'student@hcmus.edu.vn', 'status' => 'active']);
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('spam@notallowed.xyz', 'Spam');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_domain_not_allowed');
+        $this->assertDatabaseMissing('users', ['email' => 'spam@notallowed.xyz']);
+        $this->assertGuest('web');
+    }
+
+    public function test_an_existing_active_account_may_use_google_whatever_its_domain(): void
+    {
+        $existing = $this->createUser('old.member@legacy-domain.org', 'active');
+        $this->mockGoogle('old.member@legacy-domain.org', 'Old Member');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertAuthenticatedAs($existing, 'web');
+    }
+
+    public function test_domain_matching_is_exact_for_plain_entries_and_suffix_for_wildcards(): void
+    {
+        config(['services.google.allowed_domains' => 'gmail.com,*.edu']);
+
+        foreach (['x@evilgmail.com', 'x@gmail.com.evil.test', 'x@edu', 'x@notedu'] as $i => $email) {
+            $this->mockGoogle($email, 'X');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_domain_not_allowed');
+        }
+        foreach (['x@gmail.com', 'x@mit.edu', 'x@cs.mit.edu'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'X');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+    }
+
+    public function test_an_empty_allowlist_means_no_restriction(): void
+    {
+        config(['services.google.allowed_domains' => '']);
+        $this->mockGoogle('anyone@anywhere.test', 'Anyone');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertDatabaseHas('users', ['email' => 'anyone@anywhere.test']);
+    }
+
     public function test_email_of_a_deleted_account_gets_a_fresh_account(): void
     {
         $old = $this->createUser('back@example.com', 'active');
@@ -136,8 +191,9 @@ class GoogleLoginTest extends TestCase
     {
         $googleUser = (new GoogleUser)->setRaw(['email_verified' => $verified])->map(['id' => '1', 'name' => $name, 'email' => $email]);
         $provider = Mockery::mock(Provider::class);
-        $provider->shouldReceive('user')->andReturn($googleUser);
-        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+        // once(): each call consumes one expectation, so a test can mock several sign-ins in a row.
+        $provider->shouldReceive('user')->once()->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->once()->andReturn($provider);
     }
 
     private function createUser(string $email, string $status, string $role = 'user'): User

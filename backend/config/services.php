@@ -34,6 +34,9 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Email domains that may CREATE an account through Google (existing active accounts are not
+        // restricted). Comma separated; "*.edu" matches any subdomain suffix; empty = no restriction.
+        'allowed_domains' => env('GOOGLE_ALLOWED_DOMAINS', 'gmail.com,*.edu,*.edu.vn'),
     ],
 
     'slack' => [
