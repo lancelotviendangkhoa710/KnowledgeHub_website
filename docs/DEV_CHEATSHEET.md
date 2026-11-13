@@ -43,6 +43,18 @@ Truy cập website tại http://localhost:3000 và API tại
 http://localhost:8080/api/v1/categories. Các tài khoản test được nhóm cấp riêng.
 Đăng ký hoặc tạo nội dung sẽ ghi vào database dùng chung.
 
+## Đăng nhập bằng Google (tùy chọn)
+
+Nút "Continue with Google" cần OAuth client riêng, không có thì nút báo "chưa cấu hình".
+
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID (Web application).
+2. Authorized redirect URI: `http://localhost:3000/api/auth/google/callback`. Nếu app ở chế độ Testing, thêm email của bạn vào Test users.
+3. Điền vào `backend/.env` (không commit): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback`.
+4. `docker compose up -d --force-recreate app nginx`, rồi mở http://localhost:3000/login.
+
+Chỉ dùng http://localhost:3000 cho cả đăng nhập và duyệt web (cookie không chia sẻ giữa các địa chỉ khác nhau).
+Email Google chưa có tài khoản sẽ tạo tài khoản `active`; tài khoản `pending`, `inactive`, `banned` bị từ chối.
+
 ## Kiểm tra và xử lý lỗi
 
 ```powershell

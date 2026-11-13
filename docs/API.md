@@ -54,7 +54,7 @@ Identity/Auth, Content, and Learning progress endpoints are documented below.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
 | --- | --- | ---: | ---: | --- |
-| Identity/Auth | TEAM_MEMBER_A | 10 | 10 | AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
+| Identity/Auth | TEAM_MEMBER_A | 12 | 12 | AUTH-07 Google sign-in (2 browser routes); AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
 | Content | TEAM_MEMBER_B | 21 | 21 | Implemented in routes/api/content.php; verified with 37 tests |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 11 | 0 | AI-01..03 V1 implemented in routes/api/ai.php; contract is a V1 draft pending approval; chat is feature-flagged (`AI_CHAT_ENABLED=false`); owner still TBD |
@@ -128,6 +128,18 @@ return `401`; other tokens belonging to the same user remain valid.
 normalization, duplicate and soft-deleted email behavior, pending-login
 rejection, guest-only authorization failures, login throttling, token issuance,
 and current-token-only revocation.
+
+### IMPLEMENTED - GET `/api/auth/google/redirect` and `/api/auth/google/callback` (AUTH-07)
+
+Browser navigations for "Continue with Google" (decision: `docs/decisions/2026-11-13-google-sign-in.md`).
+They are web routes, not JSON endpoints, and are reached through the same `/api` proxy.
+
+- `redirect`: `302` to Google's consent screen. Without `GOOGLE_CLIENT_ID` it answers `302 /login?error=google_not_configured`.
+- `callback` (throttled to 20 per minute): needs the `state` Google echoes back. Always answers `302` to a relative URL:
+  - `/login` on success: a cookie session is started (same limits as the password login) and the login page forwards the signed-in visitor.
+  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google) or `google_unavailable` (the account exists but is not `active`).
+- A verified email without an account creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
+- A Google-only account has no usable password, so password login, change-password, account deletion and admin role changes (which ask for the current password) are not possible for it yet.
 
 ### IMPLEMENTED - GET `/api/me`
 
