@@ -19,13 +19,21 @@ Dùng **Session pooler** khi mạng chỉ có IPv4, `DB_SSLMODE=require`, và
 cấp nếu cần AI. Không đưa file này vào Git. `APP_KEY` phải là khóa Laravel riêng.
 
 ```powershell
+docker compose run --rm --no-deps app php artisan key:generate
 docker compose up -d --build
-docker compose exec app php artisan key:generate
-docker compose restart app nginx
 ```
 
 Chỉ chạy `key:generate` **lần đầu khi `APP_KEY` còn trống**; đổi khóa sau đó có
-thể làm dữ liệu được mã hóa bằng khóa cũ không còn đọc được. Lần chạy sau chỉ cần:
+thể làm dữ liệu được mã hóa bằng khóa cũ không còn đọc được. Container chạy một
+lần sẽ cài dependencies trước khi tạo khóa; khởi động các service sau đó để
+chúng nhận khóa mới. Nếu service đã chạy khi thay đổi `backend/.env`, tạo lại
+container để nạp cấu hình mới:
+
+```powershell
+docker compose up -d --force-recreate app nginx
+```
+
+Lần chạy sau chỉ cần:
 
 ```powershell
 docker compose up -d

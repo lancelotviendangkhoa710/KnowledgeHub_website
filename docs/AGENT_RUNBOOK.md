@@ -6,11 +6,13 @@ there as valuable. Never run tests, `migrate:fresh`, `migrate:refresh`,
 team approval and a reviewed recovery plan. The local test container is the
 only database for automated tests; its contents are disposable.
 
-For tests, first start the isolated database and application:
+For tests, first wait for the isolated database to become healthy, then run
+PHPUnit in a one-off app container. Its entrypoint installs missing dependencies
+before starting PHPUnit:
 
 ```powershell
-docker compose --profile test up -d app test-db
-docker compose exec -T app php vendor/bin/phpunit --testsuite=Unit
+docker compose --profile test up -d --wait test-db
+docker compose run --rm --no-deps app php vendor/bin/phpunit --testsuite=Unit
 ```
 
 Run PHPUnit directly so its safety bootstrap runs before Laravel starts. Clear

@@ -378,12 +378,10 @@ Do NOT auto-fix application code. Flag for team review. Each requires a team-app
 
 ```powershell
 docker compose up -d
-docker compose exec app php artisan migrate
-docker compose exec app php artisan db:seed
-docker compose exec app php artisan migrate:fresh --seed
-docker compose exec postgres psql -U knowledgehub -d knowledgehub
-docker compose exec app php artisan test
 ```
+
+See `docs/DEV_CHEATSHEET.md` for setup and read-only database checks, and
+`docs/AGENT_RUNBOOK.md` for tests against the disposable database.
 
 ---
 
