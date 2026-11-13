@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LandingCourseLink, LandingNavActions } from '@/components/auth/LandingActions';
 
 function BrandMark() {
   return (
@@ -31,10 +32,7 @@ export default function HomePage() {
             <a href="#how-it-works" className="nav-link">How It Works</a>
             <a href="#about" className="nav-link">About</a>
           </nav>
-          <div className="nav-actions">
-            <Link href="/login" className="nav-link nav-link--signin">Sign In</Link>
-            <Link href="/courses" className="btn btn--primary btn--sm">Explore Courses</Link>
-          </div>
+          <LandingNavActions />
         </div>
       </header>
 
@@ -55,7 +53,7 @@ export default function HomePage() {
                 KnowledgeHub brings curated courses, structured learning paths, and an AI companion that adapts to your goals — so every learning step moves you closer to mastery.
               </p>
               <div className="hero-actions">
-                <Link href="/courses" className="btn btn--primary">Explore Courses</Link>
+                <LandingCourseLink className="btn btn--primary" guestLabel="Explore Courses" memberLabel="Continue Learning" />
                 <a href="#features" className="btn btn--ghost">Discover Features</a>
               </div>
             </div>
@@ -135,7 +133,7 @@ export default function HomePage() {
         </section>
 
         <section className="cta-section" id="about" aria-labelledby="cta-heading">
-          <div className="container cta-inner"><div className="cta-content"><h2 className="cta-heading" id="cta-heading">Ready to take ownership<br />of your learning?</h2><p className="cta-desc">Explore curated courses, build lasting knowledge, and move forward with a learning path designed for you.</p><Link href="/courses" className="btn btn--white btn--lg">Start Exploring for Free</Link></div><div className="cta-shapes" aria-hidden="true"><div className="cta-shape cta-shape--a" /><div className="cta-shape cta-shape--b" /><div className="cta-shape cta-shape--c" /></div></div>
+          <div className="container cta-inner"><div className="cta-content"><h2 className="cta-heading" id="cta-heading">Ready to take ownership<br />of your learning?</h2><p className="cta-desc">Explore curated courses, build lasting knowledge, and move forward with a learning path designed for you.</p><LandingCourseLink className="btn btn--white btn--lg" guestLabel="Start Exploring for Free" memberLabel="Back to Your Courses" /></div><div className="cta-shapes" aria-hidden="true"><div className="cta-shape cta-shape--a" /><div className="cta-shape cta-shape--b" /><div className="cta-shape cta-shape--c" /></div></div>
         </section>
       </main>
 
