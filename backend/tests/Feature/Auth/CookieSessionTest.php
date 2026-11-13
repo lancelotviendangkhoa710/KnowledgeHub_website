@@ -36,6 +36,19 @@ class CookieSessionTest extends TestCase
 
         $this->assertAuthenticatedAs($user, 'web');
         $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertTrue(session()->has('password_hash_web'));
+    }
+
+    public function test_logout_with_a_bearer_token_from_a_web_origin_revokes_the_token(): void
+    {
+        $user = $this->createUser('both@example.com', 'active');
+        $token = $user->createToken('web')->plainTextToken;
+
+        $this->withHeaders(self::WEB + ['Authorization' => 'Bearer '.$token])
+            ->postJson('/api/auth/logout')
+            ->assertOk();
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
     public function test_login_without_web_origin_still_returns_a_token(): void

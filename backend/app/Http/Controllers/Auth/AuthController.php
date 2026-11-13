@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
+use Laravel\Sanctum\TransientToken;
 
 class AuthController extends Controller
 {
@@ -41,8 +42,14 @@ class AuthController extends Controller
 
         // Web app (stateful request): the session cookie is the credential, no token in JSON.
         if ($this->isCookieSession($request)) {
-            Auth::guard('web')->login($result['user']);
+            $guard = Auth::guard('web');
+            $guard->login($result['user']);
             $request->session()->regenerate();
+            // Same value Sanctum's AuthenticateSession compares: a password change made before this
+            // session's first request must still end the session.
+            $request->session()->put('password_hash_web', method_exists($guard, 'hashPasswordForCookie')
+                ? $guard->hashPasswordForCookie($result['user']->getAuthPassword())
+                : $result['user']->getAuthPassword());
             $request->session()->put('login_at', time());
         }
 
@@ -60,7 +67,9 @@ class AuthController extends Controller
     {
         $this->authorize('logout', User::class);
 
-        if ($this->isCookieSession($request)) {
+        // Decide by the credential that authenticated this request, not by Origin: a bearer token
+        // sent from a stateful origin must still be revoked.
+        if ($request->hasSession() && $request->user()->currentAccessToken() instanceof TransientToken) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
