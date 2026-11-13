@@ -33,9 +33,9 @@ Chia theo domain owner, giao nguyên vertical module; task nhỏ là từng feat
 
 ### Khiêm — Identity/Auth (`TEAM_MEMBER_A`, `p1/`)
 
-1. AUTH-01 Đăng ký/đăng nhập/đăng xuất — ưu tiên đầu; mức vừa.
-2. AUTH-02 Hồ sơ/tài khoản — sau AUTH-01.
-3. AUTH-03 Gán role — sau auth cơ bản; cần kiểm tra kỹ vì đặc quyền.
+1. AUTH-01 Đăng ký/đăng nhập/đăng xuất — ưu tiên đầu; mức vừa. **DONE** (PR #8).
+2. AUTH-02 Hồ sơ/tài khoản — sau AUTH-01. **DONE** (PR #11).
+3. AUTH-03 Gán role — sau auth cơ bản; cần kiểm tra kỹ vì đặc quyền. **DONE** (PR #15 backend, #20 UI).
 
 ### Khua — Content (`TEAM_MEMBER_B`, `p2/`)
 
