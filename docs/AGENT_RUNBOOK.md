@@ -10,9 +10,11 @@ For tests, first start the isolated database and application:
 
 ```powershell
 docker compose --profile test up -d app test-db
-docker compose exec -T app php artisan test --testsuite=Unit
+docker compose exec -T app php vendor/bin/phpunit --testsuite=Unit
 ```
 
+Run PHPUnit directly so its safety bootstrap runs before Laravel starts. Clear
+any Laravel config cache first; PHPUnit refuses to run when it detects one.
 `backend/tests/bootstrap.php` overrides inherited DB settings; the Laravel
 test base class checks the resulting connection before tests run. Never bypass
 either guard or reuse `test-db` for shared data. The test database uses tmpfs
