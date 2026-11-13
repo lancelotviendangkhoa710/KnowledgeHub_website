@@ -36,7 +36,25 @@ class CookieSessionTest extends TestCase
 
         $this->assertAuthenticatedAs($user, 'web');
         $this->assertDatabaseCount('personal_access_tokens', 0);
-        $this->assertTrue(session()->has('password_hash_web'));
+    }
+
+    public function test_changing_the_password_ends_a_session_before_its_first_request(): void
+    {
+        $user = $this->createUser('pw@example.com', 'active');
+
+        $login = $this->withHeaders(self::WEB)
+            ->postJson('/api/auth/login', ['email' => 'pw@example.com', 'password' => 'password-123'])
+            ->assertOk();
+        $sessionCookie = $login->getCookie(config('session.cookie'), false)->getValue();
+
+        // Password changed elsewhere before the new session sent any request.
+        $user->forceFill(['password' => Hash::make('another-password-456')])->save();
+        $this->app['auth']->forgetGuards(); // the next request starts with no cached user
+
+        $this->withUnencryptedCookie(config('session.cookie'), $sessionCookie)
+            ->withHeaders(self::WEB)
+            ->getJson('/api/me')
+            ->assertUnauthorized();
     }
 
     public function test_logout_with_a_bearer_token_from_a_web_origin_revokes_the_token(): void
