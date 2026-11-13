@@ -65,6 +65,17 @@ export async function logout(): Promise<void> {
   setCurrentUser(null);
 }
 
+/** Asks the server who the cookie session belongs to, whatever the local marker says. */
+export async function probeSession(): Promise<AuthUser | null> {
+  try {
+    const res = await api.get<{ data: { user: AuthUser } }>('/me');
+    setCurrentUser(res.data.user);
+    return res.data.user;
+  } catch {
+    return null;
+  }
+}
+
 let restoring: Promise<void> | null = null;
 
 /** After a reload the cookie session may still be valid: ask the server who we are (once at a time). */

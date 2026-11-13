@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useState } from 'react';
-import { login } from '@/lib/auth';
+import { FormEvent, useEffect, useState } from 'react';
+import { login, probeSession } from '@/lib/auth';
 
 function getSafeRedirectUrl(param: string | null): string {
   if (!param) return '/courses';
@@ -27,6 +27,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Already signed in (cookie session still valid): the API refuses a second login, so skip this page.
+  useEffect(() => {
+    void probeSession().then((user) => {
+      if (user) router.replace(getSafeRedirectUrl(new URLSearchParams(window.location.search).get('redirect')));
+    });
+  }, [router]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

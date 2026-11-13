@@ -10,6 +10,7 @@
 const KEY = 'kh_signed_in';
 let memory: string | null = null;
 
+/** Browser-only. Do not read it while rendering (the server cannot): use it in effects and handlers. */
 export function getAccessToken(): string | null {
   if (typeof window === 'undefined') {
     return null;

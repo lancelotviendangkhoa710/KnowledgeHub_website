@@ -313,6 +313,8 @@ export default function CourseDetailPage() {
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
+  const [mounted, setMounted] = useState(false); // the signed-in marker is browser-only: read it after mount
+  useEffect(() => setMounted(true), []);
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
 
   useEffect(() => {
@@ -595,7 +597,7 @@ export default function CourseDetailPage() {
 
   const version = article?.published_version || article?.latest_version;
   const content = version?.content || 'No content recorded for this version.';
-  const isGuest = !currentUser && !getAccessToken();
+  const isGuest = !currentUser && !(mounted && getAccessToken());
 
   const { introContent, remainingContent } = useMemo(() => {
     if (!content || !article) return { introContent: '', remainingContent: '' };

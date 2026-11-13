@@ -95,6 +95,8 @@ function CoursesCatalog() {
   const categoriesAbortRef = useRef<AbortController | null>(null);
   const listTopRef = useRef<HTMLElement | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
+  const [mounted, setMounted] = useState(false); // the signed-in marker is browser-only: read it after mount
+  useEffect(() => setMounted(true), []);
 
   /** Keeps `currentUser` in sync with the auth store and resolves the profile when only a token exists. */
   useEffect(() => {
@@ -637,7 +639,7 @@ function CoursesCatalog() {
 
       {/* Contributor Action Strip */}
       {(() => {
-        const isGuest = !currentUser && !getAccessToken();
+        const isGuest = !currentUser && !(mounted && getAccessToken());
         const isContributorOrAdmin =
           currentUser?.roles?.some((r) => r === 'contributor' || r === 'admin') ?? false;
 
