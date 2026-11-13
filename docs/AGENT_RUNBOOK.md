@@ -34,5 +34,6 @@ Never print credentials or tokens from environment files or logs.
 
 If API requests fail with PostgreSQL prepared statement protocol errors while
 using Supabase transaction pooling, obtain the correct session-pooler endpoint
-from Supabase and disable persistent connections. Restart app and nginx after
-changing backend connection settings. No database reset is required.
+from Supabase and disable persistent connections. Recreate app and nginx after
+changing backend connection settings so they load the new environment:
+`docker compose up -d --force-recreate app nginx`. No database reset is required.

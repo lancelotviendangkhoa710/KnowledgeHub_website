@@ -1,5 +1,10 @@
 # Development Setup Guide
 
+> **Historical guidance:** The commands below describe an older local database
+> configuration and are not valid for the shared Supabase development database.
+> Do not execute them against shared data. Use [DEV_CHEATSHEET.md](DEV_CHEATSHEET.md)
+> for current setup and [AGENT_RUNBOOK.md](AGENT_RUNBOOK.md) for isolated tests.
+
 **Target**: New team members setting up KnowledgeHub development environment  
 **Role**: Database & Data Engineering  
 **OS**: Windows (primary), Linux/Mac (community-supported)
@@ -152,14 +157,7 @@ netstat -ano | findstr :5432
 ```
 
 ### Migration fails
-```powershell
-# Reset database (WARNING: destroys all data)
-docker compose exec app php artisan migrate:fresh --seed
-
-# Or manually drop/create database
-docker compose exec postgres psql -U knowledgehub -c "DROP DATABASE knowledgehub;"
-docker compose exec postgres psql -U knowledgehub -c "CREATE DATABASE knowledgehub;"
-```
+Stop and coordinate with the team; do not reset or seed the shared database.
 
 ### Permission errors
 ```powershell
