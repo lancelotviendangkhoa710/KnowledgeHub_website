@@ -135,9 +135,9 @@ Browser navigations for "Continue with Google" (decision: `docs/decisions/2026-1
 They are web routes, not JSON endpoints, and are reached through the same `/api` proxy.
 
 - `redirect`: `302` to Google's consent screen. Without `GOOGLE_CLIENT_ID` it answers `302 /login?error=google_not_configured`.
-- `callback` (throttled to 20 per minute): needs the `state` Google echoes back. Always answers `302` to a relative URL:
+- `callback`: needs the `state` Google echoes back (no per-IP throttle: behind the proxy all visitors share one IP). Always answers `302` to a relative URL:
   - `/login` on success: a cookie session is started (same limits as the password login) and the login page forwards the signed-in visitor.
-  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`) or `google_too_many_signups` (the per-IP or overall hourly limit on new accounts is reached).
+  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_email_unconfirmed` (verified, but Google does not vouch for ownership: not Gmail and no matching hosted domain), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`) or `google_too_many_signups` (the per-IP or overall hourly limit on new accounts is reached).
 - A verified email without an account, on an allowed domain (default `*.edu`, `*.edu.vn`; configurable, empty = no limit) and under the new-account limits (per public IP per day, default 3; overall per hour, default 30), creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
 - A Google-only account has no usable password, so password login, change-password, account deletion and admin role changes (which ask for the current password) are not possible for it yet.
 
