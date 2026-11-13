@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful;
 
 class AuthController extends Controller
 {
@@ -34,15 +36,23 @@ class AuthController extends Controller
         $result = $this->authService->login(
             $request->validated('email'),
             $request->validated('password'),
+            ! $this->isCookieSession($request),
         );
+
+        // Web app (stateful request): the session cookie is the credential, no token in JSON.
+        if ($this->isCookieSession($request)) {
+            Auth::guard('web')->login($result['user']);
+            $request->session()->regenerate();
+            $request->session()->put('login_at', time());
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Signed in successfully.',
-            'data' => [
+            'data' => array_filter([
                 'user' => $this->userData($result['user']),
-                'token' => $result['token']->plainTextToken,
-            ],
+                'token' => $result['token']?->plainTextToken,
+            ]),
         ]);
     }
 
@@ -50,13 +60,24 @@ class AuthController extends Controller
     {
         $this->authorize('logout', User::class);
 
-        $this->authService->logout($request->user(), $request->bearerToken());
+        if ($this->isCookieSession($request)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        } else {
+            $this->authService->logout($request->user(), $request->bearerToken());
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Signed out successfully.',
             'data' => null,
         ]);
+    }
+
+    private function isCookieSession(Request $request): bool
+    {
+        return $request->hasSession() && EnsureFrontendRequestsAreStateful::fromFrontend($request);
     }
 
     private function userData(object $user): array

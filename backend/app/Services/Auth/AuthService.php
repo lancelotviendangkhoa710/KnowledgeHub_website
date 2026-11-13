@@ -57,8 +57,8 @@ class AuthService
         }
     }
 
-    /** @return array{user: User, token: NewAccessToken} */
-    public function login(string $email, string $password): array
+    /** @return array<string, User|NewAccessToken|null> user and access token (null for cookie-session callers) */
+    public function login(string $email, string $password, bool $issueToken = true): array
     {
         $invalid = fn () => ValidationException::withMessages([
             'email' => ['The provided credentials are invalid.'],
@@ -72,7 +72,7 @@ class AuthService
 
         // Re-check status and hash on the locked row so a concurrent ban or password
         // change cannot leave a fresh token behind.
-        return $this->database->transaction(function () use ($candidate, $invalid): array {
+        return $this->database->transaction(function () use ($candidate, $invalid, $issueToken): array {
             $user = User::query()->whereKey($candidate->getKey())->lockForUpdate()->first();
 
             if (! $user || $user->status !== 'active' || $user->password !== $candidate->password) {
@@ -81,7 +81,7 @@ class AuthService
 
             return [
                 'user' => $user->load('roles'),
-                'token' => $user->createToken('web'),
+                'token' => $issueToken ? $user->createToken('web') : null,
             ];
         });
     }

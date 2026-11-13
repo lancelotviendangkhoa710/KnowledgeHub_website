@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnforceSessionPolicy;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,7 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        $middleware->statefulApi();
+        $middleware->appendToGroup('api', EnforceSessionPolicy::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // API clients get a stable, model-agnostic 404 instead of Laravel's raw
