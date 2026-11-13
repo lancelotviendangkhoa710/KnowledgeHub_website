@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { aiCompanionClient } from '@/lib/aiCompanionClient';
+import RoadmapForm from '@/components/learning/RoadmapForm';
 import { getAccessToken } from '@/lib/authToken';
 import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
 import styles from './companion.module.css';
@@ -181,6 +183,7 @@ export default function AICompanionPage() {
   const [staleNotice, setStaleNotice] = useState(false);
   const [retryNotice, setRetryNotice] = useState<string | null>(null);
   const [failedSend, setFailedSend] = useState<FailedSend | null>(null);
+  const [roadmapMode, setRoadmapMode] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -206,6 +209,7 @@ export default function AICompanionPage() {
   const skipMessagesLoadRef = useRef<string | null>(null);
   const preserveScrollRef = useRef<{ height: number; top: number } | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const roadmapPaneRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const memoryCloseRef = useRef<HTMLButtonElement | null>(null);
   const mountedRef = useRef(true);
@@ -214,6 +218,10 @@ export default function AICompanionPage() {
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+
+  useEffect(() => {
+    if (roadmapMode) roadmapPaneRef.current?.scrollTo({ top: 0 });
+  }, [roadmapMode]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -1093,6 +1101,10 @@ export default function AICompanionPage() {
             </div>
           )}
 
+          <div ref={roadmapPaneRef} style={{ display: roadmapMode ? 'block' : 'none', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            <RoadmapForm onBack={() => setRoadmapMode(false)} />
+          </div>
+          {!roadmapMode && <>
           <div
             ref={threadRef}
             className={styles.thread}
@@ -1196,7 +1208,12 @@ export default function AICompanionPage() {
             <p id="ai-companion-helper" className={styles.helperText}>
               AI Companion can make mistakes. Check important information against your course material.
             </p>
+            <div className={styles.roadmapActionButtons} style={{ justifyContent: 'center', marginTop: '0.75rem' }}>
+              <Link className={styles.smallSecondaryButton} href="/learning/my-roadmaps">My AI Roadmaps</Link>
+              <button type="button" className={styles.smallPrimaryButton} onClick={() => setRoadmapMode(true)}>Create Roadmap with AI</button>
+            </div>
           </div>
+          </>}
         </section>
       </div>
 

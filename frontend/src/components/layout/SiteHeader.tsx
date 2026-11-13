@@ -45,7 +45,8 @@ export default function SiteHeader() {
           <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Discover</Link>
           <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Courses</Link>
           <Link href="/bookmarks" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Saved</Link>
-          <Link href="/learning/roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Roadmaps</Link>
+          <Link href="/learning/roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Roadmap Templates</Link>
+          {user && <Link href="/learning/my-roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>My Roadmaps</Link>}
           <Link href="/ai/companion" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>AI Companion</Link>
           {isContributorOrAdmin && (
             <Link

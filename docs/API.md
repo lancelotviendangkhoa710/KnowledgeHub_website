@@ -503,7 +503,7 @@ filters, pagination, token revocation, strict payload).
 
 | Method | Path | Request | Success | Main errors |
 |---|---|---|---|---|
-| GET | `/api/learning/roadmaps` | — | 200, `data` array; owner sees own, Admin sees all; items ordered by `position` | 401 |
+| GET | `/api/learning/roadmaps` | Optional `mine=1`, `origin=legacy|ai` | 200, `data` array; owner sees own, Admin sees all unless `mine=1`; items ordered by `position` | 401, 422 |
 | POST | `/api/learning/roadmaps` | `title` required, `goal` required, `status` optional enum | 201, `data` roadmap with `items` | 401, 422 |
 | GET | `/api/learning/roadmaps/{roadmap}` | UUID path | 200, `data` roadmap with items | 401, 404 foreign/unknown |
 | PUT | `/api/learning/roadmaps/{roadmap}` | partial `title`, `goal`, `status` | 200, `data` roadmap | 401, 404, 422 |
@@ -587,6 +587,78 @@ The full graph for the roadmap is validated before insert. Concurrent edge addit
 ---
 
 ## 7. AI Companion / Roadmap Assistant
+
+### IMPLEMENTED — Conversation-based personalized roadmap
+
+`POST /api/ai/conversations/{conversation}/roadmaps/preview` and
+`POST /api/ai/conversations/{conversation}/roadmaps/confirm` require Sanctum and an
+owner-scoped conversation. A foreign conversation returns 404, including for
+Admin; guests receive 401. The new flow does not change the two older AI-05
+endpoints below.
+
+Preview reads at most 20 recent chat turns and 10 active explicit memories. It
+uses the existing FastAPI/DeepSeek service to extract goal, level, weeks, weekly
+hours, constraints and 1–12 skills. If essentials are missing, it returns
+`data: {"state":"needs_input","question":"...","missing_fields":[...]}` and
+stores the question as an assistant message. Otherwise it retrieves multiple
+published course candidates, ranks them, composes 4–12 ordered stages, searches
+official documentation for uncovered skills, and returns:
+
+```json
+{
+  "status": "success",
+  "data": {
+    "state": "ready",
+    "preview_token": "opaque encrypted token",
+    "expires_at": "ISO-8601 timestamp",
+    "draft": {
+      "title": "Data engineer path",
+      "summary": "A practical plan",
+      "goal": "Become a data engineer",
+      "items": [{"position": 1, "title": "SQL", "description": "Practice queries", "stage_title": "Foundation", "skills": ["SQL"], "estimated_minutes": 1440, "article_id": "published-course-uuid-or-null", "course": {"id": "published-course-uuid", "title": "Published title", "url": "/courses/slug"}, "external_resources": []}],
+      "coverage": {"internal_percent": 75, "external_percent": 0, "overall_percent": 75, "gaps": ["Airflow"], "skills": [{"skill": "SQL", "internal": 100, "external": 0, "evidence": ["Published title — Published course title or tag"]}], "resource_status": "ok"}
+    }
+  }
+}
+```
+
+Numbers above illustrate the response shape, not a hardcoded result. Scores are
+deterministic averages of per-skill evidence: title/tag match 100%, published
+content/category match 75%, related-term match 50%, no match 0%. Verified
+external material fills only the uncovered portion and is reported separately.
+`resource_status=unavailable` means web retrieval could not be verified; no URL
+is invented. A score describes resource fit, not learner mastery. Preview does
+not create a Learning roadmap. Companion previews are limited to 10 requests
+per minute per user.
+
+Confirm accepts `{ "preview_token": "..." }` only. The token binds user,
+conversation and generation key, expires after 30 minutes, and prevents client
+changes to the preview. Laravel rechecks published course IDs and external URL
+accessibility before one transaction saves the roadmap and items. Success is
+201; a replay of the same token returns the same roadmap with 200. Invalid or
+expired tokens return 422, changed resources return 409, and provider failures
+return 502/503/504. The saved response includes `origin=ai`, `ai_summary`,
+`coverage`, and each item's `ai_details` (stage, skills, estimated minutes,
+canonical course snapshot and verified external resources). On later Learning
+reads, a course link is returned only while the article remains published.
+Previously saved roadmaps have `origin=legacy`; no old data is reclassified.
+
+The independent form in `/ai/companion` uses two additional authenticated
+endpoints. `POST /api/ai/roadmaps/form-preview` accepts multipart fields
+`career_goal` (3–500 characters), `current_level` (free text, 3–200),
+`target_job_requirements` (1–5000), `weeks` (1–104),
+`hours_per_week` (1–80), and optional `cv_file` (PDF, at most 2 MiB).
+It returns the same `state=ready`, `draft`, `preview_token`, `expires_at`
+envelope as the conversation preview. The PDF is parsed in memory by FastAPI;
+blank/scanned/encrypted or malformed PDFs receive 422. The draft includes
+`week_start`/`week_end`, total item minutes equal to the requested study budget,
+and optional `cv_analysis` with quoted skill evidence, gaps, recommendations
+and a deterministic CV match percentage. Raw PDF and extracted CV text are not
+stored. `POST /api/ai/roadmaps/form-confirm` accepts only
+`{ "preview_token": "..." }`; it saves without a conversation link and has
+the same owner binding, 30-minute expiry, course/resource recheck and
+idempotent 201/200 behavior. Unauthorized requests return 401, invalid input
+422, changed sources 409, rate limit 429 and service errors 502/503/504.
 
 ### IMPLEMENTED — POST `/api/ai/roadmaps/preview`
 

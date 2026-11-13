@@ -631,6 +631,9 @@
   overflow-wrap: anywhere;
 }
 
+.roadmapActionButtons { display: flex; gap: 0.45rem; flex-wrap: wrap; flex: 0 0 auto; }
+.roadmapActionButtons a { text-decoration: none; }
+
 /* ------------------------------------------------------------------ */
 /* Thread                                                              */
 /* ------------------------------------------------------------------ */
@@ -1308,6 +1311,8 @@
 }
 
 @media (max-width: 640px) {
+  .roadmapActionButtons { width: 100%; }
+  .roadmapActionButtons > * { flex: 1 1 auto; }
   .shell {
     padding: 0 0.75rem;
   }

@@ -11,7 +11,12 @@ class LearningRoadmap extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['user_id', 'title', 'goal', 'status'];
+    protected $fillable = ['user_id', 'title', 'goal', 'status', 'origin', 'generation_key', 'ai_summary', 'coverage'];
+
+    protected function casts(): array
+    {
+        return ['coverage' => 'array'];
+    }
 
     public function user(): BelongsTo
     {

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AI\ConversationController;
+use App\Http\Controllers\AI\CompanionRoadmapController;
+use App\Http\Controllers\AI\FormRoadmapController;
 use App\Http\Controllers\AI\MessageController;
 use App\Http\Controllers\AI\RetentionPurgeController;
 use App\Http\Controllers\AI\RoadmapGenerationController;
@@ -18,6 +20,14 @@ Route::middleware('auth:sanctum')->group(function () {
     // AI-05 Roadmap Assistant - TEAM_MEMBER_C
     Route::post('/ai/roadmaps/preview', [RoadmapGenerationController::class, 'preview']);
     Route::post('/ai/roadmaps/confirm', [RoadmapGenerationController::class, 'confirm']);
+    Route::post('/ai/roadmaps/form-preview', [FormRoadmapController::class, 'preview']);
+    Route::post('/ai/roadmaps/form-confirm', [FormRoadmapController::class, 'confirm']);
+
+    // AI-05 Companion flow; owner-scoped conversation context and signed preview.
+    Route::post('/ai/conversations/{conversation}/roadmaps/preview', [CompanionRoadmapController::class, 'preview'])
+        ->whereUuid('conversation');
+    Route::post('/ai/conversations/{conversation}/roadmaps/confirm', [CompanionRoadmapController::class, 'confirm'])
+        ->whereUuid('conversation');
 
     // AI-01 Conversations
     Route::get('/ai/conversations', [ConversationController::class, 'index']);

@@ -160,6 +160,10 @@ erDiagram
         string title
         text goal
         string status "active|completed|archived|paused"
+        string origin "legacy|ai"
+        uuid generation_key "nullable unique"
+        text ai_summary "nullable"
+        jsonb coverage "nullable score snapshot"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -171,6 +175,7 @@ erDiagram
         text description
         smallint position "unique per roadmap"
         string status "pending|in_progress|completed|skipped"
+        jsonb ai_details "nullable stage and resources"
         timestamptz created_at
         timestamptz updated_at
     }

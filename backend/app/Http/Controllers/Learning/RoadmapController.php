@@ -16,10 +16,14 @@ class RoadmapController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $filters = $request->validate([
+            'mine' => ['sometimes', 'boolean'],
+            'origin' => ['sometimes', 'in:legacy,ai'],
+        ]);
         return response()->json([
             'status' => 'success',
             'message' => 'Roadmaps retrieved successfully.',
-            'data' => $this->roadmaps->list($request->user()),
+            'data' => $this->roadmaps->list($request->user(), (bool) ($filters['mine'] ?? false), $filters['origin'] ?? null),
         ]);
     }
 

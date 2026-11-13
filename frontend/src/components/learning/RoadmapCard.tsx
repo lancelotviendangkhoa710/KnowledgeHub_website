@@ -24,6 +24,7 @@ const progressOptions: { value: RoadmapItemStatus; label: string }[] = [
 const roadmapStatuses: RoadmapStatus[] = ['active', 'paused', 'completed', 'archived'];
 
 export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: Props) {
+  const isAiRoadmap = roadmap.origin === 'ai';
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(roadmap.title);
@@ -144,11 +145,17 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
   };
 
   return (
-    <article style={{ padding: '1.75rem', background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-xs)' }}>
+    <article id={roadmap.id} style={{ padding: '1.75rem', background: 'var(--color-white)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-xs)', scrollMarginTop: '5rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 280px' }}>
           <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.5rem' }}>{roadmap.title}</h2>
           <p style={{ color: 'var(--color-gray)', marginBottom: '0.75rem', lineHeight: 1.6 }}>{roadmap.goal}</p>
+          {isAiRoadmap && roadmap.ai_summary && <p style={{ color: 'var(--color-gray)', marginBottom: '0.75rem', lineHeight: 1.6 }}>{roadmap.ai_summary}</p>}
+          {isAiRoadmap && roadmap.coverage && (
+            <p style={{ color: 'var(--color-primary)', marginBottom: '0.75rem', fontWeight: 700 }}>
+              Roadmap Match Score {Math.round(roadmap.coverage.overall_percent)}% · Internal courses {Math.round(roadmap.coverage.internal_percent)}% · External support {Math.round(roadmap.coverage.external_percent)}% · Remaining gaps {roadmap.coverage.gaps.length}
+            </p>
+          )}
           <p style={{ color: 'var(--color-gray)', margin: 0 }}>
             {completedCount} of {roadmap.items.length} steps completed · {roadmap.status}
           </p>
@@ -171,7 +178,7 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
       {open && (
         <div id={`roadmap-${roadmap.id}`} style={{ borderTop: '1px solid var(--color-border)', marginTop: '1.5rem', paddingTop: '1.5rem' }}>
           {error && <p role="alert" style={{ color: '#b42318' }}>{error}</p>}
-          {editing ? (
+          {!isAiRoadmap && editing ? (
             <form onSubmit={saveRoadmap} style={{ display: 'grid', gap: '0.75rem', marginBottom: '1.75rem' }}>
               <label>Roadmap title<input aria-label="Edit roadmap title" required maxLength={255} value={title} onChange={(event) => setTitle(event.target.value)} style={{ display: 'block', width: '100%', padding: '0.6rem' }} /></label>
               <label>Learning goal<textarea aria-label="Edit learning goal" required value={goal} onChange={(event) => setGoal(event.target.value)} rows={2} style={{ display: 'block', width: '100%', padding: '0.6rem' }} /></label>
@@ -183,10 +190,26 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
                 <button type="button" className="btn btn-secondary" onClick={() => setEditing(false)} disabled={busy !== null}>Cancel</button>
               </div>
             </form>
-          ) : (
+          ) : !isAiRoadmap ? (
             <button type="button" className="btn btn-secondary" style={{ marginBottom: '1.5rem' }} onClick={() => { setTitle(roadmap.title); setGoal(roadmap.goal); setStatus(roadmap.status); setEditing(true); }}>
               Edit roadmap
             </button>
+          ) : null}
+
+          {isAiRoadmap && roadmap.coverage && (
+            <div style={{ background: 'var(--color-primary-faint)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '0.9rem 1rem', marginBottom: '1.5rem' }}>
+              <strong>Resource coverage at creation: {Math.round(roadmap.coverage.overall_percent)}%</strong>
+              <p style={{ margin: '0.3rem 0', color: 'var(--color-gray)', fontSize: '0.85rem' }}>This is a snapshot of resource relevance when the roadmap was created, not a measure of mastery.</p>
+              {roadmap.coverage.gaps.length > 0 && <p style={{ margin: 0, color: '#9a3412', fontSize: '0.85rem' }}>Remaining skill gaps: {roadmap.coverage.gaps.join(', ')}</p>}
+              {roadmap.coverage.resource_status === 'unavailable' && <p style={{ margin: '0.4rem 0 0', color: '#9a3412', fontSize: '0.85rem' }}>External resource search was unavailable when this roadmap was created.</p>}
+              {roadmap.coverage.cv_analysis && <div style={{ marginTop: '0.7rem', fontSize: '0.84rem', color: 'var(--color-charcoal)' }}>
+                <strong>CV analysis</strong>
+                {roadmap.coverage.cv_analysis.cv_match_percent !== null && <p style={{ margin: '0.25rem 0' }}>Target role match: {Math.round(roadmap.coverage.cv_analysis.cv_match_percent)}%</p>}
+                {roadmap.coverage.cv_analysis.strengths.length > 0 && <p style={{ margin: '0.25rem 0' }}>Strengths: {roadmap.coverage.cv_analysis.strengths.map((entry) => `${entry.skill} (${entry.evidence})`).join('; ')}</p>}
+                {roadmap.coverage.cv_analysis.gaps.length > 0 && <p style={{ margin: '0.25rem 0' }}>Skills to develop: {roadmap.coverage.cv_analysis.gaps.join(', ')}</p>}
+                {roadmap.coverage.cv_analysis.recommendations.length > 0 && <p style={{ margin: '0.25rem 0' }}>Suggestions: {roadmap.coverage.cv_analysis.recommendations.join('; ')}</p>}
+              </div>}
+            </div>
           )}
 
           <h3 style={{ color: 'var(--color-charcoal)', marginBottom: '1rem' }}>Learning steps</h3>
@@ -206,15 +229,26 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
                 ) : (
                   <div style={{ display: 'grid', gap: '0.55rem' }}>
                     <strong>{item.title}</strong>
+                    {isAiRoadmap && item.ai_details?.stage_title && <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700 }}>{item.ai_details.stage_title}</span>}
+                    {isAiRoadmap && item.ai_details?.week_start && item.ai_details?.week_end && <span style={{ fontSize: '0.78rem', color: 'var(--color-gray)' }}>Week {item.ai_details.week_start}{item.ai_details.week_end > item.ai_details.week_start ? `–${item.ai_details.week_end}` : ''}</span>}
+                    {isAiRoadmap && item.ai_details?.estimated_minutes && <span style={{ fontSize: '0.78rem', color: 'var(--color-gray)' }}>Estimated time: {Math.round(item.ai_details.estimated_minutes / 60 * 10) / 10} hours</span>}
                     {item.description && <p style={{ margin: 0, color: 'var(--color-gray)' }}>{item.description}</p>}
-                    {item.article_id && <Link href={`/courses/${encodeURIComponent(item.article_id)}`}>Open course</Link>}
+                    {isAiRoadmap && item.ai_details?.skills && item.ai_details.skills.length > 0 && <p style={{ margin: 0, fontSize: '0.83rem' }}><strong>Skills:</strong> {item.ai_details.skills.join(', ')}</p>}
+                    {item.article_id && (!isAiRoadmap || item.ai_details?.course) && <Link href={`/courses/${encodeURIComponent(item.article_id)}`}>Internal course: {item.ai_details?.course?.title ?? 'Open course'}</Link>}
+                    {isAiRoadmap && item.ai_details?.course?.reason && <span style={{ fontSize: '0.8rem', color: 'var(--color-gray)' }}>Why this course: {item.ai_details.course.reason}</span>}
+                    {isAiRoadmap && item.article_id && !item.ai_details?.course && <span style={{ color: 'var(--color-gray)', fontSize: '0.82rem' }}>A linked course is no longer available.</span>}
+                    {isAiRoadmap && (item.ai_details?.external_resources ?? []).filter((resource) => resource.url.startsWith('https://')).map((resource) => (
+                      <a key={resource.url} href={resource.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontSize: '0.84rem' }}>
+                        External resource: {resource.title} ↗ <span style={{ color: 'var(--color-gray)' }}>· {resource.reason}</span>
+                      </a>
+                    ))}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <label htmlFor={`progress-${item.id}`}>Progress</label>
                       <select id={`progress-${item.id}`} aria-label={`Progress for ${item.title}`} value={item.status} disabled={busy !== null} onChange={(event) => void changeProgress(item, event.target.value as RoadmapItemStatus)} style={{ padding: '0.45rem' }}>
                         {progressOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
-                      <button type="button" className="btn btn-secondary" disabled={busy !== null} onClick={() => startEditingItem(item)}>Edit step</button>
-                      <button type="button" className="btn btn-secondary" disabled={busy !== null} onClick={() => void removeItem(item)}>Delete step</button>
+                      {!isAiRoadmap && <button type="button" className="btn btn-secondary" disabled={busy !== null} onClick={() => startEditingItem(item)}>Edit step</button>}
+                      {!isAiRoadmap && <button type="button" className="btn btn-secondary" disabled={busy !== null} onClick={() => void removeItem(item)}>Delete step</button>}
                     </div>
                   </div>
                 )}
@@ -222,12 +256,12 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
             ))}
           </ol>
 
-          <form onSubmit={addItem} style={{ display: 'grid', gap: '0.65rem', marginTop: '1.5rem' }}>
+          {!isAiRoadmap && <form onSubmit={addItem} style={{ display: 'grid', gap: '0.65rem', marginTop: '1.5rem' }}>
             <h4 style={{ margin: 0 }}>Add a step</h4>
             <input aria-label="New step title" required maxLength={255} placeholder="Step title" value={newItemTitle} onChange={(event) => setNewItemTitle(event.target.value)} style={{ padding: '0.6rem' }} />
             <textarea aria-label="New step description" placeholder="Description (optional)" rows={2} value={newItemDescription} onChange={(event) => setNewItemDescription(event.target.value)} style={{ padding: '0.6rem' }} />
             <button className="btn btn-primary" disabled={busy !== null} style={{ justifySelf: 'start' }}>{busy === 'new-item' ? 'Adding…' : 'Add step'}</button>
-          </form>
+          </form>}
         </div>
       )}
     </article>
