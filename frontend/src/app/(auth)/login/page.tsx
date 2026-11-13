@@ -28,6 +28,7 @@ const GOOGLE_ERRORS: Record<string, string> = {
   google_unavailable: 'This account cannot sign in with Google. It may be pending approval or suspended; contact an administrator.',
   google_domain_not_allowed: 'This email domain is not approved for new accounts. Use an approved address (such as a school email) or ask an administrator to allow your domain.',
   google_too_many_signups: 'Too many new accounts were created recently. Please try again later.',
+  google_email_unconfirmed: 'Google cannot confirm that you own this email address. Sign in with a Gmail account or your school or work Google account.',
   google_not_configured: 'Google sign-in is not set up on this server.',
 };
 
@@ -41,7 +42,8 @@ export default function LoginPage() {
   // Already signed in (cookie session still valid): the API refuses a second login, so skip this page.
   useEffect(() => {
     const googleError = new URLSearchParams(window.location.search).get('error');
-    if (googleError && GOOGLE_ERRORS[googleError]) setMessage(GOOGLE_ERRORS[googleError]);
+    // Own keys only: ?error=__proto__ must not resolve to an inherited object.
+    if (googleError && Object.prototype.hasOwnProperty.call(GOOGLE_ERRORS, googleError)) setMessage(GOOGLE_ERRORS[googleError]);
 
     void probeSession().then((user) => {
       if (user) router.replace(getSafeRedirectUrl(new URLSearchParams(window.location.search).get('redirect')));
