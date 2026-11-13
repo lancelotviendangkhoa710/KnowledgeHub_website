@@ -1,23 +1,10 @@
 #!/bin/sh
 set -e
 
-# Bootstrap tracked Laravel source if not yet installed.
-if [ ! -f /var/www/html/artisan ]; then
-    echo "==> Installing Laravel via Composer..."
-    composer create-project laravel/laravel:^11.0 /tmp/laravel --prefer-dist --no-interaction
-    # Copy only non-database files to preserve host-mounted database/ volume
-    rsync -a --exclude='database' /tmp/laravel/ /var/www/html/
-    rm -rf /tmp/laravel
-    echo "==> Laravel installed."
+# Keep dependencies in a named volume; install on the first startup.
+if [ ! -f /var/www/html/vendor/autoload.php ]; then
+    composer install --no-interaction --prefer-dist
 fi
 
-# Copy .env if missing
-if [ ! -f /var/www/html/.env ]; then
-    cp /var/www/html/.env.example /var/www/html/.env
-    php /var/www/html/artisan key:generate
-fi
-
-# Set permissions
 chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache 2>/dev/null || true
-
 exec "$@"

@@ -388,3 +388,13 @@ docker compose exec app php artisan test
 ---
 
 *Priority: Correctness > Speed. Read before writing. Test thoroughly. Minimal diff.*
+
+## Runtime, testing and deployment
+
+Read `docs/AGENT_RUNBOOK.md` before runtime, testing, or deployment tasks.
+
+Never run automated tests, `migrate:fresh`, `migrate:refresh`, `db:wipe`,
+`db:seed`, or other destructive/reset commands against shared or cloud data.
+PHPUnit must use only the disposable Compose `test-db` database. Verify the
+actual connection before running tests; never bypass the test bootstrap or
+database guard. A unit-test label does not imply a test is read-only.
