@@ -9,9 +9,9 @@
 
 | ID | Section/module | Domain owner | Status | Dependency | Activity Spec | Allowed write paths | Reviewer | Commit message |
 |---|---|---|---|---|---|---|---|---|
-| AUTH-01 | Đăng ký/đăng nhập/đăng xuất | TEAM_MEMBER_A | BACKLOG | Chốt auth contract/mapping; AUTH-01 | [`../../features/identity-auth/AUTH-01-registration-login-logout.md`](../../features/identity-auth/AUTH-01-registration-login-logout.md) | Identity/Auth theo `OWNERSHIP.md`; route/shared phải phối hợp | Khoa + domain owner | `p1: implement registration login and logout` |
-| AUTH-02 | Hồ sơ/tài khoản | TEAM_MEMBER_A | BACKLOG | AUTH-01 và policy trường/lifecycle được duyệt | [`../../features/identity-auth/AUTH-02-profile-account.md`](../../features/identity-auth/AUTH-02-profile-account.md) | Identity/Auth theo `OWNERSHIP.md` | Khoa + domain owner | `p1: implement profile and account management` |
-| AUTH-03 | Quản lý vai trò | TEAM_MEMBER_A | BACKLOG | AUTH-01; role policy được duyệt | [`../../features/identity-auth/AUTH-03-role-assignment.md`](../../features/identity-auth/AUTH-03-role-assignment.md) | Identity/Auth theo `OWNERSHIP.md` | Khoa + domain owner | `p1: implement admin role assignment` |
+| AUTH-01 | Đăng ký/đăng nhập/đăng xuất | TEAM_MEMBER_A | DONE | Chốt auth contract/mapping; AUTH-01 | [`../../features/identity-auth/AUTH-01-registration-login-logout.md`](../../features/identity-auth/AUTH-01-registration-login-logout.md) | Identity/Auth theo `OWNERSHIP.md`; route/shared phải phối hợp | Khoa + domain owner | `p1: implement registration login and logout` |
+| AUTH-02 | Hồ sơ/tài khoản | TEAM_MEMBER_A | DONE | AUTH-01 và policy trường/lifecycle được duyệt | [`../../features/identity-auth/AUTH-02-profile-account.md`](../../features/identity-auth/AUTH-02-profile-account.md) | Identity/Auth theo `OWNERSHIP.md` | Khoa + domain owner | `p1: implement profile and account management` |
+| AUTH-03 | Quản lý vai trò | TEAM_MEMBER_A | DONE | AUTH-01; role policy được duyệt | [`../../features/identity-auth/AUTH-03-role-assignment.md`](../../features/identity-auth/AUTH-03-role-assignment.md) | Identity/Auth theo `OWNERSHIP.md` | Khoa + domain owner | `p1: implement admin role assignment` |
 
 ## Điều kiện nhận task
 
