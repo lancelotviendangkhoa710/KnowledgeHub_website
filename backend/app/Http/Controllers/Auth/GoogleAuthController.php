@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Exceptions\Auth\GoogleDomainNotAllowed;
-use App\Exceptions\Auth\GoogleSignupLimitReached;
+use App\Exceptions\Auth\GoogleSignInRefused;
 use App\Http\Controllers\Controller;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -17,6 +14,7 @@ use Throwable;
  * AUTH-07: "Continue with Google". Browser navigations (not XHR), so they live in routes/web.php
  * where the session middleware always runs. Redirects are relative on purpose: behind the Next.js
  * /api proxy this app does not know its public host. The login page forwards signed-in visitors.
+ * Which Google identities may sign in is decided by AuthService::userForGoogle, not here.
  */
 class GoogleAuthController extends Controller
 {
@@ -39,47 +37,21 @@ class GoogleAuthController extends Controller
             return $this->toLogin('google_failed'); // denied consent, expired state, Google outage
         }
 
-        $verified = filter_var($google->user['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        if (! $google->getEmail() || ! $verified) {
-            return $this->toLogin('google_unverified');
-        }
-
-        if (! $this->isAuthoritativeEmail($google)) {
-            Log::notice('Google sign-in refused: email not vouched for by Google', ['domain' => Str::after($google->getEmail(), '@')]);
-
-            return $this->toLogin('google_email_unconfirmed');
-        }
-
         try {
-            $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail(), $request->ip());
-        } catch (GoogleDomainNotAllowed) {
-            // Domain only (no personal data): tells the operator what to add to GOOGLE_ALLOWED_DOMAINS.
-            Log::notice('Google sign-up refused: email domain not allowed', ['domain' => Str::after($google->getEmail(), '@')]);
-
-            return $this->toLogin('google_domain_not_allowed');
-        } catch (GoogleSignupLimitReached) {
-            return $this->toLogin('google_too_many_signups');
-        }
-        if ($user === null) {
-            return $this->toLogin('google_unavailable'); // existing account that is not active
+            $user = $this->authService->userForGoogle(
+                (string) $google->getEmail(),
+                (string) ($google->getName() ?: $google->getEmail()),
+                filter_var($google->user['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                $google->user['hd'] ?? null,
+                $request->ip(),
+            );
+        } catch (GoogleSignInRefused $refused) {
+            return $this->toLogin($refused->reason);
         }
 
         $this->authService->startWebSession($request, $user);
 
         return $this->toLogin();
-    }
-
-    /** Gmail, or a Workspace address whose domain is the account's hosted domain (`hd`); see config comment. */
-    private function isAuthoritativeEmail($google): bool
-    {
-        if (! config('services.google.require_authoritative_email')) {
-            return true;
-        }
-
-        $domain = Str::lower(Str::after((string) $google->getEmail(), '@'));
-        $hosted = Str::lower((string) ($google->user['hd'] ?? ''));
-
-        return in_array($domain, ['gmail.com', 'googlemail.com'], true) || ($hosted !== '' && $hosted === $domain);
     }
 
     private function toLogin(?string $error = null): RedirectResponse

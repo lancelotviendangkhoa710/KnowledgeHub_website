@@ -2,8 +2,7 @@
 
 namespace App\Services\Auth;
 
-use App\Exceptions\Auth\GoogleDomainNotAllowed;
-use App\Exceptions\Auth\GoogleSignupLimitReached;
+use App\Exceptions\Auth\GoogleSignInRefused;
 use App\Models\PersonalAccessToken;
 use App\Models\Role;
 use App\Models\User;
@@ -33,24 +32,39 @@ class AuthService
     }
 
     /**
-     * AUTH-07: the account for an email Google has verified. An existing active account is reused;
-     * an existing account in any other status is refused (null) so Google cannot lift a ban or
-     * skip the admin gate; an unknown email gets a new active account with the default role,
-     * but only for an allowed email domain (GoogleDomainNotAllowed otherwise).
-     * Linking is by verified email only (no schema change, see the ADR).
+     * AUTH-07: the account for a Google sign-in, or GoogleSignInRefused (its `reason` is shown on the
+     * login page). Rules, in order:
+     *  1. Google must report the email as verified and (unless switched off) vouch for ownership: a
+     *     Gmail address, or one whose domain is the account's hosted domain (`hd`, Google Workspace).
+     *     For any other address `email_verified` does not prove the person still owns the mailbox, so
+     *     it must not reach an existing account (recycled mailbox, old owner keeps the Google account).
+     *  2. An existing active account is reused with its roles; any other status is refused, so Google
+     *     cannot lift a ban or skip the admin gate.
+     *  3. An unknown email gets a new active account with the default role, but only for an allowed
+     *     email domain and under the new-account limits.
+     * Linking is by email only (no schema change, see the ADR).
      */
-    public function userForGoogle(string $email, string $name, ?string $ip = null): ?User
+    public function userForGoogle(string $email, string $name, bool $emailVerified, ?string $hostedDomain, ?string $ip = null): User
     {
-        // shortcut: linked by verified email, not Google's stable id; add a google_id column when a schema change is approved.
+        // shortcut: linked by email, not Google's stable id; add a google_id column when a schema change is approved.
         $email = Str::lower(trim($email));
-        $existing = fn () => User::query()->where('email', $email)->first();
+        if ($email === '' || ! $emailVerified) {
+            throw new GoogleSignInRefused('google_unverified');
+        }
+        if (! $this->googleVouchesForEmail($email, $hostedDomain)) {
+            Log::notice('Google sign-in refused: email not vouched for by Google', ['domain' => Str::after($email, '@')]);
+            throw new GoogleSignInRefused('google_email_unconfirmed');
+        }
 
+        $existing = fn () => User::query()->where('email', $email)->first();
         if ($user = $existing()) {
-            return $user->status === 'active' ? $user->load('roles') : null;
+            return $this->activeOrRefused($user);
         }
 
         if (! $this->googleDomainAllowed($email)) {
-            throw new GoogleDomainNotAllowed($email);
+            // Domain only (no personal data): tells the operator what to add to GOOGLE_ALLOWED_DOMAINS.
+            Log::notice('Google sign-up refused: email domain not allowed', ['domain' => Str::after($email, '@')]);
+            throw new GoogleSignInRefused('google_domain_not_allowed');
         }
 
         $limitKey = $this->googleSignupLimitKey($ip);
@@ -59,7 +73,7 @@ class AuthService
         $tooMany = $this->failOpen(fn () => ($limitKey !== null && $limit > 0 && RateLimiter::tooManyAttempts($limitKey, $limit))
             || ($hourly > 0 && RateLimiter::tooManyAttempts('google-signup:all', $hourly)), false);
         if ($tooMany) {
-            throw new GoogleSignupLimitReached($ip ?? 'unknown');
+            throw new GoogleSignInRefused('google_too_many_signups');
         }
 
         try {
@@ -80,10 +94,30 @@ class AuthService
             return $created;
         } catch (ValidationException) {
             // Lost a race with another sign-in for the same email: use the account that won.
-            $user = $existing();
-
-            return $user && $user->status === 'active' ? $user->load('roles') : null;
+            return $this->activeOrRefused($existing() ?? throw new GoogleSignInRefused('google_failed'));
         }
+    }
+
+    private function activeOrRefused(User $user): User
+    {
+        if ($user->status !== 'active') {
+            throw new GoogleSignInRefused('google_unavailable'); // pending, inactive or banned
+        }
+
+        return $user->load('roles');
+    }
+
+    /** Gmail, or an address whose domain is the account's hosted domain (`hd`); see config/services.php. */
+    private function googleVouchesForEmail(string $email, ?string $hostedDomain): bool
+    {
+        if (! config('services.google.require_authoritative_email')) {
+            return true;
+        }
+
+        $domain = Str::after($email, '@');
+        $hosted = Str::lower((string) $hostedDomain);
+
+        return in_array($domain, ['gmail.com', 'googlemail.com'], true) || ($hosted !== '' && $hosted === $domain);
     }
 
     /** Limiter bookkeeping must never break sign-in (cache outage, bad file permissions): fail open and log. */
