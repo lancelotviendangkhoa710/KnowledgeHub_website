@@ -137,8 +137,8 @@ They are web routes, not JSON endpoints, and are reached through the same `/api`
 - `redirect`: `302` to Google's consent screen. Without `GOOGLE_CLIENT_ID` it answers `302 /login?error=google_not_configured`.
 - `callback` (throttled to 20 per minute): needs the `state` Google echoes back. Always answers `302` to a relative URL:
   - `/login` on success: a cookie session is started (same limits as the password login) and the login page forwards the signed-in visitor.
-  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google) or `google_unavailable` (the account exists but is not `active`).
-- A verified email without an account creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
+  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`).
+- A verified email without an account, on an allowed domain (default `gmail.com`, `*.edu`, `*.edu.vn`; configurable, empty = no limit), creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
 - A Google-only account has no usable password, so password login, change-password, account deletion and admin role changes (which ask for the current password) are not possible for it yet.
 
 ### IMPLEMENTED - GET `/api/me`

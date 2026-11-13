@@ -18,12 +18,14 @@ Users can only sign in with email and password, and a new account stays `pending
 
    | Situation | Result |
    |---|---|
-   | No account with that email (soft-deleted accounts do not count) | New account: status `active` (Google verified the email, decided by the Auth owner), role `user`, `email_verified_at` set |
+   | No account with that email (soft-deleted accounts do not count) and the domain is allowed (see 5) | New account: status `active` (Google verified the email, decided by the Auth owner), role `user`, `email_verified_at` set |
+   | No account and the domain is not allowed | Refused (`/login?error=google_domain_not_allowed`), nothing created |
    | Account exists and is `active` | Signed in as that account; its roles are unchanged |
    | Account exists but is `pending`, `inactive` or `banned` | Refused (`/login?error=google_unavailable`): Google must not lift a ban or skip the admin gate |
 
-5. **No schema change.** Accounts are matched by verified email only; nothing is stored about the Google identity. A Google-created account gets a random 64-character password that nobody knows, so password login for it is impossible.
-6. **Configuration** (private env, never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (the web origin plus `/api/auth/google/callback`, registered in Google Cloud). Without a client id the redirect route sends the user back to `/login?error=google_not_configured`.
+5. **Anti-spam: allowed email domains for new accounts.** The intended use is production with open sign-up and no admin approval, so account creation is limited by `GOOGLE_ALLOWED_DOMAINS` (default `gmail.com,*.edu,*.edu.vn`): a plain entry matches the domain exactly, `*.x` matches any domain ending in `.x`, an empty value removes the limit. Existing `active` accounts are not restricted, so older registered users can still use Google. This stops throwaway-domain sign-ups; it does not stop someone with many free Gmail accounts (see limits).
+6. **No schema change.** Accounts are matched by verified email only; nothing is stored about the Google identity. A Google-created account gets a random 64-character password that nobody knows, so password login for it is impossible.
+7. **Configuration** (private env, never committed): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, optional `GOOGLE_ALLOWED_DOMAINS` (the web origin plus `/api/auth/google/callback`, registered in Google Cloud). Without a client id the redirect route sends the user back to `/login?error=google_not_configured`.
 
 ## Consequences
 
@@ -38,6 +40,7 @@ Users can only sign in with email and password, and a new account stays `pending
 - New runtime dependency: `laravel/socialite` v5 (6 packages added to `composer.lock`, no existing package changed).
 
 ### Risks
+- Open sign-up with Gmail allowed is still abusable by people with many free accounts. Existing controls: Google's own checks, the callback throttle (20 per minute per IP) and the admin's ability to ban an account. Stronger controls (per-IP creation limits, a stricter allowlist, admin review of new accounts) can be added without redesign.
 - Callback failures (denied consent, expired state, Google outage) all land on `/login?error=google_failed`; they are not logged in detail.
 - The Google Cloud OAuth client must list the exact redirect URI per environment.
 
@@ -49,6 +52,6 @@ Users can only sign in with email and password, and a new account stays `pending
 
 ## Validation
 
-- Feature tests with Google mocked (`tests/Feature/Auth/GoogleLoginTest.php`): new verified email, reuse of an active account, refusal of `pending`/`inactive`/`banned`, unverified email, Google failure, not configured, soft-deleted email, no usable password.
+- Feature tests with Google mocked (`tests/Feature/Auth/GoogleLoginTest.php`): new verified email, reuse of an active account, refusal of `pending`/`inactive`/`banned`, unverified email, Google failure, not configured, soft-deleted email, no usable password, domain allowlist (exact, wildcard, existing accounts exempt, empty list).
 - Redirect step and failed callback checked through the Next.js `/api` proxy.
 - Real Google sign-in needs Google Cloud credentials and must be verified manually per environment.

@@ -53,7 +53,7 @@ Nút "Continue with Google" cần OAuth client riêng, không có thì nút báo
 4. `docker compose up -d --force-recreate app nginx`, rồi mở http://localhost:3000/login.
 
 Chỉ dùng http://localhost:3000 cho cả đăng nhập và duyệt web (cookie không chia sẻ giữa các địa chỉ khác nhau).
-Email Google chưa có tài khoản sẽ tạo tài khoản `active`; tài khoản `pending`, `inactive`, `banned` bị từ chối.
+Email Google chưa có tài khoản sẽ tạo tài khoản `active`, nhưng chỉ với tên miền được phép: biến `GOOGLE_ALLOWED_DOMAINS` (mặc định `gmail.com,*.edu,*.edu.vn`; `*.edu` khớp mọi tên miền kết thúc bằng `.edu`; để trống = không giới hạn). Tài khoản đã có và `active` thì không bị giới hạn tên miền; tài khoản `pending`, `inactive`, `banned` bị từ chối.
 
 ## Kiểm tra và xử lý lỗi
 
