@@ -8,6 +8,9 @@ use App\Models\User;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Illuminate\Hashing\HashManager;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\NewAccessToken;
 use RuntimeException;
@@ -21,14 +24,67 @@ class AuthService
 
     public function register(array $attributes): User
     {
+        return $this->createWithDefaultRole($attributes, 'pending');
+    }
+
+    /**
+     * AUTH-07: the account for an email Google has verified. An existing active account is reused;
+     * an existing account in any other status is refused (null) so Google cannot lift a ban or
+     * skip the admin gate; an unknown email gets a new active account with the default role.
+     * Linking is by verified email only (no schema change, see the ADR).
+     */
+    public function userForGoogle(string $email, string $name): ?User
+    {
+        // shortcut: linked by verified email, not Google's stable id; add a google_id column when a schema change is approved.
+        $email = Str::lower(trim($email));
+        $existing = fn () => User::query()->where('email', $email)->first();
+
+        if ($user = $existing()) {
+            return $user->status === 'active' ? $user->load('roles') : null;
+        }
+
         try {
-            return $this->database->transaction(function () use ($attributes): User {
+            // Google-only accounts get a random password nobody knows, so password login is impossible.
+            return $this->createWithDefaultRole(
+                ['name' => $name, 'email' => $email, 'password' => Str::random(64)],
+                'active',
+                verified: true,
+            );
+        } catch (ValidationException) {
+            // Lost a race with another sign-in for the same email: use the account that won.
+            $user = $existing();
+
+            return $user && $user->status === 'active' ? $user->load('roles') : null;
+        }
+    }
+
+    /** Starts the cookie session for the web app: login, fresh session id, absolute-lifetime stamp, password hash. */
+    public function startWebSession(Request $request, User $user): void
+    {
+        $guard = Auth::guard('web');
+        $guard->login($user);
+        $request->session()->regenerate();
+        $request->session()->put('login_at', time());
+        // Same value Sanctum's AuthenticateSession compares: a password change made before this
+        // session's first request must still end the session.
+        $request->session()->put('password_hash_web', method_exists($guard, 'hashPasswordForCookie')
+            ? $guard->hashPasswordForCookie($user->getAuthPassword())
+            : $user->getAuthPassword());
+    }
+
+    private function createWithDefaultRole(array $attributes, string $status, bool $verified = false): User
+    {
+        try {
+            return $this->database->transaction(function () use ($attributes, $status, $verified): User {
                 $user = new User([
                     'name' => $attributes['name'],
                     'email' => $attributes['email'],
                     'password' => $attributes['password'],
                 ]);
-                $user->status = 'pending';
+                $user->status = $status;
+                if ($verified) {
+                    $user->email_verified_at = now();
+                }
                 $user->save();
 
                 $role = Role::query()->where('name', 'user')->first();
