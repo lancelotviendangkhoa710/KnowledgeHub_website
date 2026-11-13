@@ -21,6 +21,14 @@ function getSafeRedirectUrl(param: string | null): string {
   return '/courses';
 }
 
+// Error codes the backend puts in /login?error=... after a Google sign-in attempt (AUTH-07).
+const GOOGLE_ERRORS: Record<string, string> = {
+  google_failed: 'Google sign-in was cancelled or failed. Please try again.',
+  google_unverified: 'Your Google email address is not verified, so it cannot be used to sign in.',
+  google_unavailable: 'This account cannot sign in with Google. It may be pending approval or suspended; contact an administrator.',
+  google_not_configured: 'Google sign-in is not set up on this server.',
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -30,6 +38,9 @@ export default function LoginPage() {
 
   // Already signed in (cookie session still valid): the API refuses a second login, so skip this page.
   useEffect(() => {
+    const googleError = new URLSearchParams(window.location.search).get('error');
+    if (googleError && GOOGLE_ERRORS[googleError]) setMessage(GOOGLE_ERRORS[googleError]);
+
     void probeSession().then((user) => {
       if (user) router.replace(getSafeRedirectUrl(new URLSearchParams(window.location.search).get('redirect')));
     });
@@ -64,6 +75,8 @@ export default function LoginPage() {
           <label className="auth-field">Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
           <button className="button button--primary auth-submit" type="submit" disabled={submitting}>{submitting ? 'Signing in...' : 'Sign in'}</button>
         </form>
+        {/* Full-page navigation on purpose: Google's consent screen is not an XHR. */}
+        <a className="button button--secondary" href="/api/auth/google/redirect" style={{ width: '100%', minHeight: '2.9rem', marginTop: '0.75rem', textAlign: 'center' }}>Continue with Google</a>
         <p className="auth-switch">New to KnowledgeHub? <Link href="/register">Create an account</Link></p>
       </div>
     </section>
