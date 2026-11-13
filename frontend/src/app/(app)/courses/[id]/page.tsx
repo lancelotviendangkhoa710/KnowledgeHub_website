@@ -1122,6 +1122,12 @@ export default function CourseDetailPage() {
               >
                 Version {version?.version_no || 1}.0
               </span>
+              <Link
+                href={`/courses/${encodeURIComponent(idOrSlug)}/versions`}
+                style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'underline' }}
+              >
+                Version history
+              </Link>
               <span
                 className="badge"
                 style={{
