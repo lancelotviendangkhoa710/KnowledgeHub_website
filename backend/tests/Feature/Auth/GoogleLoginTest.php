@@ -121,6 +121,40 @@ class GoogleLoginTest extends TestCase
         $this->assertGuest('web');
     }
 
+    public function test_an_address_google_does_not_vouch_for_cannot_sign_in_even_to_an_existing_account(): void
+    {
+        // Not Gmail and no hosted domain: email_verified alone does not prove the person owns the mailbox.
+        $admin = $this->createUser('boss@example.com', 'active', 'contributor');
+        $this->mockGoogle('boss@example.com', 'Previous Owner', hosted: null);
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_email_unconfirmed');
+        $this->assertGuest('web');
+
+        // A hosted domain that is not the address's own domain proves nothing either.
+        $this->mockGoogle('boss@example.com', 'Previous Owner', hosted: 'other-company.com');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_email_unconfirmed');
+        $this->assertGuest('web');
+
+        // A managed account whose hosted domain matches is vouched for.
+        $this->mockGoogle('boss@example.com', 'Real Owner');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->assertAuthenticatedAs($admin, 'web');
+    }
+
+    public function test_gmail_needs_no_hosted_domain_and_the_check_can_be_switched_off(): void
+    {
+        config(['services.google.allowed_domains' => 'gmail.com,example.com']);
+        $this->mockGoogle('person@gmail.com', 'Person', hosted: null);
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->assertDatabaseHas('users', ['email' => 'person@gmail.com']);
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        config(['services.google.require_authoritative_email' => false]);
+        $this->mockGoogle('plain@example.com', 'Plain', hosted: null);
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+    }
+
     public function test_google_failure_goes_back_to_login(): void
     {
         $provider = Mockery::mock(Provider::class);
@@ -274,9 +308,15 @@ class GoogleLoginTest extends TestCase
         $this->assertNotSame($old->id, User::where('email', 'back@example.com')->value('id'));
     }
 
-    private function mockGoogle(string $email, string $name, bool $verified = true): void
+    /** $hosted: the Workspace domain Google reports; 'same' = the email's own domain (a managed account), null = none. */
+    private function mockGoogle(string $email, string $name, bool $verified = true, ?string $hosted = 'same'): void
     {
-        $googleUser = (new GoogleUser)->setRaw(['email_verified' => $verified])->map(['id' => '1', 'name' => $name, 'email' => $email]);
+        $raw = ['email_verified' => $verified];
+        $hd = $hosted === 'same' ? substr(strrchr($email, '@'), 1) : $hosted;
+        if ($hd !== null && $hd !== 'gmail.com') {
+            $raw['hd'] = $hd;
+        }
+        $googleUser = (new GoogleUser)->setRaw($raw)->map(['id' => '1', 'name' => $name, 'email' => $email]);
         $provider = Mockery::mock(Provider::class);
         // once(): each call consumes one expectation, so a test can mock several sign-ins in a row.
         $provider->shouldReceive('user')->once()->andReturn($googleUser);

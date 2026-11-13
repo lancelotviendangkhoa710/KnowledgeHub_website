@@ -44,6 +44,12 @@ class GoogleAuthController extends Controller
             return $this->toLogin('google_unverified');
         }
 
+        if (! $this->isAuthoritativeEmail($google)) {
+            Log::notice('Google sign-in refused: email not vouched for by Google', ['domain' => Str::after($google->getEmail(), '@')]);
+
+            return $this->toLogin('google_email_unconfirmed');
+        }
+
         try {
             $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail(), $request->ip());
         } catch (GoogleDomainNotAllowed) {
@@ -61,6 +67,19 @@ class GoogleAuthController extends Controller
         $this->authService->startWebSession($request, $user);
 
         return $this->toLogin();
+    }
+
+    /** Gmail, or a Workspace address whose domain is the account's hosted domain (`hd`); see config comment. */
+    private function isAuthoritativeEmail($google): bool
+    {
+        if (! config('services.google.require_authoritative_email')) {
+            return true;
+        }
+
+        $domain = Str::lower(Str::after((string) $google->getEmail(), '@'));
+        $hosted = Str::lower((string) ($google->user['hd'] ?? ''));
+
+        return in_array($domain, ['gmail.com', 'googlemail.com'], true) || ($hosted !== '' && $hosted === $domain);
     }
 
     private function toLogin(?string $error = null): RedirectResponse

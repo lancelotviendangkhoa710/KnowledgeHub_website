@@ -10,5 +10,7 @@ Route::get('/', function () {
 // AUTH-07: Google sign-in. Paths sit under /api so the frontend's existing /api proxy forwards them.
 Route::prefix('api/auth/google')->group(function () {
     Route::get('redirect', [GoogleAuthController::class, 'redirect']);
-    Route::get('callback', [GoogleAuthController::class, 'callback'])->middleware('throttle:20,1');
+    // No per-IP throttle: behind the proxy every visitor shares one IP, so it would let anyone block everyone.
+    // A bad callback is rejected on the OAuth state before any call to Google; sign-ups have their own limits.
+    Route::get('callback', [GoogleAuthController::class, 'callback']);
 });

@@ -34,6 +34,10 @@ return [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Only emails Google itself vouches for may sign in: a Gmail address, or one whose domain equals the
+        // account's hosted domain (`hd`, Google Workspace). For any other address `email_verified` does not
+        // prove the person still owns the mailbox (recycled mailbox, old owner keeps the Google account).
+        'require_authoritative_email' => (bool) env('GOOGLE_REQUIRE_AUTHORITATIVE_EMAIL', true),
         // Email domains that may CREATE an account through Google (existing active accounts are not
         // restricted). Comma separated; "*.edu" matches any subdomain suffix; empty = no restriction.
         'allowed_domains' => env('GOOGLE_ALLOWED_DOMAINS', '*.edu,*.edu.vn'),
