@@ -8,6 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Services\Auth\AuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
@@ -45,6 +47,9 @@ class GoogleAuthController extends Controller
         try {
             $user = $this->authService->userForGoogle($google->getEmail(), $google->getName() ?: $google->getEmail(), $request->ip());
         } catch (GoogleDomainNotAllowed) {
+            // Domain only (no personal data): tells the operator what to add to GOOGLE_ALLOWED_DOMAINS.
+            Log::notice('Google sign-up refused: email domain not allowed', ['domain' => Str::after($google->getEmail(), '@')]);
+
             return $this->toLogin('google_domain_not_allowed');
         } catch (GoogleSignupLimitReached) {
             return $this->toLogin('google_too_many_signups');

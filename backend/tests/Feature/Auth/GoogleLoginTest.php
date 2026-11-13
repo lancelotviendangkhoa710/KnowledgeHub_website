@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Cache\RateLimiter as LimiterStore;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -226,6 +227,20 @@ class GoogleLoginTest extends TestCase
         $this->mockGoogle('w3@example.com', 'W');
         $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_too_many_signups');
         $this->assertDatabaseMissing('users', ['email' => 'w3@example.com']);
+    }
+
+    public function test_a_broken_limiter_does_not_break_sign_in(): void
+    {
+        $limiter = Mockery::mock(LimiterStore::class);
+        $limiter->shouldReceive('tooManyAttempts')->andThrow(new RuntimeException('Permission denied'));
+        $limiter->shouldReceive('hit')->andThrow(new RuntimeException('Permission denied'));
+        $this->app->instance(LimiterStore::class, $limiter);
+        RateLimiter::clearResolvedInstance(LimiterStore::class);
+        $this->mockGoogle('resilient@example.com', 'Resilient');
+
+        $this->withServerVariables(['REMOTE_ADDR' => '8.8.4.4'])->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertAuthenticatedAs(User::where('email', 'resilient@example.com')->firstOrFail(), 'web');
     }
 
     public function test_internal_addresses_and_a_zero_limit_are_never_limited(): void
