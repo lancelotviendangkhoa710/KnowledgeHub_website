@@ -2,6 +2,7 @@
 
 namespace App\Services\Learning;
 
+use App\Models\Article;
 use App\Models\LearningRoadmap;
 use App\Models\RoadmapItem;
 use App\Models\User;
@@ -15,14 +16,18 @@ class RoadmapService
 {
     public function __construct(private readonly RoadmapPolicy $policy) {}
 
-    public function list(User $user): mixed
+    public function list(User $user, bool $mine = false, ?string $origin = null): mixed
     {
         $query = LearningRoadmap::query()->with('items');
-        if (! $this->policy->isAdmin($user)) {
+        if ($mine || ! $this->policy->isAdmin($user)) {
             $query->where('user_id', $user->id);
         }
 
-        return $query->orderByDesc('created_at')->get();
+        if ($origin !== null) {
+            $query->where('origin', $origin);
+        }
+
+        return $this->refreshCourseLinks($query->orderByDesc('created_at')->get());
     }
 
     public function find(User $user, string $roadmapId): LearningRoadmap
@@ -32,7 +37,40 @@ class RoadmapService
             $query->where('user_id', $user->id);
         }
 
-        return $query->firstOrFail();
+        return $this->refreshCourseLinks(collect([$query->firstOrFail()]))->first();
+    }
+
+    /** Saved evidence is historical; only expose a course link while it is still public. */
+    private function refreshCourseLinks(mixed $roadmaps): mixed
+    {
+        $ids = $roadmaps->flatMap(static fn (LearningRoadmap $roadmap) => $roadmap->origin === 'ai'
+            ? $roadmap->items->pluck('article_id') : collect())
+            ->filter()->unique()->values()->all();
+        if ($ids === []) {
+            return $roadmaps;
+        }
+        $published = Article::query()->published()->whereIn('id', $ids)
+            ->with('publishedVersion:id,article_id,title')->get()->keyBy('id');
+        foreach ($roadmaps as $roadmap) {
+            if ($roadmap->origin !== 'ai') {
+                continue;
+            }
+            foreach ($roadmap->items as $item) {
+                if ($item->article_id === null) {
+                    continue;
+                }
+                $details = $item->ai_details ?? [];
+                $article = $published->get($item->article_id);
+                $details['course'] = $article === null ? null : [
+                    'id' => $article->id,
+                    'title' => (string) $article->publishedVersion?->title,
+                    'url' => '/courses/'.rawurlencode((string) $article->slug),
+                    'reason' => $details['course']['reason'] ?? null,
+                ];
+                $item->ai_details = $details;
+            }
+        }
+        return $roadmaps;
     }
 
     public function create(User $user, array $attributes): LearningRoadmap
@@ -47,7 +85,7 @@ class RoadmapService
     {
         return DB::transaction(function () use ($roadmap, $attributes): LearningRoadmap {
             $roadmap->update($attributes);
-            return $roadmap->fresh(['items']);
+            return $this->refreshCourseLinks(collect([$roadmap->fresh(['items'])]))->first();
         });
     }
 

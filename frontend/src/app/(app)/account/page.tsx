@@ -477,7 +477,7 @@ export default function AccountPage() {
 
         {/* AI Roadmaps Card */}
         <Link
-          href="/learning/roadmaps"
+          href="/learning/my-roadmaps"
           style={{
             textDecoration: 'none',
             background: 'var(--color-white)',
@@ -512,10 +512,10 @@ export default function AccountPage() {
             </div>
             <div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
-                Learning Roadmaps
+                My AI Roadmaps
               </div>
               <div style={{ fontSize: '0.85rem', color: 'var(--color-gray)' }}>
-                Explore AI-guided curricula
+                Open your saved learning plans
               </div>
             </div>
           </div>

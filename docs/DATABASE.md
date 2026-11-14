@@ -87,6 +87,17 @@ KnowledgeHub is a **curated learning platform**, not a social or user-generated-
 | `learning_progress` | 1:1 progress tracker per item; `status` is the authoritative learning status. |
 | `roadmap_item_prerequisites` | DAG prerequisites. Self-ref forbidden by CHECK. |
 
+AI-05 Companion roadmaps use additive Learning columns: `learning_roadmaps.origin`
+(`legacy` by default, `ai` for the new flow), nullable unique UUID
+`generation_key`, nullable `ai_summary`, and nullable JSONB `coverage` for the
+variable skill evidence and score snapshot. `roadmap_items.ai_details` is
+nullable JSONB for stage, skill, time and verified external-resource details.
+The new form flow stores only evidence-backed CV strengths and recommendations
+in `coverage`; the uploaded PDF and extracted raw text are never persisted.
+Sequential AI steps are linked through `roadmap_item_prerequisites`.
+The existing `roadmap_items.article_id` FK remains the sole internal course
+link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
+
 > **Status authority (2026-10-22):** `learning_progress.status` is authoritative. `roadmap_items.status` is a denormalized mirror updated in the same transaction by the progress service; item create/update endpoints reject `status`. The ADR `docs/decisions/2026-10-22-learning-progress-authority.md` is implemented but still **Proposed** pending Product/PM approval.
 
 ### E – Payment
@@ -223,6 +234,7 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 12 | 2026-10-21-000001 | `personal_access_tokens` (Sanctum, UUID PK) |
 | 13 | 2026-10-22-000001 | Backfill `roadmap_items.status` from `learning_progress.status` (OQ-05) |
 | 14 | 2026-11-08-000001 | Add `messages.sequence` + `messages.client_message_id` (M1 ordering/idempotency) |
+| 15 | 2026-11-13-000001 | Add AI roadmap origin, generation key, evidence and item details (pending shared DB rollout) |
 
 > `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
 > migration once the team approves the schema cleanup task. Until then it is dormant — no application

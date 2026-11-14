@@ -54,14 +54,13 @@ export async function sessionFetch(input: string, init: RequestInit = {}): Promi
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+  const headers: Record<string, string> = { 'Accept': 'application/json' };
+  if (!isFormData) headers['Content-Type'] = 'application/json';
 
   const options: RequestInit = { method, headers };
   if (body) {
-    options.body = JSON.stringify(body);
+    options.body = isFormData ? body as FormData : JSON.stringify(body);
   }
 
   let response: Response;

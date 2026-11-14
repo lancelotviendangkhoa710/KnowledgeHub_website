@@ -1,319 +1,35 @@
-'use client';
-
-import { FormEvent, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { LearningRoadmap } from '@/types/learning';
-import { roadmapClient } from '@/lib/roadmapClient';
-import RoadmapCard from '@/components/learning/RoadmapCard';
-import AIRoadmapCreator from '@/components/learning/AIRoadmapCreator';
+import { redirect } from 'next/navigation';
+import { roadmapTemplates } from '@/data/roadmapTemplates';
+import styles from './templates.module.css';
 
-type RoadmapMode = 'saved' | 'manual' | 'ai';
-
-const DEFAULT_LOGIN_HREF = `/login?redirect=${encodeURIComponent('/learning/roadmaps')}`;
-
-export default function RoadmapsPage() {
-  const router = useRouter();
-  const [roadmaps, setRoadmaps] = useState<LearningRoadmap[]>([]);
-  const [title, setTitle] = useState('');
-  const [goal, setGoal] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  // Action errors (create/delete) are shown inside the mode that produced them.
-  const [error, setError] = useState<string | null>(null);
-  // A list-load failure must never be shown as an AI/manual-mode error.
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [authRequired, setAuthRequired] = useState(false);
-  const [loginHref, setLoginHref] = useState(DEFAULT_LOGIN_HREF);
-  const [mode, setMode] = useState<RoadmapMode>('saved');
-  // Guards against a double click sending two DELETE requests: the ref blocks
-  // re-entry synchronously, the state drives the disabled attribute.
-  const deletingRef = useRef<Set<string>>(new Set());
-  const [deletingIds, setDeletingIds] = useState<string[]>([]);
-
-  const load = async () => {
-    setLoading(true);
-    setLoadError(null);
-    setAuthRequired(false);
-    try {
-      setRoadmaps((await roadmapClient.list()).data);
-    } catch (caught) {
-      setRoadmaps([]);
-      if ((caught as { status?: number }).status === 401) {
-        // Gate immediately and send the guest to sign in, keeping the current
-        // URL (including ?mode=...) so the journey resumes on the same tab.
-        const currentUrl = `${window.location.pathname}${window.location.search}`;
-        const href = `/login?redirect=${encodeURIComponent(currentUrl)}`;
-        setLoginHref(href);
-        setAuthRequired(true);
-        router.replace(href);
-      } else {
-        setLoadError('Couldn\'t load your roadmaps. Check your connection, then retry.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('mode') === 'ai') setMode('ai');
-    void load();
-  }, []);
-
-  const selectMode = (next: RoadmapMode) => {
-    setMode(next);
-    window.history.replaceState(window.history.state, '', next === 'ai' ? '/learning/roadmaps?mode=ai' : '/learning/roadmaps');
-  };
-
-  const create = async (event: FormEvent) => {
-    event.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      const roadmap = (await roadmapClient.create({ title, goal })).data;
-      setRoadmaps((current) => [roadmap, ...current]);
-      setTitle('');
-      setGoal('');
-      selectMode('saved');
-    } catch {
-      setError('Unable to create roadmap. Review required fields, then retry.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const remove = async (id: string) => {
-    if (deletingRef.current.has(id)) return;
-    const roadmap = roadmaps.find((entry) => entry.id === id);
-    if (!roadmap || !window.confirm(`Delete roadmap "${roadmap.title}" and all its steps?`)) return;
-    deletingRef.current.add(id);
-    setDeletingIds([...deletingRef.current]);
-    setError(null);
-    try {
-      await roadmapClient.remove(id);
-      setRoadmaps((current) => current.filter((roadmap) => roadmap.id !== id));
-    } catch {
-      setError('Unable to delete roadmap. Retry after reloading.');
-    } finally {
-      deletingRef.current.delete(id);
-      setDeletingIds([...deletingRef.current]);
-    }
-  };
-
-  const checkingSession = (
-    <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-gray)' }}>
-      Checking your session…
-    </div>
-  );
+export default function RoadmapTemplatesPage({ searchParams }: { searchParams?: { mode?: string } }) {
+  if (searchParams?.mode === 'ai') redirect('/ai/companion');
 
   return (
-    <div className="container" style={{ paddingTop: '2.5rem', maxWidth: 900 }}>
-      {/* Header */}
-      <header style={{ marginBottom: '2.5rem' }}>
-        <span
-          className="badge"
-          style={{
-            backgroundColor: 'var(--color-primary-pale)',
-            color: 'var(--color-primary)',
-            border: '1px solid var(--color-border)',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            padding: '0.2rem 0.65rem',
-            borderRadius: 'var(--radius-full)',
-            marginBottom: '0.75rem',
-            display: 'inline-flex',
-          }}
-        >
-          Curated Learning Paths
-        </span>
-        <h1 style={{ color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800, marginBottom: '0.5rem' }}>
-          Learning Roadmaps
-        </h1>
-        <p style={{ color: 'var(--color-gray)', fontSize: '1.05rem', lineHeight: 1.6 }}>
-          Plan private learning goals and ordered next steps.
-        </p>
+    <div className={`container ${styles.page}`}>
+      <header className={styles.header}>
+        <span className="badge">Curated learning paths</span>
+        <h1>Roadmap Templates Library</h1>
+        <p>Explore example paths by career and experience level. These templates are references, not plans personalized to your goals or schedule.</p>
+        <div className={styles.actions}>
+          <Link href="/ai/companion" className="btn btn-primary">Create Roadmap with AI</Link>
+          <Link href="/learning/my-roadmaps" className="btn btn-secondary">My AI Roadmaps</Link>
+        </div>
       </header>
-
-      <nav aria-label="Roadmap actions" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-        {([
-          ['saved', 'Saved roadmaps'],
-          ['manual', 'Create manually'],
-          ['ai', 'Create with AI'],
-        ] as [RoadmapMode, string][]).map(([value, label]) => (
-          <button key={value} type="button" className={mode === value ? 'btn btn-primary' : 'btn btn-secondary'} aria-pressed={mode === value} onClick={() => selectMode(value)}>{label}</button>
+      <div className={styles.grid}>
+        {roadmapTemplates.map((template) => (
+          <article className={styles.card} key={template.id}>
+            <div className={styles.cardTop}><span className={styles.level}>{template.level}</span><span className={styles.duration}>{template.duration}</span></div>
+            <h2>{template.role}</h2>
+            <p>{template.summary}</p>
+            <details>
+              <summary>Explore template</summary>
+              <ol>{template.stages.map((stage) => <li key={stage.title}><strong>{stage.title}</strong><span>{stage.description}</span></li>)}</ol>
+            </details>
+          </article>
         ))}
-      </nav>
-
-      {!loading && authRequired && (
-        // Single sign-in fallback while the login redirect takes over. The
-        // create forms are never rendered in this state.
-        <div
-          role="alert"
-          style={{
-            background: 'var(--color-white)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.25rem 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span>Your session expired. Sign in to view and manage your roadmaps.</span>
-          <Link className="btn btn-secondary" href={loginHref}>Sign in</Link>
-        </div>
-      )}
-
-      {!authRequired && mode === 'manual' && (loading ? checkingSession : (
-        <div
-          style={{
-            background: 'var(--color-white)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '2rem',
-            boxShadow: 'var(--shadow-xs)',
-            marginBottom: '2.5rem',
-          }}
-        >
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '1.25rem' }}>
-            Create New Roadmap
-          </h3>
-          {error && <p role="alert" style={{ color: '#b42318', marginTop: 0 }}>{error}</p>}
-          <form onSubmit={create} style={{ display: 'grid', gap: '1.25rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: '0.4rem' }}>
-                Roadmap Title *
-              </label>
-              <input
-                aria-label="Roadmap title"
-                required
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                placeholder="e.g., Senior Distributed Systems Engineer"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-white)',
-                  border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-charcoal)',
-                  fontSize: '0.95rem',
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: '0.4rem' }}>
-                Learning Goal *
-              </label>
-              <textarea
-                aria-label="Learning goal"
-                required
-                value={goal}
-                onChange={(event) => setGoal(event.target.value)}
-                placeholder="What core competencies or milestones do you want to achieve?"
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--color-white)',
-                  border: '1.5px solid var(--color-border)',
-                  color: 'var(--color-charcoal)',
-                  fontSize: '0.95rem',
-                  lineHeight: 1.6,
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={submitting}
-                style={{ padding: '0.65rem 1.35rem', fontWeight: 600 }}
-              >
-                {submitting ? 'Creating…' : 'Create Roadmap'}
-              </button>
-            </div>
-          </form>
-        </div>
-      ))}
-
-      {!authRequired && mode === 'ai' && (loading ? checkingSession : (
-        <AIRoadmapCreator authRequired={false} onSaved={() => { selectMode('saved'); void load(); }} />
-      ))}
-
-      {!authRequired && mode === 'saved' && (loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--color-gray)' }}>
-          Loading roadmaps…
-        </div>
-      ) : loadError ? (
-        <div
-          role="alert"
-          style={{
-            background: 'var(--color-primary-faint)',
-            border: '1px solid var(--color-primary-pale)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1rem 1.25rem',
-            color: 'var(--color-primary-light)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '1rem',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span>{loadError}</span>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => void load()}
-            style={{ padding: '0.35rem 0.75rem', fontSize: '0.85rem' }}
-          >
-            Retry
-          </button>
-        </div>
-      ) : (
-        <>
-          {error && <p role="alert" style={{ color: '#b42318' }}>{error}</p>}
-          {roadmaps.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '3.5rem 2rem',
-                background: 'var(--color-white)',
-                border: '1px dashed var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-xs)',
-              }}
-            >
-              <h3 style={{ color: 'var(--color-charcoal)', marginBottom: '0.5rem', fontSize: '1.15rem', fontWeight: 600 }}>
-                No roadmaps yet
-              </h3>
-              <p style={{ color: 'var(--color-gray)', margin: 0 }}>
-                Define a roadmap above to organize your progression and curriculum milestones.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: '1.25rem' }}>
-              {roadmaps.map((roadmap) => (
-                <RoadmapCard
-                  key={roadmap.id}
-                  roadmap={roadmap}
-                  onChange={(updated) => setRoadmaps((current) => current.map((entry) => entry.id === updated.id ? updated : entry))}
-                  onDelete={() => void remove(roadmap.id)}
-                  deleting={deletingIds.includes(roadmap.id)}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      ))}
+      </div>
     </div>
   );
 }
