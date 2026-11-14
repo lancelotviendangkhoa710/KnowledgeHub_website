@@ -1,10 +1,10 @@
 # Decision: Store opted-in CV files in Supabase Storage
 
-**Status**: Proposed
+**Status**: Approved
 
 **Date**: 2026-11-14
 
-**Author**: AI agent, recording the repository owner's selected direction for team review
+**Author**: AI agent, recording the repository owner's approval on 2026-11-14
 
 **Related**: `2026-10-06-architecture-techstack-locked.md`, `2026-10-07-use-supabase-postgresql.md`, `2026-11-08-ai-companion-privacy-retention.md`, `docs/API.md` §7
 
@@ -39,13 +39,15 @@ Content attachments or authorize a general storage migration.
 4. Keep one designated current best CV per learner. Replacing it invalidates
    prior extracted text and retrieval derivatives. Deleting the CV or account
    must remove the file and all associated extracted text, chunks, embeddings,
-   and references. A partial failure must be detectable and retried; the
-   application must not retrieve stale content while cleanup is pending.
+   and references. Account soft-deletion must remove them immediately, before
+   the account deletion request succeeds. A partial failure must be detectable
+   and retried; the application must not retrieve stale content while cleanup
+   is pending.
 5. The database may hold only the metadata and extracted/derived text needed for
    the approved retrieval design, associated with the owner. The schema,
-   embedding provider/model, indexing, access rules, exact deletion timing,
-   backup limitations, and AI provider disclosure require a separate reviewed
-   design before implementation. This ADR does not approve RAG implementation.
+   embedding provider/model, indexing, access rules, backup limitations, and AI
+   provider disclosure require a separate reviewed design before implementation.
+   This ADR does not approve RAG implementation.
 
 ## Consequences
 
