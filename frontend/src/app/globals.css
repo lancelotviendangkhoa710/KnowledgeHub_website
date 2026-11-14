@@ -22,13 +22,16 @@
   --color-primary-light:  #B22222;
 
   /* 2. Typography Palette & Borders */
-  --color-gray:           #706B6B;
-  --color-gray-light:     #9E9898;
+  --color-gray:           #6B6466; /* UX-04: 5.4:1 on canvas (was #706B6B) */
+  --color-gray-light:     #767071; /* UX-04: 4.5:1 on canvas (was #9E9898, 2.7:1) */
   --color-border:         #E8DEDC;
   --color-border-light:   #F0E8E8;
 
   /* 3. Typography Fonts */
-  --font-family:          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  --font-family:          var(--font-sans, -apple-system), -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-body:            var(--font-family);
+  --font-display:         var(--font-family);
+  --font-mono:            var(--font-code, 'JetBrains Mono'), ui-monospace, SFMono-Regular, Consolas, monospace;
   --font-family-serif:    Georgia, 'Times New Roman', serif;
 
   /* 4. Legacy Token Isolation: Map dark-mode variables from shared-source.css to light foundation */
@@ -56,6 +59,33 @@
   --accent-gold-glow:     rgba(139, 0, 0, 0.10);
   --accent-cyan:          #1A6B85;
   --accent-emerald:       #1B6E34;
+
+  /* 5. UX-04 semantic tokens (docs/decisions/2026-11-14-ui-design-tokens.md).
+     Feature code uses these instead of hard-coded hex values. Every text pair
+     below passes WCAG AA (>= 4.5:1) on white and on the canvas. */
+  --bg-subtle:            #F5EFEC;
+  --border-strong:        #DCCFCB;
+
+  --color-success:        #1B6E34;
+  --color-success-bg:     #E8F3EC;
+  --color-warning:        #8A5A00;
+  --color-warning-bg:     #FBF1DD;
+  --color-info:           #1A6B85;
+  --color-info-bg:        #E6F0F4;
+  --color-danger:         #B3261E;
+  --color-danger-bg:      #FBEAE8;
+
+  --text-read:            1.0625rem; /* 17px lesson body */
+  --leading-read:         1.75;
+  --measure-read:         70ch;
+
+  --focus-ring:           0 0 0 2px var(--color-white), 0 0 0 4px var(--color-primary);
+}
+
+/* UX-04: one visible keyboard focus style for every interactive element. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Base Canvas & Global Element Reset */
