@@ -10,71 +10,127 @@
    Eradicates washed-out contrast defects across all application domains.
    ============================================================ */
 
+/* UX-02: token mockup (docs/ui-redesign). Tên cũ ở cuối khối chỉ là lớp ánh xạ cho trang chưa đổi. */
 :root {
-  /* 1. Background Color Palette */
-  --color-off-white:      #FAF7F5;
-  --color-white:          #FFFFFF;
-  --color-primary-pale:   #F3E5E5;
-  --color-primary-faint:  #FBF0F0;
-  --color-charcoal:       #242124;
-  --color-primary:        #8B0000;
-  --color-primary-dark:   #650000;
-  --color-primary-light:  #B22222;
+  --bg:#F3F5FA; --surface:#FFFFFF; --surface-2:#E9EDF6; --line:#DCE1EC;
+  --ink:#101214; --ink-2:#4A5162; --ink-3:#737B8E;
+  --brand:#2443E0; --brand-soft:#E3E8FF; --hero:#1F3ACF; --hero-deep:#172A9C;
+  --mark:#FFD84A; --mark-ink:#3A2E00;
+  --btn:#101214; --btn-ink:#FFFFFF;
+  --ok:#168A5B; --danger:#C9372C;
+  --c-sys:#3D5AFE; --c-prog:#FFCB3D; --c-data:#22B07D; --c-career:#FF7A59;
+  --shadow:0 1px 2px rgba(16,18,20,.05),0 8px 24px rgba(23,42,156,.07);
+  --display:var(--f-display,'Plus Jakarta Sans'),'Roboto',system-ui,sans-serif;
+  --body:var(--f-body,'Roboto'),system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:var(--f-mono,'JetBrains Mono'),ui-monospace,Consolas,monospace;
+  --r-card:10px; --r-pill:999px; --head:64px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme:dark;
+    --bg:#0C0E14; --surface:#151821; --surface-2:#1E222E; --line:#2A2F3D;
+    --ink:#ECEEF5; --ink-2:#B3B9C9; --ink-3:#8088A0;
+    --brand:#93A5FF; --brand-soft:#1B2350; --hero:#1B2FA6; --hero-deep:#111C6B;
+    --btn:#ECEEF5; --btn-ink:#101214;
+    --ok:#4FD1A0; --danger:#FF8478;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme:dark;
+  --bg:#0C0E14; --surface:#151821; --surface-2:#1E222E; --line:#2A2F3D;
+  --ink:#ECEEF5; --ink-2:#B3B9C9; --ink-3:#8088A0;
+  --brand:#93A5FF; --brand-soft:#1B2350; --hero:#1B2FA6; --hero-deep:#111C6B;
+  --btn:#ECEEF5; --btn-ink:#101214;
+  --ok:#4FD1A0; --danger:#FF8478;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+}
 
-  /* 2. Typography Palette & Borders */
-  --color-gray:           #706B6B;
-  --color-gray-light:     #9E9898;
-  --color-border:         #E8DEDC;
-  --color-border-light:   #F0E8E8;
+:root {
+  /* Lớp ánh xạ tên cũ -> token mới (xóa dần khi các trang đã đổi xong) */
+  --color-off-white:      var(--bg);
+  --color-white:          var(--surface);
+  --color-primary-pale:   var(--brand-soft);
+  --color-primary-faint:  var(--brand-soft);
+  --color-charcoal:       var(--ink);
+  --color-primary:        var(--brand);
+  --color-primary-dark:   color-mix(in srgb, var(--brand) 78%, var(--ink));
+  --color-primary-light:  var(--brand);
+  --color-gray:           var(--ink-2);
+  --color-gray-light:     var(--ink-3);
+  --color-border:         var(--line);
+  --color-border-light:   var(--line);
+  --font-family:          var(--body);
+  --font-family-serif:    var(--display);
 
-  /* 3. Typography Fonts */
-  --font-family:          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  --font-family-serif:    Georgia, 'Times New Roman', serif;
+  --bg-canvas:            var(--bg);
+  --bg-surface:           var(--surface);
+  --bg-surface-elevated:  var(--surface);
+  --bg-glass:             color-mix(in srgb, var(--surface) 90%, transparent);
+  --bg-glass-card:        var(--surface);
 
-  /* 4. Legacy Token Isolation: Map dark-mode variables from shared-source.css to light foundation */
-  --bg-canvas:            var(--color-off-white);
-  --bg-surface:           var(--color-white);
-  --bg-surface-elevated:  var(--color-white);
-  --bg-glass:             rgba(255, 255, 255, 0.90);
-  --bg-glass-card:        var(--color-white);
+  --color-bg:             var(--bg);
+  --color-text:           var(--ink);
+  --color-muted:          var(--ink-2);
 
-  --color-bg:             var(--color-off-white);
-  --color-text:           var(--color-charcoal);
-  --color-muted:          var(--color-gray);
+  --text-primary:         var(--ink);
+  --text-secondary:       var(--ink-2);
+  --text-muted:           var(--ink-2);
+  --text-faint:           var(--ink-3);
 
-  --text-primary:         var(--color-charcoal);
-  --text-secondary:       var(--color-gray);
-  --text-muted:           var(--color-gray);
-  --text-faint:           var(--color-gray-light);
+  --border-subtle:        var(--line);
+  --border-medium:        var(--line);
+  --border-glow:          color-mix(in srgb, var(--brand) 15%, transparent);
 
-  --border-subtle:        var(--color-border-light);
-  --border-medium:        var(--color-border);
-  --border-glow:          rgba(139, 0, 0, 0.15);
-
-  --accent-gold:          var(--color-primary);
-  --accent-gold-light:    var(--color-primary-pale);
-  --accent-gold-glow:     rgba(139, 0, 0, 0.10);
-  --accent-cyan:          #1A6B85;
-  --accent-emerald:       #1B6E34;
+  --accent-gold:          var(--brand);
+  --accent-gold-light:    var(--brand-soft);
+  --accent-gold-glow:     color-mix(in srgb, var(--brand) 10%, transparent);
+  --accent-cyan:          var(--brand);
+  --accent-emerald:       var(--ok);
 }
 
 /* Base Canvas & Global Element Reset */
+*, *::before, *::after { box-sizing: border-box; }
+
 html {
-  background-color: var(--color-off-white) !important;
-  color: var(--color-charcoal) !important;
+  background-color: var(--bg);
+  color: var(--ink);
 }
 
 body {
-  background-color: var(--color-off-white) !important;
-  background-image: none !important;
-  color: var(--color-charcoal) !important;
-  font-family: var(--font-family) !important;
+  margin: 0;
+  background-color: var(--bg);
+  background-image: none;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Strict Text Hierarchy: Charcoal Headings & Gray Copy (WCAG AA compliant) */
 h1, h2, h3, h4, h5, h6 {
-  color: var(--color-charcoal) !important;
-  font-family: var(--font-family) !important;
+  color: var(--ink);
+  font-family: var(--display);
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+code, kbd, pre, samp { font-family: var(--mono); }
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Inverted text exceptions for dark/primary surfaces (UX-01 Invariants) */
