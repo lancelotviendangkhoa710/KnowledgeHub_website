@@ -1,0 +1,164 @@
+# Tài liệu bàn giao giao diện KnowledgeHub
+
+Tài liệu này dùng để đưa cho Claude Code khi chuyển giao diện mockup vào dự án. Mockup là nguồn tham chiếu duy nhất: file `docs/ui-redesign/mockup/index.html` trong repo (bản đã đăng trên claude.ai với tên "KnowledgeHub giao diện mới"). Mở file này bằng trình duyệt để xem, thêm `#khoa-hoc`, `#bai-hoc`... vào đường dẫn để chuyển màn hình. Logo nằm trong `docs/ui-redesign/logo/`.
+
+## 1. Phạm vi và nguyên tắc làm việc
+
+- Chỉ đổi giao diện. Không đổi logic, API, route, tên biến state hay dữ liệu.
+- Làm từng trang một, mỗi trang một commit, kiểm tra bằng trình duyệt trước khi sang trang khác.
+- Phải có đủ hai chế độ sáng và tối ở mọi trang.
+- Toàn bộ chữ trên giao diện bằng tiếng Việt.
+- Người giao việc là chủ task giao diện nên được phép dùng ba công cụ sau, và chỉ ba công cụ này:
+  - Impeccable: cài như skill cho Claude Code (`npx impeccable install`), dùng để thiết kế và kiểm tra giao diện, không thêm vào code chạy trên web.
+  - GSAP: gói `gsap` trên npm, kèm bộ hướng dẫn gsap-skills cho Claude Code. Chỉ dùng cho một khoảnh khắc chuyển động chính ở trang giới thiệu. Các trang khác dùng CSS.
+  - Lenis: gói `lenis` trên npm. Chỉ bật ở trang giới thiệu, tắt khi người dùng bật giảm chuyển động. Không dùng ở trang học và các trang quản lý.
+- Không dùng React Bits và 21st.dev. Hiệu ứng nổi bật của React Bits trái với phong cách phẳng của mockup, còn 21st.dev viết cho Tailwind và shadcn nên không khớp với CSS hiện tại của dự án. Nếu thấy một hiệu ứng cụ thể thật sự cần, viết lại bằng CSS theo bộ màu ở mục 3.
+- Mỗi gói npm thêm vào phải có một mục ADR ngắn trong `docs/decisions/` và nằm trong một commit riêng. Đọc hướng dẫn cài đặt chính thức của từng công cụ trước khi cài vì phiên bản có thể đã thay đổi.
+- Hiệu ứng chuyển động phải dùng ít và có chủ đích. Không hiện lần lượt từng thẻ, không nâng thẻ khi di chuột. Phải tôn trọng `prefers-reduced-motion`.
+
+## 2. Quy tắc của nhóm cần tuân thủ
+
+- Tạo nhánh từ `dev`, không làm trên `p1/AUTH-07-google-login`. Tên nhánh có tiền tố `p1/`, ví dụ `p1/UX-02-new-ui-courses`.
+- Commit bắt đầu bằng `p1:`. Pull request trỏ về `dev`.
+- Các trang khóa học, lộ trình, trợ lý AI thuộc phần của thành viên khác. Khi sửa phải ghi rõ trong mô tả PR.
+- Không sửa file dùng chung ngoài `globals.css`, các file token và component giao diện chung. Nếu cần sửa nơi khác, hỏi trước.
+- Ghi quyết định thiết kế mới vào `docs/features/UX-01-design-foundation.md` vì tài liệu này đang ghi bộ token cũ (đỏ burgundy `#8B0000` trên nền giấy `#FAF7F5`).
+- AUTH-07 đã gộp vào `dev` và nhánh đã xóa trên GitHub, nên đăng nhập và tài khoản làm được bình thường. Nhớ `git fetch` và `git pull` nhánh `dev` mới nhất trước khi tạo nhánh.
+- Người giao việc phụ trách toàn bộ giao diện, nên được sửa cả các trang thuộc phần của thành viên khác. Vẫn ghi rõ trong mô tả PR.
+
+## 3. Token thiết kế
+
+Đưa vào `globals.css` dưới dạng biến CSS. Giữ lớp ánh xạ cho các tên biến cũ để trang chưa đổi vẫn chạy.
+
+### Chế độ sáng
+
+| Biến | Giá trị | Công dụng |
+|---|---|---|
+| --bg | #F3F5FA | nền trang |
+| --surface | #FFFFFF | thẻ, bảng |
+| --surface-2 | #E9EDF6 | nền phụ, ô nhập |
+| --line | #DCE1EC | đường viền |
+| --ink | #101214 | chữ chính |
+| --ink-2 | #4A5162 | chữ phụ |
+| --ink-3 | #737B8E | chữ mờ |
+| --brand | #2443E0 | màu thương hiệu, liên kết |
+| --brand-soft | #E3E8FF | nền nhấn nhẹ |
+| --hero | #1F3ACF | khối hero |
+| --hero-deep | #172A9C | phần tối của hero |
+| --mark | #FFD84A | điểm nhấn vàng |
+| --mark-ink | #3A2E00 | chữ trên nền vàng |
+| --btn / --btn-ink | #101214 / #FFFFFF | nút chính |
+| --ok | #168A5B | thành công |
+| --danger | #C9372C | lỗi |
+
+### Chế độ tối
+
+| Biến | Giá trị |
+|---|---|
+| --bg | #0C0E14 |
+| --surface | #151821 |
+| --surface-2 | #1E222E |
+| --line | #2A2F3D |
+| --ink | #ECEEF5 |
+| --ink-2 | #B3B9C9 |
+| --ink-3 | #8088A0 |
+| --brand | #93A5FF |
+| --brand-soft | #1B2350 |
+| --hero | #1B2FA6 |
+| --hero-deep | #111C6B |
+| --mark, --mark-ink | giữ nguyên |
+| --btn / --btn-ink | #ECEEF5 / #101214 |
+| --ok | #4FD1A0 |
+| --danger | #FF8478 |
+
+### Màu theo chủ đề khóa học
+
+Hệ thống #3D5AFE, Lập trình #FFCB3D, Dữ liệu #22B07D, Nghề nghiệp #FF7A59. Dùng cho ảnh bìa dạng hình khối và nhãn chủ đề.
+
+### Chữ, bo góc, bóng
+
+- Tiêu đề: Plus Jakarta Sans. Nội dung: Roboto. Mã nguồn: JetBrains Mono. Cỡ chữ nội dung 15px, dòng 1.6.
+- Bo góc thẻ 10px, nút dạng viên thuốc (999px). Không dùng bo góc lớn hơn cho thẻ.
+- Bóng chỉ dùng một mức (`--shadow`), không đổ bóng khi di chuột.
+- Chiều cao thanh đầu trang 64px.
+
+### Cách chuyển sáng tối
+
+- Mặc định theo hệ điều hành bằng `prefers-color-scheme`.
+- Nút chuyển ghi `data-theme="light"` hoặc `"dark"` lên thẻ `html`, lưu `localStorage` với khóa `kh-theme`.
+- Trong Next.js cần một đoạn script nhỏ trong `<head>` đọc khóa này trước khi vẽ trang để không bị nháy sai màu.
+
+## 4. Những thứ không được làm
+
+Đây là các điểm người dùng đã loại vì trông giống giao diện do AI tạo ra:
+
+- Không dùng vạch màu bên cạnh thẻ hoặc dưới tiêu đề.
+- Không bo góc lớn, không thẻ nổi lên khi di chuột, không hiện lần lượt từng thẻ bằng hiệu ứng.
+- Không dùng gradient làm trang trí.
+- Không dùng chữ in hoa nhỏ phía trên mỗi tiêu đề, không đánh số 01, 02, 03 khi nội dung không phải một chuỗi bước.
+- Giữ biểu tượng và nhãn thật, không dùng emoji làm biểu tượng.
+
+## 5. Logo
+
+Dùng phương án C. Biểu tượng là một nút gốc nối với hai nhánh, nút giữa màu vàng `#FFD84A`, vẽ bằng SVG (symbol `logo` trong mockup). Các file logo đã gửi riêng: bản sáng, bản tối, bản ngang. Bản ngang đang dùng chữ nên cần đổi chữ thành đường vẽ trước khi đưa vào dự án để không phụ thuộc phông.
+
+## 6. Thứ tự làm các trang
+
+Mỗi dòng ứng với một màn hình trong mockup (mở bằng đường dẫn `#tên-màn-hình`).
+
+| Thứ tự | Màn hình mockup | Trang trong dự án (cần xác nhận lại đường dẫn thật) | Ghi chú |
+|---|---|---|---|
+| 0 | khung chung | SiteHeader, SiteFooter, Navbar, nút sáng tối, globals.css | làm trước, mọi trang dùng |
+| 1 | khoa-hoc | danh sách và chi tiết khóa học | phần của thành viên khác, ghi vào PR |
+| 2 | trang-chu | trang giới thiệu (landing) | tiêu đề lớn là "KnowledgeHub" |
+| 3 | bai-hoc | trang học | |
+| 4 | lo-trinh, lo-trinh-cua-toi | lộ trình | |
+| 5 | tro-ly | trợ lý AI | ẩn chân trang ở màn hình này |
+| 6 | da-luu | đã lưu | |
+| 7 | studio | danh sách khóa học của contributor | |
+| 8 | soan-khoa-hoc | `courses/create` (hơn 3000 dòng) | chia thành component nhỏ khi làm, xem mục 7 |
+| 9 | lich-su-phien-ban | `courses/[id]/versions` | xem mục 7 |
+| 10 | quan-tri | quản trị | |
+| 11 | dang-nhap, tai-khoan | đăng nhập, tài khoản | AUTH-07 đã gộp, giữ nguyên chức năng đăng nhập Google |
+
+## 7. Hai màn soạn khóa học và lịch sử phiên bản
+
+Giữ nguyên toàn bộ chức năng hiện có, chỉ đổi giao diện.
+
+Soạn khóa học (`#soan-khoa-hoc`):
+- Ba chế độ xem: chia đôi, chỉ soạn, chỉ xem. Trên điện thoại xếp thành một cột.
+- Thông báo khôi phục bản nháp tự lưu, có nút Khôi phục và Bỏ bản nháp.
+- Thông tin khóa học: tên (5 đến 120 ký tự), đường dẫn tự tạo từ tên và có nút khóa hoặc sửa tay, danh mục, thẻ dạng chip nhập bằng Enter.
+- Thanh công cụ: H2, H3, in đậm, in nghiêng, gạch ngang, danh sách, trích dẫn, đường kẻ, khối code nhiều ngôn ngữ, ghi chú (lưu ý, mẹo, cảnh báo), chèn video YouTube bằng hộp thoại.
+- Xem trước dùng cùng kiểu chữ với trang học. Trong dự án, giữ nguyên bộ hiển thị markdown hiện có, chỉ đổi kiểu dáng.
+- Bảng kiểm tra trước khi xuất bản có 4 điều kiện: tên hợp lệ, đã chọn danh mục, có ít nhất 1 thẻ, nội dung từ 50 từ. Nút Xuất bản chỉ bật khi đạt đủ. Giữ nguyên bước xác nhận trước khi xuất bản như trong code hiện tại.
+
+Lịch sử phiên bản (`#lich-su-phien-ban`):
+- Danh sách phiên bản mới nhất ở trên, có nhãn Đang xuất bản và Mới nhất. Tên người tạo chỉ hiện tên, không hiện email.
+- Hai chế độ: Xem (nội dung dạng văn bản thuần, không hiển thị HTML) và So sánh (chọn phiên bản gốc, phiên bản so sánh, đổi chỗ, so với bản trước).
+- So sánh theo từng dòng, có số dòng cũ và mới, dấu cộng và trừ kèm nhãn cho trình đọc màn hình (không chỉ dựa vào màu), thay đổi tiêu đề hiện riêng, các dòng không đổi được gấp lại và mở ra được. Khi thay đổi quá lớn, hiện thông báo kết quả chỉ là gần đúng như logic hiện tại.
+- Ô chọn Xem thử trạng thái chỉ có trong mockup để xem các trường hợp: tác giả, người đọc (chỉ thấy bản đang xuất bản), chưa đăng nhập, không có quyền, không tìm thấy, lỗi tải. Không đưa ô này vào dự án. Quy tắc hiển thị theo quyền giữ nguyên như code hiện tại.
+
+## 8. Trang chưa có mockup
+
+Áp dụng cho các trang quản trị chi tiết (danh mục, thẻ, contributor, phân quyền) và mọi trang chưa có trong mockup.
+
+- Chỉ dùng token và component đã làm ở các bước trước. Bảng, biểu mẫu, hộp thoại, nhãn trạng thái làm giống màn Studio và Quản trị trong mockup.
+- Không thêm kiểu mới, màu mới hay hiệu ứng mới.
+- Trạng thái trống, đang tải, lỗi dùng cách thể hiện đã có trong mockup.
+- Đưa người giao việc xem trước khi commit.
+
+## 9. Quy tắc bắt buộc: mockup trước khi code
+
+Khi làm một chức năng mới hoặc một màn hình mới, phải làm mockup HTML trước bằng Claude Fable hoặc Claude trên ứng dụng desktop, được người giao việc duyệt, rồi mới code vào dự án. Mockup mới được thêm vào `docs/ui-redesign/mockup/index.html` theo cùng cách đặt tên màn hình, dùng đúng token ở mục 3 và có cả chế độ sáng và tối. Claude Code không tự làm mockup cho màn hình mới và không code màn hình mới khi chưa có mockup đã duyệt.
+
+## 10. Việc chưa chốt
+
+- Ba điểm thiết kế chưa quyết: dải vàng "Chưa biết bắt đầu từ đâu?", chữ mờ lớn ở đầu trang khóa học, ảnh bìa dạng hình khối thay cho ảnh thật.
+
+## 11. Cách kiểm tra mỗi trang
+
+1. Chạy `docker compose up`, mở `http://localhost:3000`.
+2. So với mockup ở cả chế độ sáng và tối, ở chiều rộng máy tính và điện thoại.
+3. Kiểm tra bàn phím có viền focus nhìn thấy, tương phản chữ đạt chuẩn, vẫn dùng được khi bật giảm chuyển động.
+4. Chạy lint và build của frontend trước khi commit.

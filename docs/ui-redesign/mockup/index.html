@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KnowledgeHub giao diện mới</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M11 8v24M11 20 28 8M11 20l17 12' stroke='%232F4BE6' stroke-width='2.4' fill='none'/%3E%3Ccircle cx='11' cy='8' r='4.2' fill='%232F4BE6'/%3E%3Ccircle cx='11' cy='32' r='4.2' fill='%232F4BE6'/%3E%3Ccircle cx='28' cy='8' r='4.2' fill='%232F4BE6'/%3E%3Ccircle cx='28' cy='32' r='4.2' fill='%232F4BE6'/%3E%3Ccircle cx='11' cy='20' r='5.6' fill='%23FFD84A'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Roboto:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Bố cục: một khối màu thương hiệu lớn ở đầu trang tìm kiếm, phần còn lại là bề mặt phẳng, mọi nút bấm dạng viên tròn, điểm nhấn vàng bút dạ quang. */
+:root{
+  --bg:#F3F5FA; --surface:#FFFFFF; --surface-2:#E9EDF6; --line:#DCE1EC;
+  --ink:#101214; --ink-2:#4A5162; --ink-3:#737B8E;
+  --brand:#2443E0; --brand-soft:#E3E8FF; --hero:#1F3ACF; --hero-deep:#172A9C;
+  --mark:#FFD84A; --mark-ink:#3A2E00;
+  --btn:#101214; --btn-ink:#FFFFFF;
+  --ok:#168A5B; --danger:#C9372C;
+  --c-sys:#3D5AFE; --c-prog:#FFCB3D; --c-data:#22B07D; --c-career:#FF7A59;
+  --shadow:0 1px 2px rgba(16,18,20,.05),0 8px 24px rgba(23,42,156,.07);
+  --display:'Plus Jakarta Sans','Roboto',system-ui,sans-serif;
+  --body:'Roboto',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --r-card:10px; --r-pill:999px; --head:64px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0C0E14; --surface:#151821; --surface-2:#1E222E; --line:#2A2F3D;
+    --ink:#ECEEF5; --ink-2:#B3B9C9; --ink-3:#8088A0;
+    --brand:#93A5FF; --brand-soft:#1B2350; --hero:#1B2FA6; --hero-deep:#111C6B;
+    --mark:#FFD84A; --mark-ink:#3A2E00;
+    --btn:#ECEEF5; --btn-ink:#101214;
+    --ok:#4FD1A0; --danger:#FF8478;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0C0E14; --surface:#151821; --surface-2:#1E222E; --line:#2A2F3D;
+  --ink:#ECEEF5; --ink-2:#B3B9C9; --ink-3:#8088A0;
+  --brand:#93A5FF; --brand-soft:#1B2350; --hero:#1B2FA6; --hero-deep:#111C6B;
+  --mark:#FFD84A; --mark-ink:#3A2E00;
+  --btn:#ECEEF5; --btn-ink:#101214;
+  --ok:#4FD1A0; --danger:#FF8478;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+h1,h2,h3,h4{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.02em;line-height:1.2}
+p{margin:0}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+svg.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:6px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* Thanh điều hướng */
+.top{position:sticky;top:0;z-index:20;height:var(--head);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top .wrap{height:100%;display:flex;align-items:center;gap:20px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:-.02em}
+.nav{display:flex;gap:4px;margin-left:8px}
+.nav a{padding:8px 14px;border-radius:var(--r-pill);font-weight:500;color:var(--ink-2);font-size:14px;white-space:nowrap}
+.nav a:hover{background:var(--surface-2);color:var(--ink)}
+.nav a[aria-current="page"]{background:var(--ink);color:var(--surface)}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.icon-btn{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.icon-btn:hover{color:var(--ink);border-color:var(--ink-3)}
+.studio{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--r-pill);border:1px solid var(--line);font-weight:500;font-size:14px;background:var(--surface)}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--mark);color:var(--mark-ink);display:grid;place-items:center;font-weight:700;font-size:13px;font-family:var(--display)}
+#theme .sun{display:none}
+:root[data-theme="dark"] #theme .sun{display:block}
+:root[data-theme="dark"] #theme .moon{display:none}
+
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:var(--r-pill);font-weight:600;font-size:14px;background:var(--btn);color:var(--btn-ink);white-space:nowrap;transition:transform .15s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--ink-3)}
+.btn.sm{padding:7px 14px;font-size:13px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r-pill);font-size:12px;font-weight:600;background:var(--surface-2);color:var(--ink-2);white-space:nowrap}
+
+.screen{display:none}
+.screen.on{display:block}
+
+/* Trang khóa học */
+.hero{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--hero-deep),var(--hero));color:#fff}
+.hero .wrap{position:relative;padding-top:72px;padding-bottom:84px}
+.ghost-word{position:absolute;left:-2vw;top:50%;transform:translateY(-52%);font-family:var(--display);font-weight:800;font-size:clamp(150px,25vw,360px);letter-spacing:-.04em;line-height:1;color:rgba(255,255,255,.055);white-space:nowrap;pointer-events:none;user-select:none}
+.hero-disc{position:absolute;width:300px;height:300px;border-radius:50%;background:var(--mark);right:-70px;bottom:-170px}
+.hero-ring{position:absolute;width:150px;height:150px;border-radius:50%;border:26px solid rgba(255,255,255,.14);right:170px;top:-60px}
+.hero-kicker{font-family:var(--display);font-weight:600;font-size:16px;color:rgba(255,255,255,.82)}
+.hero h1{font-size:clamp(34px,4.6vw,54px);font-weight:800;margin:8px 0 28px;max-width:16ch}
+.search{display:flex;align-items:center;gap:10px;background:var(--surface);color:var(--ink);border-radius:var(--r-pill);padding:7px 7px 7px 20px;max-width:640px;box-shadow:0 12px 36px rgba(6,12,60,.35)}
+.search input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:16px;color:var(--ink);padding:10px 0;outline:none}
+.search input::placeholder{color:var(--ink-3)}
+.search svg{color:var(--ink-3)}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;align-items:center;font-size:13px;color:rgba(255,255,255,.75)}
+.hero-tags button{padding:5px 12px;border-radius:var(--r-pill);background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:500}
+.hero-tags button:hover{background:rgba(255,255,255,.22)}
+.hero :focus-visible{outline-color:#fff}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:26px 0 6px}
+.chip{padding:8px 16px;border-radius:var(--r-pill);background:var(--surface);border:1px solid var(--line);font-weight:500;font-size:14px;color:var(--ink-2)}
+.chip:hover{border-color:var(--ink-3);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:600}
+.chip span{opacity:.7;font-variant-numeric:tabular-nums}
+.count{margin-left:auto;color:var(--ink-3);font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;padding:16px 0 8px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s,border-color .2s;cursor:pointer}
+.card:hover{border-color:var(--ink-3)}
+.cover{height:128px;position:relative;overflow:hidden;padding:12px;display:flex;justify-content:space-between;align-items:flex-start}
+.cover .pill{background:rgba(255,255,255,.92);color:#101214;position:relative;z-index:1}
+.cover i{position:absolute;display:block}
+.art{position:absolute;inset:0}.art.v1{transform:scaleX(-1)}.art.v2{transform:translateX(16%) scale(1.18)}
+.cv-sys{background:var(--c-sys)} .cv-prog{background:var(--c-prog)} .cv-data{background:var(--c-data)} .cv-career{background:var(--c-career)}
+.cv-sys i:nth-of-type(1){width:74px;height:74px;border-radius:50%;background:#fff;opacity:.92;left:38%;bottom:-18px}
+.cv-sys i:nth-of-type(2){width:46px;height:46px;border-radius:50%;background:var(--mark);left:18%;bottom:26px}
+.cv-sys i:nth-of-type(3){width:46px;height:46px;border-radius:50%;background:#101214;right:14%;bottom:30px}
+.cv-prog i:nth-of-type(1){width:150px;height:18px;border-radius:9px;background:#101214;left:24px;bottom:52px}
+.cv-prog i:nth-of-type(2){width:96px;height:18px;border-radius:9px;background:#fff;left:52px;bottom:26px}
+.cv-prog i:nth-of-type(3){width:120px;height:120px;border-radius:50%;background:var(--c-career);right:-34px;bottom:-44px}
+.cv-data i:nth-of-type(1){width:64px;height:64px;border-radius:6px;background:#101214;left:24px;bottom:-12px}
+.cv-data i:nth-of-type(2){width:64px;height:92px;border-radius:6px;background:#fff;left:100px;bottom:-12px}
+.cv-data i:nth-of-type(3){width:64px;height:120px;border-radius:6px;background:var(--mark);left:176px;bottom:-12px}
+.cv-career i:nth-of-type(1){width:110px;height:110px;border-radius:50% 50% 0 50%;background:#fff;left:26px;bottom:-30px}
+.cv-career i:nth-of-type(2){width:110px;height:110px;border-radius:50% 50% 50% 0;background:#101214;left:118px;bottom:-52px}
+.cv-career i:nth-of-type(3){width:26px;height:26px;border-radius:50%;background:var(--mark);right:30px;bottom:26px}
+.card-body{padding:16px 18px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.role{font-size:12.5px;font-weight:600;color:var(--brand)}
+.card h3{font-size:17px;font-weight:700}
+.desc{color:var(--ink-2);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-foot{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:12px;font-size:13px;color:var(--ink-2)}
+.mini-av{width:24px;height:24px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ink)}
+.save{margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:var(--ink-3)}
+.save:hover{background:var(--surface-2);color:var(--ink)}
+.save[aria-pressed="true"]{color:var(--mark-ink);background:var(--mark)}
+.save[aria-pressed="true"] svg{fill:currentColor}
+.band{grid-column:1/-1;border-radius:var(--r-card);background:var(--mark);color:var(--mark-ink);padding:24px 28px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;position:relative;overflow:hidden}
+.band::after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(16,18,20,.9);right:-50px;top:-90px}
+.band h2{font-size:22px;font-weight:800;color:#101214}
+.band p{font-size:14px;max-width:46ch}
+.band-links{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;position:relative;z-index:1}
+.band .btn{background:#101214;color:#fff}
+.band .btn.ghost{background:rgba(255,255,255,.7);color:#101214;border:0}
+.empty{grid-column:1/-1;text-align:center;padding:56px 16px;color:var(--ink-2)}
+.pager{display:flex;justify-content:center;gap:6px;padding:28px 0 64px}
+.pager button{min-width:38px;height:38px;padding:0 12px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:14px;font-variant-numeric:tabular-nums}
+.pager button[aria-current]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.pager button:disabled{opacity:.45;cursor:default}
+
+/* Trang bài học */
+.progress{position:sticky;top:var(--head);z-index:15;height:3px;background:transparent}
+.progress b{display:block;height:100%;width:0;background:var(--brand);border-radius:0 3px 3px 0}
+.lesson{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:56px;padding-top:36px;padding-bottom:80px;align-items:start}
+.crumb{display:flex;gap:8px;font-size:13px;color:var(--ink-3);margin-bottom:18px}
+.crumb a:hover{color:var(--ink)}
+.lesson h1{font-size:clamp(30px,3.6vw,44px);font-weight:800;max-width:20ch}
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin:20px 0 0;font-size:14px;color:var(--ink-2)}
+.meta .by{display:flex;align-items:center;gap:8px;font-weight:500;color:var(--ink)}
+.meta .acts{margin-left:auto;display:flex;gap:8px}
+.ver{color:var(--brand);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.prose{max-width:68ch;margin-top:32px;font-size:16.5px;line-height:1.75}
+.prose>*+*{margin-top:18px}
+.prose h2{font-size:24px;font-weight:700;margin-top:44px;scroll-margin-top:90px}
+.prose strong{font-weight:600}
+.prose ul,.prose ol{margin:18px 0 0;padding-left:22px}
+.prose li+li{margin-top:8px}
+.prose code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);padding:2px 6px;border-radius:6px}
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:20px 22px}
+.goal h4{font-size:14px;color:var(--brand);font-weight:700;margin-bottom:6px;letter-spacing:0}
+.hl{font-weight:500}
+.video{border-radius:var(--r-card);overflow:hidden;background:#101214;color:#fff;aspect-ratio:16/9;position:relative;display:grid;place-items:center}
+.video::before{content:"";position:absolute;width:60%;aspect-ratio:1;border-radius:50%;background:var(--hero);left:-18%;bottom:-60%}
+.video::after{content:"";position:absolute;width:26%;aspect-ratio:1;border-radius:50%;background:var(--mark);right:8%;top:-12%}
+.play{position:relative;z-index:1;width:72px;height:72px;border-radius:50%;background:#fff;color:#101214;display:grid;place-items:center}
+.play svg{width:26px;height:26px;fill:currentColor;stroke:none;margin-left:3px}
+.video-cap{position:absolute;z-index:1;left:20px;right:20px;bottom:16px;display:flex;justify-content:space-between;gap:12px;align-items:end;font-size:14px}
+.video-cap b{font-family:var(--display);font-weight:600;max-width:36ch;line-height:1.35}
+.video-cap a{white-space:nowrap;text-decoration:underline;text-underline-offset:3px;font-size:13px}
+.code{border-radius:var(--r-card);background:#12141C;color:#DDE2F0;overflow:hidden;border:1px solid var(--line)}
+.code-top{display:flex;justify-content:space-between;align-items:center;padding:8px 10px 8px 16px;font-family:var(--mono);font-size:12px;color:#8E97AE;border-bottom:1px solid #262A38}
+.code-top button{display:flex;gap:6px;align-items:center;padding:5px 10px;border-radius:var(--r-pill);color:#DDE2F0;font-family:var(--body);font-size:12px}
+.code-top button:hover{background:#262A38}
+.code pre{margin:0;padding:16px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.7}
+.k{color:#93A5FF}.s{color:#FFD84A}.t{color:#6FD9AE}
+.note{background:var(--surface);border:1px solid var(--line);padding:14px 18px;border-radius:var(--r-card)}
+.note b{display:block;font-family:var(--display);font-size:14px;margin-bottom:2px}
+.side{position:sticky;top:calc(var(--head) + 28px);display:flex;flex-direction:column;gap:28px}
+.side h4{font-size:14px;font-weight:700;margin-bottom:10px;letter-spacing:0}
+.toc{display:flex;flex-direction:column;gap:2px}
+.toc a{padding:7px 12px;border-radius:8px;font-size:14px;color:var(--ink-2)}
+.toc a:hover{color:var(--ink)}
+.toc a.on{background:var(--brand-soft);color:var(--brand);font-weight:500}
+.rel{display:flex;flex-direction:column;gap:10px}
+.rel a{display:flex;gap:12px;align-items:center;padding:10px;border-radius:var(--r-card);background:var(--surface);border:1px solid var(--line)}
+.rel a:hover{border-color:var(--ink-3)}
+.rel .sw{width:40px;height:40px;border-radius:6px;flex:none}
+.rel b{display:block;font-size:14px;font-weight:600;line-height:1.35}
+.rel small{color:var(--ink-3);font-size:12px}
+
+/* Trang trợ lý AI */
+.ai{display:grid;grid-template-columns:280px minmax(0,1fr) 300px;height:calc(100vh - var(--head));height:calc(100dvh - var(--head));min-height:520px}
+.ai.no-mem{grid-template-columns:280px minmax(0,1fr)}
+.ai.no-mem .mem{display:none}
+.ai-list{border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;padding:18px 14px;gap:14px;min-height:0}
+.ai-list h2{font-size:18px;font-weight:800;padding:0 6px}
+.ai-list .btn{justify-content:center}
+.convs{display:flex;flex-direction:column;gap:4px;overflow-y:auto;flex:1}
+.conv{text-align:left;padding:10px 12px;border-radius:8px;width:100%}
+.conv:hover{background:var(--surface-2)}
+.conv[aria-current]{background:var(--brand-soft)}
+.conv b{display:block;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conv[aria-current] b{color:var(--brand)}
+.conv small{color:var(--ink-3);font-size:12px}
+.ai-list .foot{font-size:12px;color:var(--ink-3);padding:0 6px}
+.chat{display:flex;flex-direction:column;min-width:0;min-height:0}
+.chat-head{display:flex;align-items:center;gap:10px;padding:14px 24px;border-bottom:1px solid var(--line)}
+.chat-head h1{font-size:17px;font-weight:700}
+.chat-head small{color:var(--ink-3);font-size:12.5px;display:block}
+.chat-head .acts{margin-left:auto;display:flex;gap:6px}
+.thread{flex:1;overflow-y:auto;padding:28px 24px 12px}
+.thread-in{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.me{align-self:flex-end;max-width:78%;background:var(--btn);color:var(--btn-ink);padding:10px 16px;border-radius:12px 12px 2px 12px}
+.bot{display:flex;gap:12px;align-items:flex-start}
+.bot-av{width:32px;height:32px;border-radius:8px;background:var(--hero);position:relative;overflow:hidden;flex:none;margin-top:2px}
+.bot-av::before{content:"";position:absolute;width:20px;height:20px;border-radius:50%;background:var(--mark);left:-5px;bottom:-5px}
+.bot-txt{min-width:0;font-size:15.5px;line-height:1.7}
+.bot-txt>*+*{margin-top:12px}
+.bot-txt h3{font-size:16px;font-weight:700;margin-top:20px}
+.bot-txt ul{margin:8px 0 0;padding-left:20px}
+.bot-txt li+li{margin-top:4px}
+.bot-txt strong{font-weight:600}
+.offer{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-radius:var(--r-card);background:var(--brand-soft);margin-top:18px}
+.offer p{flex:1;min-width:200px;font-size:14px}
+.offer b{display:block;font-family:var(--display)}
+.dots{display:flex;gap:5px;padding:12px 0}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--ink-3);animation:bl 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.compose{padding:8px 24px 16px}
+.compose-in{max-width:720px;margin:0 auto}
+.sugg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.sugg button{padding:7px 14px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--ink-2)}
+.sugg button:hover{border-color:var(--brand);color:var(--brand)}
+.box{display:flex;align-items:flex-end;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px 8px 8px 16px}
+.box:focus-within{border-color:var(--brand)}
+.box textarea{flex:1;border:0;background:none;resize:none;font:inherit;color:var(--ink);padding:8px 0;outline:none;max-height:140px;min-height:24px}
+.send{width:40px;height:40px;border-radius:50%;background:var(--hero);color:#fff;display:grid;place-items:center;flex:none}
+.hint{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--ink-3);padding:8px 6px 0}
+.mem{border-left:1px solid var(--line);background:var(--surface);padding:18px;display:flex;flex-direction:column;gap:14px;min-height:0;overflow-y:auto}
+.mem h2{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+.mem p{font-size:13px;color:var(--ink-2)}
+.mem-item{display:flex;gap:8px;align-items:flex-start;padding:10px 12px;border-radius:8px;background:var(--bg);font-size:14px}
+.mem-item span{flex:1}
+.mem-item button{color:var(--ink-3);padding:2px}
+.mem-item button:hover{color:var(--danger)}
+.mem form{display:flex;gap:6px;margin-top:auto}
+.mem input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);border-radius:var(--r-pill);padding:9px 14px;font:inherit;font-size:13px;color:var(--ink)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--btn);color:var(--btn-ink);padding:10px 18px;border-radius:var(--r-pill);font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:.25s;z-index:50}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* ===== Các trang bổ sung ===== */
+.logo-mark{width:34px;height:34px;color:var(--brand);flex:none}
+a.avatar{text-decoration:none}
+body[data-screen="dang-nhap"] .nav,body[data-screen="dang-nhap"] .studio,body[data-screen="dang-nhap"] a.avatar{display:none}
+.mu{color:var(--ink-2)}
+.ph{padding:40px 0 8px}
+.ph h1{font-size:clamp(28px,3.4vw,40px);font-weight:800}
+.ph p{color:var(--ink-2);margin-top:8px;max-width:62ch}
+.ph .row{display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap}
+.ph .btns{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.sec{padding:40px 0 8px}
+.sec>h2,.sec-h h2{font-size:24px;font-weight:800}
+.sec-h{display:flex;align-items:baseline;gap:16px;margin-bottom:6px}
+.sec-h a{margin-left:auto;color:var(--brand);font-weight:500;font-size:14px}
+.sec-h a:hover{text-decoration:underline}
+.pg-end{padding-bottom:72px}
+
+/* Form */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field label{font-size:14px;font-weight:500}
+.field input,.field select{height:44px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 14px;font:inherit;color:var(--ink);width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:var(--brand)}
+.field input[readonly]{background:var(--surface-2);color:var(--ink-3)}
+.field small{color:var(--ink-3);font-size:13px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:24px}
+.panel h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.panel>p{color:var(--ink-2);font-size:14px;margin-bottom:18px;max-width:60ch}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.ghost.danger{background:var(--surface);color:var(--danger);border:1px solid var(--line)}
+
+/* Bảng */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface)}
+table.tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:780px}
+.tbl th{text-align:left;font-weight:500;color:var(--ink-3);font-size:13px;padding:12px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl .tt b{display:block;font-weight:500}
+.tbl .tt small{color:var(--ink-3);font-family:var(--mono);font-size:12px}
+.tbl .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tbl .acts{display:flex;gap:6px;justify-content:flex-end}
+.st{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--r-pill);font-size:12px;font-weight:500;white-space:nowrap}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st.ok{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)}
+.st.draft{background:var(--surface-2);color:var(--ink-2)}
+.st.bad{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger)}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:20px 0 14px}
+.tools .search-s{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-pill);padding:0 14px;height:40px;flex:1;max-width:420px}
+.tools .search-s input{flex:1;min-width:0;border:0;background:none;font:inherit;color:var(--ink);outline:none}
+.tools .search-s svg{color:var(--ink-3)}
+.sel{height:40px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 10px;font:inherit;font-size:14px;color:var(--ink)}
+
+/* Các bước lộ trình */
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.steps li{display:flex;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.steps li:last-child{border-bottom:0}
+.dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);flex:none;display:grid;place-items:center;color:var(--ink-3)}
+.dot.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.dot.now{border-color:var(--brand)}
+.dot.now::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--brand)}
+.dot svg{width:13px;height:13px;stroke-width:3}
+.steps .nm{flex:1;min-width:0;font-weight:500}
+.steps .nm small{display:block;font-weight:400;color:var(--ink-3);font-size:13px}
+.steps li.lock .nm{color:var(--ink-3)}
+.bar{height:8px;border-radius:4px;background:var(--surface-2);overflow:hidden}
+.bar b{display:block;height:100%;background:var(--brand);border-radius:4px}
+
+/* Trang chủ */
+.hero.home .wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:56px;align-items:center;padding-top:80px;padding-bottom:88px}
+.hero.home h1{font-size:clamp(40px,6vw,68px);margin-bottom:18px}
+.hero.home .lead{font-size:17px;color:rgba(255,255,255,.85);max-width:46ch;line-height:1.65}
+.hero.home .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.hero .btn.light{background:#fff;color:#101214}
+.hero .btn.line{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5)}
+.prev{background:var(--surface);color:var(--ink);border-radius:var(--r-card);padding:22px 24px;box-shadow:0 12px 36px rgba(6,12,60,.35);position:relative;z-index:1}
+.prev h3{font-size:17px;font-weight:700}
+.prev .mu{font-size:13px;margin:2px 0 8px}
+.prev .bar{margin:12px 0 4px}
+.path-row{display:grid;grid-template-columns:200px minmax(0,1fr) auto;gap:20px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line)}
+.path-row:first-of-type{border-top:1px solid var(--line)}
+.path-row h3{font-size:18px;font-weight:700}
+.path-row p{color:var(--ink-2);font-size:14px}
+.path-row .lv{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.path-row .lv a{padding:6px 14px;border-radius:var(--r-pill);border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:500}
+.path-row .lv a:hover{border-color:var(--ink-3)}
+.ai-sec{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:48px;align-items:center;margin-top:48px;padding:40px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card)}
+.ai-sec h2{font-size:26px;font-weight:800;max-width:18ch}
+.ai-sec p.mu{margin:12px 0 22px;max-width:44ch}
+.ai-chat{display:flex;flex-direction:column;gap:16px;background:var(--bg);border-radius:var(--r-card);padding:22px}
+.ai-chat .me{max-width:88%}
+.site-foot{border-top:1px solid var(--line);background:var(--surface);margin-top:56px}
+.site-foot .wrap{display:flex;gap:32px;flex-wrap:wrap;padding-top:32px;padding-bottom:32px;align-items:flex-start}
+.site-foot .logo{font-size:16px}
+.site-foot p{color:var(--ink-3);font-size:13px;max-width:34ch;margin-top:8px}
+.site-foot nav{margin-left:auto;display:flex;gap:56px;flex-wrap:wrap}
+.site-foot nav div{display:flex;flex-direction:column;gap:8px;font-size:14px}
+.site-foot nav b{font-weight:500;margin-bottom:2px}
+.site-foot nav a{color:var(--ink-2)}
+.site-foot nav a:hover{color:var(--ink)}
+
+/* Đăng nhập */
+.auth{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:calc(100vh - var(--head))}
+.auth-art{background:linear-gradient(180deg,var(--hero-deep),var(--hero));color:#fff;position:relative;overflow:hidden;padding:64px;display:flex;flex-direction:column;justify-content:flex-end}
+.auth-art h2{font-size:32px;font-weight:800;max-width:16ch;position:relative;z-index:1}
+.auth-art p{margin-top:12px;color:rgba(255,255,255,.82);max-width:40ch;position:relative;z-index:1}
+.auth-art .hero-disc{right:auto;left:-90px;top:-110px;bottom:auto;width:280px;height:280px}
+.auth-form{display:grid;place-items:center;padding:40px 24px}
+.auth-box{width:100%;max-width:380px}
+.auth-box h1{font-size:28px;font-weight:800;margin-bottom:6px}
+.auth-box>p{color:var(--ink-2);margin-bottom:24px;font-size:14px}
+.auth-box .btn{width:100%;justify-content:center;padding:12px 18px}
+.or{display:flex;align-items:center;gap:12px;color:var(--ink-3);font-size:13px;margin:16px 0}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+.sw{margin-top:20px;font-size:14px;color:var(--ink-2);text-align:center}
+.sw button{color:var(--brand);font-weight:600}
+.sw button:hover{text-decoration:underline}
+
+/* Quản trị */
+.cat{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.cat:last-child{border-bottom:0}
+.cat.sub{padding-left:44px}
+.cat b{font-weight:500}
+.cat small{color:var(--ink-3)}
+.cat .acts{margin-left:auto;display:flex;gap:6px}
+.taglist{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.tag{display:inline-flex;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-radius:var(--r-pill);background:var(--surface);border:1px solid var(--line);font-size:14px}
+.tag small{color:var(--ink-3)}
+.tag button{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;color:var(--ink-3)}
+.tag button:hover{background:var(--surface-2);color:var(--danger)}
+.acct{max-width:720px;padding-bottom:72px;display:flex;flex-direction:column;gap:20px;padding-top:24px}
+.who{display:flex;gap:16px;align-items:center;margin-bottom:20px}
+.who .avatar{width:56px;height:56px;font-size:18px}
+.who b{font-family:var(--display);font-size:18px;display:block}
+.rm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;padding:20px 0 8px}
+.rm{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:20px;display:flex;flex-direction:column;gap:10px}
+.rm:hover{border-color:var(--ink-3)}
+.rm .pills{display:flex;gap:8px}
+.rm h3{font-size:18px;font-weight:700}
+.rm p{color:var(--ink-2);font-size:14px}
+.rm a{margin-top:auto;padding-top:6px;color:var(--brand);font-weight:600;font-size:14px}
+.rm a:hover{text-decoration:underline}
+.notice{margin-top:18px;padding:12px 16px;border-radius:var(--r-card);background:var(--surface-2);color:var(--ink-2);font-size:14px;max-width:70ch}
+.mine{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;padding-top:24px;align-items:start}
+.empty-s{padding:28px 0 8px;color:var(--ink-2);font-size:14px}
+
+.screen.on{min-height:calc(100vh - var(--head) - 150px)}
+body[data-screen="tro-ly"] .site-foot,body[data-screen="dang-nhap"] .site-foot{display:none}
+@media (max-width:980px){
+  .hero.home .wrap,.ai-sec,.auth,.mine{grid-template-columns:1fr}
+  .ai-sec{padding:24px;gap:28px}
+  .auth-art{min-height:220px;padding:32px}
+  .path-row{grid-template-columns:1fr}.path-row .lv{justify-content:flex-start}
+  .site-foot nav{margin-left:0}
+}
+
+@media (max-width:980px){
+  .nav a{padding:8px 10px}.studio span,.count{display:none}
+  .lesson{grid-template-columns:1fr;gap:32px}.side{position:static}
+  .ai,.ai.no-mem{grid-template-columns:1fr;height:auto}
+  .ai-list{border-right:0;border-bottom:1px solid var(--line)}.convs{flex-direction:row;overflow-x:auto}.conv{min-width:200px}
+  .mem{border-left:0;border-top:1px solid var(--line)}
+  .thread{overflow:visible}
+}
+@media (max-width:640px){
+  .top .wrap{gap:10px;padding:0 16px}.logo span{display:none}.nav{margin:0;overflow-x:auto}.studio{display:none}
+  .wrap{padding:0 16px}.hero .wrap{padding-top:44px;padding-bottom:60px}.hero-ring{display:none}
+  .meta .acts{margin-left:0;width:100%}.band-links{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ===== Soạn khóa học ===== */
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r-pill);background:var(--surface);padding:3px;gap:2px}
+.seg button{padding:6px 14px;border-radius:var(--r-pill);font-size:13px;font-weight:500;color:var(--ink-2);display:inline-flex;gap:6px;align-items:center}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-selected="true"],.seg button[aria-pressed="true"]{background:var(--brand-soft);color:var(--brand);font-weight:600}
+.recover{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:20px;padding:12px 16px;background:var(--brand-soft);border:1px solid var(--brand);border-radius:var(--r-card);font-size:14px}
+.recover p{flex:1;min-width:240px}
+.recover[hidden]{display:none}
+.ed{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start;margin-top:20px}
+.ed[data-mode="editor"],.ed[data-mode="preview"]{grid-template-columns:minmax(0,1fr)}
+.ed[data-mode="editor"] .pv{display:none}
+.ed[data-mode="preview"] .ep{display:none}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.pn{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card)}
+.pn-h{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px}
+.pn-h .sp{margin-left:auto;font-weight:400;color:var(--ink-3);font-size:13px}
+.pn-b{padding:16px}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.fgrid .full{grid-column:1/-1}
+.lab-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lab-row button{font-size:13px;color:var(--brand);font-weight:500}
+.taginput{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 8px;min-height:44px}
+.taginput:focus-within{border-color:var(--brand)}
+.taginput input{flex:1;min-width:120px;border:0;background:none;font:inherit;color:var(--ink);outline:none;height:30px;padding:0 6px}
+.tb{display:flex;flex-wrap:wrap;gap:2px;padding:8px;border-bottom:1px solid var(--line);position:relative;align-items:center}
+.tb>button,.tb .dd>button{min-width:32px;height:32px;padding:0 9px;border-radius:6px;font-size:13px;font-weight:600;color:var(--ink-2);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.tb>button:hover,.tb .dd>button:hover{background:var(--surface-2);color:var(--ink)}
+.tb .vsep{width:1px;height:20px;background:var(--line);margin:0 6px}
+.tb .dd{position:relative}
+.menu{position:absolute;top:36px;left:0;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);padding:4px;min-width:190px}
+.menu[hidden]{display:none}
+.menu button{display:block;width:100%;text-align:left;padding:7px 10px;border-radius:6px;font-size:13.5px;color:var(--ink)}
+.menu button:hover{background:var(--surface-2)}
+textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;resize:vertical;padding:16px;font-family:var(--mono);font-size:13.5px;line-height:1.7;color:var(--ink);outline:none}
+.pv .prose{margin-top:0;max-width:none;font-size:15.5px}
+.pv .prose h1{font-size:26px;margin-bottom:6px;max-width:none}
+.pv .prose h2{font-size:21px;margin-top:28px}
+.pv .prose h3{font-size:17px;margin-top:22px}
+.pv .prose blockquote{margin:18px 0 0;padding:10px 16px;background:var(--surface-2);border-radius:var(--r-card);color:var(--ink-2)}
+.pv .prose hr{border:0;border-top:1px solid var(--line);margin:24px 0}
+.pv .prose pre{margin:18px 0 0;padding:14px;border-radius:var(--r-card);background:#12141C;color:#DDE2F0;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.7}
+.pv-empty{color:var(--ink-3)}
+.pre{margin-top:20px;padding:16px 18px}
+.pre-h{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;font-weight:600}
+.pre-h span{font-weight:400;font-size:14px;color:var(--ink-2)}
+.meter{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden;margin:12px 0 16px}
+.meter b{display:block;height:100%;background:var(--brand);border-radius:99px;transition:width .3s}
+.pre.ready .meter b{background:var(--ok)}
+.chk{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;list-style:none;padding:0;margin:0}
+.chk li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.chk .dot{flex:none;width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;color:#fff;margin-top:1px}
+.chk .dot svg{width:12px;height:12px;stroke-width:3;opacity:0}
+.chk li.ok .dot{background:var(--ok);border-color:var(--ok)}
+.chk li.ok .dot svg{opacity:1}
+.chk small{display:block;color:var(--ink-3);font-size:12.5px}
+.actbar{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin:16px 0 72px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.dlg-bg{position:fixed;inset:0;background:rgba(10,12,20,.55);display:none;place-items:center;z-index:60;padding:20px}
+.dlg-bg.on{display:grid}
+.dlg{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:22px;width:min(480px,100%)}
+.dlg h3{font-size:18px;margin-bottom:14px}
+.dlg .btns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.dlg .okv{color:var(--ok);font-size:13px}
+
+/* ===== Lịch sử phiên bản ===== */
+.state-sel{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-3)}
+.vh{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px;margin-top:20px;align-items:start}
+.vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.vitem{display:block;width:100%;text-align:left;padding:14px 16px;border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface)}
+.vitem:hover{border-color:var(--ink-3)}
+.vitem[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft)}
+.vitem b{font-family:var(--display);font-size:15px;display:block}
+.vitem .m{display:block;color:var(--ink-3);font-size:13px;margin-top:4px}
+.vitem .bd{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.vnote{margin-bottom:12px;font-size:13.5px;color:var(--ink-2)}
+.cmpbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.cmpbar .sel{height:36px}
+.cmpbar .lbl{font-size:13px;color:var(--ink-3)}
+.vhead{padding:16px 18px;border-bottom:1px solid var(--line)}
+.vhead h2{font-size:20px}
+.vhead p{color:var(--ink-3);font-size:13px;margin-top:4px}
+.vpre{margin:0;padding:18px;white-space:pre-wrap;font-family:var(--mono);font-size:13.5px;line-height:1.7;overflow-x:auto}
+.dsum{padding:12px 18px;border-bottom:1px solid var(--line);font-size:14px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.dsum .a{color:var(--ok);font-weight:600}.dsum .r{color:var(--danger);font-weight:600}
+.tchg{padding:12px 18px;border-bottom:1px solid var(--line);font-size:14px}
+.tchg s{color:var(--danger)}.tchg ins{color:var(--ok);text-decoration:none;font-weight:500}
+.diff{font-family:var(--mono);font-size:13px;line-height:1.65;overflow-x:auto;padding:8px 0}
+.dl{display:grid;grid-template-columns:44px 44px 28px minmax(0,1fr)}
+.dl>span{padding:0 8px}
+.dl .n{color:var(--ink-3);text-align:right;user-select:none}
+.dl .mk{text-align:center;font-weight:700}
+.dl .tx{white-space:pre-wrap;word-break:break-word}
+.dl.add{background:color-mix(in srgb,var(--ok) 13%,transparent)}.dl.add .mk{color:var(--ok)}
+.dl.del{background:color-mix(in srgb,var(--danger) 11%,transparent)}.dl.del .mk{color:var(--danger)}
+.fold{display:block;width:100%;padding:6px 14px;font-family:var(--body);font-size:13px;color:var(--brand);background:var(--surface-2);text-align:left}
+.fold:hover{text-decoration:underline}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.state{padding:48px 24px;text-align:center;max-width:480px;margin:0 auto}
+.state h3{font-size:20px;margin-bottom:8px}
+.state p{color:var(--ink-2);margin-bottom:18px}
+@media (max-width:900px){.ed{grid-template-columns:minmax(0,1fr)}.vh{grid-template-columns:minmax(0,1fr)}.fgrid{grid-template-columns:minmax(0,1fr)}.chk{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-mark" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 13v6h14v-6"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5m0 0-6 6m6-6 6 6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="logo" viewBox="0 0 40 40"><path d="M11 8v24M11 20 28 8M11 20l17 12" stroke="currentColor" stroke-width="2.4" fill="none"/><circle cx="11" cy="8" r="4.2" fill="currentColor"/><circle cx="11" cy="32" r="4.2" fill="currentColor"/><circle cx="28" cy="8" r="4.2" fill="currentColor"/><circle cx="28" cy="32" r="4.2" fill="currentColor"/><circle cx="11" cy="20" r="5.6" fill="#FFD84A"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="#trang-chu" aria-label="KnowledgeHub, về trang chủ"><svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#logo"/></svg><span>KnowledgeHub</span></a>
+    <nav class="nav" aria-label="Điều hướng chính">
+      <a href="#khoa-hoc" data-nav="khoa-hoc">Khóa học</a>
+      <a href="#lo-trinh" data-nav="lo-trinh">Lộ trình</a>
+      <a href="#tro-ly" data-nav="tro-ly">Trợ lý AI</a>
+      <a href="#da-luu" data-nav="da-luu">Đã lưu</a>
+    </nav>
+    <div class="top-right">
+      <a class="studio" href="#studio"><svg class="i"><use href="#i-pen"/></svg><span>Studio</span></a>
+      <button class="icon-btn" id="theme" aria-label="Đổi giao diện sáng tối"><svg class="i moon"><use href="#i-moon"/></svg><svg class="i sun"><use href="#i-sun"/></svg></button>
+      <a class="avatar" href="#tai-khoan" title="Tài khoản của Team Test Admin" aria-label="Tài khoản">TA</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============ KHÓA HỌC ============ -->
+<main class="screen" id="s-khoa-hoc">
+  <section class="hero">
+    <div class="ghost-word" aria-hidden="true">KNOWLEDGE</div>
+    <div class="hero-disc" aria-hidden="true"></div><div class="hero-ring" aria-hidden="true"></div>
+    <div class="wrap">
+      <p class="hero-kicker">Thư viện khóa học</p>
+      <h1>Hôm nay bạn muốn học gì?</h1>
+      <form class="search" id="search" role="search">
+        <svg class="i"><use href="#i-search"/></svg>
+        <input id="q" type="search" placeholder="Raft, ETL, code review, index..." aria-label="Tìm khóa học" autocomplete="off">
+        <button class="btn" type="submit">Tìm</button>
+      </form>
+      <div class="hero-tags"><span>Chủ đề hay tìm</span>
+        <button data-q="Data Engineer">Data Engineer</button><button data-q="hệ thống phân tán">Hệ thống phân tán</button><button data-q="Git">Git</button><button data-q="pipeline">Pipeline</button>
+      </div>
+    </div>
+  </section>
+  <div class="wrap">
+    <div class="filters" id="filters" role="group" aria-label="Lọc theo lĩnh vực"></div>
+    <div class="grid" id="grid"></div>
+    <div class="pager" aria-label="Phân trang"><button disabled>Trước</button><button aria-current="page">1</button><button>2</button><button>3</button><button>Sau</button></div>
+  </div>
+</main>
+
+<!-- ============ BÀI HỌC ============ -->
+<main class="screen" id="s-bai-hoc">
+  <div class="progress" aria-hidden="true"><b id="bar"></b></div>
+  <div class="wrap lesson">
+    <article>
+      <nav class="crumb" aria-label="Đường dẫn"><a href="#khoa-hoc">Khóa học</a><span>/</span><a href="#khoa-hoc">Thiết kế hệ thống</a></nav>
+      <h1>Hệ thống phân tán: Những đánh đổi cơ bản</h1>
+      <div class="meta">
+        <span class="by"><span class="mini-av">T</span>Team Test Contributor</span>
+        <span>Cập nhật 13/11/2026</span>
+        <a class="ver" href="#lich-su-phien-ban">Phiên bản 3, xem lịch sử</a>
+        <span class="acts">
+          <button class="btn ghost sm" id="saveLesson" aria-pressed="false"><svg class="i"><use href="#i-mark"/></svg><span>Lưu</span></button>
+          <button class="btn ghost sm" id="shareLesson"><svg class="i"><use href="#i-share"/></svg>Chia sẻ</button>
+        </span>
+      </div>
+      <div class="prose">
+        <div class="goal"><h4>Mục tiêu</h4><p>Hiểu các đánh đổi cốt lõi của hệ thống phân tán (CAP, nhất quán và sẵn sàng) và cách thuật toán đồng thuận Raft giữ dữ liệu nhất quán.</p></div>
+
+        <h2 id="h1">1. Bối cảnh: vì sao cần thuật toán đồng thuận</h2>
+        <p>Trong hệ thống phân tán, nhiều máy chủ phải thống nhất cùng một chuỗi thay đổi dữ liệu dù có máy bị sập hoặc mạng bị chia cắt. Raft giải bài toán này bằng cách <span class="hl">bầu ra một leader duy nhất</span>, leader nhận lệnh và nhân bản log sang các follower.</p>
+        <div class="video">
+          <button class="play" aria-label="Phát video bài giảng"><svg class="i"><use href="#i-play"/></svg></button>
+          <div class="video-cap"><b>Designing for Understandability: The Raft Consensus Algorithm, Diego Ongaro</b><a href="#bai-hoc" data-soon>Mở trên YouTube</a></div>
+        </div>
+
+        <h2 id="h2">2. Ba trạng thái của một node</h2>
+        <ul>
+          <li><strong>Follower:</strong> nhận log từ leader, trả lời heartbeat.</li>
+          <li><strong>Candidate:</strong> hết thời gian chờ heartbeat thì tăng term và xin phiếu bầu.</li>
+          <li><strong>Leader:</strong> được đa số phiếu, gửi <code>AppendEntries</code> định kỳ.</li>
+        </ul>
+        <div class="code">
+          <div class="code-top"><span>typescript</span><button id="copy"><svg class="i" style="width:14px;height:14px"><use href="#i-copy"/></svg><span>Sao chép</span></button></div>
+<pre id="codeText"><span class="k">type</span> <span class="t">Role</span> = <span class="s">'follower'</span> | <span class="s">'candidate'</span> | <span class="s">'leader'</span>;
+
+<span class="k">interface</span> <span class="t">ConsensusNode</span> {
+  id: <span class="t">string</span>;
+  role: <span class="t">Role</span>;
+  currentTerm: <span class="t">number</span>;
+  votedFor: <span class="t">string</span> | <span class="k">null</span>;
+  log: { term: <span class="t">number</span>; command: <span class="t">string</span> }[];
+  commitIndex: <span class="t">number</span>;
+}</pre>
+        </div>
+
+        <h2 id="h3">3. Bất biến cần giữ</h2>
+        <div class="note"><b>Ghi nhớ</b>Một entry chỉ được coi là committed khi đã được ghi trên đa số node. Mỗi term có nhiều nhất một leader.</div>
+
+        <h2 id="h4">4. Bài tập</h2>
+        <ol>
+          <li>Vẽ lại diễn biến khi leader bị mất kết nối với 2/5 node.</li>
+          <li>Giải thích vì sao follower từ chối <code>AppendEntries</code> có term nhỏ hơn <code>currentTerm</code> của nó.</li>
+        </ol>
+      </div>
+    </article>
+    <aside class="side">
+      <div><h4>Mục lục</h4>
+        <nav class="toc" id="toc" aria-label="Mục lục">
+          <a href="#h1" data-t="h1">1. Vì sao cần thuật toán đồng thuận</a>
+          <a href="#h2" data-t="h2">2. Ba trạng thái của một node</a>
+          <a href="#h3" data-t="h3">3. Bất biến cần giữ</a>
+          <a href="#h4" data-t="h4">4. Bài tập</a>
+        </nav>
+      </div>
+      <div><h4>Khóa học liên quan</h4>
+        <div class="rel">
+          <a href="#bai-hoc" data-soon><span class="sw" style="background:var(--c-sys)"></span><span><b>Hệ thống phân tán và độ tin cậy</b><small>Senior, phiên bản 3.0</small></span></a>
+          <a href="#bai-hoc" data-soon><span class="sw" style="background:var(--c-prog)"></span><span><b>Thiết kế hệ thống và đánh đổi kiến trúc</b><small>Senior, phiên bản 3.0</small></span></a>
+          <a href="#bai-hoc" data-soon><span class="sw" style="background:var(--c-data)"></span><span><b>SRE: Vận hành và xử lý sự cố</b><small>Senior, phiên bản 2.0</small></span></a>
+        </div>
+      </div>
+      <a class="btn ghost" href="#lo-trinh-cua-toi" style="justify-content:center">Xem lộ trình có khóa này</a>
+    </aside>
+  </div>
+</main>
+
+<!-- ============ TRỢ LÝ AI ============ -->
+<main class="screen" id="s-tro-ly">
+  <div class="ai" id="ai">
+    <aside class="ai-list">
+      <h2>Trợ lý AI</h2>
+      <button class="btn" data-soon><svg class="i"><use href="#i-plus"/></svg>Cuộc trò chuyện mới</button>
+      <div class="convs">
+        <button class="conv" aria-current="true"><b>bạn là model gì?</b><small>8 tin nhắn, 1 ngày trước</small></button>
+        <button class="conv" data-soon><b>Chưa đặt tên</b><small>0 tin nhắn, 1 ngày trước</small></button>
+      </div>
+      <p class="foot">Chỉ bạn xem được các cuộc trò chuyện này.</p>
+    </aside>
+    <section class="chat" aria-label="Trò chuyện với trợ lý AI">
+      <div class="chat-head">
+        <div><h1>bạn là model gì?</h1><small>8 tin nhắn, cập nhật 1 ngày trước</small></div>
+        <div class="acts">
+          <button class="btn ghost sm" id="memToggle" aria-pressed="true"><svg class="i"><use href="#i-note"/></svg>Ghi nhớ</button>
+          <button class="icon-btn" aria-label="Đổi tên cuộc trò chuyện" data-soon><svg class="i"><use href="#i-edit"/></svg></button>
+          <button class="icon-btn" aria-label="Xóa cuộc trò chuyện" data-soon><svg class="i"><use href="#i-trash"/></svg></button>
+        </div>
+      </div>
+      <div class="thread" id="thread"><div class="thread-in" id="msgs">
+        <div class="me">Bạn có thể hỗ trợ mình lộ trình để trở thành data engineer không?</div>
+        <div class="bot"><span class="bot-av"></span><div class="bot-txt">
+          <p>Chắc chắn rồi. Dưới đây là lộ trình tham khảo để trở thành <strong>Data Engineer</strong>, chia theo giai đoạn.</p>
+          <h3>1. Nền tảng cơ bản, 1 đến 2 tháng</h3>
+          <ul><li><strong>Lập trình:</strong> Python, thêm SQL thành thạo</li><li><strong>Cơ sở dữ liệu:</strong> mô hình quan hệ, chuẩn hóa, index, join</li><li><strong>Linux và Git:</strong> dòng lệnh cơ bản, quản lý phiên bản</li></ul>
+          <h3>2. Kỹ năng cốt lõi, 2 đến 3 tháng</h3>
+          <ul><li><strong>SQL nâng cao:</strong> window functions, CTE, tối ưu query</li><li><strong>ETL và ELT:</strong> khái niệm pipeline, batch và streaming</li><li><strong>Định dạng dữ liệu:</strong> CSV, JSON, Parquet, Avro</li></ul>
+          <h3>3. Công cụ và hạ tầng, 2 đến 3 tháng</h3>
+          <ul><li><strong>Orchestration:</strong> Apache Airflow</li><li><strong>Xử lý dữ liệu lớn:</strong> Apache Spark</li><li><strong>Container và CI/CD:</strong> Docker, GitHub Actions cơ bản</li></ul>
+          <div class="offer"><p><b>Biến câu trả lời này thành lộ trình</b>Lộ trình sẽ có từng bước, khóa học cần học trước và theo dõi tiến độ.</p><button class="btn sm" data-soon>Tạo lộ trình bằng AI</button></div>
+        </div></div>
+      </div></div>
+      <div class="compose"><div class="compose-in">
+        <div class="sugg" aria-label="Gợi ý câu hỏi">
+          <button>ETL và ELT khác nhau thế nào?</button><button>Gợi ý khóa học tiếp theo cho mình</button><button>Giải thích Raft bằng ví dụ đời thường</button>
+        </div>
+        <form class="box" id="composer">
+          <textarea id="msg" rows="1" placeholder="Hỏi về bài học, khóa học hoặc lộ trình của bạn" aria-label="Tin nhắn"></textarea>
+          <button class="send" type="submit" aria-label="Gửi tin nhắn"><svg class="i"><use href="#i-send"/></svg></button>
+        </form>
+        <div class="hint"><span>Enter để gửi, Shift + Enter để xuống dòng. Trợ lý có thể sai, hãy đối chiếu với nội dung khóa học.</span><span id="cnt" style="font-variant-numeric:tabular-nums">0/4000</span></div>
+      </div></div>
+    </section>
+    <aside class="mem" aria-label="Ghi nhớ">
+      <h2><svg class="i"><use href="#i-note"/></svg>Ghi nhớ</h2>
+      <p>Những điều trợ lý nhớ về bạn để trả lời sát hơn. Bạn xóa được bất cứ lúc nào.</p>
+      <div id="memList">
+        <div class="mem-item" style="margin-bottom:8px"><span>Mình thích làm dự án thực hành trước khi học lý thuyết.</span><button aria-label="Xóa ghi nhớ"><svg class="i" style="width:15px;height:15px"><use href="#i-x"/></svg></button></div>
+        <div class="mem-item"><span>Mục tiêu nghề nghiệp: Data Engineer.</span><button aria-label="Xóa ghi nhớ"><svg class="i" style="width:15px;height:15px"><use href="#i-x"/></svg></button></div>
+      </div>
+      <form id="memForm"><input id="memIn" placeholder="Thêm điều cần nhớ" aria-label="Thêm điều cần nhớ"><button class="btn sm" type="submit">Thêm</button></form>
+    </aside>
+  </div>
+</main>
+
+<!-- ============ TRANG CHỦ ============ -->
+<main class="screen" id="s-trang-chu">
+  <section class="hero home">
+    <div class="ghost-word" aria-hidden="true">HỌC</div>
+    <div class="hero-disc" aria-hidden="true"></div>
+    <div class="wrap">
+      <div>
+        <h1>KnowledgeHub</h1>
+        <p class="lead">Khóa học có chọn lọc, xếp thành lộ trình có khóa học cần học trước. Trợ lý AI nhớ mục tiêu của bạn và gợi ý bước tiếp theo.</p>
+        <div class="cta">
+          <a class="btn light" href="#khoa-hoc">Xem khóa học</a>
+          <a class="btn line" href="#tro-ly">Tạo lộ trình bằng AI</a>
+        </div>
+      </div>
+      <div class="prev" aria-label="Ví dụ một lộ trình">
+        <h3>Data Engineer, trình độ Intermediate</h3>
+        <p class="mu">Ví dụ minh họa, 3 trên 5 khóa đã xong</p>
+        <div class="bar" aria-hidden="true"><b style="width:60%"></b></div>
+        <ol class="steps">
+          <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Database, giao dịch và đồng thời</span></li>
+          <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Thiết kế pipeline ETL và ELT</span></li>
+          <li><span class="dot now"></span><span class="nm">Kiểm thử và quan sát pipeline<small>Đang học</small></span></li>
+          <li class="lock"><span class="dot"><svg class="i"><use href="#i-lock"/></svg></span><span class="nm">Hệ thống phân tán và độ tin cậy<small>Cần học xong khóa ở trên</small></span></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+  <div class="wrap">
+    <section class="sec">
+      <div class="sec-h"><h2>Khóa học mới cập nhật</h2><a href="#khoa-hoc">Xem tất cả 35 khóa</a></div>
+      <div class="grid" id="homeGrid"></div>
+    </section>
+    <section class="sec">
+      <div class="sec-h"><h2>Lộ trình theo nghề</h2><a href="#lo-trinh">Xem tất cả lộ trình mẫu</a></div>
+      <div>
+        <div class="path-row"><h3>Data Engineer</h3><p>Từ SQL và pipeline đầu tiên đến hệ thống dữ liệu chạy ổn định.</p><div class="lv"><a href="#lo-trinh">Beginner, 8 đến 12 tuần</a><a href="#lo-trinh">Intermediate</a><a href="#lo-trinh">Advanced</a></div></div>
+        <div class="path-row"><h3>Frontend Developer</h3><p>Từ HTML, CSS và JavaScript đến ứng dụng web có kiểm thử.</p><div class="lv"><a href="#lo-trinh">Beginner, 8 đến 12 tuần</a><a href="#lo-trinh">Intermediate</a><a href="#lo-trinh">Advanced</a></div></div>
+        <div class="path-row"><h3>AI Engineer</h3><p>Từ nền tảng toán và Python đến đưa mô hình vào sản phẩm.</p><div class="lv"><a href="#lo-trinh">Beginner, 8 đến 12 tuần</a><a href="#lo-trinh">Intermediate</a><a href="#lo-trinh">Advanced</a></div></div>
+      </div>
+    </section>
+    <section class="ai-sec">
+      <div>
+        <h2>Hỏi trợ lý khi chưa biết học gì tiếp</h2>
+        <p class="mu">Trợ lý đọc lộ trình và tiến độ của bạn, rồi gợi ý khóa học tiếp theo hoặc giải thích chỗ bạn chưa hiểu.</p>
+        <a class="btn" href="#tro-ly">Mở trợ lý AI</a>
+      </div>
+      <div class="ai-chat" aria-label="Ví dụ hội thoại">
+        <div class="me">Mình học xong ETL và ELT rồi, nên học gì tiếp?</div>
+        <div class="bot"><span class="bot-av"></span><div class="bot-txt"><p>Bạn nên học <strong>Kiểm thử và quan sát pipeline</strong>. Khóa này dùng đúng phần ETL bạn vừa xong, và là điều kiện để mở khóa Hệ thống phân tán và độ tin cậy.</p></div></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- ============ ĐĂNG NHẬP ============ -->
+<main class="screen" id="s-dang-nhap">
+  <div class="auth">
+    <aside class="auth-art" aria-hidden="true">
+      <div class="hero-disc"></div>
+      <h2>Tiếp tục từ chỗ bạn đã dừng</h2>
+      <p>Tiến độ, khóa học đã lưu và lộ trình của bạn được giữ nguyên.</p>
+    </aside>
+    <div class="auth-form">
+      <form class="auth-box" id="authForm">
+        <h1 id="authTitle">Đăng nhập</h1>
+        <p id="authSub">Dùng email bạn đã đăng ký với KnowledgeHub.</p>
+        <div class="field" id="nameField" hidden><label for="au-name">Họ và tên</label><input id="au-name" autocomplete="name" placeholder="Nguyễn Văn An"></div>
+        <div class="field"><label for="au-mail">Email</label><input id="au-mail" type="email" autocomplete="email" placeholder="ten@truong.edu.vn"></div>
+        <div class="field"><label for="au-pass">Mật khẩu</label><input id="au-pass" type="password" autocomplete="current-password"><small id="passHint" hidden>Ít nhất 8 ký tự.</small></div>
+        <button class="btn" type="submit" id="authBtn">Đăng nhập</button>
+        <div class="or">hoặc</div>
+        <button class="btn ghost" type="button" id="gBtn">Tiếp tục với Google</button>
+        <p class="sw"><span id="swText">Chưa có tài khoản?</span> <button type="button" id="swBtn">Đăng ký</button></p>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- ============ LỘ TRÌNH MẪU ============ -->
+<main class="screen" id="s-lo-trinh">
+  <div class="wrap">
+    <div class="ph">
+      <div class="row">
+        <div><h1>Lộ trình mẫu</h1><p>Các lộ trình tham khảo theo nghề và trình độ. Bạn có thể nhờ trợ lý AI chỉnh lại theo mục tiêu và thời gian của mình.</p></div>
+        <div class="btns"><a class="btn" href="#tro-ly">Tạo lộ trình bằng AI</a><a class="btn ghost" href="#lo-trinh-cua-toi">Lộ trình của tôi</a></div>
+      </div>
+    </div>
+    <div class="filters" id="rmFilters" role="group" aria-label="Lọc theo nghề"></div>
+    <div class="rm-grid" id="rmGrid"></div>
+    <p class="notice">Đây là lộ trình tham khảo, chưa được cá nhân hóa theo mục tiêu hay lịch học của bạn.</p>
+    <div class="pg-end"></div>
+  </div>
+</main>
+
+<!-- ============ LỘ TRÌNH CỦA TÔI ============ -->
+<main class="screen" id="s-lo-trinh-cua-toi">
+  <div class="wrap">
+    <div class="ph">
+      <div class="row">
+        <div><h1>Lộ trình của tôi</h1><p>Tiếp tục kế hoạch học đã tạo và theo dõi từng bước.</p></div>
+        <div class="btns"><a class="btn" href="#tro-ly">Tạo lộ trình bằng AI</a><a class="btn ghost" href="#lo-trinh">Xem lộ trình mẫu</a></div>
+      </div>
+    </div>
+    <div class="mine">
+      <section class="panel" aria-label="Lộ trình Data Engineer">
+        <h2>Data Engineer, trình độ Intermediate</h2>
+        <p>Tạo bằng trợ lý AI ngày 13/11. Dữ liệu trong mockup là ví dụ.</p>
+        <div class="bar" aria-hidden="true"><b style="width:40%"></b></div>
+        <p style="margin:8px 0 6px;font-size:13px">2 trên 5 khóa đã xong</p>
+        <ol class="steps" id="myStepsList">
+          <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Database, giao dịch và đồng thời<small>Intermediate</small></span><span class="st ok">Đã xong</span></li>
+          <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Thiết kế pipeline ETL và ELT<small>Intermediate</small></span><span class="st ok">Đã xong</span></li>
+          <li><span class="dot now"></span><span class="nm">Kiểm thử và quan sát pipeline<small>Intermediate</small></span><button class="btn sm" id="goLesson">Học tiếp</button></li>
+          <li class="lock"><span class="dot"><svg class="i"><use href="#i-lock"/></svg></span><span class="nm">Hệ thống phân tán và độ tin cậy<small>Cần học xong Kiểm thử và quan sát pipeline</small></span></li>
+          <li class="lock"><span class="dot"><svg class="i"><use href="#i-lock"/></svg></span><span class="nm">Thiết kế hệ thống và đánh đổi kiến trúc<small>Cần học xong Hệ thống phân tán và độ tin cậy</small></span></li>
+        </ol>
+      </section>
+      <aside>
+        <h2 style="font-size:18px;font-weight:700">Đã lưu trước đây</h2>
+        <p class="empty-s">Chưa có lộ trình nào được lưu. Những lộ trình cũ không ghi rõ cách tạo sẽ hiện ở đây.</p>
+      </aside>
+    </div>
+    <div class="pg-end"></div>
+  </div>
+</main>
+
+<!-- ============ ĐÃ LƯU ============ -->
+<main class="screen" id="s-da-luu">
+  <div class="wrap">
+    <div class="ph"><h1>Đã lưu</h1><p>Các khóa học bạn đánh dấu để học sau.</p></div>
+    <div class="grid" id="savedGrid"></div>
+    <div class="pg-end"></div>
+  </div>
+</main>
+
+<!-- ============ TÀI KHOẢN ============ -->
+<main class="screen" id="s-tai-khoan">
+  <div class="wrap">
+    <div class="ph"><h1>Tài khoản</h1></div>
+    <div class="acct">
+      <form class="panel" data-save>
+        <div class="who"><span class="avatar">TA</span><div><b>Team Test Admin</b><span class="mu">Quản trị viên</span></div></div>
+        <h2>Hồ sơ</h2>
+        <p>Tên hiển thị xuất hiện trên các khóa học bạn viết.</p>
+        <div class="field"><label for="ac-name">Họ và tên</label><input id="ac-name" value="Team Test Admin"></div>
+        <div class="field"><label for="ac-mail">Email</label><input id="ac-mail" value="admin@example.com" readonly><small>Chưa thể đổi email.</small></div>
+        <button class="btn" type="submit">Lưu thay đổi</button>
+      </form>
+      <form class="panel" data-save>
+        <h2>Đổi mật khẩu</h2>
+        <p>Bạn sẽ cần đăng nhập lại trên các thiết bị khác.</p>
+        <div class="field"><label for="ac-p1">Mật khẩu hiện tại</label><input id="ac-p1" type="password" autocomplete="current-password"></div>
+        <div class="field"><label for="ac-p2">Mật khẩu mới</label><input id="ac-p2" type="password" autocomplete="new-password"><small>Ít nhất 8 ký tự.</small></div>
+        <button class="btn" type="submit">Đổi mật khẩu</button>
+      </form>
+      <section class="panel">
+        <h2>Xóa tài khoản</h2>
+        <p>Xóa tài khoản sẽ xóa cuộc trò chuyện, ghi nhớ và lộ trình của bạn. Không thể hoàn tác.</p>
+        <button class="btn ghost danger" id="delAcc">Xóa tài khoản của tôi</button>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- ============ STUDIO ============ -->
+<main class="screen" id="s-studio">
+  <div class="wrap">
+    <div class="ph">
+      <div class="row">
+        <div><h1>Studio</h1><p>Quản lý các khóa học bạn viết và xuất bản.</p></div>
+        <div class="btns"><a class="btn" href="#soan-khoa-hoc"><svg class="i"><use href="#i-plus"/></svg>Tạo khóa học</a></div>
+      </div>
+    </div>
+    <div class="tools">
+      <label class="search-s"><svg class="i"><use href="#i-search"/></svg><input id="stQ" placeholder="Tìm theo tên hoặc slug" aria-label="Tìm khóa học"></label>
+      <select class="sel" id="stS" aria-label="Lọc theo trạng thái"><option value="">Mọi trạng thái</option><option>Đã xuất bản</option><option>Bản nháp</option><option>Đã lưu trữ</option></select>
+    </div>
+    <div class="tbl-wrap"><table class="tbl" id="stTbl">
+      <thead><tr><th>Khóa học</th><th>Danh mục và thẻ</th><th>Trạng thái</th><th>Cập nhật</th><th></th></tr></thead>
+      <tbody>
+        <tr><td class="tt"><b>Hệ thống phân tán: Những đánh đổi cơ bản</b><small>demo-he-thong-phan-tan-co-ban</small></td><td>Thiết kế hệ thống<div class="tags"><span class="pill">Distributed Systems</span></div></td><td><span class="st ok">Đã xuất bản</span></td><td>13/11/2026</td><td><div class="acts"><a class="btn ghost sm" href="#soan-khoa-hoc">Sửa</a><a class="btn ghost sm" href="#lich-su-phien-ban">Lịch sử</a><button class="btn ghost sm" data-soon>Phiên bản mới</button></div></td></tr>
+        <tr><td class="tt"><b>Thiết kế pipeline ETL và ELT</b><small>data-engineer-etl-elt</small></td><td>Khoa học dữ liệu<div class="tags"><span class="pill">Data Engineer</span><span class="pill">Intermediate</span></div></td><td><span class="st ok">Đã xuất bản</span></td><td>12/11/2026</td><td><div class="acts"><a class="btn ghost sm" href="#soan-khoa-hoc">Sửa</a><a class="btn ghost sm" href="#lich-su-phien-ban">Lịch sử</a><button class="btn ghost sm" data-soon>Phiên bản mới</button></div></td></tr>
+        <tr><td class="tt"><b>Kiểm thử và quan sát pipeline</b><small>data-engineer-kiem-thu-pipeline</small></td><td>Khoa học dữ liệu<div class="tags"><span class="pill">Data Engineer</span></div></td><td><span class="st draft">Bản nháp</span></td><td>11/11/2026</td><td><div class="acts"><a class="btn ghost sm" href="#soan-khoa-hoc">Sửa</a><a class="btn ghost sm" href="#lich-su-phien-ban">Lịch sử</a><button class="btn ghost sm" data-soon>Phiên bản mới</button></div></td></tr>
+        <tr><td class="tt"><b>Làm việc nhóm: Giao tiếp và code review</b><small>lam-viec-nhom-code-review</small></td><td>Kỹ năng nghề nghiệp<div class="tags"><span class="pill">Teamwork</span><span class="pill">Code Review</span></div></td><td><span class="st ok">Đã xuất bản</span></td><td>09/11/2026</td><td><div class="acts"><a class="btn ghost sm" href="#soan-khoa-hoc">Sửa</a><a class="btn ghost sm" href="#lich-su-phien-ban">Lịch sử</a><button class="btn ghost sm" data-soon>Phiên bản mới</button></div></td></tr>
+        <tr><td class="tt"><b>Demo Craft</b><small>demo-craft</small></td><td>Kỹ năng nghề nghiệp<div class="tags"><span class="pill">algorithms</span></div></td><td><span class="st bad">Đã lưu trữ</span></td><td>02/11/2026</td><td><div class="acts"><button class="btn ghost sm" data-soon>Xem</button><button class="btn ghost sm" data-soon>Phiên bản mới</button></div></td></tr>
+      </tbody></table></div>
+    <div class="pg-end"></div>
+  </div>
+</main>
+
+<!-- ============ SOẠN KHÓA HỌC ============ -->
+<main class="screen" id="s-soan-khoa-hoc">
+  <div class="wrap" style="max-width:1360px">
+    <nav class="crumb" aria-label="Đường dẫn" style="padding-top:28px"><a href="#studio">Studio</a><span>/</span><span>Soạn khóa học</span></nav>
+    <div class="ph" style="padding-top:0">
+      <div class="row">
+        <div><h1>Soạn khóa học</h1><p>Viết nội dung bằng markdown, xem trước theo giao diện người học và kiểm tra các điều kiện trước khi xuất bản.</p></div>
+        <div class="btns">
+          <div class="seg" role="tablist" aria-label="Chế độ xem" id="edMode">
+            <button role="tab" aria-selected="true" data-m="split">Chia đôi</button>
+            <button role="tab" aria-selected="false" data-m="editor">Chỉ soạn</button>
+            <button role="tab" aria-selected="false" data-m="preview">Chỉ xem</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <section class="recover" id="recover" role="region" aria-label="Khôi phục bản nháp">
+      <p><b>Tìm thấy bản nháp chưa lưu:</b> Giới thiệu về Raft, tự lưu lúc 14:32.</p>
+      <button class="btn sm" id="recRestore">Khôi phục</button>
+      <button class="btn ghost sm" id="recDiscard">Bỏ bản nháp</button>
+    </section>
+
+    <div class="ed" id="ed" data-mode="split">
+      <div class="col ep">
+        <section class="pn">
+          <div class="pn-h">Thông tin khóa học</div>
+          <div class="pn-b">
+            <div class="fgrid">
+              <div class="field full"><label for="fTitle">Tên khóa học</label><input id="fTitle" placeholder="Ví dụ: Nền tảng của các hệ thống lưu trữ dữ liệu" maxlength="120"><small id="fTitleN">0/120 ký tự</small></div>
+              <div class="field"><div class="lab-row"><label for="fSlug">Đường dẫn</label><button type="button" id="slugBtn">Sửa tay</button></div><input id="fSlug" readonly placeholder="tu-dong-tao-tu-ten-khoa-hoc"></div>
+              <div class="field"><label for="fCat">Danh mục</label><select id="fCat"><option value="">Chọn danh mục</option><option>Thiết kế hệ thống</option><option>Khoa học dữ liệu</option><option>Kỹ năng nghề nghiệp</option></select></div>
+              <div class="field full"><label for="fTag">Thẻ</label>
+                <div class="taginput" id="tagBox"><input id="fTag" placeholder="Nhập thẻ rồi nhấn Enter" aria-label="Thêm thẻ"></div>
+                <small>Cần ít nhất 1 thẻ.</small></div>
+            </div>
+          </div>
+        </section>
+        <section class="pn">
+          <div class="pn-h">Nội dung <span class="sp" id="wc">0 từ</span></div>
+          <div class="tb" role="toolbar" aria-label="Định dạng nội dung">
+            <button data-f="h2" title="Tiêu đề lớn (H2)">H2</button>
+            <button data-f="h3" title="Tiêu đề nhỏ (H3)">H3</button>
+            <span class="vsep"></span>
+            <button data-f="b" title="In đậm" style="font-weight:800">B</button>
+            <button data-f="i" title="In nghiêng" style="font-style:italic">I</button>
+            <button data-f="s" title="Gạch ngang" style="text-decoration:line-through">S</button>
+            <span class="vsep"></span>
+            <button data-f="ul" title="Danh sách">Danh sách</button>
+            <button data-f="q" title="Trích dẫn">Trích dẫn</button>
+            <button data-f="hr" title="Đường kẻ">Đường kẻ</button>
+            <span class="vsep"></span>
+            <div class="dd"><button id="ddCode" aria-haspopup="true" aria-expanded="false">Khối code</button>
+              <div class="menu" id="mCode" hidden><button data-code="typescript">TypeScript</button><button data-code="python">Python</button><button data-code="sql">SQL</button><button data-code="bash">Bash</button></div></div>
+            <div class="dd"><button id="ddNote" aria-haspopup="true" aria-expanded="false">Ghi chú</button>
+              <div class="menu" id="mNote" hidden><button data-note="Lưu ý">Lưu ý</button><button data-note="Mẹo">Mẹo</button><button data-note="Cảnh báo">Cảnh báo</button></div></div>
+            <button id="btnYt"><svg class="i" style="width:15px;height:15px"><use href="#i-play"/></svg>Video YouTube</button>
+          </div>
+          <textarea class="md" id="fBody" aria-label="Nội dung khóa học" placeholder="Viết nội dung bằng markdown..."></textarea>
+        </section>
+      </div>
+      <section class="pn pv">
+        <div class="pn-h">Xem trước theo giao diện người học</div>
+        <div class="pn-b"><div class="prose" id="pvBox"></div></div>
+      </section>
+    </div>
+
+    <section class="pn pre" id="pre" aria-label="Kiểm tra trước khi xuất bản">
+      <div class="pre-h">Kiểm tra trước khi xuất bản <span id="preN">0/4 điều kiện đạt</span></div>
+      <div class="meter" aria-hidden="true"><b id="meter" style="width:0"></b></div>
+      <ul class="chk" id="chk"></ul>
+    </section>
+    <div class="actbar">
+      <a class="btn ghost" href="#studio">Hủy</a>
+      <button class="btn ghost" id="btnDraft">Lưu bản nháp</button>
+      <button class="btn" id="btnPub" disabled>Xuất bản</button>
+    </div>
+  </div>
+  <div class="dlg-bg" id="ytDlg" role="dialog" aria-modal="true" aria-labelledby="ytH">
+    <div class="dlg">
+      <h3 id="ytH">Chèn video YouTube</h3>
+      <div class="field"><label for="ytUrl">Đường dẫn video</label><input id="ytUrl" placeholder="https://www.youtube.com/watch?v=..."><small class="okv" id="ytOk" hidden>Đã nhận diện video hợp lệ.</small></div>
+      <div class="field"><label for="ytTitle">Tiêu đề video</label><input id="ytTitle" placeholder="Ví dụ: Bài giảng 1, giới thiệu đồng thuận phân tán"></div>
+      <div class="btns"><button class="btn ghost" id="ytCancel">Hủy</button><button class="btn" id="ytInsert" disabled>Chèn video</button></div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ LỊCH SỬ PHIÊN BẢN ============ -->
+<main class="screen" id="s-lich-su-phien-ban">
+  <div class="wrap">
+    <nav class="crumb" aria-label="Đường dẫn" style="padding-top:28px"><a href="#khoa-hoc">Khóa học</a><span>/</span><a href="#bai-hoc">Hệ thống phân tán: Những đánh đổi cơ bản</a><span>/</span><span>Lịch sử phiên bản</span></nav>
+    <div class="ph" style="padding-top:0">
+      <div class="row">
+        <div><h1>Lịch sử phiên bản</h1><p>Xem lại từng phiên bản của khóa học và so sánh nội dung giữa hai phiên bản.</p></div>
+        <div class="btns"><label class="state-sel">Xem thử trạng thái
+          <select class="sel" id="vState" aria-label="Xem thử trạng thái của trang">
+            <option value="author">Tác giả</option><option value="reader">Người đọc</option><option value="guest">Chưa đăng nhập</option><option value="forbidden">Không có quyền</option><option value="notfound">Không tìm thấy</option><option value="error">Lỗi tải</option>
+          </select></label></div>
+      </div>
+    </div>
+    <div id="vBody"></div>
+    <div class="pg-end"></div>
+  </div>
+</main>
+
+<!-- ============ QUẢN TRỊ ============ -->
+<main class="screen" id="s-quan-tri">
+  <div class="wrap">
+    <div class="ph"><h1>Quản trị</h1><p>Quản lý người dùng, danh mục và thẻ của nền tảng.</p></div>
+    <div class="filters" id="adTabs" role="group" aria-label="Phần quản trị">
+      <button class="chip" data-p="users" aria-pressed="true">Người dùng</button>
+      <button class="chip" data-p="cats" aria-pressed="false">Danh mục</button>
+      <button class="chip" data-p="tags" aria-pressed="false">Thẻ</button>
+    </div>
+    <section id="p-users">
+      <div class="tools">
+        <label class="search-s"><svg class="i"><use href="#i-search"/></svg><input placeholder="Tìm theo tên hoặc email" aria-label="Tìm người dùng"></label>
+        <select class="sel" aria-label="Lọc theo vai trò"><option>Mọi vai trò</option><option>Người học</option><option>Người viết</option><option>Quản trị viên</option></select>
+        <select class="sel" aria-label="Sắp xếp"><option>Mới tham gia nhất</option><option>Cũ nhất</option></select>
+      </div>
+      <div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Tham gia</th><th></th></tr></thead>
+        <tbody>
+          <tr><td class="tt"><b>Lê Minh Anh</b><small>minhanh@truong.edu.vn</small></td><td><select class="sel" aria-label="Vai trò"><option>Người học</option><option>Người viết</option><option>Quản trị viên</option></select></td><td><span class="st draft">Chờ duyệt</span></td><td>14/11/2026</td><td><div class="acts"><button class="btn ghost sm" data-soon>Duyệt</button></div></td></tr>
+          <tr><td class="tt"><b>Trần Quốc Bảo</b><small>quocbao@truong.edu.vn</small></td><td><select class="sel" aria-label="Vai trò"><option>Người học</option><option>Người viết</option><option>Quản trị viên</option></select></td><td><span class="st ok">Hoạt động</span></td><td>12/11/2026</td><td><div class="acts"><button class="btn ghost sm" data-soon>Khóa</button></div></td></tr>
+          <tr><td class="tt"><b>Team Test Contributor</b><small>contributor@example.com</small></td><td><select class="sel" aria-label="Vai trò"><option>Người viết</option><option>Người học</option><option>Quản trị viên</option></select></td><td><span class="st ok">Hoạt động</span></td><td>03/11/2026</td><td><div class="acts"><button class="btn ghost sm" data-soon>Khóa</button></div></td></tr>
+          <tr><td class="tt"><b>Phạm Thu Hà</b><small>thuha@gmail.com</small></td><td><select class="sel" aria-label="Vai trò"><option>Người học</option><option>Người viết</option><option>Quản trị viên</option></select></td><td><span class="st bad">Bị khóa</span></td><td>30/10/2026</td><td><div class="acts"><button class="btn ghost sm" data-soon>Mở khóa</button></div></td></tr>
+        </tbody></table></div>
+    </section>
+    <section id="p-cats" hidden>
+      <div class="tools"><button class="btn sm" data-soon><svg class="i"><use href="#i-plus"/></svg>Thêm danh mục</button></div>
+      <div class="tbl-wrap">
+        <div class="cat"><b>Thiết kế hệ thống</b><small>12 khóa</small><span class="acts"><button class="btn ghost sm" data-soon>Sửa</button><button class="btn ghost sm danger" data-soon>Xóa</button></span></div>
+        <div class="cat sub"><b>Hệ thống phân tán</b><small>5 khóa</small><span class="acts"><button class="btn ghost sm" data-soon>Sửa</button><button class="btn ghost sm danger" data-soon>Xóa</button></span></div>
+        <div class="cat"><b>Lập trình</b><small>9 khóa</small><span class="acts"><button class="btn ghost sm" data-soon>Sửa</button><button class="btn ghost sm danger" data-soon>Xóa</button></span></div>
+        <div class="cat"><b>Khoa học dữ liệu</b><small>8 khóa</small><span class="acts"><button class="btn ghost sm" data-soon>Sửa</button><button class="btn ghost sm danger" data-soon>Xóa</button></span></div>
+        <div class="cat"><b>Kỹ năng nghề nghiệp</b><small>6 khóa</small><span class="acts"><button class="btn ghost sm" data-soon>Sửa</button><button class="btn ghost sm danger" data-soon>Xóa</button></span></div>
+      </div>
+    </section>
+    <section id="p-tags" hidden>
+      <form class="tools" id="tagForm"><input class="sel" id="tagIn" placeholder="Tên thẻ mới" aria-label="Tên thẻ mới" style="width:220px"><button class="btn sm" type="submit">Thêm thẻ</button></form>
+      <div class="taglist" id="tagList">
+        <span class="tag">Data Engineer <small>6</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button></span>
+        <span class="tag">Software Engineer <small>14</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button></span>
+        <span class="tag">Distributed Systems <small>5</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button></span>
+        <span class="tag">Code Review <small>2</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button></span>
+        <span class="tag">Teamwork <small>3</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button></span>
+        <span class="tag">Foundation <small>7</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button></span>
+      </div>
+    </section>
+    <div class="pg-end"></div>
+  </div>
+</main>
+
+<footer class="site-foot" id="foot">
+  <div class="wrap">
+    <div><a class="logo" href="#trang-chu"><svg class="logo-mark" viewBox="0 0 40 40" aria-hidden="true"><use href="#logo"/></svg><span>KnowledgeHub</span></a><p>Nền tảng học tập có chọn lọc, kèm trợ lý AI. Do đội ngũ nội dung KnowledgeHub vận hành.</p></div>
+    <nav aria-label="Chân trang">
+      <div><b>Học tập</b><a href="#khoa-hoc">Khóa học</a><a href="#lo-trinh">Lộ trình</a><a href="#tro-ly">Trợ lý AI</a></div>
+      <div><b>Tài khoản</b><a href="#dang-nhap">Đăng nhập</a><a href="#da-luu">Đã lưu</a><a href="#tai-khoan">Tài khoản</a></div>
+    </nav>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+(function(){
+var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
+var root=document.documentElement, calm=matchMedia('(prefers-reduced-motion:reduce)').matches, G=window.gsap&&!calm?window.gsap:null;
+
+/* Sáng tối */
+try{var saved=localStorage.getItem('kh-theme'); if(saved) root.setAttribute('data-theme',saved);}catch(e){}
+if(!root.getAttribute('data-theme')) root.setAttribute('data-theme',matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+$('#theme').addEventListener('click',function(){var t=root.getAttribute('data-theme')==='dark'?'light':'dark';root.setAttribute('data-theme',t);try{localStorage.setItem('kh-theme',t)}catch(e){}});
+
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(function(){t.classList.remove('on')},2200)}
+document.addEventListener('click',function(e){var s=e.target.closest('[data-soon]');if(s){e.preventDefault();toast('Trang này sẽ có ở đợt mockup sau')}});
+
+/* Dữ liệu khóa học, lấy từ nội dung thật của web */
+var D={sys:'Thiết kế hệ thống',prog:'Lập trình',data:'Khoa học dữ liệu',career:'Kỹ năng nghề nghiệp'};
+var C=[
+ ['sys','Software Engineer','Senior','Hệ thống phân tán và độ tin cậy','Áp dụng các mẫu thiết kế hệ thống phân tán để tăng độ tin cậy: nhân bản, phân vùng, hàng đợi, circuit breaker và idempotency.'],
+ ['prog','Software Engineer','Foundation','Cấu trúc dữ liệu và thuật toán','Chọn cấu trúc dữ liệu phù hợp và ước lượng độ phức tạp thời gian, bộ nhớ của thuật toán.'],
+ ['prog','Software Engineer','Foundation','Lập trình nền tảng và giải quyết vấn đề','Rèn quy trình giải quyết vấn đề khi lập trình: hiểu đề, chia nhỏ, viết mã giả, cài đặt và kiểm thử.'],
+ ['career','','','Làm việc nhóm: Giao tiếp và code review','Viết Pull Request dễ review và đưa nhận xét code review rõ ràng, tôn trọng, giúp cả nhóm học hỏi.'],
+ ['data','Data Engineer','Intermediate','Kiểm thử và quan sát pipeline','Kiểm thử và quan sát pipeline dữ liệu để phát hiện lỗi trước khi người dùng nhìn thấy số sai.'],
+ ['data','Data Engineer','Intermediate','Thiết kế pipeline ETL và ELT','Phân biệt ETL và ELT, chọn đúng mô hình cho từng nguồn dữ liệu và thiết kế pipeline chạy lại được.'],
+ ['sys','Software Engineer','Senior','Thiết kế hệ thống và đánh đổi kiến trúc','Ra quyết định kiến trúc có lý do: nêu yêu cầu, ước lượng tải, chọn thành phần và ghi rõ đánh đổi.'],
+ ['career','Software Engineer','Foundation','Git và kiểm thử phần mềm cơ bản','Làm việc nhóm với Git theo nhánh và viết test tự động cho thay đổi của mình.'],
+ ['sys','','','Hệ thống phân tán: Những đánh đổi cơ bản','Hiểu các đánh đổi cốt lõi của hệ thống phân tán và cách thuật toán đồng thuận Raft giữ dữ liệu nhất quán.']
+];
+var filter='all', query='';
+function chips(){
+  var n={all:C.length};C.forEach(function(c){n[c[0]]=(n[c[0]]||0)+1});
+  var h='<button class="chip" data-f="all" aria-pressed="'+(filter==='all')+'">Tất cả <span>(35)</span></button>';
+  Object.keys(D).forEach(function(k){h+='<button class="chip" data-f="'+k+'" aria-pressed="'+(filter===k)+'">'+D[k]+'</button>'});
+  h+='<span class="count">Trang 1 trên 3</span>';
+  $('#filters').innerHTML=h;
+}
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d')}
+function draw(){
+  var list=C.filter(function(c){return (filter==='all'||c[0]===filter)&&(!query||norm(c.join(' ')).indexOf(norm(query))>-1)});
+  var h='';
+  list.forEach(function(c,i){
+    h+='<article class="card" tabindex="0" role="link" aria-label="'+c[3]+'"><div class="cover cv-'+c[0]+'"><span class="pill">'+D[c[0]]+'</span>'+(c[2]?'<span class="pill">'+c[2]+'</span>':'')+'<span class="art v'+(i%3)+'"><i></i><i></i><i></i></span></div><div class="card-body">'+(c[1]?'<span class="role">'+c[1]+'</span>':'')+'<h3>'+c[3]+'</h3><p class="desc">'+c[4]+'</p><div class="card-foot"><span class="mini-av">T</span>Team Test Contributor<button class="save" aria-pressed="false" aria-label="Lưu khóa học"><svg class="i"><use href="#i-mark"/></svg></button></div></div></article>';
+    if(i===5&&filter==='all'&&!query) h+='<section class="band"><div><h2>Chưa biết bắt đầu từ đâu?</h2><p>Chọn một lộ trình mẫu theo nghề và trình độ, rồi nhờ trợ lý AI chỉnh theo mục tiêu của bạn.</p></div><div class="band-links"><a class="btn ghost sm" href="#lo-trinh">Data Engineer</a><a class="btn ghost sm" href="#lo-trinh">Frontend Developer</a><a class="btn ghost sm" href="#lo-trinh">AI Engineer</a><a class="btn sm" href="#tro-ly">Tạo lộ trình bằng AI</a></div></section>';
+  });
+  if(!list.length) h='<div class="empty"><h3 style="margin-bottom:6px">Không có khóa học nào khớp với “'+query.replace(/</g,'&lt;')+'”</h3><p>Thử từ khóa ngắn hơn hoặc bỏ bộ lọc lĩnh vực.</p></div>';
+  $('#grid').innerHTML=h;
+}
+$('#filters').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;filter=b.dataset.f;chips();draw()});
+$('#search').addEventListener('submit',function(e){e.preventDefault();query=$('#q').value.trim();draw()});
+$('#q').addEventListener('input',function(){query=this.value.trim();draw()});
+$$('.hero-tags button').forEach(function(b){b.addEventListener('click',function(){$('#q').value=b.dataset.q;query=b.dataset.q;draw()})});
+$('#grid').addEventListener('click',function(e){
+  var s=e.target.closest('.save');
+  if(s){var on=s.getAttribute('aria-pressed')!=='true';s.setAttribute('aria-pressed',on);toast(on?'Đã lưu khóa học':'Đã bỏ lưu');return}
+  if(e.target.closest('.card')) location.hash='bai-hoc';
+});
+$('#grid').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.classList.contains('card')) location.hash='bai-hoc'});
+
+/* ===== Soạn khóa học ===== */
+(function(){
+  var ed=$('#ed'),title=$('#fTitle'),slug=$('#fSlug'),cat=$('#fCat'),body=$('#fBody'),tagBox=$('#tagBox'),tagIn=$('#fTag');
+  var tags=[],slugLocked=true;
+  var SAMPLE='## Bối cảnh\nTrong hệ thống phân tán, nhiều máy chủ phải thống nhất cùng một chuỗi thay đổi dữ liệu dù có máy bị sập hoặc mạng bị chia cắt. Raft giải bài toán này bằng cách bầu ra một leader.\n\n## Ba trạng thái của một node\n- **Follower** nhận log từ leader.\n- **Candidate** xin phiếu bầu khi hết thời gian chờ.\n- **Leader** gửi heartbeat định kỳ.\n\n> Mỗi term chỉ có tối đa một leader.\n\n```typescript\ntype Role = \'follower\' | \'candidate\' | \'leader\';\n```\n\nSau khi đọc xong, bạn cần giải thích được vì sao cần đa số phiếu để bầu leader và điều gì xảy ra khi mạng bị chia đôi.';
+  function slugify(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')}
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+  function inl(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/~~(.+?)~~/g,'<s>$1</s>').replace(/`(.+?)`/g,'<code>$1</code>')}
+  function md(src){
+    var out=[],lines=src.split('\n'),i=0,list=false;
+    function close(){if(list){out.push('</ul>');list=false}}
+    while(i<lines.length){var l=lines[i];
+      if(/^```/.test(l)){close();var buf=[];i++;while(i<lines.length&&!/^```/.test(lines[i])){buf.push(lines[i]);i++}out.push('<pre>'+esc(buf.join('\n'))+'</pre>')}
+      else if(/^### /.test(l)){close();out.push('<h3>'+inl(l.slice(4))+'</h3>')}
+      else if(/^## /.test(l)){close();out.push('<h2>'+inl(l.slice(3))+'</h2>')}
+      else if(/^- /.test(l)){if(!list){out.push('<ul>');list=true}out.push('<li>'+inl(l.slice(2))+'</li>')}
+      else if(/^> /.test(l)){close();out.push('<blockquote>'+inl(l.slice(2))+'</blockquote>')}
+      else if(/^---$/.test(l)){close();out.push('<hr>')}
+      else if(l.trim()===''){close()}
+      else{close();out.push('<p>'+inl(l)+'</p>')}
+      i++}
+    close();return out.join('\n');
+  }
+  function drawTags(){$$('.tag',tagBox).forEach(function(t){t.remove()});tags.forEach(function(t,ix){var s=document.createElement('span');s.className='tag';s.innerHTML=esc(t)+'<button type="button" aria-label="Xóa thẻ '+esc(t)+'"><svg class="i" style="width:12px;height:12px"><use href="#i-x"/></svg></button>';s.querySelector('button').onclick=function(){tags.splice(ix,1);update()};tagBox.insertBefore(s,tagIn)})}
+  function update(){
+    drawTags();
+    if(slugLocked)slug.value=slugify(title.value);
+    var tl=title.value.trim().length;$('#fTitleN').textContent=title.value.length+'/120 ký tự';
+    var words=body.value.trim().split(/\s+/).filter(Boolean).length;$('#wc').textContent=words+' từ';
+    var h=title.value.trim()?'<h1>'+esc(title.value.trim())+'</h1>':'';
+    $('#pvBox').innerHTML=(body.value.trim()||h)?h+md(body.value):'<p class="pv-empty">Nội dung xem trước sẽ hiện ở đây khi bạn bắt đầu viết.</p>';
+    var items=[
+      {ok:tl>=5&&tl<=120,t:'Tên khóa học dài từ 5 đến 120 ký tự',d:tl+'/120 ký tự'},
+      {ok:!!cat.value,t:'Đã chọn danh mục',d:cat.value||'Chưa chọn'},
+      {ok:tags.length>=1,t:'Có ít nhất 1 thẻ',d:tags.length+' thẻ'},
+      {ok:words>=50,t:'Nội dung có ít nhất 50 từ',d:words+'/50 từ'}
+    ];
+    var n=items.filter(function(x){return x.ok}).length;
+    $('#chk').innerHTML=items.map(function(x){return '<li class="'+(x.ok?'ok':'')+'"><span class="dot"><svg class="i"><use href="#i-check"/></svg></span><span>'+x.t+'<small>'+x.d+'</small><span class="sr">'+(x.ok?'Đạt':'Chưa đạt')+'</span></span></li>'}).join('');
+    $('#preN').textContent=n+'/4 điều kiện đạt'+(n===4?', sẵn sàng xuất bản':'');
+    $('#meter').style.width=n*25+'%';$('#pre').classList.toggle('ready',n===4);
+    $('#btnPub').disabled=n!==4;
+  }
+  function insert(before,after,ph){var s=body.selectionStart,e=body.selectionEnd,v=body.value,sel=v.slice(s,e)||ph;body.value=v.slice(0,s)+before+sel+after+v.slice(e);body.focus();body.selectionStart=s+before.length;body.selectionEnd=s+before.length+sel.length;update()}
+  function line(prefix,ph){var s=body.selectionStart,v=body.value,st=v.lastIndexOf('\n',s-1)+1;body.value=v.slice(0,st)+prefix+(v.slice(st,body.selectionEnd)||ph)+v.slice(body.selectionEnd);body.focus();update()}
+  var F={h2:function(){line('## ','Tiêu đề phần')},h3:function(){line('### ','Tiêu đề nhỏ')},b:function(){insert('**','**','in đậm')},i:function(){insert('*','*','in nghiêng')},s:function(){insert('~~','~~','gạch ngang')},ul:function(){line('- ','Mục danh sách')},q:function(){line('> ','Nội dung trích dẫn')},hr:function(){insert('\n---\n','','')}};
+  $$('.tb [data-f]').forEach(function(b){b.onclick=function(){F[b.dataset.f]()}});
+  function menu(btn,m){btn.onclick=function(e){e.stopPropagation();var open=m.hidden;$$('.menu').forEach(function(x){x.hidden=true});$$('.tb .dd>button').forEach(function(x){x.setAttribute('aria-expanded','false')});m.hidden=!open;btn.setAttribute('aria-expanded',open)}}
+  menu($('#ddCode'),$('#mCode'));menu($('#ddNote'),$('#mNote'));
+  document.addEventListener('click',function(){$$('.menu').forEach(function(x){x.hidden=true})});
+  $$('#mCode [data-code]').forEach(function(b){b.onclick=function(){insert('\n```'+b.dataset.code+'\n','\n```\n','// viết code ở đây')}});
+  $$('#mNote [data-note]').forEach(function(b){b.onclick=function(){insert('\n> **'+b.dataset.note+':** ','\n','nội dung ghi chú')}});
+  var dlg=$('#ytDlg'),ytU=$('#ytUrl'),ytT=$('#ytTitle');
+  function ytId(u){var m=u.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m&&m[1]}
+  function ytCheck(){var ok=!!ytId(ytU.value);$('#ytOk').hidden=!ok;$('#ytInsert').disabled=!ok}
+  $('#btnYt').onclick=function(){dlg.classList.add('on');ytU.focus()};
+  ytU.oninput=ytCheck;
+  function ytClose(){dlg.classList.remove('on');ytU.value='';ytT.value='';ytCheck()}
+  $('#ytCancel').onclick=ytClose;
+  dlg.addEventListener('click',function(e){if(e.target===dlg)ytClose()});
+  addEventListener('keydown',function(e){if(e.key==='Escape'&&dlg.classList.contains('on'))ytClose()});
+  $('#ytInsert').onclick=function(){insert('\n> Video: '+(ytT.value.trim()||'Bài giảng')+' ('+ytU.value.trim()+')\n','','');ytClose()};
+  $('#edMode').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;$$('#edMode button').forEach(function(x){x.setAttribute('aria-selected',x===b)});ed.dataset.mode=b.dataset.m});
+  title.oninput=update;cat.onchange=update;body.oninput=update;
+  $('#slugBtn').onclick=function(){slugLocked=!slugLocked;slug.readOnly=slugLocked;this.textContent=slugLocked?'Sửa tay':'Tự tạo lại';if(slugLocked)slug.value=slugify(title.value);else slug.focus()};
+  slug.oninput=function(){slug.value=slugify(slug.value)};
+  tagIn.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();var v=tagIn.value.trim();if(v&&tags.indexOf(v)<0)tags.push(v);tagIn.value='';update()}else if(e.key==='Backspace'&&!tagIn.value&&tags.length){tags.pop();update()}});
+  $('#recRestore').onclick=function(){title.value='Giới thiệu về Raft';cat.value='Thiết kế hệ thống';tags=['Distributed Systems'];body.value=SAMPLE;$('#recover').hidden=true;update();toast('Đã khôi phục bản nháp')};
+  $('#recDiscard').onclick=function(){$('#recover').hidden=true;toast('Đã bỏ bản nháp')};
+  $('#btnDraft').onclick=function(){toast('Đã lưu bản nháp')};
+  $('#btnPub').onclick=function(){toast('Đã xuất bản khóa học');location.hash='studio'};
+  update();
+})();
+
+/* ===== Lịch sử phiên bản ===== */
+(function(){
+  var V=[
+    {n:1,title:'Hệ thống phân tán: Những đánh đổi',by:'Team Test Contributor',at:'02/11/2026',body:['## Bối cảnh','Nhiều máy chủ phải thống nhất cùng một chuỗi thay đổi dữ liệu.','','## Các trạng thái của node','- Follower nhận log từ leader.','- Candidate xin phiếu bầu.','- Leader gửi heartbeat.','','## Tổng kết','Raft dễ hiểu hơn Paxos.']},
+    {n:2,title:'Hệ thống phân tán: Những đánh đổi cơ bản',by:'Team Test Contributor',at:'08/11/2026',body:['## Bối cảnh','Nhiều máy chủ phải thống nhất cùng một chuỗi thay đổi dữ liệu dù có máy bị sập hoặc mạng bị chia cắt.','','## Các trạng thái của node','- Follower nhận log từ leader.','- Candidate xin phiếu bầu khi hết thời gian chờ.','- Leader gửi heartbeat định kỳ.','','## Định lý CAP','Khi mạng bị chia cắt, hệ thống phải chọn giữa nhất quán và sẵn sàng.','','## Tổng kết','Raft dễ hiểu hơn Paxos.']},
+    {n:3,title:'Hệ thống phân tán: Những đánh đổi cơ bản',by:'Team Test Contributor',at:'13/11/2026',body:['## Bối cảnh','Nhiều máy chủ phải thống nhất cùng một chuỗi thay đổi dữ liệu dù có máy bị sập hoặc mạng bị chia cắt.','','## Các trạng thái của node','- Follower nhận log từ leader.','- Candidate xin phiếu bầu khi hết thời gian chờ.','- Leader gửi AppendEntries định kỳ.','','## Định lý CAP','Khi mạng bị chia cắt, hệ thống phải chọn giữa nhất quán và sẵn sàng.','Raft chọn nhất quán: bên thiểu số không ghi được.','','## Câu hỏi tự kiểm tra','Vì sao cần đa số phiếu để bầu leader?','','## Tổng kết','Raft dễ hiểu hơn Paxos.']}
+  ];
+  var PUB=3,LATEST=3,sel=3,mode='view',base=2,cmp=3,state='author';
+  var box=$('#vBody');
+  function diff(a,b){var n=a.length,m=b.length,L=[],i,j;for(i=0;i<=n;i++){L.push(new Array(m+1).fill(0))}
+    for(i=n-1;i>=0;i--)for(j=m-1;j>=0;j--)L[i][j]=a[i]===b[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+    var out=[],x=0,y=0,o=1,nn=1;
+    while(x<n&&y<m){if(a[x]===b[y]){out.push({t:'eq',o:o++,n:nn++,s:a[x]});x++;y++}else if(L[x+1][y]>=L[x][y+1]){out.push({t:'del',o:o++,s:a[x]});x++}else{out.push({t:'add',n:nn++,s:b[y]});y++}}
+    while(x<n){out.push({t:'del',o:o++,s:a[x++]})}while(y<m){out.push({t:'add',n:nn++,s:b[y++]})}return out}
+  function row(r){var mk=r.t==='add'?'+':r.t==='del'?'−':'';var sr=r.t==='add'?'Thêm: ':r.t==='del'?'Xóa: ':'';return '<div class="dl '+r.t+'"><span class="n">'+(r.o||'')+'</span><span class="n">'+(r.n||'')+'</span><span class="mk" aria-hidden="true">'+mk+'</span><span class="tx"><span class="sr">'+sr+'</span>'+(r.s.replace(/&/g,'&amp;').replace(/</g,'&lt;')||' ')+'</span></div>'}
+  function diffHtml(a,b){var d=diff(a,b),h='',i=0,CTX=3;
+    while(i<d.length){if(d[i].t!=='eq'){h+=row(d[i]);i++;continue}
+      var j=i;while(j<d.length&&d[j].t==='eq')j++;var len=j-i,first=i===0,last=j===d.length;
+      var head=first?0:CTX,tail=last?0:CTX;
+      if(len<=head+tail+2){for(var k=i;k<j;k++)h+=row(d[k])}
+      else{for(var k=i;k<i+head;k++)h+=row(d[k]);var hid=len-head-tail;h+='<button class="fold" data-fold="'+i+','+j+','+head+','+tail+'">Hiện '+hid+' dòng không đổi</button>';}
+      i=j}
+    return {h:h,d:d}}
+  function stateCard(t,p,btn){return '<section class="pn"><div class="state"><h3>'+t+'</h3><p>'+p+'</p>'+(btn||'')+'</div></section>'}
+  function render(){
+    if(state==='guest'){box.innerHTML=stateCard('Đăng nhập để xem lịch sử phiên bản','Khóa học này chưa xuất bản, nên bạn cần đăng nhập bằng tài khoản có quyền.','<a class="btn" href="#dang-nhap">Đăng nhập</a>');return}
+    if(state==='forbidden'){box.innerHTML=stateCard('Bạn không có quyền xem trang này','Chỉ tác giả và quản trị viên xem được lịch sử của khóa học chưa xuất bản.','<a class="btn ghost" href="#khoa-hoc">Về danh sách khóa học</a>');return}
+    if(state==='notfound'){box.innerHTML=stateCard('Không tìm thấy khóa học','Khóa học có thể đã bị xóa hoặc đường dẫn không đúng.','<a class="btn ghost" href="#khoa-hoc">Về danh sách khóa học</a>');return}
+    if(state==='error'){box.innerHTML=stateCard('Không tải được lịch sử phiên bản','Kiểm tra kết nối mạng rồi thử lại.','<button class="btn" id="vRetry">Thử lại</button>');$('#vRetry').onclick=function(){state='author';$('#vState').value='author';render()};return}
+    var list=state==='reader'?V.filter(function(v){return v.n===PUB}):V;
+    if(state==='reader'&&sel!==PUB)sel=PUB;
+    var h='<div class="vh"><div>';
+    if(state==='reader')h+='<p class="vnote">Bạn chỉ thấy phiên bản đang xuất bản. Các phiên bản khác chỉ tác giả và quản trị viên xem được.</p>';
+    h+='<ul class="vlist">'+list.slice().reverse().map(function(v){return '<li><button class="vitem" data-v="'+v.n+'" aria-pressed="'+(v.n===sel)+'"><b>Phiên bản '+v.n+'</b><span class="m">'+v.title+'</span><span class="m">'+v.by+', '+v.at+'</span><span class="bd">'+(v.n===PUB?'<span class="st ok">Đang xuất bản</span>':'')+(v.n===LATEST?'<span class="st draft">Mới nhất</span>':'')+'</span></button></li>'}).join('')+'</ul></div>';
+    h+='<section class="pn">';
+    if(state==='author'){h+='<div class="cmpbar"><div class="seg" id="vMode"><button aria-pressed="'+(mode==='view')+'" data-m="view">Xem</button><button aria-pressed="'+(mode==='cmp')+'" data-m="cmp">So sánh</button></div>';
+      if(mode==='cmp'){var opt=function(s){return V.map(function(v){return '<option value="'+v.n+'"'+(v.n===s?' selected':'')+'>Phiên bản '+v.n+'</option>'}).join('')};
+        h+='<span class="lbl">Gốc</span><select class="sel" id="vBase" aria-label="Phiên bản gốc">'+opt(base)+'</select><button class="btn ghost sm" id="vSwap">Đổi chỗ</button><span class="lbl">So với</span><select class="sel" id="vCmp" aria-label="Phiên bản so sánh">'+opt(cmp)+'</select><button class="btn ghost sm" id="vPrev">So với bản trước</button>'}
+      h+='</div>'}
+    if(mode==='view'||state==='reader'){var v=V[sel-1];h+='<div class="vhead"><h2>'+v.title+'</h2><p>Phiên bản '+v.n+', '+v.by+', '+v.at+'</p></div><pre class="vpre">'+v.body.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre>'}
+    else{var A=V[base-1],B=V[cmp-1];
+      if(base===cmp)h+='<div class="state"><p>Hai phiên bản giống nhau. Chọn hai phiên bản khác nhau để so sánh.</p></div>';
+      else{var r=diffHtml(A.body,B.body),add=r.d.filter(function(x){return x.t==='add'}).length,del=r.d.filter(function(x){return x.t==='del'}).length;
+        h+='<div class="dsum"><span><span class="a">+'+add+' dòng</span> thêm</span><span><span class="r">−'+del+' dòng</span> xóa</span></div>';
+        if(A.title!==B.title)h+='<div class="tchg">Tiêu đề đổi: <s>'+A.title+'</s> thành <ins>'+B.title+'</ins></div>';
+        h+='<div class="diff" id="vDiff" role="region" aria-label="So sánh nội dung" tabindex="0">'+r.h+'</div>';box._d=r.d}}
+    h+='</section></div>';box.innerHTML=h;
+  }
+  box.addEventListener('click',function(e){
+    var t=e.target.closest('button');if(!t)return;
+    if(t.dataset.v){sel=+t.dataset.v;render()}
+    else if(t.closest('#vMode')){mode=t.dataset.m;render()}
+    else if(t.id==='vSwap'){var x=base;base=cmp;cmp=x;render()}
+    else if(t.id==='vPrev'){cmp=sel>1?sel:2;base=cmp-1;render()}
+    else if(t.dataset.fold){var p=t.dataset.fold.split(',').map(Number),d=box._d,h='';for(var k=p[0]+p[2];k<p[1]-p[3];k++)h+=row(d[k]);var tmp=document.createElement('div');tmp.innerHTML=h;while(tmp.firstChild)t.parentNode.insertBefore(tmp.firstChild,t);t.remove()}
+  });
+  box.addEventListener('change',function(e){if(e.target.id==='vBase'){base=+e.target.value;render()}else if(e.target.id==='vCmp'){cmp=+e.target.value;render()}});
+  $('#vState').addEventListener('change',function(){state=this.value;render()});
+  render();
+})();
+
+/* Điều hướng giữa các màn hình */
+var first=true;
+function route(){
+  var h=(location.hash||'').slice(1), anchor=null;
+  if(/^h[1-4]$/.test(h)){anchor=h;h='bai-hoc'}
+  if(['trang-chu','khoa-hoc','bai-hoc','tro-ly','dang-nhap','lo-trinh','lo-trinh-cua-toi','da-luu','tai-khoan','studio','quan-tri','soan-khoa-hoc','lich-su-phien-ban'].indexOf(h)<0) h='trang-chu';
+  document.body.dataset.screen=h;
+  $$('.screen').forEach(function(s){s.classList.toggle('on',s.id==='s-'+h)});
+  $$('.nav a').forEach(function(a){var key=({'bai-hoc':'khoa-hoc','lich-su-phien-ban':'khoa-hoc','lo-trinh-cua-toi':'lo-trinh','soan-khoa-hoc':'studio'})[h]||h;var on=a.dataset.nav===key;if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
+  if(anchor){var el=document.getElementById(anchor);if(el)el.scrollIntoView()}else scrollTo(0,0);
+  if(G){
+    if((h==='khoa-hoc'||h==='trang-chu')&&first){
+      var sc='#s-'+h+' ';
+      G.from(sc+'.ghost-word',{x:80,opacity:0,duration:1.1,ease:'power3.out'});
+      G.from(sc+'.hero-disc',{y:120,duration:.9,ease:'power3.out'});
+      G.from(sc+'.hero-kicker,'+sc+'.hero h1,'+sc+'.search,'+sc+'.hero-tags,'+sc+'.lead,'+sc+'.cta,'+sc+'.prev',{y:22,opacity:0,duration:.6,stagger:.08,ease:'power2.out',clearProps:'all'});
+    } else if(!anchor) G.from('#s-'+h,{opacity:0,duration:.25,clearProps:'all'});
+  }
+  first=false; onScroll();
+  if(h==='tro-ly'){var t=$('#thread');t.scrollTop=0}
+}
+addEventListener('hashchange',route);
+
+/* Bài học: thanh tiến độ đọc và mục lục */
+function onScroll(){
+  if(!$('#s-bai-hoc').classList.contains('on'))return;
+  var d=document.documentElement, max=d.scrollHeight-innerHeight;
+  $('#bar').style.width=(max>0?Math.min(100,scrollY/max*100):0)+'%';
+  var cur='h1';['h1','h2','h3','h4'].forEach(function(id){if(document.getElementById(id).getBoundingClientRect().top<140)cur=id});
+  $$('#toc a').forEach(function(a){a.classList.toggle('on',a.dataset.t===cur)});
+}
+addEventListener('scroll',onScroll,{passive:true});
+$('#copy').addEventListener('click',function(){var b=this.lastElementChild;function ok(){b.textContent='Đã sao chép';setTimeout(function(){b.textContent='Sao chép'},1600)}
+  try{navigator.clipboard.writeText($('#codeText').textContent).then(ok,ok)}catch(e){ok()}});
+$('#saveLesson').addEventListener('click',function(){var on=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',on);this.lastElementChild.textContent=on?'Đã lưu':'Lưu';toast(on?'Đã lưu khóa học':'Đã bỏ lưu')});
+$('#shareLesson').addEventListener('click',function(){toast('Đã sao chép đường dẫn')});
+$('.play').addEventListener('click',function(){toast('Video YouTube sẽ phát tại đây')});
+
+/* Trợ lý AI */
+var msg=$('#msg');
+function grow(){msg.style.height='auto';msg.style.height=Math.min(140,msg.scrollHeight)+'px';$('#cnt').textContent=msg.value.length+'/4000'}
+msg.addEventListener('input',grow);
+function send(text){
+  text=text.trim();if(!text)return;
+  var me=document.createElement('div');me.className='me';me.textContent=text;$('#msgs').appendChild(me);
+  var bot=document.createElement('div');bot.className='bot';bot.innerHTML='<span class="bot-av"></span><div class="bot-txt"><div class="dots"><i></i><i></i><i></i></div></div>';$('#msgs').appendChild(bot);
+  if(G) G.from([me,bot],{y:10,opacity:0,duration:.3,stagger:.12,clearProps:'all'});
+  var t=$('#thread');t.scrollTop=t.scrollHeight;bot.scrollIntoView({block:'end'});
+  msg.value='';grow();
+  setTimeout(function(){bot.lastElementChild.innerHTML='<p>Đây là bản mockup nên trợ lý chưa trả lời thật. Khi ghép vào dự án, câu trả lời sẽ hiện ở đây, có định dạng tiêu đề, danh sách và khối code.</p>';t.scrollTop=t.scrollHeight},1100);
+}
+$('#composer').addEventListener('submit',function(e){e.preventDefault();send(msg.value)});
+msg.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(msg.value)}});
+$$('.sugg button').forEach(function(b){b.addEventListener('click',function(){send(b.textContent)})});
+$('#memToggle').addEventListener('click',function(){var off=$('#ai').classList.toggle('no-mem');this.setAttribute('aria-pressed',!off)});
+$('#memList').addEventListener('click',function(e){var b=e.target.closest('button');if(b){b.parentNode.remove();toast('Đã xóa ghi nhớ')}});
+$('#memForm').addEventListener('submit',function(e){e.preventDefault();var v=$('#memIn').value.trim();if(!v)return;
+  var d=document.createElement('div');d.className='mem-item';d.style.marginTop='8px';d.innerHTML='<span></span><button aria-label="Xóa ghi nhớ"><svg class="i" style="width:15px;height:15px"><use href="#i-x"/></svg></button>';d.firstChild.textContent=v;$('#memList').appendChild(d);$('#memIn').value=''});
+
+/* ===== Các trang bổ sung ===== */
+function cardHTML(c,i,saved){return '<article class="card" tabindex="0" role="link" aria-label="'+c[3]+'"><div class="cover cv-'+c[0]+'"><span class="pill">'+D[c[0]]+'</span>'+(c[2]?'<span class="pill">'+c[2]+'</span>':'')+'<span class="art v'+(i%3)+'"><i></i><i></i><i></i></span></div><div class="card-body">'+(c[1]?'<span class="role">'+c[1]+'</span>':'')+'<h3>'+c[3]+'</h3><p class="desc">'+c[4]+'</p><div class="card-foot"><span class="mini-av">T</span>Team Test Contributor<button class="save" aria-pressed="'+(!!saved)+'" aria-label="Lưu khóa học"><svg class="i"><use href="#i-mark"/></svg></button></div></div></article>'}
+$('#homeGrid').innerHTML=[8,5,0].map(function(k,j){return cardHTML(C[k],j)}).join('');
+$('#savedGrid').innerHTML=[4,5,8].map(function(k,j){return cardHTML(C[k],j,true)}).join('');
+['#homeGrid','#savedGrid'].forEach(function(sel){
+  $(sel).addEventListener('click',function(e){
+    var s=e.target.closest('.save');
+    if(s){var on=s.getAttribute('aria-pressed')!=='true';s.setAttribute('aria-pressed',on);toast(on?'Đã lưu khóa học':'Đã bỏ lưu');return}
+    if(e.target.closest('.card')) location.hash='bai-hoc';
+  });
+});
+
+/* Lộ trình mẫu */
+var P=[['Data Engineer','Beginner','8 đến 12 tuần'],['Data Engineer','Intermediate','10 đến 16 tuần'],['Data Engineer','Advanced','12 đến 20 tuần'],['Frontend Developer','Beginner','8 đến 12 tuần'],['Frontend Developer','Intermediate','10 đến 16 tuần'],['Frontend Developer','Advanced','12 đến 20 tuần'],['AI Engineer','Beginner','8 đến 12 tuần'],['AI Engineer','Intermediate','10 đến 16 tuần'],['AI Engineer','Advanced','12 đến 20 tuần']];
+var rf='all';
+function rmDraw(){
+  var jobs=['Data Engineer','Frontend Developer','AI Engineer'];
+  $('#rmFilters').innerHTML='<button class="chip" data-r="all" aria-pressed="'+(rf==='all')+'">Tất cả</button>'+jobs.map(function(j){return '<button class="chip" data-r="'+j+'" aria-pressed="'+(rf===j)+'">'+j+'</button>'}).join('');
+  $('#rmGrid').innerHTML=P.filter(function(p){return rf==='all'||p[0]===rf}).map(function(p){return '<article class="rm"><div class="pills"><span class="pill">'+p[1]+'</span><span class="pill">'+p[2]+'</span></div><h3>'+p[0]+'</h3><p>Lộ trình tham khảo cho '+p[0]+' trình độ '+p[1]+'. Chỉnh theo mục tiêu của bạn với trợ lý AI.</p><a href="#lo-trinh-cua-toi" data-soon>Xem lộ trình</a></article>'}).join('');
+}
+$('#rmFilters').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;rf=b.dataset.r;rmDraw()});
+rmDraw();
+$('#goLesson').addEventListener('click',function(){location.hash='bai-hoc'});
+
+/* Đăng nhập và đăng ký */
+var reg=false;
+function authMode(){
+  $('#authTitle').textContent=reg?'Tạo tài khoản':'Đăng nhập';
+  $('#authSub').textContent=reg?'Chỉ mất một phút. Bạn có thể đăng ký bằng email trường.':'Dùng email bạn đã đăng ký với KnowledgeHub.';
+  $('#nameField').hidden=!reg;$('#passHint').hidden=!reg;
+  $('#authBtn').textContent=reg?'Tạo tài khoản':'Đăng nhập';
+  $('#swText').textContent=reg?'Đã có tài khoản?':'Chưa có tài khoản?';
+  $('#swBtn').textContent=reg?'Đăng nhập':'Đăng ký';
+  $('#au-pass').setAttribute('autocomplete',reg?'new-password':'current-password');
+}
+$('#swBtn').addEventListener('click',function(){reg=!reg;authMode()});
+$('#authForm').addEventListener('submit',function(e){e.preventDefault();toast('Đây là mockup nên chưa đăng nhập thật')});
+$('#gBtn').addEventListener('click',function(){toast('Đăng nhập Google sẽ nối ở bước code')});
+
+/* Tài khoản, Studio, Quản trị */
+$$('form[data-save]').forEach(function(f){f.addEventListener('submit',function(e){e.preventDefault();toast('Đã lưu thay đổi')})});
+$('#delAcc').addEventListener('click',function(){toast('Bản thật sẽ hỏi xác nhận trước khi xóa')});
+function stFilter(){var q=norm($('#stQ').value),s=$('#stS').value;$$('#stTbl tbody tr').forEach(function(r){var ok=(!q||norm(r.textContent).indexOf(q)>-1)&&(!s||r.querySelector('.st').textContent===s);r.hidden=!ok})}
+$('#stQ').addEventListener('input',stFilter);$('#stS').addEventListener('change',stFilter);
+$('#adTabs').addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;
+  $$('#adTabs .chip').forEach(function(c){c.setAttribute('aria-pressed',c===b)});
+  ['users','cats','tags'].forEach(function(k){$('#p-'+k).hidden=(k!==b.dataset.p)})});
+$('#tagList').addEventListener('click',function(e){var b=e.target.closest('button');if(b){b.parentNode.remove();toast('Đã xóa thẻ')}});
+$('#tagForm').addEventListener('submit',function(e){e.preventDefault();var v=$('#tagIn').value.trim();if(!v)return;
+  var s=document.createElement('span');s.className='tag';s.innerHTML='<span></span> <small>0</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button>';s.firstChild.textContent=v;$('#tagList').appendChild(s);$('#tagIn').value=''});
+
+chips();draw();route();
+})();
+</script>
+</body>
+</html>
