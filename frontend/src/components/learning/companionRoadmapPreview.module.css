@@ -12,6 +12,9 @@
 .scoreGrid .primaryScore { background: var(--color-primary-faint); }
 .scoreValue { font-size: 2rem; color: var(--color-primary); font-weight: 800; line-height: 1; }
 .scoreNote { color: var(--color-gray); font-size: .78rem; line-height: 1.5; margin: .55rem 0 0; }
+.scoreExplanation { color: var(--color-gray); font-size: .78rem; line-height: 1.5; margin-top: .45rem; }
+.scoreExplanation summary { color: var(--color-primary); cursor: pointer; font-weight: 700; }
+.scoreExplanation p { margin: .4rem 0 0; }
 .skillBlock { margin-top: 1.5rem; }
 .skillBlock h3 { font-size: .95rem; margin: 0 0 .65rem; }
 .skillList { display: grid; gap: .45rem; }
@@ -21,6 +24,7 @@
 .cvBlock { background: var(--color-primary-faint); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.3rem; }
 .cvBlock h3 { margin: 0 0 .5rem; font-size: .95rem; }
 .cvBlock p { color: var(--color-gray); font-size: .82rem; line-height: 1.5; margin: .35rem 0; overflow-wrap: anywhere; }
+.cvBlock .encouragement { color: var(--color-primary); font-weight: 600; margin-bottom: .7rem; }
 .steps { flex: 1 1 auto; list-style: none; padding: 0; margin: 1.5rem 0; display: grid; gap: .9rem; }
 .step { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: .8rem; padding: 1rem; border: 1px solid var(--color-border-light); border-radius: var(--radius-md); }
 .stepIndex { color: var(--color-primary); font-weight: 800; }

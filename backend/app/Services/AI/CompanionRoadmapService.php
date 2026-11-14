@@ -74,7 +74,7 @@ class CompanionRoadmapService
         $intent = $this->ai->post('/v1/roadmaps/form-intent', [
             'career_goal' => trim($input['career_goal']),
             'current_level' => trim($input['current_level']),
-            'target_job_requirements' => trim($input['target_job_requirements']),
+            'target_job_requirements' => isset($input['target_job_requirements']) ? trim($input['target_job_requirements']) : null,
             'weeks' => (int) $input['weeks'],
             'hours_per_week' => (int) $input['hours_per_week'],
             'cv_text' => $cvText,
@@ -347,10 +347,17 @@ class CompanionRoadmapService
             }
         }
         $gaps = array_values(array_filter($skills, static fn (string $skill): bool => ! isset($strengths[mb_strtolower($skill)])));
+        $encouragement = $value['encouragement'] ?? null;
+        if (count($strengths) === 0 || ! is_string($encouragement) || trim($encouragement) === '' || mb_strlen($encouragement) > 320) {
+            $encouragement = count($strengths) > 0
+                ? 'Your CV shows experience you can build on. This roadmap can help you strengthen the skills for your goal.'
+                : 'Your career goal is a good place to start. This roadmap can help you build and demonstrate relevant skills.';
+        }
         return [
             'strengths' => array_values($strengths),
             'gaps' => $gaps,
             'recommendations' => $recommendations,
+            'encouragement' => trim($encouragement),
             'cv_match_percent' => (int) round(count($strengths) * 100 / count($skills)),
         ];
     }

@@ -17,6 +17,7 @@ export interface SkillCoverage {
 }
 
 export interface CVAnalysis {
+  encouragement?: string | null;
   strengths: { skill: string; evidence: string }[];
   gaps: string[];
   recommendations: string[];

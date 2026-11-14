@@ -35,23 +35,28 @@ export default function CompanionRoadmapPreview({ draft, saving, onSave, onClose
         <button className={styles.close} type="button" onClick={onClose} disabled={saving} aria-label="Close roadmap preview">×</button>
       </div>
 
-      <div className={styles.scoreGrid} aria-label="Roadmap matching score">
+      <div className={styles.scoreGrid} aria-label="Learning resource coverage">
         <div className={styles.primaryScore}>
           <span className={styles.scoreValue}>{percent(coverage.overall_percent)}</span>
-          <span className={styles.scoreLabel}>Roadmap Match Score</span>
+          <span className={styles.scoreLabel}>Learning resource coverage</span>
         </div>
         <div><strong>{percent(coverage.internal_percent)}</strong><span>Internal course coverage</span></div>
         <div><strong>{percent(coverage.external_percent)}</strong><span>External resource support</span></div>
       </div>
-      <p className={styles.scoreNote}>Coverage describes how well the available resources match these skills. It does not measure or guarantee mastery.</p>
-      {coverage.resource_status === 'unavailable' && <p className={styles.gaps} role="status">External resource search is temporarily unavailable. No unverified links were added; remaining skills are shown as gaps.</p>}
+      <p className={styles.scoreNote}>This shows how much learning material we found for the skills in your goal. A lower number means our available resources have gaps, not that you or your goal scored poorly.</p>
+      <details className={styles.scoreExplanation}>
+        <summary>How is this calculated?</summary>
+        <p>AI suggests the target skills. For each skill, KnowledgeHub checks matching published courses and verified external resources. The percentage averages the available coverage across those skills; external resources can fill gaps left by our courses. See the skill coverage list below for the breakdown. This is not a measure of your ability or a guarantee of mastery.</p>
+      </details>
+      {coverage.resource_status === 'unavailable' && <p className={styles.gaps} role="status">External resource search is temporarily unavailable. No unverified links were added; skills with limited resources are listed below.</p>}
 
       {draft.cv_analysis && (
         <section className={styles.cvBlock} aria-label="CV analysis">
           <h3>CV analysis</h3>
-          {draft.cv_analysis.cv_match_percent !== null && <p><strong>{percent(draft.cv_analysis.cv_match_percent)} CV match</strong> with the target position based on provided evidence.</p>}
+          {draft.cv_analysis.encouragement && <p className={styles.encouragement}>{draft.cv_analysis.encouragement}</p>}
+          {draft.cv_analysis.strengths.length > 0 ? <p><strong>CV evidence for {draft.cv_analysis.strengths.length} of {coverage.skills.length} target skills.</strong> Only skills supported by a direct quote from your PDF count here; missing evidence does not mean you lack a skill.</p> : <p>Your CV provides a starting point. We could not match its wording directly to the target skills; this does not measure your ability.</p>}
           {draft.cv_analysis.strengths.length > 0 && <p><strong>Existing strengths:</strong> {draft.cv_analysis.strengths.map((entry) => `${entry.skill} (${entry.evidence})`).join('; ')}</p>}
-          {draft.cv_analysis.gaps.length > 0 && <p><strong>Skills to develop:</strong> {draft.cv_analysis.gaps.join(', ')}</p>}
+          {draft.cv_analysis.gaps.length > 0 && <p><strong>Skills without CV evidence yet:</strong> {draft.cv_analysis.gaps.join(', ')}</p>}
           {draft.cv_analysis.recommendations.length > 0 && <p><strong>Suggestions:</strong> {draft.cv_analysis.recommendations.join('; ')}</p>}
         </section>
       )}
@@ -66,7 +71,7 @@ export default function CompanionRoadmapPreview({ draft, saving, onSave, onClose
             </div>
           ))}
         </div>
-        {coverage.gaps.length > 0 && <p className={styles.gaps}><strong>Remaining skill gaps:</strong> {coverage.gaps.join(', ')}</p>}
+        {coverage.gaps.length > 0 && <p className={styles.gaps}><strong>Skills with limited learning resources:</strong> {coverage.gaps.join(', ')}</p>}
       </div>
 
       <ol className={styles.steps}>
