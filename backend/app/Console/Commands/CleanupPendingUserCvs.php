@@ -16,14 +16,15 @@ class CleanupPendingUserCvs extends Command
     public function handle(UserCvService $service): int
     {
         $failed = false;
-        UserCv::query()->where('status', 'pending_delete')->select('user_id')->distinct()
-            ->orderBy('user_id')->pluck('user_id')->each(function ($id) use ($service, &$failed): void {
+        $cutoff = now()->subMinutes(UserCvService::STAGING_GRACE_MINUTES);
+        UserCv::query()->where('status', 'pending_delete')->where('updated_at', '<=', $cutoff)->select('user_id')->distinct()
+            ->orderBy('user_id')->pluck('user_id')->each(function ($id) use ($service, $cutoff, &$failed): void {
                 $user = User::withTrashed()->find($id);
                 if ($user === null) {
                     return;
                 }
                 try {
-                    $service->cleanupPending($user);
+                    $service->cleanupPending($user, false, $cutoff);
                 } catch (CvCleanupException) {
                     $failed = true;
                 }

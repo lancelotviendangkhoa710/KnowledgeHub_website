@@ -55,6 +55,8 @@ return [
             'bucket' => env('CV_STORAGE_BUCKET'),
             'endpoint' => env('CV_STORAGE_ENDPOINT'),
             'use_path_style_endpoint' => true,
+            'http' => ['connect_timeout' => 5, 'timeout' => 30],
+            'retries' => 0,
             'options' => ['before_upload' => App\Services\AI\CvStorageUploadOptions::class.'::removeAcl'],
             'visibility' => 'private',
             'throw' => true,

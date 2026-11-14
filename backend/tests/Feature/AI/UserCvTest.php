@@ -122,8 +122,45 @@ class UserCvTest extends TestCase
         $this->postJson('/api/ai/cv', ['cv_file' => $this->pdf(), 'consent' => '1'])->assertStatus(503);
         $this->assertDatabaseHas('user_cvs', ['id' => $old->id, 'status' => 'pending_delete', 'extracted_text' => null]);
         $this->assertSame(1, UserCv::query()->where('status', 'active')->count());
+        $this->travel(6)->minutes();
         $this->artisan('ai:cleanup-pending-cvs')->assertSuccessful();
         $this->assertDatabaseMissing('user_cvs', ['id' => $old->id]);
+    }
+    public function test_scheduled_cleanup_preserves_recent_staging_for_same_owner(): void
+    {
+        $owner = $this->user();
+        $createPending = fn (string $key) => UserCv::create([
+            'user_id' => $owner->id, 'object_key' => $key, 'filename' => 'cv.pdf',
+            'size_bytes' => 12, 'consented_at' => now(), 'status' => 'pending_delete',
+            'extracted_text' => null,
+        ]);
+        $old = $createPending('cvs/old.pdf');
+        $fresh = $createPending('cvs/staging.pdf');
+        Storage::disk('cv')->put($old->object_key, 'old');
+        Storage::disk('cv')->put($fresh->object_key, 'staging');
+        \Illuminate\Support\Facades\DB::table('user_cvs')->where('id', $old->id)
+            ->update(['updated_at' => now()->subMinutes(6)]);
+
+        $this->artisan('ai:cleanup-pending-cvs')->assertSuccessful();
+        $this->assertDatabaseMissing('user_cvs', ['id' => $old->id]);
+        $this->assertDatabaseHas('user_cvs', ['id' => $fresh->id]);
+        Storage::disk('cv')->assertMissing($old->object_key);
+        Storage::disk('cv')->assertExists($fresh->object_key);
+    }
+
+    public function test_save_does_not_clean_another_recent_staging_record(): void
+    {
+        $owner = $this->user();
+        $staging = UserCv::create([
+            'user_id' => $owner->id, 'object_key' => 'cvs/staging.pdf', 'filename' => 'cv.pdf',
+            'size_bytes' => 12, 'consented_at' => now(), 'status' => 'pending_delete',
+            'extracted_text' => null,
+        ]);
+        Storage::disk('cv')->put($staging->object_key, 'staging');
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/ai/cv', ['cv_file' => $this->pdf(), 'consent' => '1'])->assertCreated();
+        $this->assertDatabaseHas('user_cvs', ['id' => $staging->id, 'status' => 'pending_delete']);
+        Storage::disk('cv')->assertExists($staging->object_key);
     }
     public function test_failed_cleanup_clears_text_and_can_be_retried(): void
     {
@@ -141,6 +178,7 @@ class UserCvTest extends TestCase
         $this->assertDatabaseHas('user_cvs', ['id' => $cv->id, 'status' => 'pending_delete', 'extracted_text' => null]);
         $this->getJson('/api/ai/cv')->assertJsonPath('data', null);
         $this->get('/api/ai/cv/download')->assertNotFound();
+        $this->travel(6)->minutes();
         $this->artisan('ai:cleanup-pending-cvs')->assertSuccessful();
         $this->assertDatabaseMissing('user_cvs', ['id' => $cv->id]);
     }

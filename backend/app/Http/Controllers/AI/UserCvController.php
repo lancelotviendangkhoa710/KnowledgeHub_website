@@ -24,6 +24,8 @@ class UserCvController extends Controller
 
     public function store(StoreUserCvRequest $request): JsonResponse
     {
+        $this->authorize('create', UserCv::class);
+
         try {
             $cv = $this->cvs->save($request->user(), $request->file('cv_file'));
         } catch (RuntimeException $exception) {
@@ -46,6 +48,8 @@ class UserCvController extends Controller
 
     public function destroy(Request $request): JsonResponse
     {
+        $this->authorize('deleteAll', UserCv::class);
+
         try {
             $this->cvs->deleteAllForUser($request->user());
         } catch (RuntimeException $exception) {

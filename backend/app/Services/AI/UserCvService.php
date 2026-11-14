@@ -13,6 +13,8 @@ use Throwable;
 
 class UserCvService
 {
+    public const STAGING_GRACE_MINUTES = 5;
+
     public function __construct(private readonly CompanionRoadmapAiClient $extractor) {}
 
     public function current(User $user): ?UserCv
@@ -56,7 +58,7 @@ class UserCvService
             ]);
         });
         try {
-            DB::transaction(function () use ($user, $file, $cv, $text): void {
+            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text): array {
                 $this->lockOwner($user);
                 $row = UserCv::query()->whereKey($cv->id)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
                 $stream = fopen($file->getRealPath(), 'rb');
@@ -70,15 +72,19 @@ class UserCvService
                 } finally {
                     fclose($stream);
                 }
-                UserCv::query()->where('user_id', $user->id)->where('status', 'active')
-                    ->update(['status' => 'pending_delete', 'extracted_text' => null, 'updated_at' => now()]);
+                $active = UserCv::query()->where('user_id', $user->id)->where('status', 'active');
+                $replacedIds = (clone $active)->pluck('id')->all();
+                $active->update(['status' => 'pending_delete', 'extracted_text' => null, 'updated_at' => now()]);
                 $row->update(['status' => 'active', 'extracted_text' => $text]);
+                return [$row, $replacedIds];
             });
-            $this->cleanupPending($user);
+            if ($replacedIds !== []) {
+                $this->cleanupPending($user, false, null, $replacedIds);
+            }
         } catch (Throwable $exception) {
             throw new RuntimeException('CV storage or cleanup is temporarily unavailable. Please retry.', 503, $exception);
         }
-        return $cv->refresh();
+        return $saved;
     }
 
     public function markAllPendingForUser(User $user): void
@@ -101,15 +107,22 @@ class UserCvService
         $this->cleanupPending($user, true);
     }
 
-    public function cleanupPending(User $user, bool $rejectActive = false): void
+    public function cleanupPending(User $user, bool $rejectActive = false, ?\DateTimeInterface $olderThan = null, ?array $ids = null): void
     {
         try {
-            DB::transaction(function () use ($user, $rejectActive): void {
+            DB::transaction(function () use ($user, $rejectActive, $olderThan, $ids): void {
                 $this->lockOwner($user, true);
                 if ($rejectActive && UserCv::query()->where('user_id', $user->id)->where('status', 'active')->exists()) {
                     throw new RuntimeException('CV cleanup must be retried.');
                 }
-                $rows = UserCv::query()->where('user_id', $user->id)->where('status', 'pending_delete')->lockForUpdate()->get();
+                $query = UserCv::query()->where('user_id', $user->id)->where('status', 'pending_delete');
+                if ($olderThan !== null) {
+                    $query->where('updated_at', '<=', $olderThan);
+                }
+                if ($ids !== null) {
+                    $query->whereIn('id', $ids);
+                }
+                $rows = $query->lockForUpdate()->get();
                 foreach ($rows as $row) {
                     $disk = Storage::disk('cv');
                     if (! $disk->delete($row->object_key) || $disk->exists($row->object_key)) {

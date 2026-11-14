@@ -6,7 +6,9 @@ use App\Models\LearningRoadmap;
 use App\Models\PersonalAccessToken;
 use App\Models\RoadmapItem;
 use App\Models\User;
+use App\Models\UserCv;
 use App\Policies\RoadmapPolicy;
+use App\Policies\UserCvPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -44,6 +46,7 @@ class AppServiceProvider extends ServiceProvider
         // Identity/Auth (AUTH-01): UserPolicy holds the guest-only rules for the
         // public register/login endpoints and the current-token rule for logout.
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(UserCv::class, UserCvPolicy::class);
 
         // Identity/Auth (AUTH-01): throttle password guessing per account+source
         // pair, plus a coarser cap per source address across all accounts.

@@ -5,6 +5,7 @@ namespace Tests\Feature\Auth;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\UserCv;
+use App\Services\AI\UserCvService;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -256,6 +257,33 @@ class ProfileTest extends TestCase
         $this->assertDatabaseHas('user_cvs', [
             'id' => $cv->id, 'status' => 'pending_delete', 'extracted_text' => null,
         ]);
+        $this->assertSame(1, $user->tokens()->count());
+    }
+
+    public function test_concurrent_cv_created_after_cleanup_blocks_account_deletion(): void
+    {
+        $user = $this->createUser('cv-race@example.com');
+        $cvs = Mockery::mock(UserCvService::class);
+        $cvs->shouldReceive('markAllPendingForUser')->once();
+        $cvs->shouldReceive('cleanupPendingForUser')->once()->andReturnUsing(function (User $owner): void {
+            UserCv::create([
+                'user_id' => $owner->id,
+                'object_key' => 'cvs/'.Str::uuid().'.pdf',
+                'filename' => 'cv.pdf',
+                'size_bytes' => 8,
+                'extracted_text' => 'new CV text',
+                'consented_at' => now(),
+                'status' => 'active',
+            ]);
+        });
+        $this->app->instance(UserCvService::class, $cvs);
+
+        $this->withToken($user->createToken('t')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])
+            ->assertStatus(503);
+
+        $this->assertNotSoftDeleted('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('user_cvs', ['user_id' => $user->id, 'status' => 'active']);
         $this->assertSame(1, $user->tokens()->count());
     }
 

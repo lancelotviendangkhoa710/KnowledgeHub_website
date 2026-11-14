@@ -30,7 +30,7 @@ This runbook is for the approved CV persistence design. It does not authorize ag
 
 ## Rollback and recovery
 
-- If backend or frontend smoke checks fail, disable/hide the frontend controls and roll back the application release to the last known-good backend/frontend versions. Keep the additive table and bucket contents intact; do not automatically drop the table or bucket as a rollback step.
+- If backend or frontend smoke checks fail, disable/hide the frontend controls and roll back only to a backend release that retains CV cleanup integration. Once any CV rows or objects exist, never restore a backend without that integration: it could report account deletion success without removing CV data. If no cleanup-compatible backend is available, block account deletion until cleanup integration is restored. Keep the additive table, bucket contents, and all `pending_delete` rows intact; do not automatically drop the table or bucket as a rollback step.
 - If the migration fails, stop rollout and use the reviewed database recovery procedure. Do not run a reset or improvise manual deletes. Preserve any `pending_delete` records and objects for reconciliation.
 - If Storage and database state diverge, keep affected CVs unavailable, identify rows by internal IDs/object keys through restricted operator tooling, retry cleanup, and reconcile only under the reviewed recovery procedure. Do not expose CV contents during investigation.
 - Resume only after the failing component is corrected and the smoke checks pass. A forward fix is preferred when saved user data exists. Any destructive schema or object cleanup requires a separately reviewed recovery plan.

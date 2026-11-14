@@ -4,6 +4,8 @@ namespace App\Services\Auth;
 
 use App\Models\PersonalAccessToken;
 use App\Models\User;
+use App\Models\UserCv;
+use App\Services\AI\CvCleanupException;
 use App\Services\AI\UserCvService;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Hashing\HashManager;
@@ -66,6 +68,9 @@ class ProfileService
         // Commit the tombstone before touching Storage so a failed deletion
         // remains excluded from retrieval and can be retried.
         $this->userCvs->markAllPendingForUser($user);
+        // Storage I/O takes place without the global admin-role lock. A final
+        // transaction rechecks both the admin invariant and absence of CV rows.
+        $this->userCvs->cleanupPendingForUser($user);
 
         $this->database->transaction(function () use ($user, $currentPassword): void {
             $this->database->table('roles')->where('name', 'admin')->lockForUpdate()->value('id');
@@ -78,8 +83,11 @@ class ProfileService
                 ]);
             }
 
-            // Holding the user lock prevents a new upload through the CV service.
-            $this->userCvs->cleanupPendingForUser($locked);
+            // A concurrent upload after cleanup must make deletion fail. The
+            // owner lock serializes this check with CV writes and soft-delete.
+            if (UserCv::query()->where('user_id', $locked->getKey())->exists()) {
+                throw new CvCleanupException;
+            }
 
             $locked->tokens()->delete();
             $locked->delete();

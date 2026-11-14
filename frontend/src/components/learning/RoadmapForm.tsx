@@ -9,6 +9,7 @@ import CompanionRoadmapPreview from './CompanionRoadmapPreview';
 import styles from './roadmapForm.module.css';
 
 type ReadyPreview = Extract<CompanionPreviewResult, { state: 'ready' }>;
+type CvAction = 'download' | 'delete' | 'save';
 const MAX_PDF_BYTES = 2 * 1024 * 1024;
 
 type Props = { onBack: () => void };
@@ -28,7 +29,7 @@ export default function RoadmapForm({ onBack }: Props) {
   const [saveCvConsent, setSaveCvConsent] = useState(false);
   const [storedCv, setStoredCv] = useState<StoredCvMetadata | null>(null);
   const [cvLoading, setCvLoading] = useState(true);
-  const [cvAction, setCvAction] = useState<'download' | 'delete' | 'save' | null>(null);
+  const [cvAction, setCvAction] = useState<CvAction | null>(null);
   const [cvSaveFailed, setCvSaveFailed] = useState(false);
   const [preview, setPreview] = useState<ReadyPreview | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,8 +38,22 @@ export default function RoadmapForm({ onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const inFlightRef = useRef(false);
   const saveInFlightRef = useRef(false);
+  const cvActionRef = useRef<CvAction | null>(null);
+  const cvMutationVersionRef = useRef(0);
   const mountedRef = useRef(true);
   const viewRef = useRef<HTMLDivElement>(null);
+
+  function beginCvAction(action: CvAction): boolean {
+    if (cvActionRef.current !== null) return false;
+    cvActionRef.current = action;
+    setCvAction(action);
+    return true;
+  }
+
+  function endCvAction(): void {
+    cvActionRef.current = null;
+    setCvAction(null);
+  }
 
   useEffect(() => {
     viewRef.current?.parentElement?.scrollTo({ top: 0 });
@@ -51,10 +66,11 @@ export default function RoadmapForm({ onBack }: Props) {
 
   useEffect(() => {
     let active = true;
+    const requestVersion = cvMutationVersionRef.current;
     aiRoadmapClient.getCv().then((response) => {
-      if (active) setStoredCv(response.data);
+      if (active && requestVersion === cvMutationVersionRef.current) setStoredCv(response.data);
     }).catch((caught) => {
-      if (active) setError(apiStatus(caught) === 401
+      if (active && requestVersion === cvMutationVersionRef.current) setError(apiStatus(caught) === 401
         ? 'Your session expired. Sign in again to manage your saved CV.'
         : 'We could not check your saved CV. You can still create a preview.');
     }).finally(() => {
@@ -81,8 +97,7 @@ export default function RoadmapForm({ onBack }: Props) {
   }
 
   async function downloadCv(): Promise<void> {
-    if (cvAction) return;
-    setCvAction('download');
+    if (!beginCvAction('download')) return;
     setError(null);
     try {
       const blob = await aiRoadmapClient.downloadCv();
@@ -99,32 +114,32 @@ export default function RoadmapForm({ onBack }: Props) {
         ? 'Your session expired. Sign in again to download your saved CV.'
         : 'We could not download your saved CV. Please retry.');
     } finally {
-      setCvAction(null);
+      endCvAction();
     }
   }
 
   async function deleteCv(): Promise<void> {
-    if (cvAction) return;
-    setCvAction('delete');
+    if (!beginCvAction('delete')) return;
     setError(null);
     try {
       await aiRoadmapClient.deleteCv();
+      cvMutationVersionRef.current += 1;
       setStoredCv(null);
     } catch (caught) {
       setError(apiStatus(caught) === 401
         ? 'Your session expired. Sign in again to delete your saved CV.'
         : 'We could not delete your saved CV. Please retry.');
     } finally {
-      setCvAction(null);
+      endCvAction();
     }
   }
 
   async function saveSelectedCv(): Promise<void> {
-    if (!cvFile || cvAction) return;
-    setCvAction('save');
+    if (!cvFile || !saveCvConsent || !beginCvAction('save')) return;
     setError(null);
     try {
       const response = await aiRoadmapClient.saveCv(cvFile);
+      cvMutationVersionRef.current += 1;
       setStoredCv(response.data);
       setSaveCvConsent(false);
       setCvSaveFailed(false);
@@ -133,13 +148,13 @@ export default function RoadmapForm({ onBack }: Props) {
         ? 'Your session expired. Sign in again to save your CV.'
         : 'We could not save your CV. Please retry.');
     } finally {
-      setCvAction(null);
+      endCvAction();
     }
   }
 
   async function submit(event: FormEvent): Promise<void> {
     event.preventDefault();
-    if (inFlightRef.current || saveInFlightRef.current) return;
+    if (inFlightRef.current || saveInFlightRef.current || cvActionRef.current !== null) return;
     if (!careerGoal.trim() || !currentLevel.trim() || !jobRequirements.trim()) {
       setError('Complete your goal, current level and target job requirements.');
       return;
@@ -153,6 +168,7 @@ export default function RoadmapForm({ onBack }: Props) {
     setError(null);
     setPreview(null);
     setSavedId(null);
+    setCvSaveFailed(false);
     try {
       const form = new FormData();
       form.append('career_goal', careerGoal.trim());
@@ -190,9 +206,15 @@ export default function RoadmapForm({ onBack }: Props) {
       setSavedId(response.data.id);
       setPreview(null);
       if (saveCvConsent && cvFile) {
+        if (!beginCvAction('save')) {
+          setCvSaveFailed(true);
+          setError('Your roadmap was saved, but the CV save could not start. Recheck consent and retry below.');
+          return;
+        }
         try {
           const cvResponse = await aiRoadmapClient.saveCv(cvFile);
           if (!mountedRef.current) return;
+          cvMutationVersionRef.current += 1;
           setStoredCv(cvResponse.data);
           setSaveCvConsent(false);
         } catch {
@@ -200,6 +222,8 @@ export default function RoadmapForm({ onBack }: Props) {
             setCvSaveFailed(true);
             setError('Your roadmap was saved, but we could not save your CV. You can retry the CV save below.');
           }
+        } finally {
+          endCvAction();
         }
       }
     } catch (caught) {
@@ -222,8 +246,8 @@ export default function RoadmapForm({ onBack }: Props) {
       <h2>Roadmap saved</h2>
       <p>Your personalized roadmap is ready to revisit and track.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      {cvSaveFailed && cvFile && <button className="btn btn-secondary" type="button" onClick={() => void saveSelectedCv()} disabled={cvAction !== null}>{cvAction === 'save' ? 'Saving CV…' : 'Retry CV save'}</button>}
-      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>View My AI Roadmaps</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); }}>Create another roadmap</button><button className="btn btn-secondary" type="button" onClick={onBack}>Back to Chat</button></div>
+      {cvSaveFailed && cvFile && <button className="btn btn-secondary" type="button" onClick={() => void saveSelectedCv()} disabled={!saveCvConsent || cvAction !== null}>{cvAction === 'save' ? 'Saving CV…' : 'Retry CV save'}</button>}
+      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>View My AI Roadmaps</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); setCvSaveFailed(false); setSaveCvConsent(false); }}>Create another roadmap</button><button className="btn btn-secondary" type="button" onClick={onBack}>Back to Chat</button></div>
     </div>;
   }
 
