@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { login, probeSession } from '@/lib/auth';
 
 function getSafeRedirectUrl(param: string | null): string {
@@ -19,6 +19,33 @@ function getSafeRedirectUrl(param: string | null): string {
     return trimmed;
   }
   return '/courses';
+}
+
+// The Google round trip lands on a bare /login, so the page the visitor wanted is parked here (already
+// validated) for a few minutes. It is not the OAuth `state`, which still protects the exchange itself.
+const REDIRECT_KEY = 'kh_login_redirect';
+const REDIRECT_TTL_MS = 10 * 60 * 1000;
+
+function parkRedirect(): void {
+  const wanted = new URLSearchParams(window.location.search).get('redirect');
+  if (!wanted) return;
+  try {
+    window.sessionStorage.setItem(REDIRECT_KEY, `${Date.now()}|${getSafeRedirectUrl(wanted)}`);
+  } catch {
+    // storage blocked: the visitor simply lands on the default page
+  }
+}
+
+/** The parked destination if it is fresh; always clears it so it cannot leak into a later visit. */
+function takeParkedRedirect(): string | null {
+  try {
+    const raw = window.sessionStorage.getItem(REDIRECT_KEY);
+    window.sessionStorage.removeItem(REDIRECT_KEY);
+    const [at, path] = (raw ?? '').split('|');
+    return path && Date.now() - Number(at) < REDIRECT_TTL_MS ? path : null;
+  } catch {
+    return null;
+  }
 }
 
 // Error codes the backend puts in /login?error=... after a Google sign-in attempt (AUTH-07).
@@ -38,15 +65,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const parkedRef = useRef<string | null | undefined>(undefined);
 
   // Already signed in (cookie session still valid): the API refuses a second login, so skip this page.
   useEffect(() => {
+    // A ref: development mode runs this effect twice and the second run must still see the parked value.
+    if (parkedRef.current === undefined) parkedRef.current = takeParkedRedirect();
+    // Decided now, not inside the callback below: by then the page may already have moved on and lost the query.
+    const wanted = getSafeRedirectUrl(new URLSearchParams(window.location.search).get('redirect') ?? parkedRef.current);
     const googleError = new URLSearchParams(window.location.search).get('error');
     // Own keys only: ?error=__proto__ must not resolve to an inherited object.
     if (googleError && Object.prototype.hasOwnProperty.call(GOOGLE_ERRORS, googleError)) setMessage(GOOGLE_ERRORS[googleError]);
 
     void probeSession().then((user) => {
-      if (user) router.replace(getSafeRedirectUrl(new URLSearchParams(window.location.search).get('redirect')));
+      if (user) router.replace(wanted);
     });
   }, [router]);
 
@@ -80,7 +112,7 @@ export default function LoginPage() {
           <button className="button button--primary auth-submit" type="submit" disabled={submitting}>{submitting ? 'Signing in...' : 'Sign in'}</button>
         </form>
         {/* Full-page navigation on purpose: Google's consent screen is not an XHR. */}
-        <a className="button button--secondary" href="/api/auth/google/redirect" style={{ width: '100%', minHeight: '2.9rem', marginTop: '0.75rem', textAlign: 'center' }}>Continue with Google</a>
+        <a className="button button--secondary" href="/api/auth/google/redirect" onClick={parkRedirect} style={{ width: '100%', minHeight: '2.9rem', marginTop: '0.75rem', textAlign: 'center' }}>Continue with Google</a>
         <p className="auth-switch">New to KnowledgeHub? <Link href="/register">Create an account</Link></p>
       </div>
     </section>
