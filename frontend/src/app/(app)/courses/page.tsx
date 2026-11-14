@@ -344,9 +344,9 @@ function CoursesCatalog() {
       : '';
 
   return (
-    <div className="container" style={{ paddingTop: '2.5rem' }}>
+    <div className="container" style={{ paddingTop: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
       {/* Hero Section */}
-      <section style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 3.5rem auto' }}>
+      <section style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto var(--space-8) auto' }}>
         <div style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
           <span
             className="badge"
@@ -369,15 +369,15 @@ function CoursesCatalog() {
           style={{
             marginBottom: '1rem',
             color: 'var(--color-charcoal)',
-            fontSize: 'clamp(2.2rem, 4.5vw, 3.25rem)',
-            fontWeight: 800,
+            fontSize: 'clamp(1.75rem, 4.5vw, 2.75rem)',
+            fontWeight: 700,
             letterSpacing: '-0.03em',
             lineHeight: 1.15,
           }}
         >
           Curated Engineering Courses & Deep Dives
         </h1>
-        <p style={{ fontSize: '1.125rem', color: 'var(--color-gray)', marginBottom: '2rem', lineHeight: 1.65 }}>
+        <p style={{ fontSize: 'clamp(1rem, 2vw, 1.125rem)', color: 'var(--color-gray)', marginBottom: 'var(--space-6)', lineHeight: 1.6 }}>
           High-fidelity, peer-reviewed curricula authored by internal staff engineers and domain specialists.
         </p>
 
@@ -422,11 +422,15 @@ function CoursesCatalog() {
       <section
         aria-label="Filter courses by domain"
         style={{
-          marginBottom: '2.5rem',
+          marginBottom: 'var(--space-6)',
           display: 'flex',
           gap: '0.65rem',
           overflowX: 'auto',
           paddingBottom: '0.5rem',
+          paddingRight: '2rem',
+          scrollbarWidth: 'thin',
+          WebkitMaskImage: 'linear-gradient(to right, black calc(100% - 32px), transparent)',
+          maskImage: 'linear-gradient(to right, black calc(100% - 32px), transparent)',
         }}
       >
         <button
@@ -567,8 +571,8 @@ function CoursesCatalog() {
                 aria-busy={loading}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-                  gap: '1.75rem',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
+                  gap: 'var(--space-6)',
                   opacity: loading ? 0.55 : 1,
                   transition: 'opacity var(--transition-fast)',
                 }}

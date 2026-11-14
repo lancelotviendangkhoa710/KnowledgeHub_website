@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
 import { getAccessToken } from '@/lib/authToken';
 import { api } from '@/lib/api';
-import { markdownExcerpt } from '@/lib/markdownText';
+import { hasVideoEmbed, markdownExcerpt } from '@/lib/markdownText';
+import styles from './courseCard.module.css';
 
 interface CourseCardProps {
   article: Article;
@@ -53,205 +54,80 @@ export default function CourseCard({ article }: CourseCardProps) {
   const version = article.published_version || article.latest_version;
   const title = version?.title || 'Untitled Course Material';
   const excerpt = markdownExcerpt(version?.content) || 'In-depth peer-reviewed course material.';
+  const hasVideo = hasVideoEmbed(version?.content);
+  const href = `/courses/${article.slug || article.id}`;
+  const authorName = article.author?.name || 'Contributor';
 
   return (
-    <article
-      className="course-card"
-      style={{
-        backgroundColor: 'var(--color-white)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '1.75rem',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        boxShadow: 'var(--shadow-xs)',
-        transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)',
-      }}
-    >
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {article.category && (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: 'var(--color-primary-pale)',
-                  color: 'var(--color-primary)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                {article.category.name}
-              </span>
-            )}
-            {article.status === 'draft' ? (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: 'var(--color-primary-pale)',
-                  color: 'var(--color-primary)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                Draft
-              </span>
-            ) : (
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: '#EBF5EE',
-                  color: '#1B6E34',
-                  border: '1px solid #D2EBD9',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                Verified
-              </span>
-            )}
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <button
-              type="button"
-              onClick={toggleBookmark}
-              disabled={isPending}
-              aria-label={bookmarked ? 'Remove from saved library' : 'Save course'}
-              title={bookmarked ? 'Remove from saved library' : 'Save to personal library'}
-              style={{
-                background: bookmarked ? 'var(--color-primary-pale)' : 'var(--color-white)',
-                border: '1px solid',
-                borderColor: bookmarked ? 'var(--color-primary)' : 'var(--color-border)',
-                color: bookmarked ? 'var(--color-primary)' : 'var(--color-gray)',
-                width: 34,
-                height: 34,
-                borderRadius: 'var(--radius-sm)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all var(--transition-fast)',
-              }}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    <article className={`course-card ${styles.card}`}>
+      <div className={styles.top}>
+        <div className={styles.badges}>
+          {article.category && <span className={`${styles.badge} ${styles.badgeCategory}`}>{article.category.name}</span>}
+          {article.status === 'draft' ? (
+            <span className={`${styles.badge} ${styles.badgeDraft}`}>Draft</span>
+          ) : (
+            <span className={`${styles.badge} ${styles.badgeVerified}`}>Verified</span>
+          )}
+          {hasVideo && (
+            <span className={`${styles.badge} ${styles.badgeVideo}`}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
               </svg>
-            </button>
-            {notice && (
-              <div
-                role="status"
-                style={{
-                  position: 'absolute',
-                  top: '115%',
-                  right: 0,
-                  backgroundColor: '#0F172A',
-                  color: '#F8FAFC',
-                  padding: '0.45rem 0.75rem',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '0.75rem',
-                  whiteSpace: 'nowrap',
-                  boxShadow: 'var(--shadow-md)',
-                  zIndex: 50,
-                  border: '1px solid #334155',
-                }}
-              >
-                {notice}
-              </div>
-            )}
-          </div>
+              Video
+            </span>
+          )}
         </div>
 
-        <Link href={`/courses/${article.slug || article.id}`}>
-          <h3
-            style={{
-              marginBottom: '0.75rem',
-              color: 'var(--color-charcoal)',
-              fontSize: '1.2rem',
-              fontWeight: 600,
-              lineHeight: 1.3,
-              transition: 'color var(--transition-fast)',
-            }}
+        <div className={styles.bookmarkWrap}>
+          <button
+            type="button"
+            onClick={toggleBookmark}
+            disabled={isPending}
+            aria-pressed={bookmarked}
+            aria-label={bookmarked ? 'Remove from saved library' : 'Save course'}
+            title={bookmarked ? 'Remove from saved library' : 'Save to personal library'}
+            className={`${styles.bookmark} ${bookmarked ? styles.bookmarkOn : ''}`}
           >
-            {title}
-          </h3>
-        </Link>
-
-        <p style={{ fontSize: '0.92rem', color: 'var(--color-gray)', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-          {excerpt}
-        </p>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </button>
+          {notice && (
+            <div role="status" className={styles.notice}>
+              {notice}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div>
-        {article.tags && article.tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '1.25rem' }}>
-            {article.tags.map((tag) => (
-              <span
-                key={tag.id}
-                style={{
-                  fontSize: '0.75rem',
-                  color: 'var(--color-gray)',
-                  background: 'var(--color-off-white)',
-                  padding: '0.2rem 0.55rem',
-                  borderRadius: 'var(--radius-sm)',
-                  border: '1px solid var(--color-border-light)',
-                  fontWeight: 500,
-                }}
-              >
-                #{tag.name}
-              </span>
-            ))}
-          </div>
-        )}
+      <h3 className={styles.title}>
+        <Link href={href} className={styles.titleLink}>
+          {title}
+        </Link>
+      </h3>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: 'var(--color-primary-pale)',
-                border: '1px solid var(--color-border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-primary)',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-              }}
-            >
-              {article.author?.name ? article.author.name[0] : 'C'}
-            </div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-charcoal)' }}>
-              {article.author?.name || 'Contributor'}
+      <p className={styles.excerpt}>{excerpt}</p>
+
+      {article.tags && article.tags.length > 0 && (
+        <div className={styles.tags}>
+          {article.tags.map((tag) => (
+            <span key={tag.id} className={styles.tag}>
+              #{tag.name}
             </span>
-          </div>
-
-          <Link
-            href={`/courses/${article.slug || article.id}`}
-            style={{
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              color: 'var(--color-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-              transition: 'color var(--transition-fast)',
-            }}
-          >
-            Study Course &rarr;
-          </Link>
+          ))}
         </div>
+      )}
+
+      <div className={styles.footer}>
+        <div className={styles.author}>
+          <span className={styles.avatar} aria-hidden="true">
+            {authorName[0]}
+          </span>
+          <span className={styles.authorName}>{authorName}</span>
+        </div>
+        <Link href={href} className={styles.cta} aria-label={`Study ${title}`}>
+          Study Course &rarr;
+        </Link>
       </div>
     </article>
   );

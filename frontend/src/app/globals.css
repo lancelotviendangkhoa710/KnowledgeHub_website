@@ -74,6 +74,10 @@
   --color-info-bg:        #E6F0F4;
   --color-danger:         #B3261E;
   --color-danger-bg:      #FBEAE8;
+  --color-success-border: #B9DCC4;
+  --color-warning-border: #EBCF94;
+  --color-info-border:    #B5D3DF;
+  --color-danger-border:  #F0C2BE;
 
   --text-read:            1.0625rem; /* 17px lesson body */
   --leading-read:         1.75;
