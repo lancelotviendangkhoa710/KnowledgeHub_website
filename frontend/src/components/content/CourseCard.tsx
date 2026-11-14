@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Article } from '@/types/content';
 import { getAccessToken } from '@/lib/authToken';
 import { api } from '@/lib/api';
+import { markdownExcerpt } from '@/lib/markdownText';
 
 interface CourseCardProps {
   article: Article;
@@ -51,13 +52,7 @@ export default function CourseCard({ article }: CourseCardProps) {
 
   const version = article.published_version || article.latest_version;
   const title = version?.title || 'Untitled Course Material';
-  const excerpt = version?.content
-    ? version.content
-        .replace(/^[#>-].*$/gm, '')
-        .replace(/[`*]/g, '')
-        .trim()
-        .slice(0, 140) + '...'
-    : 'In-depth peer-reviewed course material.';
+  const excerpt = markdownExcerpt(version?.content) || 'In-depth peer-reviewed course material.';
 
   return (
     <article
