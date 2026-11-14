@@ -10,6 +10,7 @@ import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurren
 import { accountClient } from '@/lib/accountClient';
 import { getAccessToken } from '@/lib/authToken';
 import YouTubeEmbed from '@/components/content/YouTubeEmbed';
+import { normalizeTopHeadings } from '@/lib/markdownText';
 import { extractYouTubeVideoId } from '@/lib/videoUtils';
 
 
@@ -118,12 +119,12 @@ function Callout({
 }) {
   const styles = {
     note: {
-      border: '#3B82F6',
-      bg: '#EFF6FF',
-      text: '#1E40AF',
+      border: 'var(--color-info)',
+      bg: 'var(--color-info-bg)',
+      text: 'var(--color-info)',
       title: title || 'Note',
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-info)" strokeWidth="2">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
@@ -131,23 +132,23 @@ function Callout({
       ),
     },
     tip: {
-      border: '#10B981',
-      bg: '#ECFDF5',
-      text: '#065F46',
+      border: 'var(--color-success)',
+      bg: 'var(--color-success-bg)',
+      text: 'var(--color-success)',
       title: title || 'Tip',
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2">
           <path d="M9 18h6m-4 4h2m-1-18a7 7 0 0 0-7 7c0 2.22 1.2 4.15 3 5.19V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-.81c1.8-1.04 3-2.97 3-5.19a7 7 0 0 0-7-7z" />
         </svg>
       ),
     },
     warning: {
-      border: '#F59E0B',
-      bg: '#FFFBEB',
-      text: '#92400E',
+      border: 'var(--color-warning)',
+      bg: 'var(--color-warning-bg)',
+      text: 'var(--color-warning)',
       title: title || 'Warning',
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           <line x1="12" y1="9" x2="12" y2="13" />
           <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -155,9 +156,9 @@ function Callout({
       ),
     },
     default: {
-      border: 'var(--color-primary, #0284C7)',
-      bg: 'var(--color-primary-faint, #F0F9FF)',
-      text: 'var(--color-charcoal, #0F172A)',
+      border: 'var(--color-primary)',
+      bg: 'var(--color-primary-faint)',
+      text: 'var(--color-charcoal)',
       title: undefined,
       icon: null,
     },
@@ -213,8 +214,8 @@ function renderInlineFormatting(text: string): React.ReactNode {
         <code
           key={`code-${match.index}`}
           style={{
-            backgroundColor: '#F1F5F9',
-            color: '#0F172A',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--color-charcoal)',
             padding: '0.15rem 0.4rem',
             borderRadius: '4px',
             fontSize: '0.88em',
@@ -316,6 +317,7 @@ export default function CourseDetailPage() {
   const [mounted, setMounted] = useState(false); // the signed-in marker is browser-only: read it after mount
   useEffect(() => setMounted(true), []);
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   useEffect(() => {
     const unsub = subscribeCurrentUser(() => setCurrentUser(getCurrentUser()));
@@ -373,6 +375,7 @@ export default function CourseDetailPage() {
       if (data?.category_id) {
         const relatedController = new AbortController();
         relatedAbortRef.current = relatedController;
+        setRelatedLoading(true);
         fetchArticles({ categoryId: data.category_id }, { signal: relatedController.signal })
           .then((list) => {
             if (relatedController.signal.aborted) return;
@@ -380,7 +383,10 @@ export default function CourseDetailPage() {
           })
           .catch(() => {})
           .finally(() => {
-            if (relatedAbortRef.current === relatedController) relatedAbortRef.current = null;
+            if (relatedAbortRef.current === relatedController) {
+              relatedAbortRef.current = null;
+              setRelatedLoading(false);
+            }
           });
       }
     } catch (err: unknown) {
@@ -414,7 +420,7 @@ export default function CourseDetailPage() {
   const tocItems = useMemo(() => {
     if (!article) return [];
     const v = article.published_version || article.latest_version;
-    const raw = v?.content || '';
+    const raw = normalizeTopHeadings(v?.content || '');
     const lines = raw.split('\n');
     const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
     const seenIds = new Set<string>();
@@ -596,7 +602,7 @@ export default function CourseDetailPage() {
   };
 
   const version = article?.published_version || article?.latest_version;
-  const content = version?.content || 'No content recorded for this version.';
+  const content = normalizeTopHeadings(version?.content || 'No content recorded for this version.');
   const isGuest = !currentUser && !(mounted && getAccessToken());
 
   const { introContent, remainingContent } = useMemo(() => {
@@ -1028,7 +1034,7 @@ export default function CourseDetailPage() {
           left: 0,
           width: `${readingProgress}%`,
           height: '4px',
-          backgroundColor: 'var(--color-primary, #0284C7)',
+          backgroundColor: 'var(--color-primary)',
           zIndex: 9999,
           transition: 'width 100ms ease-out',
         }}
@@ -1059,9 +1065,9 @@ export default function CourseDetailPage() {
             {article.status === 'draft' && (
               <div
                 style={{
-                  backgroundColor: '#FEF3C7',
-                  color: '#92400E',
-                  border: '1px solid #FCD34D',
+                  backgroundColor: 'var(--color-warning-bg)',
+                  color: 'var(--color-warning)',
+                  border: '1px solid var(--color-warning-border)',
                   padding: '0.75rem 1rem',
                   borderRadius: 'var(--radius-md)',
                   marginBottom: '1.25rem',
@@ -1081,7 +1087,7 @@ export default function CourseDetailPage() {
                   href={`/courses/create?parent_id=${article.id}`}
                   style={{
                     fontWeight: 600,
-                    color: '#B45309',
+                    color: 'var(--color-warning)',
                     textDecoration: 'underline',
                     whiteSpace: 'nowrap',
                   }}
@@ -1093,9 +1099,9 @@ export default function CourseDetailPage() {
             {article.status === 'archived' && (
               <div
                 style={{
-                  backgroundColor: '#F1F5F9',
-                  color: '#475569',
-                  border: '1px solid #CBD5E1',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--color-gray)',
+                  border: '1px solid var(--border-strong)',
                   padding: '0.75rem 1rem',
                   borderRadius: 'var(--radius-md)',
                   marginBottom: '1.25rem',
@@ -1135,22 +1141,22 @@ export default function CourseDetailPage() {
                 style={{
                   backgroundColor:
                     article.status === 'draft'
-                      ? '#FEF3C7'
+                      ? 'var(--color-warning-bg)'
                       : article.status === 'archived'
-                      ? '#F1F5F9'
-                      : '#EBF5EE',
+                      ? 'var(--bg-subtle)'
+                      : 'var(--color-success-bg)',
                   color:
                     article.status === 'draft'
-                      ? '#92400E'
+                      ? 'var(--color-warning)'
                       : article.status === 'archived'
-                      ? '#475569'
-                      : '#1B6E34',
+                      ? 'var(--color-gray)'
+                      : 'var(--color-success)',
                   border: `1px solid ${
                     article.status === 'draft'
-                      ? '#FCD34D'
+                      ? 'var(--color-warning-border)'
                       : article.status === 'archived'
-                      ? '#CBD5E1'
-                      : '#D2EBD9'
+                      ? 'var(--border-strong)'
+                      : 'var(--color-success-border)'
                   }`,
                   fontSize: '0.75rem',
                   fontWeight: 600,
@@ -1234,15 +1240,15 @@ export default function CourseDetailPage() {
                         position: 'absolute',
                         top: '115%',
                         right: 0,
-                        backgroundColor: '#0F172A',
-                        color: '#F8FAFC',
+                        backgroundColor: 'var(--color-charcoal)',
+                        color: 'var(--color-white)',
                         padding: '0.5rem 0.75rem',
                         borderRadius: 'var(--radius-md)',
                         fontSize: '0.75rem',
                         whiteSpace: 'nowrap',
                         boxShadow: 'var(--shadow-md)',
                         zIndex: 50,
-                        border: '1px solid #334155',
+                        border: '1px solid var(--color-charcoal)',
                       }}
                     >
                       {bookmarkNotice}
@@ -1303,7 +1309,7 @@ export default function CourseDetailPage() {
                     marginTop: '2rem',
                     padding: '2.75rem 2rem',
                     borderRadius: 'var(--radius-lg)',
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
+                    background: 'linear-gradient(180deg, var(--color-white) 0%, var(--bg-subtle) 100%)',
                     border: '1.5px solid var(--color-border)',
                     boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03)',
                     textAlign: 'center',
@@ -1315,8 +1321,8 @@ export default function CourseDetailPage() {
                       width: 56,
                       height: 56,
                       borderRadius: '50%',
-                      backgroundColor: 'var(--color-primary-pale, #E0F2FE)',
-                      color: 'var(--color-primary, #0284C7)',
+                      backgroundColor: 'var(--color-primary-pale)',
+                      color: 'var(--color-primary)',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -1383,8 +1389,8 @@ export default function CourseDetailPage() {
                 marginTop: '3.5rem',
               padding: '2rem',
               borderRadius: 'var(--radius-lg)',
-              backgroundColor: isCompleted ? '#F0FDF4' : 'var(--color-background)',
-              border: isCompleted ? '1.5px solid #86EFAC' : '1px solid var(--color-border)',
+              backgroundColor: isCompleted ? 'var(--color-success-bg)' : 'var(--color-background)',
+              border: isCompleted ? '1.5px solid var(--color-success-border)' : '1px solid var(--color-border)',
               display: 'flex',
               flexWrap: 'wrap',
               alignItems: 'center',
@@ -1396,7 +1402,7 @@ export default function CourseDetailPage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
                 {isCompleted ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2.5">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />
                   </svg>
@@ -1406,11 +1412,11 @@ export default function CourseDetailPage() {
                     <polyline points="12 6 12 12 14 14" />
                   </svg>
                 )}
-                <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: isCompleted ? '#166534' : 'var(--color-charcoal)' }}>
+                <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: isCompleted ? 'var(--color-success)' : 'var(--color-charcoal)' }}>
                   {isCompleted ? 'Lesson Completed' : 'Complete Lesson'}
                 </h4>
               </div>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: isCompleted ? '#15803D' : 'var(--color-gray)' }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: isCompleted ? 'var(--color-success)' : 'var(--color-gray)' }}>
                 {isCompleted
                   ? 'You have completed this module on this browser. Lesson progress is recorded locally on this device.'
                   : 'Mark this module as complete to save your learning history on this browser.'}
@@ -1515,9 +1521,9 @@ export default function CourseDetailPage() {
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              color: isActive ? 'var(--color-primary)' : '#DC2626',
+                              color: isActive ? 'var(--color-primary)' : 'var(--color-danger)',
                               flexShrink: 0,
-                              backgroundColor: isActive ? 'var(--color-primary-pale, #E0F2FE)' : '#FEE2E2',
+                              backgroundColor: isActive ? 'var(--color-primary-pale)' : 'var(--color-danger-bg)',
                               borderRadius: '4px',
                               padding: '2px 4px',
                             }}
@@ -1553,16 +1559,10 @@ export default function CourseDetailPage() {
                   <span style={{ color: 'var(--color-charcoal)', fontWeight: 600 }}>{article.category.name}</span>
                 </div>
               )}
-              <div>
-                <span style={{ color: 'var(--color-gray)' }}>Snapshot ID: </span>
-                <span style={{ color: 'var(--color-charcoal)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  {version?.id || 'Draft (No Snapshot)'}
-                </span>
-              </div>
               {article.status !== 'draft' && (
                 <div>
                   <span style={{ color: 'var(--color-gray)' }}>Peer Review: </span>
-                  <span style={{ color: '#1B6E34', fontWeight: 600 }}>Internal Core Approved</span>
+                  <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>Internal Core Approved</span>
                 </div>
               )}
             </div>
@@ -1675,7 +1675,9 @@ export default function CourseDetailPage() {
                   </div>
                 ) : (
                   <div style={{ fontSize: '0.82rem', color: 'var(--color-gray)', fontStyle: 'italic' }}>
-                    Additional modules for this learning domain are currently in preparation.
+                    {relatedLoading
+                      ? 'Loading related modules…'
+                      : 'Additional modules for this learning domain are currently in preparation.'}
                   </div>
                 )}
                 <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border-light)' }}>
