@@ -22,7 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Set it as a real process environment variable (Compose environment/env_file, Render): with a cached
         // config (config:cache) the .env file is not read, and this runs before config() is available.
         $trusted = array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES')))));
-        $middleware->trustProxies(at: $trusted ?: null);
+        // Laravel only accepts the wildcard as the plain string '*' (an array is read as a list of IPs).
+        $middleware->trustProxies(at: $trusted === ['*'] ? '*' : ($trusted ?: null));
 
         $middleware->statefulApi();
         $middleware->appendToGroup('api', EnforceSessionPolicy::class);

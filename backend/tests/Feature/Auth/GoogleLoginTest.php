@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Cache\RateLimiter as LimiterStore;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\Provider;
@@ -285,6 +286,24 @@ class GoogleLoginTest extends TestCase
         $this->withServerVariables(['REMOTE_ADDR' => '8.8.4.4'])->get('/api/auth/google/callback')->assertRedirect('/login');
 
         $this->assertAuthenticatedAs(User::where('email', 'resilient@example.com')->firstOrFail(), 'web');
+    }
+
+    public function test_sign_ups_are_serialized_by_a_lock_and_a_busy_lock_means_retry(): void
+    {
+        $lock = Cache::lock('google-signup', 10);
+        $this->assertTrue($lock->get()); // another sign-up is in the middle of check, create and count
+        $this->mockGoogle('late@example.com', 'Late');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_failed'); // waits 3 seconds
+
+        $this->assertDatabaseMissing('users', ['email' => 'late@example.com']);
+        $lock->release();
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('late@example.com', 'Late');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login'); // free again: the same sign-up works
+        $this->assertDatabaseHas('users', ['email' => 'late@example.com']);
     }
 
     public function test_internal_addresses_and_a_zero_limit_are_never_limited(): void

@@ -10,7 +10,9 @@ use Illuminate\Database\DatabaseManager;
 use Illuminate\Database\QueryException;
 use Illuminate\Hashing\HashManager;
 use Illuminate\Http\Request;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -67,34 +69,59 @@ class AuthService
             throw new GoogleSignInRefused('google_domain_not_allowed');
         }
 
-        $limitKey = $this->googleSignupLimitKey($ip);
-        $limit = (int) config('services.google.max_new_accounts_per_ip_per_day');
-        $hourly = (int) config('services.google.max_new_accounts_per_hour');
-        $tooMany = $this->failOpen(fn () => ($limitKey !== null && $limit > 0 && RateLimiter::tooManyAttempts($limitKey, $limit))
-            || ($hourly > 0 && RateLimiter::tooManyAttempts('google-signup:all', $hourly)), false);
-        if ($tooMany) {
-            throw new GoogleSignInRefused('google_too_many_signups');
+        // Check the limits, create the account and count it as one step: two sign-ups arriving together
+        // must not both pass the check at 29 of 30 and leave the counter at 31.
+        return $this->withSignupLock(function () use ($email, $name, $ip, $existing): User {
+            $limitKey = $this->googleSignupLimitKey($ip);
+            $limit = (int) config('services.google.max_new_accounts_per_ip_per_day');
+            $hourly = (int) config('services.google.max_new_accounts_per_hour');
+            $tooMany = $this->failOpen(fn () => ($limitKey !== null && $limit > 0 && RateLimiter::tooManyAttempts($limitKey, $limit))
+                || ($hourly > 0 && RateLimiter::tooManyAttempts('google-signup:all', $hourly)), false);
+            if ($tooMany) {
+                throw new GoogleSignInRefused('google_too_many_signups');
+            }
+
+            try {
+                // Google-only accounts get a random password nobody knows, so password login is impossible.
+                $created = $this->createWithDefaultRole(
+                    ['name' => $name, 'email' => $email, 'password' => Str::random(64)],
+                    'active',
+                    verified: true,
+                );
+                // Count creations only, not sign-ins; nothing was counted if the creation failed.
+                $this->failOpen(function () use ($limitKey) {
+                    if ($limitKey !== null) {
+                        RateLimiter::hit($limitKey, 86400);
+                    }
+                    RateLimiter::hit('google-signup:all', 3600);
+                });
+
+                return $created;
+            } catch (ValidationException) {
+                // Lost a race with another sign-in for the same email: use the account that won.
+                return $this->activeOrRefused($existing() ?? throw new GoogleSignInRefused('google_failed'));
+            }
+        });
+    }
+
+    /** Runs $work with the sign-up lock held. A broken cache must not block sign-in: then it runs unlocked (fail open). */
+    private function withSignupLock(callable $work): mixed
+    {
+        try {
+            $lock = Cache::lock('google-signup', 10);
+            $lock->block(3);
+        } catch (LockTimeoutException) {
+            throw new GoogleSignInRefused('google_failed'); // busy for 3 seconds: ask the person to retry
+        } catch (Throwable $exception) {
+            Log::warning('Google sign-up lock unavailable, not enforced', ['error' => $exception->getMessage()]);
+
+            return $work();
         }
 
         try {
-            // Google-only accounts get a random password nobody knows, so password login is impossible.
-            $created = $this->createWithDefaultRole(
-                ['name' => $name, 'email' => $email, 'password' => Str::random(64)],
-                'active',
-                verified: true,
-            );
-            // Count creations only, not sign-ins.
-            $this->failOpen(function () use ($limitKey) {
-                if ($limitKey !== null) {
-                    RateLimiter::hit($limitKey, 86400);
-                }
-                RateLimiter::hit('google-signup:all', 3600);
-            });
-
-            return $created;
-        } catch (ValidationException) {
-            // Lost a race with another sign-in for the same email: use the account that won.
-            return $this->activeOrRefused($existing() ?? throw new GoogleSignInRefused('google_failed'));
+            return $work();
+        } finally {
+            $lock->release();
         }
     }
 
