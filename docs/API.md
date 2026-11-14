@@ -114,7 +114,9 @@ Guest login accepts `email` and `password`. Only a non-deleted user with
 one-time plain token in `data.token`; the stored token is hashed. Invalid
 credentials and non-active accounts return `422` with a generic credentials
 error. Login is throttled: five attempts per minute per email + source IP pair,
-and twenty-five attempts per minute per source IP; a throttled request returns
+and twenty-five attempts per minute per public source IP (not applied to a private or
+internal address: behind a proxy that does not forward the client IP it stands for
+every visitor); a throttled request returns
 `429`. Requests that already carry an authenticated credential are rejected
 with `403`. Token expiration and activation delivery remain deferred decisions.
 
