@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\PersonalAccessToken;
 use App\Models\User;
+use App\Services\AI\UserCvService;
 use Illuminate\Database\DatabaseManager;
 use Illuminate\Hashing\HashManager;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +14,7 @@ class ProfileService
     public function __construct(
         private HashManager $hash,
         private DatabaseManager $database,
+        private UserCvService $userCvs,
     ) {}
 
     public function update(User $user, array $attributes): User
@@ -42,9 +44,8 @@ class ProfileService
     }
 
     /**
-     * Soft-delete the account after re-verifying the password and revoke all
-     * tokens. Rows in conversations, payments, roadmaps, etc. are left intact:
-     * their FKs are RESTRICT and have independent retention requirements.
+     * Soft-delete the account only after its saved CV has been removed.
+     * Other domains retain their independent retention requirements.
      */
     public function deleteAccount(User $user, string $currentPassword): void
     {
@@ -60,9 +61,28 @@ class ProfileService
                     'current_password' => ['The last administrator cannot delete their account.'],
                 ]);
             }
+        });
 
-            $user->tokens()->delete();
-            $user->delete();
+        // Commit the tombstone before touching Storage so a failed deletion
+        // remains excluded from retrieval and can be retried.
+        $this->userCvs->markAllPendingForUser($user);
+
+        $this->database->transaction(function () use ($user, $currentPassword): void {
+            $this->database->table('roles')->where('name', 'admin')->lockForUpdate()->value('id');
+            $locked = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            $this->assertPassword($locked, $currentPassword);
+
+            if ($locked->roles()->where('name', 'admin')->exists() && $this->otherActiveAdmins($locked) === 0) {
+                throw ValidationException::withMessages([
+                    'current_password' => ['The last administrator cannot delete their account.'],
+                ]);
+            }
+
+            // Holding the user lock prevents a new upload through the CV service.
+            $this->userCvs->cleanupPendingForUser($locked);
+
+            $locked->tokens()->delete();
+            $locked->delete();
         });
     }
 

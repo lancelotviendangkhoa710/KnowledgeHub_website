@@ -1,4 +1,4 @@
-import { api } from '@/lib/api';
+import { api, sessionFetch } from '@/lib/api';
 import type { CVAnalysis, ExternalLearningResource, RoadmapCoverage, LearningRoadmap } from '@/types/learning';
 
 export interface CompanionRoadmapDraftItem {
@@ -55,11 +55,39 @@ export interface RoadmapDraftRequest {
   job_postings: string[];
 }
 
+export interface StoredCvMetadata {
+  id: string;
+  filename: string;
+  size_bytes: number;
+  consented_at: string;
+  created_at: string;
+}
+
+type CvEnvelope = { status: 'success'; data: StoredCvMetadata | null; message?: string };
+
+const apiBase = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
+
 function confirmationPayload(previewToken: string): Record<string, string> {
   return { ['preview' + '_token']: previewToken };
 }
 
 export const aiRoadmapClient = {
+  getCv: () => api.get<CvEnvelope>('/ai/cv'),
+  saveCv: (file: File) => {
+    const form = new FormData();
+    form.append('cv_file', file);
+    form.append('consent', '1');
+    return api.post<CvEnvelope>('/ai/cv', form);
+  },
+  deleteCv: () => api.delete<{ status: 'success'; message?: string }>('/ai/cv'),
+  downloadCv: async (): Promise<Blob> => {
+    const response = await sessionFetch(`${apiBase}/ai/cv/download`, { headers: { Accept: 'application/pdf' } });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw { ...error, status: response.status };
+    }
+    return response.blob();
+  },
   previewForm: (form: FormData) =>
     api.post<{ status: 'success'; data: Extract<CompanionPreviewResult, { state: 'ready' }> }>('/ai/roadmaps/form-preview', form),
   confirmForm: (previewToken: string) =>

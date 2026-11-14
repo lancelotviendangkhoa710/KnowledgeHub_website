@@ -47,6 +47,20 @@ return [
             'report' => false,
         ],
 
+        'cv' => [
+            'driver' => 's3',
+            'key' => env('CV_STORAGE_KEY'),
+            'secret' => env('CV_STORAGE_SECRET'),
+            'region' => env('CV_STORAGE_REGION'),
+            'bucket' => env('CV_STORAGE_BUCKET'),
+            'endpoint' => env('CV_STORAGE_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'options' => ['before_upload' => App\Services\AI\CvStorageUploadOptions::class.'::removeAcl'],
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

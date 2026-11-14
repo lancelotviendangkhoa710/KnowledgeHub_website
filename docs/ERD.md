@@ -148,6 +148,28 @@ erDiagram
 
 ---
 
+
+### CV persistence (CV-02)
+
+```mermaid
+erDiagram
+    users ||--o{ user_cvs : "owns; one active row per user"
+    user_cvs {
+        uuid id PK
+        uuid user_id FK "ON DELETE CASCADE"
+        string object_key "unique opaque private Storage key"
+        string filename
+        bigint size_bytes
+        text extracted_text "nullable; cleared on pending_delete"
+        timestamptz consented_at
+        string status "active|pending_delete"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+A partial unique index enforces at most one `active` row per `user_id`; pending cleanup rows remain until Storage deletion is verified. RLS is enabled and browser Data API access is not granted. Laravel owns application reads and writes. PDF bytes live only in the private Supabase Storage bucket.
+
 ## Domain D – Learning Roadmap
 
 > **Status authority (2026-10-22):** `learning_progress.status` is authoritative; `roadmap_items.status` is a transactional mirror for roadmap reads. See `docs/decisions/2026-10-22-learning-progress-authority.md`.
@@ -270,6 +292,7 @@ erDiagram
 | user_id | conversations | users | RESTRICT |
 | conversation_id | messages | conversations | CASCADE |
 | user_id | user_memories | users | RESTRICT |
+| user_id | user_cvs | users | CASCADE |
 | source_message_id | user_memories | messages | SET NULL |
 | user_id | learning_roadmaps | users | RESTRICT |
 | roadmap_id | roadmap_items | learning_roadmaps | CASCADE |

@@ -7,6 +7,7 @@ use App\Http\Controllers\AI\MessageController;
 use App\Http\Controllers\AI\RetentionPurgeController;
 use App\Http\Controllers\AI\RoadmapGenerationController;
 use App\Http\Controllers\AI\UserMemoryController;
+use App\Http\Controllers\AI\UserCvController;
 use Illuminate\Support\Facades\Route;
 
 // Internal retention trigger for hosts without a scheduler. Protected by
@@ -28,6 +29,12 @@ Route::middleware('auth:sanctum')->group(function () {
         ->whereUuid('conversation');
     Route::post('/ai/conversations/{conversation}/roadmaps/confirm', [CompanionRoadmapController::class, 'confirm'])
         ->whereUuid('conversation');
+
+    // CV-02 owner-scoped saved CV.
+    Route::get('/ai/cv', [UserCvController::class, 'show']);
+    Route::post('/ai/cv', [UserCvController::class, 'store']);
+    Route::get('/ai/cv/download', [UserCvController::class, 'download']);
+    Route::delete('/ai/cv', [UserCvController::class, 'destroy']);
 
     // AI-01 Conversations
     Route::get('/ai/conversations', [ConversationController::class, 'index']);
