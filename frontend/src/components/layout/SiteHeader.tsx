@@ -2,27 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import AuthActions from '@/components/auth/AuthActions';
+import Logo from '@/components/layout/Logo';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 import { getCurrentUser, restoreSession, subscribeCurrentUser, AuthUser } from '@/lib/auth';
 
-/**
- * Renders the brand logo icon mark with animated nodes.
- */
-function BrandMark() {
-  return (
-    <span className="nav-logo__mark" aria-hidden="true">
-      <span className="logo-node logo-node--a" />
-      <span className="logo-node logo-node--b" />
-      <span className="logo-node logo-node--c" />
-    </span>
-  );
-}
+const STUDIO_PATH = /^\/courses\/(manage|create|[^/]+\/versions)/;
+
+const NAV = [
+  { href: '/courses', label: 'Khóa học', active: (p: string) => p.startsWith('/courses') && !STUDIO_PATH.test(p) },
+  { href: '/learning/roadmaps', label: 'Lộ trình', active: (p: string) => p.startsWith('/learning') },
+  { href: '/ai/companion', label: 'Trợ lý AI', active: (p: string) => p.startsWith('/ai') },
+  { href: '/bookmarks', label: 'Đã lưu', active: (p: string) => p.startsWith('/bookmarks') },
+];
 
 /**
- * Main navigation shell header displaying platform branding, links, and role-based Studio shortcut.
+ * Thanh đầu trang: logo, điều hướng chính, lối vào Studio cho contributor/admin, nút sáng tối và tài khoản.
  */
 export default function SiteHeader() {
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
+  const pathname = usePathname() ?? '';
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -35,43 +35,25 @@ export default function SiteHeader() {
     user?.roles?.includes('contributor') || user?.roles?.includes('admin');
 
   return (
-    <div className="site-header__inner content-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem', flexWrap: 'wrap' }}>
-        <Link className="site-brand nav-logo" href="/" aria-label="KnowledgeHub home" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <BrandMark />
-          <span className="nav-logo__wordmark" style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-charcoal)', letterSpacing: '-0.02em' }}>
-            Knowledge<strong style={{ color: 'var(--color-primary)', fontWeight: 700 }}>Hub</strong>
-          </span>
-        </Link>
-        <nav className="site-nav" aria-label="Main navigation" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Discover</Link>
-          <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Courses</Link>
-          <Link href="/bookmarks" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Saved</Link>
-          <Link href="/learning/roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Roadmap Templates</Link>
-          {user && <Link href="/learning/my-roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>My Roadmaps</Link>}
-          <Link href="/ai/companion" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>AI Companion</Link>
-          {isContributorOrAdmin && (
-            <Link
-              href="/courses/manage"
-              style={{
-                color: 'var(--color-primary)',
-                fontWeight: 600,
-                fontSize: '0.92rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-              </svg>
-              <span>Studio</span>
-            </Link>
-          )}
-        </nav>
+    <div className="kh-wrap kh-top__inner">
+      <Logo />
+      <nav className="kh-nav" aria-label="Điều hướng chính">
+        {NAV.map((item) => (
+          <Link key={item.href} href={item.href} aria-current={item.active(pathname) ? 'page' : undefined}>
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+      <div className="kh-top__right">
+        {isContributorOrAdmin && (
+          <Link className="kh-studio" href="/courses/manage" aria-current={STUDIO_PATH.test(pathname) ? 'page' : undefined}>
+            <svg className="kh-i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+            <span>Studio</span>
+          </Link>
+        )}
+        <ThemeToggle />
+        <AuthActions />
       </div>
-      <AuthActions />
     </div>
   );
 }

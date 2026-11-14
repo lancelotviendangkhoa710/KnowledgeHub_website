@@ -4,6 +4,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getCurrentUser, logout, subscribeCurrentUser } from '@/lib/auth';
 
+/** Chữ cái đầu của hai từ cuối trong tên, dùng cho ảnh đại diện. */
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  const letters = parts.length > 1 ? parts[parts.length - 2][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2);
+  return letters.toUpperCase();
+}
+
 export default function AuthActions() {
   const [user, setUser] = useState(getCurrentUser);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -21,7 +29,7 @@ export default function AuthActions() {
     try {
       await logout();
     } catch {
-      setLogoutError('Could not sign out. Please try again.');
+      setLogoutError('Không đăng xuất được. Vui lòng thử lại.');
     } finally {
       setLoggingOut(false);
     }
@@ -29,31 +37,25 @@ export default function AuthActions() {
 
   if (!user) {
     return (
-      <div className="site-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        <Link className="site-header__action" href="/login" style={{ color: 'var(--color-charcoal)', fontWeight: 500, fontSize: '0.9rem' }}>
-          Sign in
-        </Link>
-        <Link className="btn btn-primary" href="/register" style={{ padding: '0.45rem 1rem', fontSize: '0.875rem' }}>
-          Get started
-        </Link>
+      <div className="site-header__actions kh-auth">
+        <Link className="kh-link" href="/login">Đăng nhập</Link>
+        <Link className="kh-btn" href="/register">Bắt đầu</Link>
       </div>
     );
   }
 
   return (
-    <div className="site-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+    <div className="site-header__actions kh-auth">
       {user.roles.includes('admin') && (
-        <Link href="/admin/users" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.9rem' }}>
-          Users
-        </Link>
+        <Link className="kh-link" href="/admin/users">Quản trị</Link>
       )}
-      <Link href="/account" aria-label={`Account of ${user.name}`} style={{ color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '0.9rem', overflowWrap: 'anywhere', minWidth: 0 }}>
-        {user.name}
+      <Link className="kh-avatar" href="/account" title={`Tài khoản của ${user.name}`} aria-label={`Tài khoản của ${user.name}`}>
+        {initials(user.name)}
       </Link>
-      <button type="button" className="btn btn-secondary" onClick={handleLogout} disabled={loggingOut} style={{ padding: '0.4rem 0.85rem', fontSize: '0.85rem' }}>
-        {loggingOut ? 'Signing out...' : 'Sign out'}
+      <button type="button" className="kh-link" onClick={handleLogout} disabled={loggingOut}>
+        {loggingOut ? 'Đang đăng xuất...' : 'Đăng xuất'}
       </button>
-      {logoutError && <span role="alert" style={{ color: 'var(--color-primary-light)', fontSize: '0.85rem' }}>{logoutError}</span>}
+      {logoutError && <span role="alert" className="kh-auth__error">{logoutError}</span>}
     </div>
   );
 }
