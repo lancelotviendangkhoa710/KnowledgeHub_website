@@ -79,6 +79,12 @@ KnowledgeHub is a **curated learning platform**, not a social or user-generated-
 | `messages` | Individual turns. Not one JSON blob. |
 | `user_memories` | Cross-session AI memory. Separate from history and articles. |
 
+### CV persistence (CV-02)
+
+`user_cvs` stores metadata and extracted text for one explicitly saved best CV per user. The PDF binary remains in a private Supabase Storage bucket. Columns: UUID v4 `id`; UUID `user_id` FK to `users.id` with explicit `ON DELETE CASCADE`; opaque unique `object_key`; safe `filename`; `size_bytes`; nullable `extracted_text` (up to 12,000 characters while active); `consented_at`; `status` VARCHAR constrained to `active` or `pending_delete`; `created_at` and `updated_at` timestamptz. A check also caps extracted text at 12,000 characters and requires it to be null for pending deletion. A partial unique index on `user_id WHERE status = 'active'` permits one active CV while retaining cleanup tombstones. RLS is enabled and browser Data API access is not granted. Application access is through owner-scoped Laravel only.
+
+When replacement or deletion begins, clear extracted text and mark the old row `pending_delete` before attempting external cleanup. Never return or retrieve pending rows. Keep a pending row/key until object removal is verified; retry failed cleanup with the hourly `ai:cleanup-pending-cvs` task. Account soft deletion must first remove active and pending CV objects; on failure, fail the account deletion request without soft-deleting the user. Hard deletion of a user cascades metadata as a final database safeguard, but is not the CV cleanup mechanism. Provider backups may retain copies for their configured retention window.
+
 ### D – Learning Roadmap
 | Table | Responsibility |
 |-------|---------------|
@@ -92,8 +98,8 @@ AI-05 Companion roadmaps use additive Learning columns: `learning_roadmaps.origi
 `generation_key`, nullable `ai_summary`, and nullable JSONB `coverage` for the
 variable skill evidence and score snapshot. `roadmap_items.ai_details` is
 nullable JSONB for stage, skill, time and verified external-resource details.
-The new form flow stores only evidence-backed CV strengths and recommendations
-in `coverage`; the uploaded PDF and extracted raw text are never persisted.
+The ordinary form preview stores only evidence-backed CV strengths and recommendations
+in `coverage`; its uploaded PDF and extracted text are not persisted. The separate CV-02 opt-in feature is documented below.
 Sequential AI steps are linked through `roadmap_item_prerequisites`.
 The existing `roadmap_items.article_id` FK remains the sole internal course
 link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
@@ -166,6 +172,7 @@ link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
 | Unique | messages | (conversation_id, sequence) | Durable history order (M1 migration 2026_11_08_000001) |
 | Unique | messages | (conversation_id, client_message_id) | Durable idempotency, user rows only (M1) |
 | Composite | user_memories | (user_id, status) | Active memories |
+| Unique partial | user_cvs | user_id WHERE status = active | One active CV per user; pending deletion rows retained |
 | FK index | learning_roadmaps | user_id | User roadmaps |
 | Unique | roadmap_items | (roadmap_id, position) | Ordered positions |
 | FK indexes | subscriptions | user_id, plan_id | Subscription queries |
@@ -197,6 +204,7 @@ link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
 | payments.amount | >= 0 |
 | payments.currency | regex [A-Z]{3} |
 | webhook_events.status | pending, processed, failed, ignored |
+| user_cvs.status | active, pending_delete |
 
 ---
 
@@ -235,6 +243,7 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 13 | 2026-10-22-000001 | Backfill `roadmap_items.status` from `learning_progress.status` (OQ-05) |
 | 14 | 2026-11-08-000001 | Add `messages.sequence` + `messages.client_message_id` (M1 ordering/idempotency) |
 | 15 | 2026-11-13-000001 | Add AI roadmap origin, generation key, evidence and item details (pending shared DB rollout) |
+| 16 | CV-02 migration | Add owner-scoped `user_cvs` metadata, RLS and active-CV partial unique index |
 
 > `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
 > migration once the team approves the schema cleanup task. Until then it is dormant — no application
@@ -264,5 +273,3 @@ docker compose exec postgres psql -U knowledgehub -d knowledgehub \
       VALUES(gen_random_uuid(),'stripe','evt_001','pending',now()),
             (gen_random_uuid(),'stripe','evt_001','pending',now());"
 ```
-
-

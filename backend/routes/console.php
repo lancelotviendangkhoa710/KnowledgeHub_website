@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // AI Companion retention (ADR-C): purge AI rows for accounts deleted > 30 days ago.
 // Requires a running scheduler on the host (e.g. Render Cron Job running `php artisan schedule:run`).
 Schedule::command('ai:purge-deleted-users')->dailyAt('03:00');
+
+// Retry CV storage cleanup when a prior request could not finish.
+Schedule::command('ai:cleanup-pending-cvs')->hourly();

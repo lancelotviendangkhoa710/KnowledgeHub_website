@@ -1,10 +1,10 @@
 # Decision: CV persistence and immediate account deletion
 
-**Status**: Proposed
+**Status**: Approved
 
 **Date**: 2026-11-14
 
-**Author**: AI agent, for AI Companion and Identity/Auth owner review
+**Author**: AI agent, recording the repository owner's approval on 2026-11-14
 
 **Related**: `2026-11-14-cv-storage-supabase.md`, `2026-11-08-ai-companion-privacy-retention.md`, `docs/API.md` §7
 
@@ -96,7 +96,7 @@ Companion. This design needs both owners' review.
 
 - The implementation PR should include a new migration, minimal Laravel API
   and Auth integration, frontend opt-in and CV controls, focused tests, and
-  the matching API/database/ERD documentation changes.
+  the matching API/database/ERD documentation changes. Deploy and verify the backend and migration before enabling the frontend controls.
 - No migration or Storage bucket creation may be applied to shared Supabase
   until deployment credentials, a recovery plan, and the active-data deletion
   path are reviewed. Test against disposable Compose `test-db` and a fake or

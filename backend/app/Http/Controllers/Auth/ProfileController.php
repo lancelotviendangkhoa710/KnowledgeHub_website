@@ -8,6 +8,7 @@ use App\Http\Requests\Auth\DeleteAccountRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\AI\CvCleanupException;
 use App\Services\Auth\ProfileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,7 +59,15 @@ class ProfileController extends Controller
 
     public function destroy(DeleteAccountRequest $request): JsonResponse
     {
-        $this->profileService->deleteAccount($request->user(), $request->validated('current_password'));
+        try {
+            $this->profileService->deleteAccount($request->user(), $request->validated('current_password'));
+        } catch (CvCleanupException) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'CV cleanup is temporarily unavailable. Please retry.',
+                'data' => null,
+            ], 503);
+        }
 
         return response()->json([
             'status' => 'success',

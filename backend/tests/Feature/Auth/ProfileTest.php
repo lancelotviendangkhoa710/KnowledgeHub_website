@@ -4,9 +4,14 @@ namespace Tests\Feature\Auth;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Models\UserCv;
+use App\Services\AI\UserCvService;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Mockery;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -201,6 +206,85 @@ class ProfileTest extends TestCase
 
         $this->withToken($admin->createToken('t2')->plainTextToken)
             ->deleteJson('/api/me', ['current_password' => 'password-123'])->assertOk();
+    }
+
+    public function test_account_deletion_removes_saved_cv_before_success(): void
+    {
+        Storage::fake('cv');
+        $user = $this->createUser('cv-owner@example.com');
+        $key = 'cvs/'.Str::uuid().'.pdf';
+        Storage::disk('cv')->put($key, '%PDF-1.4');
+        $cv = UserCv::create([
+            'user_id' => $user->id,
+            'object_key' => $key,
+            'filename' => 'cv.pdf',
+            'size_bytes' => 8,
+            'extracted_text' => 'private CV text',
+            'consented_at' => now(),
+            'status' => 'active',
+        ]);
+
+        $this->withToken($user->createToken('t')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])
+            ->assertOk();
+
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
+        $this->assertDatabaseMissing('user_cvs', ['id' => $cv->id]);
+        Storage::disk('cv')->assertMissing($key);
+    }
+
+    public function test_storage_failure_keeps_account_and_pending_cv_for_retry(): void
+    {
+        $user = $this->createUser('cv-failure@example.com');
+        $cv = UserCv::create([
+            'user_id' => $user->id,
+            'object_key' => 'cvs/'.Str::uuid().'.pdf',
+            'filename' => 'cv.pdf',
+            'size_bytes' => 8,
+            'extracted_text' => 'private CV text',
+            'consented_at' => now(),
+            'status' => 'active',
+        ]);
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('delete')->once()->andReturn(false);
+        Storage::shouldReceive('disk')->with('cv')->once()->andReturn($disk);
+
+        $this->withToken($user->createToken('t')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])
+            ->assertStatus(503);
+
+        $this->assertNotSoftDeleted('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('user_cvs', [
+            'id' => $cv->id, 'status' => 'pending_delete', 'extracted_text' => null,
+        ]);
+        $this->assertSame(1, $user->tokens()->count());
+    }
+
+    public function test_concurrent_cv_created_after_cleanup_blocks_account_deletion(): void
+    {
+        $user = $this->createUser('cv-race@example.com');
+        $cvs = Mockery::mock(UserCvService::class);
+        $cvs->shouldReceive('markAllPendingForUser')->once();
+        $cvs->shouldReceive('cleanupPendingForUser')->once()->andReturnUsing(function (User $owner): void {
+            UserCv::create([
+                'user_id' => $owner->id,
+                'object_key' => 'cvs/'.Str::uuid().'.pdf',
+                'filename' => 'cv.pdf',
+                'size_bytes' => 8,
+                'extracted_text' => 'new CV text',
+                'consented_at' => now(),
+                'status' => 'active',
+            ]);
+        });
+        $this->app->instance(UserCvService::class, $cvs);
+
+        $this->withToken($user->createToken('t')->plainTextToken)
+            ->deleteJson('/api/me', ['current_password' => 'password-123'])
+            ->assertStatus(503);
+
+        $this->assertNotSoftDeleted('users', ['id' => $user->id]);
+        $this->assertDatabaseHas('user_cvs', ['user_id' => $user->id, 'status' => 'active']);
+        $this->assertSame(1, $user->tokens()->count());
     }
 
     private function createUser(string $email, string $status = 'active'): User
