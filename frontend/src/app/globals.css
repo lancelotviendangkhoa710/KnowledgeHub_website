@@ -622,3 +622,14 @@ input::placeholder, textarea::placeholder {
     font-weight: var(--weight-semibold);
   }
 }
+
+/* ============================================================
+   UX-02 KHUNG CHUNG: logo, nút icon, nút sáng tối
+   ============================================================ */
+.kh-logo { display: flex; align-items: center; gap: 10px; color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 17px; letter-spacing: -0.02em; }
+.kh-i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.kh-icon-btn { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer; }
+.kh-icon-btn:hover { color: var(--ink); border-color: var(--ink-3); }
+.kh-theme-toggle .kh-sun { display: none; }
+:root[data-theme="dark"] .kh-theme-toggle .kh-sun { display: block; }
+:root[data-theme="dark"] .kh-theme-toggle .kh-moon { display: none; }
