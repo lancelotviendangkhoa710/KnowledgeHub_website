@@ -131,12 +131,12 @@ function CalloutPreview({
 }) {
   const styles = {
     note: {
-      border: '#3B82F6',
-      bg: '#EFF6FF',
-      text: '#1E40AF',
+      border: 'var(--color-info)',
+      bg: 'var(--color-info-bg)',
+      text: 'var(--color-info)',
       title: title || 'Note',
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-info)" strokeWidth="2">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="16" x2="12" y2="12" />
           <line x1="12" y1="8" x2="12.01" y2="8" />
@@ -144,23 +144,23 @@ function CalloutPreview({
       ),
     },
     tip: {
-      border: '#10B981',
-      bg: '#ECFDF5',
-      text: '#065F46',
+      border: 'var(--color-success)',
+      bg: 'var(--color-success-bg)',
+      text: 'var(--color-success)',
       title: title || 'Tip & Best Practice',
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-success)" strokeWidth="2">
           <path d="M9 18h6m-4 4h2m-1-18a7 7 0 0 0-7 7c0 2.22 1.2 4.15 3 5.19V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-.81c1.8-1.04 3-2.97 3-5.19a7 7 0 0 0-7-7z" />
         </svg>
       ),
     },
     warning: {
-      border: '#F59E0B',
-      bg: '#FFFBEB',
-      text: '#92400E',
+      border: 'var(--color-warning)',
+      bg: 'var(--color-warning-bg)',
+      text: 'var(--color-warning)',
       title: title || 'Warning',
       icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
           <line x1="12" y1="9" x2="12" y2="13" />
           <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -168,9 +168,9 @@ function CalloutPreview({
       ),
     },
     default: {
-      border: 'var(--color-primary, #0284C7)',
-      bg: 'var(--color-primary-faint, #F0F9FF)',
-      text: 'var(--color-charcoal, #0F172A)',
+      border: 'var(--color-primary)',
+      bg: 'var(--color-primary-faint)',
+      text: 'var(--color-charcoal)',
       title: undefined,
       icon: null,
     },
@@ -225,8 +225,8 @@ function renderPreviewInline(text: string): React.ReactNode {
         <code
           key={`code-${match.index}`}
           style={{
-            backgroundColor: '#F1F5F9',
-            color: '#0F172A',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--color-charcoal)',
             padding: '0.15rem 0.4rem',
             borderRadius: '4px',
             fontSize: '0.88em',
@@ -1257,8 +1257,8 @@ List the mathematical or operational guarantees enforced by this architecture.
               width: 64,
               height: 64,
               borderRadius: '50%',
-              backgroundColor: '#FEF3C7',
-              color: '#D97706',
+              backgroundColor: 'var(--color-warning-bg)',
+              color: 'var(--color-warning)',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1339,7 +1339,7 @@ List the mathematical or operational guarantees enforced by this architecture.
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            backgroundColor: '#F1F5F9',
+            backgroundColor: 'var(--bg-subtle)',
             padding: '3px',
             borderRadius: 'var(--radius-md)',
             border: '1px solid var(--color-border)',
@@ -1359,7 +1359,7 @@ List the mathematical or operational guarantees enforced by this architecture.
               borderRadius: 'calc(var(--radius-md) - 2px)',
               border: 'none',
               backgroundColor: viewMode === 'split' ? 'var(--color-primary)' : 'transparent',
-              color: viewMode === 'split' ? '#FFFFFF' : 'var(--color-charcoal)',
+              color: viewMode === 'split' ? 'var(--color-white)' : 'var(--color-charcoal)',
               fontSize: '0.82rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -1387,7 +1387,7 @@ List the mathematical or operational guarantees enforced by this architecture.
               borderRadius: 'calc(var(--radius-md) - 2px)',
               border: 'none',
               backgroundColor: viewMode === 'editor' ? 'var(--color-primary)' : 'transparent',
-              color: viewMode === 'editor' ? '#FFFFFF' : 'var(--color-charcoal)',
+              color: viewMode === 'editor' ? 'var(--color-white)' : 'var(--color-charcoal)',
               fontSize: '0.82rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -1415,7 +1415,7 @@ List the mathematical or operational guarantees enforced by this architecture.
               borderRadius: 'calc(var(--radius-md) - 2px)',
               border: 'none',
               backgroundColor: viewMode === 'preview' ? 'var(--color-primary)' : 'transparent',
-              color: viewMode === 'preview' ? '#FFFFFF' : 'var(--color-charcoal)',
+              color: viewMode === 'preview' ? 'var(--color-white)' : 'var(--color-charcoal)',
               fontSize: '0.82rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -1440,10 +1440,10 @@ List the mathematical or operational guarantees enforced by this architecture.
           style={{
             marginBottom: '1.25rem',
             padding: '1rem 1.25rem',
-            background: '#EFF6FF',
-            border: '1.5px solid #93C5FD',
+            background: 'var(--color-info-bg)',
+            border: '1.5px solid var(--color-info-border)',
             borderRadius: 'var(--radius-md)',
-            color: '#1E40AF',
+            color: 'var(--color-info)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1453,7 +1453,7 @@ List the mathematical or operational guarantees enforced by this architecture.
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-info)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
               <polyline points="17 21 17 13 7 13 7 21" />
               <polyline points="7 3 7 8 15 8" />
@@ -1497,10 +1497,10 @@ List the mathematical or operational guarantees enforced by this architecture.
           style={{
             marginBottom: '1rem',
             padding: '0.45rem 0.85rem',
-            backgroundColor: '#F0FDF4',
-            border: '1px solid #BBF7D0',
+            backgroundColor: 'var(--color-success-bg)',
+            border: '1px solid var(--color-success-border)',
             borderRadius: 'var(--radius-md)',
-            color: '#166534',
+            color: 'var(--color-success)',
             fontSize: '0.8rem',
             display: 'inline-flex',
             alignItems: 'center',
@@ -1519,10 +1519,10 @@ List the mathematical or operational guarantees enforced by this architecture.
           style={{
             marginBottom: '1.5rem',
             padding: '0.85rem 1.25rem',
-            background: '#F0F9FF',
-            border: '1px solid #BAE6FD',
+            background: 'var(--color-info-bg)',
+            border: '1px solid var(--color-info-border)',
             borderRadius: 'var(--radius-md)',
-            color: '#0369A1',
+            color: 'var(--color-info)',
             fontSize: '0.875rem',
             display: 'flex',
             alignItems: 'center',
@@ -1586,11 +1586,11 @@ List the mathematical or operational guarantees enforced by this architecture.
         <div
           role="alert"
           style={{
-            background: '#FEF2F2',
-            border: '1px solid #FECACA',
+            background: 'var(--color-danger-bg)',
+            border: '1px solid var(--color-danger-border)',
             borderRadius: 'var(--radius-md)',
             padding: '1rem 1.5rem',
-            color: '#B91C1C',
+            color: 'var(--color-danger)',
             marginBottom: '1.5rem',
             fontWeight: 600,
             display: 'flex',
@@ -1681,11 +1681,11 @@ List the mathematical or operational guarantees enforced by this architecture.
       {successMessage && (
         <div
           style={{
-            background: '#EBF5EE',
-            border: '1px solid #D2EBD9',
+            background: 'var(--color-success-bg)',
+            border: '1px solid var(--color-success-border)',
             borderRadius: 'var(--radius-md)',
             padding: '1rem 1.5rem',
-            color: '#1B6E34',
+            color: 'var(--color-success)',
             marginBottom: '1.5rem',
             fontWeight: 600,
           }}
@@ -1797,7 +1797,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                     cursor: 'pointer',
                     fontSize: '0.75rem',
                     fontWeight: 600,
-                    color: isSlugLocked ? 'var(--color-primary)' : '#059669',
+                    color: isSlugLocked ? 'var(--color-primary)' : 'var(--color-success)',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '0.3rem',
@@ -1835,7 +1835,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                     width: '100%',
                     padding: '0.75rem 2.5rem 0.75rem 1rem',
                     borderRadius: 'var(--radius-md)',
-                    background: isSlugLocked ? '#F8FAFC' : 'var(--color-white)',
+                    background: isSlugLocked ? 'var(--bg-subtle)' : 'var(--color-white)',
                     border: isSlugLocked ? '1.5px solid var(--color-border)' : '1.5px solid var(--color-primary)',
                     color: isSlugLocked ? 'var(--color-gray)' : 'var(--color-charcoal)',
                     fontFamily: 'var(--font-mono)',
@@ -1853,7 +1853,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: isSlugLocked ? 'var(--color-primary)' : '#059669',
+                    color: isSlugLocked ? 'var(--color-primary)' : 'var(--color-success)',
                     padding: '0.2rem',
                     display: 'flex',
                     alignItems: 'center',
@@ -1904,8 +1904,8 @@ List the mathematical or operational guarantees enforced by this architecture.
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '0.35rem',
-                      backgroundColor: 'var(--color-primary-pale, #F3E5E5)',
-                      color: 'var(--color-primary, #8B0000)',
+                      backgroundColor: 'var(--color-primary-pale)',
+                      color: 'var(--color-primary)',
                       border: '1px solid var(--color-border)',
                       borderRadius: 'var(--radius-full, 9999px)',
                       padding: '0.2rem 0.6rem',
@@ -1978,7 +1978,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                           type="button"
                           onClick={() => handleAddTag(tagSlug)}
                           style={{
-                            background: '#F8FAFC',
+                            background: 'var(--bg-subtle)',
                             border: '1px dashed var(--color-border)',
                             borderRadius: 'var(--radius-full, 9999px)',
                             padding: '0.15rem 0.5rem',
@@ -2027,9 +2027,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                   marginBottom: '0.75rem',
                   padding: '0.55rem 0.85rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: '#ECFDF5',
-                  border: '1px solid #A7F3D0',
-                  color: '#065F46',
+                  backgroundColor: 'var(--color-success-bg)',
+                  border: '1px solid var(--color-success-border)',
+                  color: 'var(--color-success)',
                   fontSize: '0.82rem',
                   fontWeight: 500,
                   display: 'flex',
@@ -2050,14 +2050,14 @@ List the mathematical or operational guarantees enforced by this architecture.
                   marginBottom: '1rem',
                   padding: '1.25rem',
                   borderRadius: 'var(--radius-md)',
-                  backgroundColor: 'var(--color-off-white, #FAF7F5)',
-                  border: '1.5px solid #FECACA',
+                  backgroundColor: 'var(--color-off-white)',
+                  border: '1.5px solid var(--color-danger-border)',
                   boxShadow: 'var(--shadow-sm)',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="#E11D48">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--color-danger)">
                       <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.5 12 3.5 12 3.5s-7.505 0-9.377.55a3.016 3.016 0 0 0-2.122 2.136C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.55 9.376.55 9.376.55s7.505 0 9.377-.55a3.016 3.016 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z" />
                       <polygon points="9.545 15.568 15.818 12 9.545 8.432" fill="white" />
                     </svg>
@@ -2137,7 +2137,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                           alt="Video thumbnail preview"
                           style={{ width: '48px', height: '32px', objectFit: 'cover', borderRadius: '4px', border: '1px solid var(--color-border)' }}
                         />
-                        <div style={{ fontSize: '0.8rem', color: '#059669' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-success)' }}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontWeight: 600 }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                               <polyline points="20 6 9 17 4 12" />
@@ -2147,7 +2147,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                         </div>
                       </div>
                     ) : (
-                      <div style={{ fontSize: '0.8rem', color: videoInputUrl.trim() ? '#DC2626' : 'var(--color-gray)' }}>
+                      <div style={{ fontSize: '0.8rem', color: videoInputUrl.trim() ? 'var(--color-danger)' : 'var(--color-gray)' }}>
                         {videoInputUrl.trim() ? 'Invalid YouTube URL or ID format' : 'Paste YouTube URL or ID'}
                       </div>
                     )}
@@ -2178,7 +2178,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                         padding: '0.45rem 0.95rem',
                         borderRadius: 'var(--radius-sm, 6px)',
                         border: 'none',
-                        backgroundColor: detectedVideoId ? '#E11D48' : 'var(--color-border)',
+                        backgroundColor: detectedVideoId ? 'var(--color-danger)' : 'var(--color-border)',
                         color: 'white',
                         fontSize: '0.8rem',
                         fontWeight: 600,
@@ -2201,7 +2201,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                 flexWrap: 'wrap',
                 gap: '0.25rem',
                 padding: '0.45rem 0.65rem',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: 'var(--bg-subtle)',
                 border: '1.5px solid var(--color-border)',
                 borderBottom: 'none',
                 borderTopLeftRadius: 'var(--radius-md)',
@@ -2390,7 +2390,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                     fontWeight: 600,
                     borderRadius: '4px',
                     border: '1px solid var(--color-border)',
-                    backgroundColor: showCodeDropdown ? '#E2E8F0' : 'var(--color-white)',
+                    backgroundColor: showCodeDropdown ? 'var(--bg-subtle)' : 'var(--color-white)',
                     color: 'var(--color-charcoal)',
                     cursor: 'pointer',
                     display: 'inline-flex',
@@ -2450,7 +2450,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                           alignItems: 'center',
                           justifyContent: 'space-between',
                         }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F1F5F9')}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-subtle)')}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                       >
                         <span>{item.label}</span>
@@ -2475,7 +2475,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                     fontWeight: 600,
                     borderRadius: '4px',
                     border: '1px solid var(--color-border)',
-                    backgroundColor: showCalloutDropdown ? '#E2E8F0' : 'var(--color-white)',
+                    backgroundColor: showCalloutDropdown ? 'var(--bg-subtle)' : 'var(--color-white)',
                     color: 'var(--color-charcoal)',
                     cursor: 'pointer',
                     display: 'inline-flex',
@@ -2521,16 +2521,16 @@ List the mathematical or operational guarantees enforced by this architecture.
                         border: 'none',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#1E40AF',
+                        color: 'var(--color-info)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#EFF6FF')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-info-bg)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-info)' }} />
                       <span>Note ([!NOTE])</span>
                     </button>
 
@@ -2545,16 +2545,16 @@ List the mathematical or operational guarantees enforced by this architecture.
                         border: 'none',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#065F46',
+                        color: 'var(--color-success)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#ECFDF5')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-success-bg)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
                       <span>Tip & Best Practice</span>
                     </button>
 
@@ -2569,16 +2569,16 @@ List the mathematical or operational guarantees enforced by this architecture.
                         border: 'none',
                         fontSize: '0.8rem',
                         fontWeight: 600,
-                        color: '#92400E',
+                        color: 'var(--color-warning)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FFFBEB')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-warning-bg)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--color-warning)' }} />
                       <span>Warning ([!WARNING])</span>
                     </button>
                   </div>
@@ -2597,9 +2597,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                   fontSize: '0.8rem',
                   fontWeight: 600,
                   borderRadius: '4px',
-                  border: '1px solid #FECACA',
-                  backgroundColor: showVideoModal ? '#FEE2E2' : '#FFF1F2',
-                  color: '#BE123C',
+                  border: '1px solid var(--color-danger-border)',
+                  backgroundColor: showVideoModal ? 'var(--color-danger-bg)' : 'var(--color-danger-bg)',
+                  color: 'var(--color-danger)',
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -2646,15 +2646,15 @@ List the mathematical or operational guarantees enforced by this architecture.
             style={{
               marginBottom: '1.5rem',
               padding: '1.25rem',
-              backgroundColor: '#F8FAFC',
-              border: qualityChecks.isAllPassed ? '1.5px solid #86EFAC' : '1.5px solid var(--color-border)',
+              backgroundColor: 'var(--bg-subtle)',
+              border: qualityChecks.isAllPassed ? '1.5px solid var(--color-success-border)' : '1.5px solid var(--color-border)',
               borderRadius: 'var(--radius-md)',
               transition: 'all var(--transition-fast)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={qualityChecks.isAllPassed ? '#16A34A' : 'var(--color-primary)'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={qualityChecks.isAllPassed ? 'var(--color-success)' : 'var(--color-primary)'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <polyline points="9 12 11 14 15 10" />
                 </svg>
@@ -2668,9 +2668,9 @@ List the mathematical or operational guarantees enforced by this architecture.
                   fontWeight: 700,
                   padding: '0.15rem 0.55rem',
                   borderRadius: 'var(--radius-full)',
-                  backgroundColor: qualityChecks.isAllPassed ? '#DCFCE7' : '#FEF3C7',
-                  color: qualityChecks.isAllPassed ? '#15803D' : '#B45309',
-                  border: qualityChecks.isAllPassed ? '1px solid #BBF7D0' : '1px solid #FDE68A',
+                  backgroundColor: qualityChecks.isAllPassed ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
+                  color: qualityChecks.isAllPassed ? 'var(--color-success)' : 'var(--color-warning)',
+                  border: qualityChecks.isAllPassed ? '1px solid var(--color-success-border)' : '1px solid var(--color-warning-border)',
                 }}
               >
                 {qualityChecks.passedCount}/{qualityChecks.totalCount} Standards Met{qualityChecks.isAllPassed ? ' · Ready to Publish' : ''}
@@ -2682,7 +2682,7 @@ List the mathematical or operational guarantees enforced by this architecture.
               style={{
                 width: '100%',
                 height: '4px',
-                backgroundColor: '#E2E8F0',
+                backgroundColor: 'var(--bg-subtle)',
                 borderRadius: '2px',
                 overflow: 'hidden',
                 marginBottom: '1rem',
@@ -2692,7 +2692,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                 style={{
                   width: `${(qualityChecks.passedCount / qualityChecks.totalCount) * 100}%`,
                   height: '100%',
-                  backgroundColor: qualityChecks.isAllPassed ? '#22C55E' : '#EAB308',
+                  backgroundColor: qualityChecks.isAllPassed ? 'var(--color-success)' : 'var(--color-warning)',
                   transition: 'width 300ms ease-out',
                 }}
               />
@@ -2717,11 +2717,11 @@ List the mathematical or operational guarantees enforced by this architecture.
                           width: '16px',
                           height: '16px',
                           borderRadius: '50%',
-                          backgroundColor: '#22C55E',
+                          backgroundColor: 'var(--color-success)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: '#FFFFFF',
+                          color: 'var(--color-white)',
                         }}
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -2734,7 +2734,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                           width: '16px',
                           height: '16px',
                           borderRadius: '50%',
-                          border: '1.5px solid #CBD5E1',
+                          border: '1.5px solid var(--border-strong)',
                           backgroundColor: 'var(--color-white)',
                         }}
                       />
@@ -2742,7 +2742,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: item.valid ? 600 : 500 }}>{item.label}</div>
-                    <div style={{ fontSize: '0.72rem', color: item.valid ? '#16A34A' : 'var(--color-gray-light)' }}>
+                    <div style={{ fontSize: '0.72rem', color: item.valid ? 'var(--color-success)' : 'var(--color-gray-light)' }}>
                       {item.detail}
                     </div>
                   </div>
@@ -2826,9 +2826,9 @@ List the mathematical or operational guarantees enforced by this architecture.
             <span
               className="badge"
               style={{
-                backgroundColor: '#EBF5EE',
-                color: '#1B6E34',
-                border: '1px solid #D2EBD9',
+                backgroundColor: 'var(--color-success-bg)',
+                color: 'var(--color-success)',
+                border: '1px solid var(--color-success-border)',
                 fontSize: '0.75rem',
                 fontWeight: 600,
                 padding: '0.2rem 0.65rem',
@@ -2839,8 +2839,8 @@ List the mathematical or operational guarantees enforced by this architecture.
             </span>
             <span
               style={{
-                backgroundColor: '#F1F5F9',
-                color: '#475569',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--color-gray)',
                 border: '1px solid var(--color-border)',
                 fontSize: '0.72rem',
                 fontWeight: 600,
@@ -2908,7 +2908,7 @@ List the mathematical or operational guarantees enforced by this architecture.
                     style={{
                       fontSize: '0.75rem',
                       color: 'var(--color-gray)',
-                      backgroundColor: '#F8FAFC',
+                      backgroundColor: 'var(--bg-subtle)',
                       padding: '0.15rem 0.5rem',
                       borderRadius: '4px',
                       border: '1px solid var(--color-border)',
@@ -2927,7 +2927,7 @@ List the mathematical or operational guarantees enforced by this architecture.
               style={{
                 marginBottom: '2rem',
                 padding: '1.25rem 1.5rem',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: 'var(--bg-subtle)',
                 border: '1px solid var(--color-border)',
                 borderRadius: 'var(--radius-md)',
               }}
@@ -2987,8 +2987,8 @@ List the mathematical or operational guarantees enforced by this architecture.
                     {item.hasVideo && (
                       <span
                         style={{
-                          backgroundColor: '#FEE2E2',
-                          color: '#BE123C',
+                          backgroundColor: 'var(--color-danger-bg)',
+                          color: 'var(--color-danger)',
                           fontSize: '0.68rem',
                           fontWeight: 700,
                           padding: '0.1rem 0.4rem',
@@ -3013,7 +3013,7 @@ List the mathematical or operational guarantees enforced by this architecture.
               style={{
                 marginBottom: '1.5rem',
                 padding: '0.75rem 1rem',
-                backgroundColor: '#F8FAFC',
+                backgroundColor: 'var(--bg-subtle)',
                 border: '1px dashed var(--color-border)',
                 borderRadius: 'var(--radius-md)',
                 color: 'var(--color-gray)',

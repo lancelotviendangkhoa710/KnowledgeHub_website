@@ -20,16 +20,16 @@ export default function YouTubeEmbed({ videoId, title, caption }: YouTubeEmbedPr
           margin: '2rem 0',
           padding: '1.25rem 1.5rem',
           borderRadius: 'var(--radius-lg)',
-          backgroundColor: '#FFFBEB',
-          border: '1px solid #FCD34D',
-          color: '#92400E',
+          backgroundColor: 'var(--color-warning-bg)',
+          border: '1px solid var(--color-warning-border)',
+          color: 'var(--color-warning)',
           display: 'flex',
           alignItems: 'center',
           gap: '0.75rem',
           fontSize: '0.95rem',
         }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" strokeWidth="2">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -63,7 +63,7 @@ export default function YouTubeEmbed({ videoId, title, caption }: YouTubeEmbedPr
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '0.65rem 1.25rem',
-          backgroundColor: 'var(--color-background, #F8FAFC)',
+          backgroundColor: 'var(--bg-subtle)',
           borderBottom: '1px solid var(--color-border)',
           gap: '1rem',
           flexWrap: 'wrap',
@@ -73,9 +73,9 @@ export default function YouTubeEmbed({ videoId, title, caption }: YouTubeEmbedPr
           <span
             className="badge"
             style={{
-              backgroundColor: '#FEE2E2',
-              color: '#DC2626',
-              border: '1px solid #FECACA',
+              backgroundColor: 'var(--color-danger-bg)',
+              color: 'var(--color-danger)',
+              border: '1px solid var(--color-danger-border)',
               fontSize: '0.75rem',
               fontWeight: 700,
               padding: '0.2rem 0.6rem',
@@ -148,7 +148,7 @@ export default function YouTubeEmbed({ videoId, title, caption }: YouTubeEmbedPr
           position: 'relative',
           width: '100%',
           aspectRatio: '16 / 9',
-          backgroundColor: '#0F172A',
+          backgroundColor: 'var(--color-charcoal)',
           overflow: 'hidden',
         }}
       >
@@ -176,7 +176,7 @@ export default function YouTubeEmbed({ videoId, title, caption }: YouTubeEmbedPr
             padding: '0.65rem 1.25rem',
             fontSize: '0.825rem',
             color: 'var(--color-gray)',
-            backgroundColor: 'var(--color-background, #F8FAFC)',
+            backgroundColor: 'var(--bg-subtle)',
             borderTop: '1px solid var(--color-border)',
             fontStyle: 'italic',
           }}
