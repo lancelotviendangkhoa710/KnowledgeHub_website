@@ -1,0 +1,47 @@
+.card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; display: flex; flex-direction: column; }
+.card:hover { border-color: var(--ink-3); }
+.card:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.cover { height: 128px; position: relative; overflow: hidden; padding: 12px; display: flex; justify-content: space-between; align-items: flex-start; }
+.pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; background: rgba(255, 255, 255, .92); color: #101214; position: relative; z-index: 1; white-space: nowrap; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; position: relative; z-index: 1; }
+.role { font-size: 12.5px; font-weight: 600; color: var(--brand); }
+.art { position: absolute; inset: 0; }
+.art i { position: absolute; display: block; }
+.v1 { transform: scaleX(-1); }
+.v2 { transform: translateX(16%) scale(1.18); }
+
+.sys { background: var(--c-sys); }
+.prog { background: var(--c-prog); }
+.data { background: var(--c-data); }
+.career { background: var(--c-career); }
+
+.sys i:nth-of-type(1) { width: 74px; height: 74px; border-radius: 50%; background: #fff; opacity: .92; left: 38%; bottom: -18px; }
+.sys i:nth-of-type(2) { width: 46px; height: 46px; border-radius: 50%; background: var(--mark); left: 18%; bottom: 26px; }
+.sys i:nth-of-type(3) { width: 46px; height: 46px; border-radius: 50%; background: #101214; right: 14%; bottom: 30px; }
+.prog i:nth-of-type(1) { width: 150px; height: 18px; border-radius: 9px; background: #101214; left: 24px; bottom: 52px; }
+.prog i:nth-of-type(2) { width: 96px; height: 18px; border-radius: 9px; background: #fff; left: 52px; bottom: 26px; }
+.prog i:nth-of-type(3) { width: 120px; height: 120px; border-radius: 50%; background: var(--c-career); right: -34px; bottom: -44px; }
+.data i:nth-of-type(1) { width: 64px; height: 64px; border-radius: 6px; background: #101214; left: 24px; bottom: -12px; }
+.data i:nth-of-type(2) { width: 64px; height: 92px; border-radius: 6px; background: #fff; left: 100px; bottom: -12px; }
+.data i:nth-of-type(3) { width: 64px; height: 120px; border-radius: 6px; background: var(--mark); left: 176px; bottom: -12px; }
+.career i:nth-of-type(1) { width: 110px; height: 110px; border-radius: 50% 50% 0 50%; background: #fff; left: 26px; bottom: -30px; }
+.career i:nth-of-type(2) { width: 110px; height: 110px; border-radius: 50% 50% 50% 0; background: #101214; left: 118px; bottom: -52px; }
+.career i:nth-of-type(3) { width: 26px; height: 26px; border-radius: 50%; background: var(--mark); right: 30px; bottom: 26px; }
+
+.body { padding: 16px 18px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.title { font-size: 17px; font-weight: 700; }
+/* Cả thẻ bấm được: liên kết ở tiêu đề phủ kín thẻ, nút lưu nằm trên nó. */
+.title a::after { content: ""; position: absolute; inset: 0; }
+.desc { color: var(--ink-2); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 12px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.author { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.avatar { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--ink); }
+.saveWrap { margin-left: auto; position: relative; z-index: 2; flex: none; }
+.save { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); cursor: pointer; background: none; border: 0; }
+.save:hover { background: var(--surface-2); color: var(--ink); }
+.save[aria-pressed="true"] { color: var(--mark-ink); background: var(--mark); }
+.save[aria-pressed="true"] svg { fill: currentColor; }
+.save:disabled { opacity: .6; cursor: default; }
+.save svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.notice { position: absolute; bottom: 115%; right: 0; background: var(--ink); color: var(--bg); padding: 6px 12px; border-radius: 8px; font-size: 12px; white-space: nowrap; box-shadow: var(--shadow); z-index: 5; }
