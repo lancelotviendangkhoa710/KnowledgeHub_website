@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import RoadmapCard from '@/components/learning/RoadmapCard';
 import { roadmapClient } from '@/lib/roadmapClient';
+import { getAccessToken } from '@/lib/authToken';
 import type { LearningRoadmap } from '@/types/learning';
 import styles from './myRoadmaps.module.css';
 
@@ -17,12 +18,26 @@ export default function MyRoadmapsPage() {
   const deletingRef = useRef<Set<string>>(new Set());
 
   async function load(): Promise<void> {
+    const session = getAccessToken();
+    if (!session) {
+      setRoadmaps([]);
+      setLoading(false);
+      router.replace('/login?redirect=%2Flearning%2Fmy-roadmaps');
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      setRoadmaps((await roadmapClient.list(true)).data);
+      const result = await roadmapClient.list(true);
+      if (getAccessToken() !== session) {
+        setRoadmaps([]);
+        router.replace('/login?redirect=%2Flearning%2Fmy-roadmaps');
+        return;
+      }
+      setRoadmaps(result.data);
     } catch (caught) {
       if ((caught as { status?: number }).status === 401) {
+        setRoadmaps([]);
         router.replace('/login?redirect=%2Flearning%2Fmy-roadmaps');
       } else {
         setError('Could not load your roadmaps. Check your connection and retry.');
@@ -32,7 +47,14 @@ export default function MyRoadmapsPage() {
     }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+    const clearOnSessionChange = () => {
+      if (!getAccessToken()) setRoadmaps([]);
+    };
+    window.addEventListener('focus', clearOnSessionChange);
+    return () => window.removeEventListener('focus', clearOnSessionChange);
+  }, []);
 
   async function remove(roadmap: LearningRoadmap): Promise<void> {
     if (deletingRef.current.has(roadmap.id) || !window.confirm(`Delete roadmap "${roadmap.title}" and all its steps?`)) return;

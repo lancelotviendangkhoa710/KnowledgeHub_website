@@ -1,9 +1,12 @@
 import json
 import hmac
 import logging
+import multiprocessing
 import os
 import re
+import resource
 import uuid
+import asyncio
 from io import BytesIO
 from typing import Annotated, Literal
 
@@ -17,6 +20,51 @@ from .resources import search_resources
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("knowledgehub.ai")
 app = FastAPI(title="KnowledgeHub AI service", docs_url=None, redoc_url=None)
+
+
+def _parse_cv_worker(content: bytes, output) -> None:
+    """Parse untrusted PDF in a disposable, resource-limited process."""
+    try:
+        resource.setrlimit(resource.RLIMIT_AS, (256 * 1024 * 1024, 256 * 1024 * 1024))
+        resource.setrlimit(resource.RLIMIT_CPU, (8, 8))
+        reader = PdfReader(BytesIO(content), strict=False)
+        if reader.is_encrypted or not 1 <= len(reader.pages) <= MAX_CV_PAGES:
+            output.send(("invalid", None))
+            return
+        remaining = MAX_CV_TEXT_CHARS
+        chunks = []
+        for page in reader.pages:
+            cleaned = re.sub(r"[ \t\r\f\v]+", " ", page.extract_text() or "").strip()
+            if cleaned:
+                chunks.append(cleaned[:remaining])
+                remaining -= min(len(cleaned), remaining)
+            if remaining == 0:
+                break
+        output.send(("ok", ("\n".join(chunks).strip()[:MAX_CV_TEXT_CHARS], len(reader.pages))))
+    except Exception:
+        output.send(("invalid", None))
+    finally:
+        output.close()
+
+
+def _parse_cv_bounded(content: bytes) -> tuple[str, int]:
+    context = multiprocessing.get_context("spawn")
+    receiver, sender = context.Pipe(duplex=False)
+    process = context.Process(target=_parse_cv_worker, args=(content, sender))
+    process.start()
+    sender.close()
+    try:
+        if not receiver.poll(10):
+            raise ValueError("PDF parse deadline exceeded")
+        status, result = receiver.recv()
+        if status != "ok":
+            raise ValueError("Invalid PDF")
+        return result
+    finally:
+        if process.is_alive():
+            process.terminate()
+        process.join(timeout=1)
+        receiver.close()
 
 
 class RoadmapInput(BaseModel):
@@ -566,28 +614,10 @@ async def extract_cv(
         if not content.startswith(b"%PDF"):
             raise HTTPException(status_code=422, detail={"code": "invalid_pdf"})
         try:
-            reader = PdfReader(BytesIO(content), strict=False)
-            if reader.is_encrypted:
-                raise HTTPException(status_code=422, detail={"code": "invalid_pdf"})
-            page_count = len(reader.pages)
-            if not 1 <= page_count <= MAX_CV_PAGES:
-                raise HTTPException(status_code=422, detail={"code": "invalid_pdf_page_count"})
-            chunks = []
-            remaining = MAX_CV_TEXT_CHARS
-            for page in reader.pages:
-                page_text = page.extract_text() or ""
-                cleaned = re.sub(r"[ \t\r\f\v]+", " ", page_text).strip()
-                if cleaned:
-                    chunks.append(cleaned[:remaining])
-                    remaining -= min(len(cleaned), remaining)
-                if remaining == 0:
-                    break
-        except HTTPException:
-            raise
-        except Exception:
+            text, page_count = await asyncio.to_thread(_parse_cv_bounded, content)
+        except (ValueError, EOFError, OSError):
             logger.warning("cv_extraction_failed category=invalid_pdf")
             raise HTTPException(status_code=422, detail={"code": "invalid_pdf"})
-        text = "\n".join(chunks).strip()[:MAX_CV_TEXT_CHARS]
         if not text:
             raise HTTPException(status_code=422, detail={"code": "cv_no_text"})
         return {"text": text, "page_count": page_count}

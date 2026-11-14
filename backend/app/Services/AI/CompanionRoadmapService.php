@@ -141,6 +141,9 @@ class CompanionRoadmapService
             'draft' => $draft,
         ], JSON_THROW_ON_ERROR));
 
+        if (strlen($previewCiphertext) > 150000) {
+            throw new RuntimeException('Roadmap preview is too large. Please shorten your details and try again.', 502);
+        }
         return ['state' => 'ready', 'draft' => $draft, 'preview_token' => $previewCiphertext, 'expires_at' => $expires->toIso8601String()];
     }
 
@@ -472,26 +475,6 @@ class CompanionRoadmapService
 
     private function attachResourcesAndScore(array $items, array $skills, array $internal, array $resources): array
     {
-        $skillScores = [];
-        $internalSum = 0.0;
-        $externalSum = 0.0;
-        foreach ($skills as $skill) {
-            $internalScore = $internal[$skill]['score'];
-            $externalScore = 0.0;
-            $evidence = $internal[$skill]['evidence'];
-            foreach ($resources[$skill] ?? [] as $resource) {
-                $sourceScore = mb_stripos($resource['title'].' '.$resource['topic'], $skill) !== false ? 1.0 : 0.5;
-                $externalScore = max($externalScore, $sourceScore);
-                $evidence[] = $resource['title'].' — '.$resource['url'];
-            }
-            $supplement = max(0.0, $externalScore - $internalScore);
-            $internalSum += $internalScore;
-            $externalSum += $supplement;
-            $skillScores[] = [
-                'skill' => $skill, 'internal' => (int) round($internalScore * 100),
-                'external' => (int) round($supplement * 100), 'evidence' => $evidence,
-            ];
-        }
         foreach ($items as &$item) {
             foreach ($item['skills'] as $skill) {
                 foreach ($resources[$skill] ?? [] as $resource) {
@@ -502,7 +485,31 @@ class CompanionRoadmapService
             }
         }
         unset($item);
-
+        $skillScores = [];
+        $internalSum = 0.0;
+        $externalSum = 0.0;
+        foreach ($skills as $skill) {
+            $internalScore = $internal[$skill]['score'];
+            $externalScore = 0.0;
+            $evidence = $internal[$skill]['evidence'];
+            foreach ($items as $item) {
+                if (! in_array($skill, $item['skills'], true)) {
+                    continue;
+                }
+                foreach ($item['external_resources'] as $resource) {
+                    $sourceScore = mb_stripos($resource['title'].' '.($resource['topic'] ?? ''), $skill) !== false ? 1.0 : 0.5;
+                    $externalScore = max($externalScore, $sourceScore);
+                    $evidence[] = $resource['title'].' — '.$resource['url'];
+                }
+            }
+            $supplement = max(0.0, $externalScore - $internalScore);
+            $internalSum += $internalScore;
+            $externalSum += $supplement;
+            $skillScores[] = [
+                'skill' => $skill, 'internal' => (int) round($internalScore * 100),
+                'external' => (int) round($supplement * 100), 'evidence' => $evidence,
+            ];
+        }
         $count = count($skills);
         $internalPercent = (int) round(100 * $internalSum / $count);
         $externalPercent = (int) round(100 * $externalSum / $count);

@@ -2,6 +2,7 @@
 
 import asyncio
 import gzip
+import zlib
 import io
 import logging
 import re
@@ -89,7 +90,7 @@ def _xml_locations(data: bytes, url: str) -> tuple[bool, list[str]]:
         try:
             with gzip.GzipFile(fileobj=io.BytesIO(data)) as stream:
                 data = stream.read(MAX_SITEMAP_BYTES + 1)
-        except OSError:
+        except (OSError, EOFError, zlib.error):
             return False, []
         if len(data) > MAX_SITEMAP_BYTES:
             return False, []
@@ -223,6 +224,15 @@ class _PageMetadata(HTMLParser):
 
 
 async def search_resources(skills: list[str], client: httpx.AsyncClient) -> dict:
+    try:
+        async with asyncio.timeout(40):
+            return await _search_resources(skills, client)
+    except TimeoutError:
+        logger.warning("external_resource_lookup category=deadline")
+        return {"resources": [], "retrieval_status": "unavailable"}
+
+
+async def _search_resources(skills: list[str], client: httpx.AsyncClient) -> dict:
     """Find and verify at most one real documentation page for each skill."""
     selected_hosts = _preferred_hosts(skills)
     site_results = await asyncio.gather(*(

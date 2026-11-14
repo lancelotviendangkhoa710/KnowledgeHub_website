@@ -13,7 +13,7 @@ class RoadmapCatalogService
         $ranked = [];
         foreach ($skills as $skill) {
             $terms = $this->terms($skill);
-            $query = Article::query()->published()
+            $query = Article::query()->published()->whereHas('publishedVersion')
                 ->with(['publishedVersion:id,article_id,title,content', 'tags:id,name', 'category:id,name']);
             $query->where(function ($query) use ($terms): void {
                 foreach ($terms as $term) {

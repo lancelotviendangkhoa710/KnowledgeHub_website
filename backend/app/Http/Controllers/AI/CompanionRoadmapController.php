@@ -22,7 +22,7 @@ class CompanionRoadmapController extends Controller
         $this->authorize('update', $model);
         $key = 'ai-roadmap-preview:'.$request->user()->id;
         if (RateLimiter::tooManyAttempts($key, 10)) {
-            return response()->json(['status' => 'error', 'message' => 'Too many roadmap previews. Please retry later.'], 429)
+            return response()->json(['status' => 'error', 'message' => 'Too many roadmap previews. Please retry later.', 'data' => null], 429)
                 ->header('Retry-After', (string) RateLimiter::availableIn($key));
         }
         RateLimiter::hit($key, 60);
@@ -64,7 +64,7 @@ class CompanionRoadmapController extends Controller
     private function error(RuntimeException $exception): JsonResponse
     {
         $status = in_array($exception->getCode(), [409, 502, 503, 504], true) ? $exception->getCode() : 502;
-        $payload = ['status' => 'error', 'message' => $exception->getMessage()];
+        $payload = ['status' => 'error', 'message' => $exception->getMessage(), 'data' => null];
         if ($status === 503 && $exception->getMessage() === MessageService::CHAT_DISABLED_MESSAGE) {
             $payload['code'] = 'chat_disabled';
         }

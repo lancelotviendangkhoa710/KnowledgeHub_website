@@ -132,7 +132,7 @@ export default function RoadmapForm({ onBack }: Props) {
       <span className={styles.savedIcon} aria-hidden="true">✓</span>
       <h2>Roadmap saved</h2>
       <p>Your personalized roadmap is ready to revisit and track.</p>
-      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>View My AI Roadmaps</Link><button className="btn btn-secondary" type="button" onClick={onBack}>Back to Chat</button></div>
+      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>View My AI Roadmaps</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); }}>Create another roadmap</button><button className="btn btn-secondary" type="button" onClick={onBack}>Back to Chat</button></div>
     </div>;
   }
 

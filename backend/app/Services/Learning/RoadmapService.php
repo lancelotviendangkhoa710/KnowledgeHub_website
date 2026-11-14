@@ -85,7 +85,7 @@ class RoadmapService
     {
         return DB::transaction(function () use ($roadmap, $attributes): LearningRoadmap {
             $roadmap->update($attributes);
-            return $roadmap->fresh(['items']);
+            return $this->refreshCourseLinks(collect([$roadmap->fresh(['items'])]))->first();
         });
     }
 

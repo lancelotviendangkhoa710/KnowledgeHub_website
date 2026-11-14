@@ -209,6 +209,7 @@ export default function AICompanionPage() {
   const skipMessagesLoadRef = useRef<string | null>(null);
   const preserveScrollRef = useRef<{ height: number; top: number } | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const roadmapReturnScrollRef = useRef<number | null>(null);
   const roadmapPaneRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const memoryCloseRef = useRef<HTMLButtonElement | null>(null);
@@ -221,6 +222,10 @@ export default function AICompanionPage() {
 
   useEffect(() => {
     if (roadmapMode) roadmapPaneRef.current?.scrollTo({ top: 0 });
+    else if (roadmapReturnScrollRef.current !== null && threadRef.current) {
+      threadRef.current.scrollTop = roadmapReturnScrollRef.current;
+      roadmapReturnScrollRef.current = null;
+    }
   }, [roadmapMode]);
 
   useEffect(() => {
@@ -1210,7 +1215,7 @@ export default function AICompanionPage() {
             </p>
             <div className={styles.roadmapActionButtons} style={{ justifyContent: 'center', marginTop: '0.75rem' }}>
               <Link className={styles.smallSecondaryButton} href="/learning/my-roadmaps">My AI Roadmaps</Link>
-              <button type="button" className={styles.smallPrimaryButton} onClick={() => setRoadmapMode(true)}>Create Roadmap with AI</button>
+              <button type="button" className={styles.smallPrimaryButton} onClick={() => { roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null; setRoadmapMode(true); }}>Create Roadmap with AI</button>
             </div>
           </div>
           </>}

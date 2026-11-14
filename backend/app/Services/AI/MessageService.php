@@ -128,6 +128,7 @@ class MessageService
 
         try {
             return DB::transaction(function () use ($conversation, $content, $clientMessageId, $reply, $m1): array {
+                Conversation::query()->whereKey($conversation->id)->lockForUpdate()->firstOrFail();
                 // created_at stays second-precision (migration 000007); when M1 is applied the
                 // stable order comes from `sequence`, with created_at only as a UI timestamp.
                 $userCreatedAt = now()->startOfSecond();

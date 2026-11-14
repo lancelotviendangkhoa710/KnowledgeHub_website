@@ -503,7 +503,7 @@ filters, pagination, token revocation, strict payload).
 
 | Method | Path | Request | Success | Main errors |
 |---|---|---|---|---|
-| GET | `/api/learning/roadmaps` | Optional `mine=1`, `origin=legacy|ai` | 200, `data` array; owner sees own, Admin sees all unless `mine=1`; items ordered by `position` | 401, 422 |
+| GET | `/api/learning/roadmaps` | Optional `mine=1`, `origin=legacy\|ai` | 200, `data` array; owner sees own, Admin sees all unless `mine=1`; items ordered by `position` | 401, 422 |
 | POST | `/api/learning/roadmaps` | `title` required, `goal` required, `status` optional enum | 201, `data` roadmap with `items` | 401, 422 |
 | GET | `/api/learning/roadmaps/{roadmap}` | UUID path | 200, `data` roadmap with items | 401, 404 foreign/unknown |
 | PUT | `/api/learning/roadmaps/{roadmap}` | partial `title`, `goal`, `status` | 200, `data` roadmap | 401, 404, 422 |
