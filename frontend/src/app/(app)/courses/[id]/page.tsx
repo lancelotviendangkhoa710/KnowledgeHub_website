@@ -10,6 +10,7 @@ import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurren
 import { accountClient } from '@/lib/accountClient';
 import { getAccessToken } from '@/lib/authToken';
 import YouTubeEmbed from '@/components/content/YouTubeEmbed';
+import { normalizeTopHeadings } from '@/lib/markdownText';
 import { extractYouTubeVideoId } from '@/lib/videoUtils';
 
 
@@ -414,7 +415,7 @@ export default function CourseDetailPage() {
   const tocItems = useMemo(() => {
     if (!article) return [];
     const v = article.published_version || article.latest_version;
-    const raw = v?.content || '';
+    const raw = normalizeTopHeadings(v?.content || '');
     const lines = raw.split('\n');
     const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
     const seenIds = new Set<string>();
@@ -596,7 +597,7 @@ export default function CourseDetailPage() {
   };
 
   const version = article?.published_version || article?.latest_version;
-  const content = version?.content || 'No content recorded for this version.';
+  const content = normalizeTopHeadings(version?.content || 'No content recorded for this version.');
   const isGuest = !currentUser && !(mounted && getAccessToken());
 
   const { introContent, remainingContent } = useMemo(() => {

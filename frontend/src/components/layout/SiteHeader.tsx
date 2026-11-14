@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import AuthActions from '@/components/auth/AuthActions';
 import { getCurrentUser, restoreSession, subscribeCurrentUser, AuthUser } from '@/lib/auth';
+import styles from './siteHeader.module.css';
 
 /**
  * Renders the brand logo icon mark with animated nodes.
@@ -18,11 +20,25 @@ function BrandMark() {
   );
 }
 
+type NavItem = { href: string; label: string; match: (path: string) => boolean };
+
+const startsWith = (prefix: string) => (path: string) => path === prefix || path.startsWith(`${prefix}/`);
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/courses', label: 'Courses', match: (p) => startsWith('/courses')(p) && !p.startsWith('/courses/manage') && !p.startsWith('/courses/create') },
+  { href: '/bookmarks', label: 'Saved', match: startsWith('/bookmarks') },
+  { href: '/learning/roadmaps', label: 'Roadmap Templates', match: startsWith('/learning/roadmaps') },
+];
+
 /**
- * Main navigation shell header displaying platform branding, links, and role-based Studio shortcut.
+ * Main navigation shell header: brand, primary links with the current page marked,
+ * the role-based Studio shortcut and the account actions. Below 960px the links and
+ * actions collapse behind a menu button.
  */
 export default function SiteHeader() {
+  const pathname = usePathname() ?? '';
   const [user, setUser] = useState<AuthUser | null>(getCurrentUser);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setUser(getCurrentUser());
@@ -31,36 +47,64 @@ export default function SiteHeader() {
     return unsubscribe;
   }, []);
 
+  // Close the mobile menu after navigating.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   const isContributorOrAdmin =
     user?.roles?.includes('contributor') || user?.roles?.includes('admin');
 
+  const linkClass = (active: boolean, extra?: string) =>
+    [styles.link, active ? styles.active : '', extra ?? ''].filter(Boolean).join(' ');
+
+  const items: NavItem[] = [
+    ...NAV_ITEMS,
+    ...(user ? [{ href: '/learning/my-roadmaps', label: 'My Roadmaps', match: startsWith('/learning/my-roadmaps') }] : []),
+    { href: '/ai/companion', label: 'AI Companion', match: startsWith('/ai') },
+  ];
+
   return (
-    <div className="site-header__inner content-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.75rem', flexWrap: 'wrap' }}>
-        <Link className="site-brand nav-logo" href="/" aria-label="KnowledgeHub home" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <BrandMark />
-          <span className="nav-logo__wordmark" style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-charcoal)', letterSpacing: '-0.02em' }}>
-            Knowledge<strong style={{ color: 'var(--color-primary)', fontWeight: 700 }}>Hub</strong>
-          </span>
-        </Link>
-        <nav className="site-nav" aria-label="Main navigation" style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
-          <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Discover</Link>
-          <Link href="/courses" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Courses</Link>
-          <Link href="/bookmarks" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Saved</Link>
-          <Link href="/learning/roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>Roadmap Templates</Link>
-          {user && <Link href="/learning/my-roadmaps" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>My Roadmaps</Link>}
-          <Link href="/ai/companion" style={{ color: 'var(--color-gray)', fontWeight: 500, fontSize: '0.92rem' }}>AI Companion</Link>
+    <div className={`site-header__inner content-container ${styles.bar}`}>
+      <Link className={`site-brand nav-logo ${styles.brand}`} href="/" aria-label="KnowledgeHub home">
+        <BrandMark />
+        <span className={`nav-logo__wordmark ${styles.wordmark}`}>
+          Knowledge<strong>Hub</strong>
+        </span>
+      </Link>
+
+      <button
+        type="button"
+        className={styles.toggle}
+        aria-expanded={menuOpen}
+        aria-controls="site-header-panel"
+        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          {menuOpen ? (
+            <path d="M6 6l12 12M18 6L6 18" />
+          ) : (
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          )}
+        </svg>
+      </button>
+
+      <div id="site-header-panel" className={`${styles.panel} ${menuOpen ? styles.panelOpen : ''}`}>
+        <nav className={styles.nav} aria-label="Main navigation">
+          {items.map((item) => {
+            const active = item.match(pathname);
+            return (
+              <Link key={item.href} href={item.href} className={linkClass(active)} aria-current={active ? 'page' : undefined}>
+                {item.label}
+              </Link>
+            );
+          })}
           {isContributorOrAdmin && (
             <Link
               href="/courses/manage"
-              style={{
-                color: 'var(--color-primary)',
-                fontWeight: 600,
-                fontSize: '0.92rem',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.35rem',
-              }}
+              className={linkClass(startsWith('/courses/manage')(pathname) || startsWith('/courses/create')(pathname), styles.studio)}
+              aria-current={startsWith('/courses/manage')(pathname) ? 'page' : undefined}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 20h9" />
@@ -70,8 +114,10 @@ export default function SiteHeader() {
             </Link>
           )}
         </nav>
+        <div className={styles.actions}>
+          <AuthActions />
+        </div>
       </div>
-      <AuthActions />
     </div>
   );
 }
