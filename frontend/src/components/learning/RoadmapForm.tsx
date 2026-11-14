@@ -11,6 +11,24 @@ import styles from './roadmapForm.module.css';
 type ReadyPreview = Extract<CompanionPreviewResult, { state: 'ready' }>;
 type CvAction = 'download' | 'delete' | 'save';
 const MAX_PDF_BYTES = 2 * 1024 * 1024;
+const CUSTOM_CHOICE = '__custom__';
+const CAREER_GROUPS = [
+  { label: 'Software development', roles: ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer', 'Desktop Application Developer'] },
+  { label: 'Cloud and platform', roles: ['DevOps Engineer', 'Site Reliability Engineer', 'Cloud Engineer', 'Platform Engineer', 'Infrastructure Engineer'] },
+  { label: 'Data', roles: ['Data Engineer', 'Data Analyst', 'Business Intelligence Analyst', 'Data Scientist', 'Machine Learning Engineer'] },
+  { label: 'Artificial intelligence', roles: ['AI Engineer', 'NLP Engineer', 'Computer Vision Engineer', 'MLOps Engineer', 'AI Research Engineer'] },
+  { label: 'Cybersecurity', roles: ['Cybersecurity Analyst', 'Security Engineer', 'Application Security Engineer', 'Cloud Security Engineer', 'Penetration Tester'] },
+  { label: 'Quality assurance', roles: ['QA Engineer', 'Test Automation Engineer', 'Performance Test Engineer', 'Software Development Engineer in Test', 'Test Architect'] },
+  { label: 'Product and design', roles: ['Technical Product Manager', 'Technical Product Owner', 'UX Designer', 'UI Designer', 'UX Researcher'] },
+  { label: 'Architecture', roles: ['Software Architect', 'Solutions Architect', 'Enterprise Architect', 'Data Architect', 'Cloud Architect'] },
+  { label: 'IT operations', roles: ['IT Support Specialist', 'System Administrator', 'Network Engineer', 'Database Administrator', 'IT Operations Engineer'] },
+  { label: 'Specialized engineering', roles: ['Game Developer', 'Embedded Systems Engineer', 'Blockchain Developer', 'AR/VR Developer', 'IoT Engineer'] },
+] as const;
+
+function savedCvTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'recently' : new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
 
 type Props = { onBack: () => void };
 
@@ -20,7 +38,9 @@ function apiStatus(caught: unknown): number | undefined {
 }
 
 export default function RoadmapForm({ onBack }: Props) {
+  const [careerChoice, setCareerChoice] = useState('');
   const [careerGoal, setCareerGoal] = useState('');
+  const [levelChoice, setLevelChoice] = useState('');
   const [currentLevel, setCurrentLevel] = useState('');
   const [jobRequirements, setJobRequirements] = useState('');
   const [weeks, setWeeks] = useState('12');
@@ -155,8 +175,8 @@ export default function RoadmapForm({ onBack }: Props) {
   async function submit(event: FormEvent): Promise<void> {
     event.preventDefault();
     if (inFlightRef.current || saveInFlightRef.current || cvActionRef.current !== null) return;
-    if (!careerGoal.trim() || !currentLevel.trim() || !jobRequirements.trim()) {
-      setError('Complete your goal, current level and target job requirements.');
+    if (!careerGoal.trim() || !currentLevel.trim()) {
+      setError('Choose your career goal and current level.');
       return;
     }
     if (cvFile && (cvFile.type !== 'application/pdf' || cvFile.size > MAX_PDF_BYTES)) {
@@ -173,7 +193,7 @@ export default function RoadmapForm({ onBack }: Props) {
       const form = new FormData();
       form.append('career_goal', careerGoal.trim());
       form.append('current_level', currentLevel.trim());
-      form.append('target_job_requirements', jobRequirements.trim());
+      if (jobRequirements.trim()) form.append('target_job_requirements', jobRequirements.trim());
       form.append('weeks', weeks);
       form.append('hours_per_week', hoursPerWeek);
       if (cvFile) form.append('cv_file', cvFile);
@@ -260,12 +280,24 @@ export default function RoadmapForm({ onBack }: Props) {
   }
 
   return <div ref={viewRef} className={styles.formShell}>
-    <div className={styles.intro}><span className={styles.eyebrow}>Personalized learning plan</span><h2>Create Roadmap with AI</h2><p>Tell us where you want to go and what you can already do. We will match real courses in the library and identify remaining skill gaps.</p></div>
+    <div className={styles.intro}><span className={styles.eyebrow}>Personalized learning plan</span><h2>Create Roadmap with AI</h2><p>Tell us where you want to go and what you can already do. We will find learning resources for your goal.</p></div>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <form className={styles.form} onSubmit={(event) => void submit(event)}>
-      <label className={styles.field}>Career goal <span>*</span><input required maxLength={500} value={careerGoal} onChange={(event) => setCareerGoal(event.target.value)} placeholder="e.g. Become a Data Engineer" disabled={loading} /></label>
-      <label className={styles.field}>Current level <span>*</span><input required maxLength={200} value={currentLevel} onChange={(event) => setCurrentLevel(event.target.value)} placeholder="e.g. Comfortable with Python, new to SQL" disabled={loading} /></label>
-      <label className={styles.field}>Target job requirements <span>*</span><textarea required maxLength={5000} rows={5} value={jobRequirements} onChange={(event) => setJobRequirements(event.target.value)} placeholder="Paste a job description or describe the skills the role needs" disabled={loading} /></label>
+      <label className={styles.field}>Career goal <span>*</span><select required value={careerChoice} onChange={(event) => { const choice = event.target.value; setCareerChoice(choice); setCareerGoal(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
+        <option value="">Select an IT career</option>
+        {CAREER_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.roles.map((role) => <option key={role} value={role}>{role}</option>)}</optgroup>)}
+        <option value={CUSTOM_CHOICE}>Other career goal</option>
+      </select></label>
+      {careerChoice === CUSTOM_CHOICE && <label className={styles.field}>Describe your career goal <span>*</span><input required maxLength={500} value={careerGoal} onChange={(event) => setCareerGoal(event.target.value)} placeholder="e.g. Become a technical writer" disabled={loading} /></label>}
+      <label className={styles.field}>Current level <span>*</span><select required value={levelChoice} onChange={(event) => { const choice = event.target.value; setLevelChoice(choice); setCurrentLevel(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
+        <option value="">Select your level</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Advanced">Advanced</option>
+        <option value={CUSTOM_CHOICE}>Other / describe my level</option>
+      </select></label>
+      {levelChoice === CUSTOM_CHOICE && <label className={styles.field}>Describe your current level <span>*</span><input required maxLength={200} value={currentLevel} onChange={(event) => setCurrentLevel(event.target.value)} placeholder="e.g. Comfortable with Python, new to SQL" disabled={loading} /></label>}
+      <label className={styles.field}>Target job requirements (optional)<textarea maxLength={5000} rows={5} value={jobRequirements} onChange={(event) => setJobRequirements(event.target.value)} placeholder="Paste a job description or describe the skills the role needs" disabled={loading} /></label>
       <div className={styles.numberRow}>
         <label className={styles.field}>Learning period (weeks) <span>*</span><input required type="number" min={1} max={104} value={weeks} onChange={(event) => setWeeks(event.target.value)} disabled={loading} /></label>
         <label className={styles.field}>Hours per week <span>*</span><input required type="number" min={1} max={80} value={hoursPerWeek} onChange={(event) => setHoursPerWeek(event.target.value)} disabled={loading} /></label>
@@ -273,10 +305,10 @@ export default function RoadmapForm({ onBack }: Props) {
       <label className={styles.field}>CV (optional PDF, up to 2 MB)<input type="file" accept=".pdf,application/pdf" onChange={(event) => selectPdf(event.target.files?.[0] ?? null)} disabled={loading} /><small>{cvFile ? `${cvFile.name} — used only for this preview unless you choose to save it.` : 'Your CV is used only for this preview unless you choose to save it.'}</small></label>
       <label className={styles.consent}>
         <input type="checkbox" checked={saveCvConsent} onChange={(event) => setSaveCvConsent(event.target.checked)} disabled={loading || !cvFile} />
-        <span>Đây là CV tốt nhất của tôi. Lưu CV để cá nhân hóa trải nghiệm AI sau này.</span>
+        <span>This is my best current CV. Save it to personalize future AI experiences.</span>
       </label>
       <section className={styles.cvManager} aria-label="Saved CV">
-        <div><strong>Saved CV</strong><small>{cvLoading ? 'Checking your saved CV…' : storedCv ? `${storedCv.filename} · ${(storedCv.size_bytes / 1024).toFixed(0)} KB` : 'No CV saved to your account.'}</small><small>A saved CV is retained in your account. It is not automatically included in AI previews yet.</small></div>
+        <div><strong>Saved CV</strong>{cvLoading ? <small>Checking your saved CV…</small> : storedCv ? <small>Your latest saved CV was saved on {savedCvTime(storedCv.created_at)}. Have you updated your CV? Upload the latest PDF above and select Replace saved CV. For a roadmap preview, select the PDF you want to use above.</small> : <small>No CV saved to your account.</small>}</div>
         {storedCv && <div className={styles.cvActions}>
           <button className="btn btn-secondary" type="button" onClick={() => void downloadCv()} disabled={cvAction !== null}>{cvAction === 'download' ? 'Downloading…' : 'Download'}</button>
           <button className="btn btn-secondary" type="button" onClick={() => void deleteCv()} disabled={cvAction !== null}>{cvAction === 'delete' ? 'Deleting…' : 'Delete'}</button>

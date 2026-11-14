@@ -180,6 +180,22 @@ class CompanionRoadmapTest extends TestCase
         ]), ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonValidationErrors('cv_file');
     }
 
+    public function test_form_preview_accepts_omitted_job_requirements(): void
+    {
+        $this->configureAi();
+        $this->fakeAi();
+        Sanctum::actingAs($this->user());
+
+        $input = $this->formInput();
+        unset($input['target_job_requirements']);
+        $this->postJson('/api/ai/roadmaps/form-preview', $input)
+            ->assertOk()->assertJsonPath('data.state', 'ready');
+
+        Http::assertSent(fn (Request $request): bool =>
+            str_ends_with($request->url(), '/v1/roadmaps/form-intent')
+            && $request['target_job_requirements'] === null);
+    }
+
     public function test_pdf_cv_is_forwarded_for_extraction_and_only_evidenced_analysis_is_saved(): void
     {
         $this->configureAi();
@@ -191,6 +207,7 @@ class CompanionRoadmapTest extends TestCase
             'cv_file' => $pdf,
         ]), ['Accept' => 'application/json'])->assertOk()
             ->assertJsonPath('data.draft.cv_analysis.cv_match_percent', 50)
+            ->assertJsonPath('data.draft.cv_analysis.encouragement', 'Your Python projects are a solid foundation; relevant courses can help you grow toward data engineering.')
             ->assertJsonPath('data.draft.cv_analysis.strengths.0.skill', 'Python');
         $this->assertStringNotContainsString('Built Python and SQL projects', json_encode($preview->json('data.draft.coverage')));
         $saved = $this->postJson('/api/ai/roadmaps/form-confirm', [
@@ -229,6 +246,7 @@ class CompanionRoadmapTest extends TestCase
                 ], 'cv_analysis' => $request['cv_text'] ? [
                     'strengths' => [['skill' => 'Python', 'evidence' => 'Python and SQL projects']],
                     'gaps' => ['SQL'], 'recommendations' => ['Practice SQL queries'],
+                    'encouragement' => 'Your Python projects are a solid foundation; relevant courses can help you grow toward data engineering.',
                 ] : null]);
             }
             if (str_ends_with($request->url(), '/v1/roadmaps/intent')) {

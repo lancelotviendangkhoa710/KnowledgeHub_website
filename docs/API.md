@@ -676,15 +676,15 @@ Previously saved roadmaps have `origin=legacy`; no old data is reclassified.
 The independent form in `/ai/companion` uses two additional authenticated
 endpoints. `POST /api/ai/roadmaps/form-preview` accepts multipart fields
 `career_goal` (3–500 characters), `current_level` (free text, 3–200),
-`target_job_requirements` (1–5000), `weeks` (1–104),
+optional `target_job_requirements` (up to 5000 characters), `weeks` (1–104),
 `hours_per_week` (1–80), and optional `cv_file` (PDF, at most 2 MiB).
 It returns the same `state=ready`, `draft`, `preview_token`, `expires_at`
 envelope as the conversation preview. The PDF is parsed in memory by FastAPI;
 blank/scanned/encrypted or malformed PDFs receive 422. The draft includes
 `week_start`/`week_end`, total item minutes equal to the requested study budget,
-and optional `cv_analysis` with quoted skill evidence, gaps, recommendations
-and a deterministic CV match percentage. Raw PDF and extracted CV text are not
-stored. `POST /api/ai/roadmaps/form-confirm` accepts only
+and optional `cv_analysis` with quoted skill evidence, gaps, recommendations,
+an encouraging CV comment and a deterministic CV evidence percentage. Raw PDF
+and extracted CV text are not stored. `POST /api/ai/roadmaps/form-confirm` accepts only
 `{ "preview_token": "..." }`; it saves without a conversation link and has
 the same owner binding, 30-minute expiry, course/resource recheck and
 idempotent 201/200 behavior. Unauthorized requests return 401, invalid input

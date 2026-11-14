@@ -81,6 +81,12 @@ class CVExtractTests(unittest.TestCase):
 
 
 class FormIntentTests(unittest.IsolatedAsyncioTestCase):
+    def test_job_requirements_are_optional(self):
+        request = main.FormIntentInput(
+            career_goal="Data Engineer", current_level="Beginner", weeks=12, hours_per_week=8,
+        )
+        self.assertIsNone(request.target_job_requirements)
+
     def test_provider_target_skills_alias_is_normalized(self):
         output = main.FormIntentOutput.model_validate({
             "profile": {**{key: value for key, value in PROFILE.items() if key != "skills"},
@@ -113,19 +119,46 @@ class FormIntentTests(unittest.IsolatedAsyncioTestCase):
     async def test_cv_strength_requires_verbatim_evidence(self):
         cv = "Built Python and SQL projects for data teams."
         analysis = {"strengths": [{"skill": "Python", "evidence": "Python and SQL projects"}],
-                    "gaps": ["SQL"], "recommendations": ["Practice SQL queries"]}
+                    "gaps": ["SQL"], "recommendations": ["Practice SQL queries"],
+                    "encouragement": "Your Python projects are a useful foundation; relevant courses can help you grow."}
         valid = main.FormIntentOutput(profile=PROFILE, cv_analysis=analysis)
         with patch.object(main, "_structured_completion", new=AsyncMock(return_value=valid)):
             result = await main.roadmap_form_intent(self.request(cv), "internal")
         self.assertEqual("Python and SQL projects", result["cv_analysis"]["strengths"][0]["evidence"])
+        self.assertIn("Python projects", result["cv_analysis"]["encouragement"])
 
         invalid = main.FormIntentOutput(profile=PROFILE, cv_analysis={
             **analysis, "strengths": [{"skill": "Python", "evidence": "Invented work experience"}],
         })
         with patch.object(main, "_structured_completion", new=AsyncMock(return_value=invalid)):
-            with self.assertRaises(HTTPException) as error:
-                await main.roadmap_form_intent(self.request(cv), "internal")
-        self.assertEqual(502, error.exception.status_code)
+            filtered = await main.roadmap_form_intent(self.request(cv), "internal")
+        self.assertEqual([], filtered["cv_analysis"]["strengths"])
+
+    def test_malformed_encouragement_is_ignored_without_rejecting_cv(self):
+        analysis = main.CVAnalysis.model_validate({
+            "strengths": [], "gaps": [], "recommendations": [],
+            "encouragement": {"unexpected": "object"},
+        })
+        self.assertIsNone(analysis.encouragement)
+
+        malformed_lists = main.CVAnalysis.model_validate({
+            "strengths": "Python", "gaps": {"skill": "SQL"}, "recommendations": None,
+        })
+        self.assertEqual([], malformed_lists.strengths)
+        self.assertEqual([], malformed_lists.gaps)
+        self.assertEqual([], malformed_lists.recommendations)
+
+    def test_malformed_provider_cv_entries_are_discarded(self):
+        analysis = main.CVAnalysis.model_validate({
+            "strengths": ["Python", {"skill": "Python", "evidence": "Python and SQL projects"}],
+            "gaps": [{"skill": "SQL"}, "SQL"],
+            "recommendations": [42, "Practice SQL"],
+            "encouragement": "Too long " * 100,
+        })
+        self.assertEqual(1, len(analysis.strengths))
+        self.assertEqual(["SQL"], analysis.gaps)
+        self.assertEqual(["Practice SQL"], analysis.recommendations)
+        self.assertIsNone(analysis.encouragement)
 
     async def test_provider_cannot_change_user_level_or_study_time(self):
         output = main.FormIntentOutput(profile={**PROFILE, "weeks": 24}, cv_analysis=None)

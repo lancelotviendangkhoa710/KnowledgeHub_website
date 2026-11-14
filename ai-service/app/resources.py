@@ -225,7 +225,7 @@ class _PageMetadata(HTMLParser):
 
 async def search_resources(skills: list[str], client: httpx.AsyncClient) -> dict:
     try:
-        async with asyncio.timeout(40):
+        async with asyncio.timeout(10):
             return await _search_resources(skills, client)
     except TimeoutError:
         logger.warning("external_resource_lookup category=deadline")
