@@ -20,9 +20,10 @@ foreach ([
     'DB_URL' => '',
     'DB_SSLMODE' => 'disable',
     'DB_PERSISTENT' => 'false',
-    // Never write test cache/session files into the app's storage (root-owned files break the web server).
+    // Never write test cache/session files into the app's storage (root-owned files break the web server); same for the log file.
     'CACHE_STORE' => 'array',
     'SESSION_DRIVER' => 'array',
+    'LOG_CHANNEL' => 'stderr',
 ] as $key => $value) {
     putenv("{$key}={$value}");
     $_ENV[$key] = $_SERVER[$key] = $value;
