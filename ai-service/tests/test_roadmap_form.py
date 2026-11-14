@@ -81,6 +81,14 @@ class CVExtractTests(unittest.TestCase):
 
 
 class FormIntentTests(unittest.IsolatedAsyncioTestCase):
+    def test_provider_target_skills_alias_is_normalized(self):
+        output = main.FormIntentOutput.model_validate({
+            "profile": {**{key: value for key, value in PROFILE.items() if key != "skills"},
+                        "target_skills": PROFILE["skills"]},
+            "cv_analysis": None,
+        })
+        self.assertEqual(PROFILE["skills"], output.profile.skills)
+
     def setUp(self):
         self.env = patch.dict("os.environ", {"AI_SERVICE_TOKEN": "internal", "DEEPSEEK_API_KEY": "provider"})
         self.env.start()
