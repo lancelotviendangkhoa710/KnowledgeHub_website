@@ -72,6 +72,11 @@ class AuthService
         // Check the limits, create the account and count it as one step: two sign-ups arriving together
         // must not both pass the check at 29 of 30 and leave the counter at 31.
         return $this->withSignupLock(function () use ($email, $name, $ip, $existing): User {
+            // A sign-in for the same email may have created the account while we waited for the lock.
+            if ($user = $existing()) {
+                return $this->activeOrRefused($user);
+            }
+
             $limitKey = $this->googleSignupLimitKey($ip);
             $limit = (int) config('services.google.max_new_accounts_per_ip_per_day');
             $hourly = (int) config('services.google.max_new_accounts_per_hour');
@@ -121,7 +126,12 @@ class AuthService
         try {
             return $work();
         } finally {
-            $lock->release();
+            try {
+                $lock->release();
+            } catch (Throwable $exception) {
+                // The outcome is already decided; a failed release only means the lock expires on its own (10 s).
+                Log::warning('Google sign-up lock release failed', ['error' => $exception->getMessage()]);
+            }
         }
     }
 

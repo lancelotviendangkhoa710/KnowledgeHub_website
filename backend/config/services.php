@@ -31,6 +31,8 @@ return [
     // AUTH-07: Google sign-in. The redirect URI must be registered in Google Cloud and point at the
     // web origin, e.g. http://localhost:3000/api/auth/google/callback (the /api proxy forwards it).
     'google' => [
+        // Socialite passes this to Guzzle, which has no time limit by default: a silent Google must not hang the callback.
+        'guzzle' => ['connect_timeout' => 5, 'timeout' => 15],
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
         'redirect' => env('GOOGLE_REDIRECT_URI'),
