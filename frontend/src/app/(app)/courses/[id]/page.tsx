@@ -1389,7 +1389,7 @@ export default function CourseDetailPage() {
                 marginTop: '3.5rem',
               padding: '2rem',
               borderRadius: 'var(--radius-lg)',
-              backgroundColor: isCompleted ? 'var(--color-success-bg)' : 'var(--color-background)',
+              backgroundColor: isCompleted ? 'var(--color-success-bg)' : 'var(--bg-subtle)',
               border: isCompleted ? '1.5px solid var(--color-success-border)' : '1px solid var(--color-border)',
               display: 'flex',
               flexWrap: 'wrap',
@@ -1659,7 +1659,7 @@ export default function CourseDetailPage() {
                             borderRadius: 'var(--radius-md)',
                             border: '1px solid var(--color-border-light)',
                             textDecoration: 'none',
-                            backgroundColor: 'var(--color-background)',
+                            backgroundColor: 'var(--bg-subtle)',
                             transition: 'border-color var(--transition-fast)',
                           }}
                         >

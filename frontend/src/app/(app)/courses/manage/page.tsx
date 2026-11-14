@@ -105,16 +105,16 @@ function StatusBadge({ status }: { status: 'draft' | 'published' | 'archived' })
           display: 'inline-flex',
           alignItems: 'center',
           gap: '0.35rem',
-          backgroundColor: '#DCFCE7',
-          color: '#15803D',
-          border: '1px solid #86EFAC',
+          backgroundColor: 'var(--color-success-bg)',
+          color: 'var(--color-success)',
+          border: '1px solid var(--color-success-border)',
           padding: '0.2rem 0.6rem',
           borderRadius: '12px',
           fontSize: '0.76rem',
           fontWeight: 700,
         }}
       >
-        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#15803D' }} />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-success)' }} />
         Published
       </span>
     );
@@ -127,16 +127,16 @@ function StatusBadge({ status }: { status: 'draft' | 'published' | 'archived' })
           display: 'inline-flex',
           alignItems: 'center',
           gap: '0.35rem',
-          backgroundColor: '#FEF3C7',
-          color: '#8B0000',
-          border: '1px solid #FDE68A',
+          backgroundColor: 'var(--color-warning-bg)',
+          color: 'var(--color-primary)',
+          border: '1px solid var(--color-warning-border)',
           padding: '0.2rem 0.6rem',
           borderRadius: '12px',
           fontSize: '0.76rem',
           fontWeight: 700,
         }}
       >
-        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#D97706' }} />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-warning)' }} />
         Draft
       </span>
     );
@@ -148,16 +148,16 @@ function StatusBadge({ status }: { status: 'draft' | 'published' | 'archived' })
         display: 'inline-flex',
         alignItems: 'center',
         gap: '0.35rem',
-        backgroundColor: '#F3F4F6',
-        color: '#706B6B',
-        border: '1px solid #E5E7EB',
+        backgroundColor: 'var(--bg-subtle)',
+        color: 'var(--color-gray)',
+        border: '1px solid var(--color-border)',
         padding: '0.2rem 0.6rem',
         borderRadius: '12px',
         fontSize: '0.76rem',
         fontWeight: 700,
       }}
     >
-      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#9CA3AF' }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'var(--color-gray-light)' }} />
       Archived
     </span>
   );
@@ -198,7 +198,7 @@ function CourseTableRow({
   return (
     <tr
       style={{
-        borderBottom: isLast ? 'none' : '1px solid var(--color-border-light, #F0E8E8)',
+        borderBottom: isLast ? 'none' : '1px solid var(--color-border-light)',
         transition: 'background-color 0.15s ease',
       }}
     >
@@ -242,7 +242,7 @@ function CourseTableRow({
               fontSize: '0.75rem',
               fontWeight: 600,
               color: 'var(--color-primary)',
-              backgroundColor: 'var(--color-primary-faint, #FBF0F0)',
+              backgroundColor: 'var(--color-primary-faint)',
               border: '1px solid var(--color-border)',
               padding: '0.15rem 0.5rem',
               borderRadius: '4px',
@@ -262,7 +262,7 @@ function CourseTableRow({
                 style={{
                   fontSize: '0.72rem',
                   color: 'var(--color-gray)',
-                  backgroundColor: '#F3F4F6',
+                  backgroundColor: 'var(--bg-subtle)',
                   padding: '0.1rem 0.35rem',
                   borderRadius: '3px',
                 }}
@@ -290,8 +290,8 @@ function CourseTableRow({
             fontWeight: 600,
             fontFamily: 'var(--font-mono, monospace)',
             color: 'var(--color-charcoal)',
-            backgroundColor: '#F8FAFC',
-            border: '1px solid #E2E8F0',
+            backgroundColor: 'var(--bg-subtle)',
+            border: '1px solid var(--color-border)',
             padding: '0.18rem 0.5rem',
             borderRadius: '4px',
           }}
@@ -354,7 +354,7 @@ function CourseTableRow({
               fontSize: '0.8rem',
               fontWeight: 600,
               color: 'var(--color-primary)',
-              backgroundColor: 'var(--color-primary-faint, #FBF0F0)',
+              backgroundColor: 'var(--color-primary-faint)',
               border: '1px solid var(--color-border)',
               borderRadius: 'var(--radius-md, 6px)',
               textDecoration: 'none',
@@ -380,9 +380,9 @@ function CourseTableRow({
                 padding: '0.35rem 0.65rem',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#15803D',
-                backgroundColor: '#DCFCE7',
-                border: '1px solid #86EFAC',
+                color: 'var(--color-success)',
+                backgroundColor: 'var(--color-success-bg)',
+                border: '1px solid var(--color-success-border)',
                 borderRadius: 'var(--radius-md, 6px)',
                 cursor: isPublishing ? 'wait' : 'pointer',
                 display: 'inline-flex',
@@ -561,7 +561,7 @@ function CourseFilterBar({
                 fontSize: '0.88rem',
                 fontWeight: isActive ? 700 : 500,
                 backgroundColor: isActive ? 'var(--color-primary)' : 'transparent',
-                color: isActive ? '#FFFFFF' : 'var(--color-gray)',
+                color: isActive ? 'var(--color-white)' : 'var(--color-gray)',
                 border: 'none',
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -576,8 +576,8 @@ function CourseFilterBar({
                   fontSize: '0.75rem',
                   padding: '0.1rem 0.4rem',
                   borderRadius: '10px',
-                  backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#F3F4F6',
-                  color: isActive ? '#FFFFFF' : 'var(--color-charcoal)',
+                  backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'var(--bg-subtle)',
+                  color: isActive ? 'var(--color-white)' : 'var(--color-charcoal)',
                   fontWeight: 600,
                 }}
               >
@@ -682,7 +682,7 @@ function CourseEmptyState({
           width: 56,
           height: 56,
           borderRadius: '50%',
-          backgroundColor: 'var(--color-primary-pale, #F3E5E5)',
+          backgroundColor: 'var(--color-primary-pale)',
           color: 'var(--color-primary)',
           display: 'inline-flex',
           alignItems: 'center',
@@ -751,8 +751,8 @@ function CourseRestrictedAccessCard() {
             width: 64,
             height: 64,
             borderRadius: '50%',
-            backgroundColor: '#FEF3C7',
-            color: '#D97706',
+            backgroundColor: 'var(--color-warning-bg)',
+            color: 'var(--color-warning)',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1040,8 +1040,8 @@ export default function ContributorCourseManagementPage() {
             position: 'fixed',
             bottom: '2rem',
             right: '2rem',
-            backgroundColor: '#065F46',
-            color: '#FFFFFF',
+            backgroundColor: 'var(--color-success)',
+            color: 'var(--color-white)',
             padding: '0.85rem 1.35rem',
             borderRadius: 'var(--radius-md, 8px)',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
@@ -1065,9 +1065,9 @@ export default function ContributorCourseManagementPage() {
           role="alert"
           style={{
             marginBottom: '1.5rem',
-            backgroundColor: '#FEE2E2',
-            border: '1px solid #FCA5A5',
-            color: '#991B1B',
+            backgroundColor: 'var(--color-danger-bg)',
+            border: '1px solid var(--color-danger-border)',
+            color: 'var(--color-danger)',
             padding: '0.85rem 1.25rem',
             borderRadius: 'var(--radius-md, 8px)',
             fontSize: '0.92rem',
@@ -1081,7 +1081,7 @@ export default function ContributorCourseManagementPage() {
             type="button"
             onClick={() => setActionError(null)}
             aria-label="Dismiss error notification"
-            style={{ background: 'none', border: 'none', color: '#991B1B', cursor: 'pointer', fontWeight: 700 }}
+            style={{ background: 'none', border: 'none', color: 'var(--color-danger)', cursor: 'pointer', fontWeight: 700 }}
           >
             ✕
           </button>
@@ -1093,9 +1093,9 @@ export default function ContributorCourseManagementPage() {
           role="alert"
           style={{
             marginBottom: '1.5rem',
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #F87171',
-            color: '#B91C1C',
+            backgroundColor: 'var(--color-danger-bg)',
+            border: '1px solid var(--color-danger)',
+            color: 'var(--color-danger)',
             padding: '1rem 1.25rem',
             borderRadius: 'var(--radius-md, 8px)',
             display: 'flex',
@@ -1143,7 +1143,7 @@ export default function ContributorCourseManagementPage() {
           active={activeTab === 'all'}
           color="var(--color-charcoal)"
           activeBorderColor="var(--color-primary)"
-          iconBg="var(--color-primary-pale, #F3E5E5)"
+          iconBg="var(--color-primary-pale)"
           iconColor="var(--color-primary)"
           onClick={() => setActiveTab('all')}
           icon={
@@ -1159,10 +1159,10 @@ export default function ContributorCourseManagementPage() {
           count={loading ? '—' : metrics.published}
           subtitle="Live for readers platform-wide"
           active={activeTab === 'published'}
-          color="#15803D"
-          activeBorderColor="#15803D"
-          iconBg="#DCFCE7"
-          iconColor="#15803D"
+          color="var(--color-success)"
+          activeBorderColor="var(--color-success)"
+          iconBg="var(--color-success-bg)"
+          iconColor="var(--color-success)"
           onClick={() => setActiveTab('published')}
           icon={
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
@@ -1176,10 +1176,10 @@ export default function ContributorCourseManagementPage() {
           count={loading ? '—' : metrics.drafts}
           subtitle="Unpublished version snapshots"
           active={activeTab === 'draft'}
-          color="#8B0000"
-          activeBorderColor="#D97706"
-          iconBg="#FEF3C7"
-          iconColor="#D97706"
+          color="var(--color-primary)"
+          activeBorderColor="var(--color-warning)"
+          iconBg="var(--color-warning-bg)"
+          iconColor="var(--color-warning)"
           onClick={() => setActiveTab('draft')}
           icon={
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
@@ -1194,10 +1194,10 @@ export default function ContributorCourseManagementPage() {
           count={loading ? '—' : metrics.archived}
           subtitle="Retired / deprecated curricula"
           active={activeTab === 'archived'}
-          color="#706B6B"
-          activeBorderColor="#706B6B"
-          iconBg="#F3F4F6"
-          iconColor="#706B6B"
+          color="var(--color-gray)"
+          activeBorderColor="var(--color-gray)"
+          iconBg="var(--bg-subtle)"
+          iconColor="var(--color-gray)"
           onClick={() => setActiveTab('archived')}
           icon={
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
