@@ -43,6 +43,18 @@ Truy cập website tại http://localhost:3000 và API tại
 http://localhost:8080/api/v1/categories. Các tài khoản test được nhóm cấp riêng.
 Đăng ký hoặc tạo nội dung sẽ ghi vào database dùng chung.
 
+## Đăng nhập bằng Google (tùy chọn)
+
+Nút "Continue with Google" cần OAuth client riêng, không có thì nút báo "chưa cấu hình".
+
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth client ID (Web application).
+2. Authorized redirect URI: `http://localhost:3000/api/auth/google/callback`. Nếu app ở chế độ Testing, thêm email của bạn vào Test users.
+3. Điền vào `backend/.env` (không commit): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback`.
+4. `docker compose up -d --force-recreate app nginx`, rồi mở http://localhost:3000/login.
+
+Chỉ dùng http://localhost:3000 cho cả đăng nhập và duyệt web (cookie không chia sẻ giữa các địa chỉ khác nhau).
+Email Google chưa có tài khoản sẽ tạo tài khoản `active`, nhưng chỉ với tên miền được phép: biến `GOOGLE_ALLOWED_DOMAINS` (mặc định chỉ `*.edu,*.edu.vn`; muốn thử bằng Gmail thì đặt `GOOGLE_ALLOWED_DOMAINS=gmail.com,*.edu,*.edu.vn`; `*.edu` khớp mọi tên miền kết thúc bằng `.edu`; để trống = không giới hạn). Chỉ chấp nhận email mà Google bảo chứng: Gmail, hoặc email Google Workspace có tên miền trùng tên miền Workspace của tài khoản (biến `GOOGLE_REQUIRE_AUTHORITATIVE_EMAIL`, mặc định bật). Tài khoản Google cá nhân đăng ký bằng email khác (ví dụ email trường không dùng Workspace) bị từ chối. Giới hạn tài khoản mới: `GOOGLE_MAX_NEW_ACCOUNTS_PER_IP` (mặc định 3 mỗi IP mỗi ngày, chỉ có tác dụng khi API thấy IP thật của khách, xem ADR) và `GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR` (mặc định 30 tài khoản mới mỗi giờ cho cả hệ thống). Admin xem tài khoản mới ở trang Users (mới nhất lên đầu, lọc theo ngày tham gia) và khóa được tài khoản đáng ngờ. Tài khoản đã có và `active` thì không bị giới hạn tên miền; tài khoản `pending`, `inactive`, `banned` bị từ chối.
+
 ## Kiểm tra và xử lý lỗi
 
 ```powershell

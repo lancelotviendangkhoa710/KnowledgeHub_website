@@ -54,7 +54,7 @@ Identity/Auth, Content, and Learning progress endpoints are documented below.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
 | --- | --- | ---: | ---: | --- |
-| Identity/Auth | TEAM_MEMBER_A | 10 | 10 | AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
+| Identity/Auth | TEAM_MEMBER_A | 12 | 12 | AUTH-07 Google sign-in (2 browser routes); AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
 | Content | TEAM_MEMBER_B | 21 | 21 | Implemented in routes/api/content.php; verified with 37 tests |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 11 | 0 | AI-01..03 V1 implemented in routes/api/ai.php; contract is a V1 draft pending approval; chat is feature-flagged (`AI_CHAT_ENABLED=false`); owner still TBD |
@@ -129,6 +129,18 @@ normalization, duplicate and soft-deleted email behavior, pending-login
 rejection, guest-only authorization failures, login throttling, token issuance,
 and current-token-only revocation.
 
+### IMPLEMENTED - GET `/api/auth/google/redirect` and `/api/auth/google/callback` (AUTH-07)
+
+Browser navigations for "Continue with Google" (decision: `docs/decisions/2026-11-13-google-sign-in.md`).
+They are web routes, not JSON endpoints, and are reached through the same `/api` proxy.
+
+- `redirect`: `302` to Google's consent screen. Without `GOOGLE_CLIENT_ID` it answers `302 /login?error=google_not_configured`.
+- `callback`: needs the `state` Google echoes back (no per-IP throttle: behind the proxy all visitors share one IP). Always answers `302` to a relative URL:
+  - `/login` on success: a cookie session is started (same limits as the password login) and the login page forwards the signed-in visitor.
+  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_email_unconfirmed` (verified, but Google does not vouch for ownership: not Gmail and no matching hosted domain), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`) or `google_too_many_signups` (the per-IP or overall hourly limit on new accounts is reached).
+- A verified email without an account, on an allowed domain (default `*.edu`, `*.edu.vn`; configurable, empty = no limit) and under the new-account limits (per public IP per day, default 3; overall per hour, default 30), creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
+- A Google-only account has no usable password, so password login, change-password, account deletion and admin role changes (which ask for the current password) are not possible for it yet.
+
 ### IMPLEMENTED - GET `/api/me`
 
 Requires a Sanctum bearer token. Returns `200` with `data.user`
@@ -166,8 +178,9 @@ returns `422`. Throttled to 6 requests per minute.
 
 Admin only (`403` for User/Contributor, `401` for Guest). Query: `status`
 (`active|inactive|banned|pending`), `role` (`user|contributor|admin`),
-`search` (name/email substring, max 100), `per_page` (1-100, default 20).
-Soft-deleted users are excluded. Returns
+`search` (name/email substring, max 100), `per_page` (1-100, default 20),
+`sort` (`oldest` default, or `newest`) and `created_within_days` (1-365, only users who joined
+in the last N days; used to review new sign-ups). Soft-deleted users are excluded. Returns
 `{ status, data: [user...], meta: { current_page, last_page, per_page, total } }`.
 
 ### IMPLEMENTED - GET `/api/admin/users/{id}`

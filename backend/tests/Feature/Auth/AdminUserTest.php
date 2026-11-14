@@ -86,6 +86,24 @@ class AdminUserTest extends TestCase
         $this->withToken($token)->getJson('/api/admin/users?status=bogus')->assertUnprocessable();
     }
 
+    public function test_admin_can_review_new_accounts_newest_first_within_a_time_window(): void
+    {
+        $admin = $this->createUser('admin@example.com', 'active', 'admin');
+        $token = $admin->createToken('t')->plainTextToken;
+        $old = $this->createUser('old@example.com');
+        $recent = $this->createUser('recent@example.com');
+        \Illuminate\Support\Facades\DB::table('users')->where('id', $old->id)->update(['created_at' => now()->subDays(40)]);
+        \Illuminate\Support\Facades\DB::table('users')->where('id', $recent->id)->update(['created_at' => now()->subDay()]);
+
+        $emails = fn ($query) => collect($this->withToken($token)->getJson("/api/admin/users?{$query}")->assertOk()->json('data'))->pluck('email')->all();
+
+        $this->assertSame(['old@example.com', 'recent@example.com', 'admin@example.com'], $emails('sort=oldest'));
+        $this->assertSame(['admin@example.com', 'recent@example.com', 'old@example.com'], $emails('sort=newest'));
+        $this->assertNotContains('old@example.com', $emails('sort=newest&created_within_days=7'));
+        $this->withToken($token)->getJson('/api/admin/users?created_within_days=0')->assertUnprocessable();
+        $this->withToken($token)->getJson('/api/admin/users?sort=sideways')->assertUnprocessable();
+    }
+
     public function test_admin_views_user_and_deleted_or_malformed_ids_return_404(): void
     {
         $token = $this->createUser('admin@example.com', 'active', 'admin')->createToken('t')->plainTextToken;

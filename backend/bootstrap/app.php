@@ -16,6 +16,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Behind a proxy (Next.js /api rewrite, nginx) the client IP is only visible in X-Forwarded-For.
+        // List the proxy addresses (comma separated, CIDR allowed) in TRUSTED_PROXIES; never trust "*"
+        // when the API is reachable directly, a client could then fake its IP. Empty = trust none.
+        // Set it as a real process environment variable (Compose environment/env_file, Render): with a cached
+        // config (config:cache) the .env file is not read, and this runs before config() is available.
+        $trusted = array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES')))));
+        // Laravel only accepts the wildcard as the plain string '*' (an array is read as a list of IPs).
+        $middleware->trustProxies(at: $trusted === ['*'] ? '*' : ($trusted ?: null));
+
         $middleware->statefulApi();
         $middleware->appendToGroup('api', EnforceSessionPolicy::class);
     })
