@@ -155,6 +155,16 @@ class GoogleLoginTest extends TestCase
         $this->get('/api/auth/google/callback')->assertRedirect('/login');
     }
 
+    public function test_someone_already_signed_in_is_sent_back_without_touching_google_or_accounts(): void
+    {
+        $member = $this->createUser('member2@example.com', 'active');
+        Socialite::shouldReceive('driver')->never();
+
+        $this->actingAs($member, 'web')->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertDatabaseCount('users', 1);
+    }
+
     public function test_google_failure_goes_back_to_login(): void
     {
         $provider = Mockery::mock(Provider::class);

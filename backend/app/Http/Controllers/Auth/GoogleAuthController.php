@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Exceptions\Auth\GoogleSignInRefused;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\Auth\AuthService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Laravel\Socialite\Facades\Socialite;
@@ -31,6 +33,14 @@ class GoogleAuthController extends Controller
 
     public function callback(Request $request): RedirectResponse
     {
+        // Same guest-only rule as password login (UserPolicy::login). Someone who is already signed in is
+        // sent back to the login page, which forwards them, instead of seeing a 403 page.
+        try {
+            $this->authorize('login', User::class);
+        } catch (AuthorizationException) {
+            return $this->toLogin();
+        }
+
         try {
             $google = Socialite::driver('google')->user();
         } catch (Throwable) {
