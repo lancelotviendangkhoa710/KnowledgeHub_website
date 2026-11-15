@@ -7,8 +7,8 @@ export default function AuthShell({ children }: { children: ReactNode }) {
     <div className={styles.auth}>
       <aside className={styles.art} aria-hidden="true">
         <div className={styles.disc} />
-        <h2>Tiếp tục từ chỗ bạn đã dừng</h2>
-        <p>Tiến độ, khóa học đã lưu và lộ trình của bạn được giữ nguyên.</p>
+        <h2>KnowledgeHub</h2>
+        <p>Nền tảng học tập có chọn lọc, kèm trợ lý AI.</p>
       </aside>
       <div className={styles.formCol}>
         <div className={styles.box}>{children}</div>

@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { ChangeEvent, FormEvent, useState } from 'react';
+import { registerErrorText, registerFieldError } from '@/components/auth/authErrors';
+import GoogleButton from '@/components/auth/GoogleButton';
 import AuthShell from '@/components/auth/AuthShell';
 import styles from '@/components/auth/authForm.module.css';
 import { register } from '@/lib/auth';
@@ -24,13 +26,14 @@ export default function RegisterPage() {
     setSubmitting(true);
 
     try {
-      const response = await register(form);
-      setMessage(response.message);
+      await register(form);
+      // Lời nhắn của máy chủ là tiếng Anh nên dùng câu cố định.
+      setMessage('Đã tạo tài khoản. Tài khoản đang chờ xác minh trước khi đăng nhập.');
       setForm({ name: '', email: '', password: '', password_confirmation: '' });
     } catch (error) {
-      const response = error as { errors?: FieldErrors; message?: string };
-      setErrors(response.errors ?? {});
-      setMessage(response.message ?? 'Không tạo được tài khoản. Vui lòng thử lại.');
+      const fieldErrors = (error as { errors?: FieldErrors }).errors ?? {};
+      setErrors(Object.fromEntries(Object.entries(fieldErrors).map(([key, list]) => [key, [registerFieldError(list[0] ?? '')]])));
+      setMessage(registerErrorText(error));
     } finally {
       setSubmitting(false);
     }
@@ -62,6 +65,8 @@ export default function RegisterPage() {
           <input id="au-pass2" name="password_confirmation" type="password" value={form.password_confirmation} onChange={setField('password_confirmation')} autoComplete="new-password" required />
         </div>
         <button className={`${styles.btn} ${styles.full}`} type="submit" disabled={submitting}>{submitting ? 'Đang tạo tài khoản...' : 'Tạo tài khoản'}</button>
+        <div className={styles.or}>hoặc</div>
+        <GoogleButton label="Đăng ký bằng Google" />
         <p className={styles.sw}>Đã có tài khoản? <Link href="/login">Đăng nhập</Link></p>
       </form>
     </AuthShell>

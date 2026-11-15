@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { loginErrorText } from '@/components/auth/authErrors';
+import GoogleButton from '@/components/auth/GoogleButton';
 import AuthShell from '@/components/auth/AuthShell';
 import styles from '@/components/auth/authForm.module.css';
 import { login, probeSession } from '@/lib/auth';
@@ -95,8 +97,7 @@ export default function LoginPage() {
       const targetUrl = getSafeRedirectUrl(searchParams?.get('redirect') ?? null);
       router.push(targetUrl);
     } catch (error) {
-      const response = error as { message?: string; errors?: Record<string, string[]> };
-      setMessage(response.errors?.email?.[0] ?? response.message ?? 'Không đăng nhập được. Hãy kiểm tra thông tin đăng nhập và trạng thái tài khoản.');
+      setMessage(loginErrorText(error));
     } finally {
       setSubmitting(false);
     }
@@ -118,13 +119,7 @@ export default function LoginPage() {
         </div>
         <button className={`${styles.btn} ${styles.full}`} type="submit" disabled={submitting}>{submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</button>
         <div className={styles.or}>hoặc</div>
-        {/* Full-page navigation on purpose: Google's consent screen is not an XHR. */}
-        <a className={styles.google} href="/api/auth/google/redirect" onClick={parkRedirect}>
-          {/* Logo chữ G chính thức của Google, giữ nguyên màu, không vẽ lại. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/google-g.png" width={20} height={20} alt="" />
-          Đăng nhập bằng Google
-        </a>
+        <GoogleButton onClick={parkRedirect} />
         <p className={styles.sw}>Chưa có tài khoản? <Link href="/register">Đăng ký</Link></p>
       </form>
     </AuthShell>

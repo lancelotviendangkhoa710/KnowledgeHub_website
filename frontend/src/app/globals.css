@@ -704,4 +704,4 @@ body[data-screen="tro-ly"] .kh-foot { display: none; }
 }
 
 /* UX-02: màn đăng nhập và đăng ký ẩn điều hướng chính và nút Studio (mockup #dang-nhap) */
-.kh-top--auth .kh-nav, .kh-top--auth .kh-studio { display: none; }
+.kh-top--auth .kh-nav, .kh-top--auth .kh-studio, .kh-top--auth .kh-auth { display: none; }
