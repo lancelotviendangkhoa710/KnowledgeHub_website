@@ -16,11 +16,11 @@ export function useEditorFormatting(content: string, setContent: Dispatch<SetSta
   const handleInsertCallout = (kind: 'NOTE' | 'TIP' | 'WARNING') => {
     let snippet = '';
     if (kind === 'NOTE') {
-      snippet = `\n\n> [!NOTE]\n> Lưu ý: nêu bối cảnh quan trọng, điều kiện bắt buộc hoặc kiến thức cần có.\n\n`;
+      snippet = `\n\n> [!NOTE]\n> Nêu bối cảnh quan trọng, điều kiện bắt buộc hoặc kiến thức cần có.\n\n`;
     } else if (kind === 'TIP') {
-      snippet = `\n\n> [!TIP]\n> Mẹo: nêu cách làm được khuyến nghị, cách tối ưu hoặc số liệu so sánh.\n\n`;
+      snippet = `\n\n> [!TIP]\n> Nêu cách làm được khuyến nghị, cách tối ưu hoặc số liệu so sánh.\n\n`;
     } else if (kind === 'WARNING') {
-      snippet = `\n\n> [!WARNING]\n> Cảnh báo: nêu rủi ro vận hành, thay đổi gây lỗi hoặc cạm bẫy khi xử lý đồng thời.\n\n`;
+      snippet = `\n\n> [!WARNING]\n> Nêu rủi ro vận hành, thay đổi gây lỗi hoặc cạm bẫy khi xử lý đồng thời.\n\n`;
     }
     insertMarkdown(snippet, '', '');
     setShowCalloutDropdown(false);
