@@ -46,6 +46,6 @@ export function errorMessage(error: unknown, fallback: string): string {
   const first = e.errors ? Object.values(e.errors)[0]?.[0] : undefined;
   if (e.status === 401) return 'Your session has expired. Please sign in again.';
   if (e.status === 403) return 'You do not have permission to do that.';
-  if (e.status === 429) return 'Too many attempts. Please wait a minute and try again.';
+  if (e.status === 429) return 'Thử quá nhiều lần. Vui lòng đợi một phút rồi thử lại.';
   return first ?? e.message ?? fallback;
 }
