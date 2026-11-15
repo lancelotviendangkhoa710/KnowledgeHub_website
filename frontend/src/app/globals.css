@@ -666,6 +666,7 @@ input::placeholder, textarea::placeholder {
 
 @media (max-width: 860px) {
   .kh-top__inner { flex-wrap: wrap; gap: 8px 12px; padding-top: 10px; padding-bottom: 10px; }
+  .kh-top__right, .kh-auth { flex-wrap: wrap; }
   .kh-nav { order: 3; width: 100%; margin-left: 0; overflow-x: auto; }
   .kh-foot nav { margin-left: 0; gap: 32px; }
 }

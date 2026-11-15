@@ -52,6 +52,8 @@ export default function HomeLatestCourses() {
       </div>
       {failed ? (
         <p className={s.muted}>Chưa tải được danh sách khóa học. Bạn vẫn có thể <Link href="/courses">mở thư viện khóa học</Link>.</p>
+      ) : total === null ? (
+        <p className={s.muted} role="status">Đang tải khóa học...</p>
       ) : (
         <div className={s.grid}>
           {articles.map((article) => (

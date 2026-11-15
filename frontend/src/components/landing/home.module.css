@@ -37,7 +37,7 @@
 .secHead a:hover { text-decoration: underline; }
 .muted { color: var(--ink-2); }
 .muted a { color: var(--brand); text-decoration: underline; }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 16px 0 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 20px; padding: 16px 0 8px; }
 
 .pathRow { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--line); }
 .pathRow:first-child { border-top: 1px solid var(--line); }
