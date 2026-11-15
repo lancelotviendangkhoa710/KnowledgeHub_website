@@ -40,7 +40,7 @@ export default function MyRoadmapsPage() {
         setRoadmaps([]);
         router.replace('/login?redirect=%2Flearning%2Fmy-roadmaps');
       } else {
-        setError('Could not load your roadmaps. Check your connection and retry.');
+        setError('Không tải được lộ trình của bạn. Hãy kiểm tra kết nối rồi thử lại.');
       }
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export default function MyRoadmapsPage() {
   }, []);
 
   async function remove(roadmap: LearningRoadmap): Promise<void> {
-    if (deletingRef.current.has(roadmap.id) || !window.confirm(`Delete roadmap "${roadmap.title}" and all its steps?`)) return;
+    if (deletingRef.current.has(roadmap.id) || !window.confirm(`Xóa lộ trình “${roadmap.title}” cùng toàn bộ các bước?`)) return;
     deletingRef.current.add(roadmap.id);
     setDeletingIds([...deletingRef.current]);
     setError(null);
@@ -65,7 +65,7 @@ export default function MyRoadmapsPage() {
       await roadmapClient.remove(roadmap.id);
       setRoadmaps((current) => current.filter((entry) => entry.id !== roadmap.id));
     } catch {
-      setError('Could not delete this roadmap. Reload and retry.');
+      setError('Không xóa được lộ trình này. Hãy tải lại trang rồi thử lại.');
     } finally {
       deletingRef.current.delete(roadmap.id);
       setDeletingIds([...deletingRef.current]);
@@ -75,8 +75,7 @@ export default function MyRoadmapsPage() {
   const aiRoadmaps = roadmaps.filter((roadmap) => roadmap.origin === 'ai');
   const previous = roadmaps.filter((roadmap) => roadmap.origin !== 'ai');
 
-  function renderList(entries: LearningRoadmap[], empty: string) {
-    if (entries.length === 0) return <p className={styles.empty}>{empty}</p>;
+  function renderList(entries: LearningRoadmap[]) {
     return <div className={styles.list}>{entries.map((roadmap) => (
       <RoadmapCard
         key={roadmap.id}
@@ -89,24 +88,39 @@ export default function MyRoadmapsPage() {
   }
 
   return (
-    <div className={`container ${styles.page}`}>
-      <header className={styles.header}>
-        <div><span className="badge">Your learning paths</span><h1>My AI Roadmaps</h1><p>Continue your personalized plans and track each step as you learn.</p></div>
-        <div className={styles.actions}><Link className="btn btn-primary" href="/ai/companion">Create Roadmap with AI</Link><Link className="btn btn-secondary" href="/learning/roadmaps">Browse templates</Link></div>
+    <div className={styles.wrap}>
+      <header className={styles.head}>
+        <div className={styles.row}>
+          <div>
+            <h1>Lộ trình của tôi</h1>
+            <p>Tiếp tục kế hoạch học đã tạo và theo dõi từng bước.</p>
+          </div>
+          <div className={styles.btns}>
+            <Link className={styles.btn} href="/ai/companion">Tạo lộ trình bằng AI</Link>
+            <Link className={`${styles.btn} ${styles.btnGhost}`} href="/learning/roadmaps">Xem lộ trình mẫu</Link>
+          </div>
+        </div>
       </header>
 
-      {error && <div className={styles.error} role="alert">{error} <button type="button" onClick={() => void load()}>Retry</button></div>}
-      {loading ? <p role="status">Loading your roadmaps…</p> : <>
-        <section aria-labelledby="ai-roadmaps-heading" className={styles.section}>
-          <h2 id="ai-roadmaps-heading">My AI Roadmaps <span>{aiRoadmaps.length}</span></h2>
-          {renderList(aiRoadmaps, 'No AI roadmaps yet. Open AI Companion and create your first plan.')}
-        </section>
-        <section aria-labelledby="previous-roadmaps-heading" className={styles.section}>
-          <h2 id="previous-roadmaps-heading">Previously saved <span>{previous.length}</span></h2>
-          <p className={styles.sectionHint}>Older roadmaps are preserved here because their creation method was not recorded.</p>
-          {renderList(previous, 'No previously saved roadmaps.')}
-        </section>
-      </>}
+      {error && <div className={styles.error} role="alert"><span>{error}</span><button type="button" onClick={() => void load()}>Thử lại</button></div>}
+      {loading ? <p role="status" className={styles.state}>Đang tải lộ trình của bạn…</p> : (
+        <div className={styles.mine}>
+          <section aria-label="Lộ trình do trợ lý AI tạo">
+            {aiRoadmaps.length === 0
+              ? <p className={styles.emptyMain}>Chưa có lộ trình AI nào. Mở trợ lý AI và tạo kế hoạch đầu tiên của bạn.</p>
+              : renderList(aiRoadmaps)}
+          </section>
+          <aside className={styles.aside} aria-labelledby="previous-roadmaps-heading">
+            <h2 id="previous-roadmaps-heading">Đã lưu trước đây</h2>
+            {previous.length === 0
+              ? <p className={styles.empty}>Chưa có lộ trình nào được lưu. Những lộ trình cũ không ghi rõ cách tạo sẽ hiện ở đây.</p>
+              : <>
+                  <p className={styles.hint}>Các lộ trình cũ được giữ lại vì không ghi rõ cách tạo.</p>
+                  {renderList(previous)}
+                </>}
+          </aside>
+        </div>
+      )}
     </div>
   );
 }
