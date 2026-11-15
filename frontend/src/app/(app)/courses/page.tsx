@@ -327,7 +327,8 @@ function CoursesCatalog() {
     const title = version?.title.toLowerCase() || '';
     const content = version?.content.toLowerCase() || '';
     const q = searchQuery.toLowerCase();
-    return !q || title.includes(q) || content.includes(q);
+    // Cũng khớp tên thẻ, để các gợi ý "Chủ đề hay tìm" (lấy từ tên thẻ) luôn ra đúng khóa có thẻ đó.
+    return !q || title.includes(q) || content.includes(q) || (article.tags ?? []).some((t) => t.name.toLowerCase().includes(q));
   });
 
   /** True when the shown results came from a different page/category than the URL now asks for. */

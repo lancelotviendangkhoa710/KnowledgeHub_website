@@ -27,7 +27,8 @@ export const metadata: Metadata = {
 };
 
 // Chạy trước khi vẽ trang để không nháy sai màu sáng/tối (khóa localStorage: kh-theme).
-const themeScript = `try{var r=document.documentElement,s=localStorage.getItem('kh-theme');r.setAttribute('data-theme',s==='light'||s==='dark'?s:(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))}catch(e){}`;
+// Chỉ phần đọc localStorage nằm trong try: bị chặn lưu trữ vẫn đặt data-theme theo hệ điều hành.
+const themeScript = `var r=document.documentElement,s=null;try{s=localStorage.getItem('kh-theme')}catch(e){}r.setAttribute('data-theme',s==='light'||s==='dark'?s:(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'))`;
 
 export default function RootLayout({
   children,
