@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from 'react';
 import styles from '@/components/auth/authForm.module.css';
 import { accountClient, errorMessage } from '@/lib/accountClient';
 import type { AuthUser } from '@/lib/auth';
@@ -23,6 +23,8 @@ export default function AccountPage() {
   const [user, setUser] = useState<(AuthUser & { created_at?: string | null }) | null>(getCurrentUser);
 
   const [name, setName] = useState(user?.name ?? '');
+  const nameTouched = useRef(false); // true once the visitor has typed in the name field
+  const userId = user?.id ?? null;
   const [profileNotice, setProfileNotice] = useState<Notice>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [refreshing, setRefreshing] = useState(false); // /me in flight: cached data may be stale
@@ -39,8 +41,11 @@ export default function AccountPage() {
   // Follow sign-out / sign-in done elsewhere (e.g. the header).
   useEffect(() => subscribeCurrentUser(() => setUser(getCurrentUser())), []);
 
+  // Runs again when the user first appears (session restored after load), not only on mount.
   useEffect(() => {
-    if (!getCurrentUser()) return;
+    const cachedUser = getCurrentUser();
+    if (!cachedUser) return;
+    if (!nameTouched.current) setName(cachedUser.name);
     const tokenAtRequest = getAccessToken();
     setRefreshing(true);
     accountClient.me().then((response) => {
@@ -62,7 +67,7 @@ export default function AccountPage() {
       }
       setProfileNotice({ kind: 'error', text: errorMessage(error, 'Không tải lại được hồ sơ của bạn.') });
     }).finally(() => setRefreshing(false));
-  }, []);
+  }, [userId]);
 
   if (!user) {
     return (
@@ -148,7 +153,7 @@ export default function AccountPage() {
         <NoticeLine notice={profileNotice} />
         <div className={styles.field}>
           <label htmlFor="ac-name">Họ và tên</label>
-          <input id="ac-name" value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" maxLength={255} required />
+          <input id="ac-name" value={name} onChange={(event) => { nameTouched.current = true; setName(event.target.value); }} autoComplete="name" maxLength={255} required />
         </div>
         <div className={styles.field}>
           <label htmlFor="ac-mail">Email</label>

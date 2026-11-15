@@ -114,7 +114,7 @@ export default function AuthActions() {
         <div className={styles.menu} role="menu" aria-label="Tài khoản" ref={menuRef} onKeyDown={onMenuKeyDown}>
           <div className={styles.who}>
             <b>{user.name}</b>
-            <small>{user.email}</small>
+            <small title={user.email}>{user.email}</small>
           </div>
           <Link role="menuitem" href="/account" onClick={() => setOpen(false)}>Tài khoản</Link>
           {user.roles.includes('admin') && (
