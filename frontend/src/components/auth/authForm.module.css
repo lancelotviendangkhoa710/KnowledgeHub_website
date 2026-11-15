@@ -1,0 +1,72 @@
+/* UX-02: đăng nhập, đăng ký và biểu mẫu tài khoản theo mockup (#dang-nhap, #tai-khoan). Chỉ dùng token. */
+.auth { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: calc(100vh - var(--head)); }
+.art { background: var(--hero); color: #fff; position: relative; overflow: hidden; padding: 64px; display: flex; flex-direction: column; justify-content: flex-end; }
+.disc { position: absolute; left: -90px; top: -110px; width: 280px; height: 280px; border-radius: 50%; background: var(--mark); }
+.art h2 { color: #fff; font-size: 32px; font-weight: 800; max-width: 16ch; position: relative; }
+.art p { margin-top: 12px; color: rgba(255, 255, 255, .82); max-width: 40ch; position: relative; }
+.formCol { display: grid; place-items: center; padding: 40px 24px; }
+.box { width: 100%; max-width: 380px; }
+.box h1 { font-size: 28px; font-weight: 800; margin-bottom: 6px; }
+.lead { color: var(--ink-2); margin-bottom: 24px; font-size: 14px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field[hidden] { display: none; }
+.field label { font-size: 14px; font-weight: 500; }
+.field input { height: 44px; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 0 14px; font: inherit; color: var(--ink); width: 100%; }
+.field input::placeholder { color: var(--ink-3); }
+.field input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.field input[readonly] { background: var(--surface-2); color: var(--ink-3); }
+.field input[aria-invalid="true"] { border-color: var(--danger); }
+.field small { color: var(--ink-3); font-size: 13px; }
+.field small.err { color: var(--danger); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: var(--r-pill); font: inherit; font-weight: 600; font-size: 14px; background: var(--btn); color: var(--btn-ink); border: 1px solid transparent; cursor: pointer; white-space: nowrap; }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn.ghost:hover:not(:disabled) { border-color: var(--ink-3); }
+.btn.danger { background: var(--danger); color: var(--surface); }
+.btn.ghost.danger { background: var(--surface); color: var(--danger); }
+.full { width: 100%; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--ink-3); font-size: 13px; margin: 16px 0; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.sw { margin-top: 20px; font-size: 14px; color: var(--ink-2); text-align: center; }
+.sw a { color: var(--brand); font-weight: 600; }
+.sw a:hover { text-decoration: underline; }
+
+.notice, .error { margin-bottom: 16px; padding: 10px 14px; border-radius: 8px; font-size: 14px; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); }
+.error { color: var(--danger); border-color: var(--danger); }
+
+/* Nút Google theo hướng dẫn thương hiệu: 44px, chữ 14px/500, đệm 12 / 10 / 12px, sáng và tối. */
+.google { display: flex; align-items: center; justify-content: center; width: 100%; height: 44px; padding: 0 12px 0 12px; border-radius: var(--r-pill); border: 1px solid #747775; background: #fff; color: #1f1f1f; font-size: 14px; font-weight: 500; line-height: 20px; white-space: nowrap; }
+.google img { width: 20px; height: 20px; margin-right: 10px; flex: none; }
+.google:hover { background: color-mix(in srgb, #1f1f1f 8%, #fff); }
+:global(:root[data-theme="dark"]) .google { background: #131314; border-color: #8e918f; color: #e3e3e3; }
+:global(:root[data-theme="dark"]) .google:hover { background: color-mix(in srgb, #e3e3e3 8%, #131314); }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .google { background: #131314; border-color: #8e918f; color: #e3e3e3; }
+  :global(:root:not([data-theme="light"])) .google:hover { background: color-mix(in srgb, #e3e3e3 8%, #131314); }
+}
+
+/* Tài khoản */
+.acct { max-width: 720px; margin: 0 auto; padding: 24px 24px 72px; display: flex; flex-direction: column; gap: 20px; }
+.acct h1 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 800; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; }
+.panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.panel > p { color: var(--ink-2); font-size: 14px; margin-bottom: 16px; }
+.who { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.who b { display: block; overflow-wrap: anywhere; }
+.who .mu { color: var(--ink-3); font-size: 13px; }
+.avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--mark); color: var(--mark-ink); display: grid; place-items: center; font-weight: 700; font-family: var(--display); flex: none; }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .art { min-height: 220px; padding: 32px; }
+  .disc { width: 120px; height: 120px; left: -40px; top: -50px; }
+}
+@media (max-width: 400px) {
+  .acct { padding-left: 16px; padding-right: 16px; }
+  .panel { padding: 20px 16px; }
+  .formCol { padding: 32px 16px; }
+}
