@@ -13,21 +13,21 @@ type CvAction = 'download' | 'delete' | 'save';
 const MAX_PDF_BYTES = 2 * 1024 * 1024;
 const CUSTOM_CHOICE = '__custom__';
 const CAREER_GROUPS = [
-  { label: 'Software development', roles: ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer', 'Desktop Application Developer'] },
-  { label: 'Cloud and platform', roles: ['DevOps Engineer', 'Site Reliability Engineer', 'Cloud Engineer', 'Platform Engineer', 'Infrastructure Engineer'] },
-  { label: 'Data', roles: ['Data Engineer', 'Data Analyst', 'Business Intelligence Analyst', 'Data Scientist', 'Machine Learning Engineer'] },
-  { label: 'Artificial intelligence', roles: ['AI Engineer', 'NLP Engineer', 'Computer Vision Engineer', 'MLOps Engineer', 'AI Research Engineer'] },
-  { label: 'Cybersecurity', roles: ['Cybersecurity Analyst', 'Security Engineer', 'Application Security Engineer', 'Cloud Security Engineer', 'Penetration Tester'] },
-  { label: 'Quality assurance', roles: ['QA Engineer', 'Test Automation Engineer', 'Performance Test Engineer', 'Software Development Engineer in Test', 'Test Architect'] },
-  { label: 'Product and design', roles: ['Technical Product Manager', 'Technical Product Owner', 'UX Designer', 'UI Designer', 'UX Researcher'] },
-  { label: 'Architecture', roles: ['Software Architect', 'Solutions Architect', 'Enterprise Architect', 'Data Architect', 'Cloud Architect'] },
-  { label: 'IT operations', roles: ['IT Support Specialist', 'System Administrator', 'Network Engineer', 'Database Administrator', 'IT Operations Engineer'] },
-  { label: 'Specialized engineering', roles: ['Game Developer', 'Embedded Systems Engineer', 'Blockchain Developer', 'AR/VR Developer', 'IoT Engineer'] },
+  { label: 'Phát triển phần mềm', roles: ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer', 'Desktop Application Developer'] },
+  { label: 'Đám mây và nền tảng', roles: ['DevOps Engineer', 'Site Reliability Engineer', 'Cloud Engineer', 'Platform Engineer', 'Infrastructure Engineer'] },
+  { label: 'Dữ liệu', roles: ['Data Engineer', 'Data Analyst', 'Business Intelligence Analyst', 'Data Scientist', 'Machine Learning Engineer'] },
+  { label: 'Trí tuệ nhân tạo', roles: ['AI Engineer', 'NLP Engineer', 'Computer Vision Engineer', 'MLOps Engineer', 'AI Research Engineer'] },
+  { label: 'An ninh mạng', roles: ['Cybersecurity Analyst', 'Security Engineer', 'Application Security Engineer', 'Cloud Security Engineer', 'Penetration Tester'] },
+  { label: 'Kiểm thử và chất lượng', roles: ['QA Engineer', 'Test Automation Engineer', 'Performance Test Engineer', 'Software Development Engineer in Test', 'Test Architect'] },
+  { label: 'Sản phẩm và thiết kế', roles: ['Technical Product Manager', 'Technical Product Owner', 'UX Designer', 'UI Designer', 'UX Researcher'] },
+  { label: 'Kiến trúc', roles: ['Software Architect', 'Solutions Architect', 'Enterprise Architect', 'Data Architect', 'Cloud Architect'] },
+  { label: 'Vận hành CNTT', roles: ['IT Support Specialist', 'System Administrator', 'Network Engineer', 'Database Administrator', 'IT Operations Engineer'] },
+  { label: 'Kỹ thuật chuyên biệt', roles: ['Game Developer', 'Embedded Systems Engineer', 'Blockchain Developer', 'AR/VR Developer', 'IoT Engineer'] },
 ] as const;
 
 function savedCvTime(value: string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? 'recently' : new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  return Number.isNaN(date.getTime()) ? 'gần đây' : new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
 type Props = { onBack: () => void };
@@ -91,8 +91,8 @@ export default function RoadmapForm({ onBack }: Props) {
       if (active && requestVersion === cvMutationVersionRef.current) setStoredCv(response.data);
     }).catch((caught) => {
       if (active && requestVersion === cvMutationVersionRef.current) setError(apiStatus(caught) === 401
-        ? 'Your session expired. Sign in again to manage your saved CV.'
-        : 'We could not check your saved CV. You can still create a preview.');
+        ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để quản lý CV đã lưu.'
+        : 'Không kiểm tra được CV đã lưu. Bạn vẫn có thể tạo bản xem trước.');
     }).finally(() => {
       if (active) setCvLoading(false);
     });
@@ -105,12 +105,12 @@ export default function RoadmapForm({ onBack }: Props) {
     if (!file) { setCvFile(null); return; }
     if (file.type !== 'application/pdf' || !file.name.toLowerCase().endsWith('.pdf')) {
       setCvFile(null);
-      setError('Choose a PDF file for your CV.');
+      setError('Hãy chọn tệp PDF cho CV của bạn.');
       return;
     }
     if (file.size > MAX_PDF_BYTES) {
       setCvFile(null);
-      setError('Your PDF CV must be 2 MB or smaller.');
+      setError('CV dạng PDF phải nhỏ hơn hoặc bằng 2 MB.');
       return;
     }
     setCvFile(file);
@@ -131,8 +131,8 @@ export default function RoadmapForm({ onBack }: Props) {
       URL.revokeObjectURL(url);
     } catch (caught) {
       setError(apiStatus(caught) === 401
-        ? 'Your session expired. Sign in again to download your saved CV.'
-        : 'We could not download your saved CV. Please retry.');
+        ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tải CV đã lưu.'
+        : 'Không tải được CV đã lưu. Vui lòng thử lại.');
     } finally {
       endCvAction();
     }
@@ -147,8 +147,8 @@ export default function RoadmapForm({ onBack }: Props) {
       setStoredCv(null);
     } catch (caught) {
       setError(apiStatus(caught) === 401
-        ? 'Your session expired. Sign in again to delete your saved CV.'
-        : 'We could not delete your saved CV. Please retry.');
+        ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để xóa CV đã lưu.'
+        : 'Không xóa được CV đã lưu. Vui lòng thử lại.');
     } finally {
       endCvAction();
     }
@@ -165,8 +165,8 @@ export default function RoadmapForm({ onBack }: Props) {
       setCvSaveFailed(false);
     } catch (caught) {
       setError(apiStatus(caught) === 401
-        ? 'Your session expired. Sign in again to save your CV.'
-        : 'We could not save your CV. Please retry.');
+        ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để lưu CV.'
+        : 'Không lưu được CV. Vui lòng thử lại.');
     } finally {
       endCvAction();
     }
@@ -176,11 +176,11 @@ export default function RoadmapForm({ onBack }: Props) {
     event.preventDefault();
     if (inFlightRef.current || saveInFlightRef.current || cvActionRef.current !== null) return;
     if (!careerGoal.trim() || !currentLevel.trim()) {
-      setError('Choose your career goal and current level.');
+      setError('Hãy chọn mục tiêu nghề nghiệp và trình độ hiện tại.');
       return;
     }
     if (cvFile && (cvFile.type !== 'application/pdf' || cvFile.size > MAX_PDF_BYTES)) {
-      setError('Choose a PDF CV of 2 MB or less.');
+      setError('Hãy chọn CV dạng PDF từ 2 MB trở xuống.');
       return;
     }
     inFlightRef.current = true;
@@ -203,12 +203,12 @@ export default function RoadmapForm({ onBack }: Props) {
       if (!mountedRef.current) return;
       const status = apiStatus(caught);
       setError(status === 401
-        ? 'Your session expired. Sign in again to create a roadmap.'
+        ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tạo lộ trình.'
         : status === 422
-          ? (caught as { message?: string }).message ?? 'Please check your inputs and PDF CV, then retry.'
+          ? (caught as { message?: string }).message ?? 'Hãy kiểm tra lại thông tin và CV PDF rồi thử lại.'
           : status === 429
-            ? 'Too many previews. Please wait a minute and retry.'
-            : 'Roadmap generation is unavailable right now. Your form is still here; please retry.');
+            ? 'Bạn xem trước quá nhiều lần. Hãy đợi một phút rồi thử lại.'
+            : 'Tạo lộ trình đang tạm thời không khả dụng. Biểu mẫu của bạn vẫn còn đây, hãy thử lại sau.');
     } finally {
       inFlightRef.current = false;
       if (mountedRef.current) setLoading(false);
@@ -228,7 +228,7 @@ export default function RoadmapForm({ onBack }: Props) {
       if (saveCvConsent && cvFile) {
         if (!beginCvAction('save')) {
           setCvSaveFailed(true);
-          setError('Your roadmap was saved, but the CV save could not start. Recheck consent and retry below.');
+          setError('Lộ trình đã được lưu, nhưng chưa lưu được CV. Hãy kiểm tra lại đồng ý lưu CV và thử lại bên dưới.');
           return;
         }
         try {
@@ -240,7 +240,7 @@ export default function RoadmapForm({ onBack }: Props) {
         } catch {
           if (mountedRef.current) {
             setCvSaveFailed(true);
-            setError('Your roadmap was saved, but we could not save your CV. You can retry the CV save below.');
+            setError('Lộ trình đã được lưu, nhưng không lưu được CV. Bạn có thể thử lưu lại CV bên dưới.');
           }
         } finally {
           endCvAction();
@@ -250,10 +250,10 @@ export default function RoadmapForm({ onBack }: Props) {
       if (!mountedRef.current) return;
       const status = apiStatus(caught);
       setError(status === 401
-        ? 'Your session expired. Sign in again to save this roadmap.'
+        ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để lưu lộ trình này.'
         : status === 409 || status === 422
-          ? 'This preview has expired or its courses changed. Edit your details and generate a fresh preview.'
-          : 'We could not confirm the save. Retrying this preview is safe and will not create a duplicate.');
+          ? 'Bản xem trước đã hết hạn hoặc các khóa học đã thay đổi. Hãy chỉnh thông tin và tạo bản xem trước mới.'
+          : 'Chưa xác nhận được việc lưu. Bạn có thể thử lại an toàn, sẽ không tạo bản trùng.');
     } finally {
       saveInFlightRef.current = false;
       if (mountedRef.current) setSaving(false);
@@ -263,65 +263,65 @@ export default function RoadmapForm({ onBack }: Props) {
   if (savedId) {
     return <div ref={viewRef} className={styles.saved} role="status">
       <span className={styles.savedIcon} aria-hidden="true">✓</span>
-      <h2>Roadmap saved</h2>
-      <p>Your personalized roadmap is ready to revisit and track.</p>
+      <h2>Đã lưu lộ trình</h2>
+      <p>Lộ trình dành riêng cho bạn đã sẵn sàng để xem lại và theo dõi tiến độ.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      {cvSaveFailed && cvFile && <button className="btn btn-secondary" type="button" onClick={() => void saveSelectedCv()} disabled={!saveCvConsent || cvAction !== null}>{cvAction === 'save' ? 'Saving CV…' : 'Retry CV save'}</button>}
-      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>View My AI Roadmaps</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); setCvSaveFailed(false); setSaveCvConsent(false); }}>Create another roadmap</button><button className="btn btn-secondary" type="button" onClick={onBack}>Back to Chat</button></div>
+      {cvSaveFailed && cvFile && <button className="btn btn-secondary" type="button" onClick={() => void saveSelectedCv()} disabled={!saveCvConsent || cvAction !== null}>{cvAction === 'save' ? 'Đang lưu CV...' : 'Lưu lại CV'}</button>}
+      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>Xem lộ trình AI của tôi</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); setCvSaveFailed(false); setSaveCvConsent(false); }}>Tạo lộ trình khác</button><button className="btn btn-secondary" type="button" onClick={onBack}>Quay lại trò chuyện</button></div>
     </div>;
   }
 
   if (preview) {
     return <div ref={viewRef} className={styles.result}>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <div className={styles.resultToolbar}><span>Review your plan before saving</span><button className="btn btn-secondary" type="button" disabled={saving} onClick={() => { setPreview(null); setError(null); }}>Edit details</button></div>
-      <CompanionRoadmapPreview draft={preview.draft} saving={saving} onSave={() => void save()} onClose={onBack} closeLabel="Back to Chat" />
+      <div className={styles.resultToolbar}><span>Xem lại kế hoạch trước khi lưu</span><button className="btn btn-secondary" type="button" disabled={saving} onClick={() => { setPreview(null); setError(null); }}>Sửa thông tin</button></div>
+      <CompanionRoadmapPreview draft={preview.draft} saving={saving} onSave={() => void save()} onClose={onBack} closeLabel="Quay lại trò chuyện" />
     </div>;
   }
 
   return <div ref={viewRef} className={styles.formShell}>
-    <div className={styles.intro}><span className={styles.eyebrow}>Personalized learning plan</span><h2>Create Roadmap with AI</h2><p>Tell us where you want to go and what you can already do. We will find learning resources for your goal.</p></div>
+    <div className={styles.intro}><h2>Tạo lộ trình bằng AI</h2><p>Cho chúng tôi biết bạn muốn đi đến đâu và hiện đã làm được gì. Chúng tôi sẽ tìm tài nguyên học tập cho mục tiêu của bạn.</p></div>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <form className={styles.form} onSubmit={(event) => void submit(event)}>
-      <label className={styles.field}>Career goal <span>*</span><select required value={careerChoice} onChange={(event) => { const choice = event.target.value; setCareerChoice(choice); setCareerGoal(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
-        <option value="">Select an IT career</option>
+      <label className={styles.field}>Mục tiêu nghề nghiệp <span>*</span><select required value={careerChoice} onChange={(event) => { const choice = event.target.value; setCareerChoice(choice); setCareerGoal(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
+        <option value="">Chọn một nghề CNTT</option>
         {CAREER_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.roles.map((role) => <option key={role} value={role}>{role}</option>)}</optgroup>)}
-        <option value={CUSTOM_CHOICE}>Other career goal</option>
+        <option value={CUSTOM_CHOICE}>Mục tiêu nghề nghiệp khác</option>
       </select></label>
-      {careerChoice === CUSTOM_CHOICE && <label className={styles.field}>Describe your career goal <span>*</span><input required maxLength={500} value={careerGoal} onChange={(event) => setCareerGoal(event.target.value)} placeholder="e.g. Become a technical writer" disabled={loading} /></label>}
-      <label className={styles.field}>Current level <span>*</span><select required value={levelChoice} onChange={(event) => { const choice = event.target.value; setLevelChoice(choice); setCurrentLevel(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
-        <option value="">Select your level</option>
-        <option value="Beginner">Beginner</option>
-        <option value="Intermediate">Intermediate</option>
-        <option value="Advanced">Advanced</option>
-        <option value={CUSTOM_CHOICE}>Other / describe my level</option>
+      {careerChoice === CUSTOM_CHOICE && <label className={styles.field}>Mô tả mục tiêu nghề nghiệp <span>*</span><input required maxLength={500} value={careerGoal} onChange={(event) => setCareerGoal(event.target.value)} placeholder="Ví dụ: trở thành technical writer" disabled={loading} /></label>}
+      <label className={styles.field}>Trình độ hiện tại <span>*</span><select required value={levelChoice} onChange={(event) => { const choice = event.target.value; setLevelChoice(choice); setCurrentLevel(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
+        <option value="">Chọn trình độ của bạn</option>
+        <option value="Beginner">Mới bắt đầu</option>
+        <option value="Intermediate">Trung cấp</option>
+        <option value="Advanced">Nâng cao</option>
+        <option value={CUSTOM_CHOICE}>Khác, tôi tự mô tả trình độ</option>
       </select></label>
-      {levelChoice === CUSTOM_CHOICE && <label className={styles.field}>Describe your current level <span>*</span><input required maxLength={200} value={currentLevel} onChange={(event) => setCurrentLevel(event.target.value)} placeholder="e.g. Comfortable with Python, new to SQL" disabled={loading} /></label>}
-      <label className={styles.field}>Target job requirements (optional)<textarea maxLength={5000} rows={5} value={jobRequirements} onChange={(event) => setJobRequirements(event.target.value)} placeholder="Paste a job description or describe the skills the role needs" disabled={loading} /></label>
+      {levelChoice === CUSTOM_CHOICE && <label className={styles.field}>Mô tả trình độ hiện tại <span>*</span><input required maxLength={200} value={currentLevel} onChange={(event) => setCurrentLevel(event.target.value)} placeholder="Ví dụ: dùng Python thoải mái, mới học SQL" disabled={loading} /></label>}
+      <label className={styles.field}>Yêu cầu của công việc mục tiêu (tùy chọn)<textarea maxLength={5000} rows={5} value={jobRequirements} onChange={(event) => setJobRequirements(event.target.value)} placeholder="Dán mô tả công việc hoặc mô tả các kỹ năng vị trí đó cần" disabled={loading} /></label>
       <div className={styles.numberRow}>
-        <label className={styles.field}>Learning period (weeks) <span>*</span><input required type="number" min={1} max={104} value={weeks} onChange={(event) => setWeeks(event.target.value)} disabled={loading} /></label>
-        <label className={styles.field}>Hours per week <span>*</span><input required type="number" min={1} max={80} value={hoursPerWeek} onChange={(event) => setHoursPerWeek(event.target.value)} disabled={loading} /></label>
+        <label className={styles.field}>Thời gian học (tuần) <span>*</span><input required type="number" min={1} max={104} value={weeks} onChange={(event) => setWeeks(event.target.value)} disabled={loading} /></label>
+        <label className={styles.field}>Số giờ mỗi tuần <span>*</span><input required type="number" min={1} max={80} value={hoursPerWeek} onChange={(event) => setHoursPerWeek(event.target.value)} disabled={loading} /></label>
       </div>
-      <label className={styles.field}>CV (optional PDF, up to 2 MB)<input type="file" accept=".pdf,application/pdf" onChange={(event) => selectPdf(event.target.files?.[0] ?? null)} disabled={loading} /><small>{cvFile ? `${cvFile.name} — used only for this preview unless you choose to save it.` : 'Your CV is used only for this preview unless you choose to save it.'}</small></label>
+      <label className={styles.field}>CV (tùy chọn, PDF tối đa 2 MB)<input type="file" accept=".pdf,application/pdf" onChange={(event) => selectPdf(event.target.files?.[0] ?? null)} disabled={loading} /><small>{cvFile ? `${cvFile.name} — chỉ dùng cho bản xem trước này, trừ khi bạn chọn lưu.` : 'CV chỉ được dùng cho bản xem trước này, trừ khi bạn chọn lưu.'}</small></label>
       <label className={styles.consent}>
         <input type="checkbox" checked={saveCvConsent} onChange={(event) => setSaveCvConsent(event.target.checked)} disabled={loading || !cvFile} />
-        <span>This is my best current CV. Save it to personalize future AI experiences.</span>
+        <span>Đây là CV tốt nhất hiện tại của tôi. Hãy lưu để cá nhân hóa các trải nghiệm AI sau này.</span>
       </label>
-      <section className={styles.cvManager} aria-label="Saved CV">
-        <div><strong>Saved CV</strong>{cvLoading ? <small>Checking your saved CV…</small> : storedCv ? <small>Your latest saved CV was saved on {savedCvTime(storedCv.created_at)}. Have you updated your CV? Upload the latest PDF above and select Replace saved CV. For a roadmap preview, select the PDF you want to use above.</small> : <small>No CV saved to your account.</small>}</div>
+      <section className={styles.cvManager} aria-label="CV đã lưu">
+        <div><strong>CV đã lưu</strong>{cvLoading ? <small>Đang kiểm tra CV đã lưu...</small> : storedCv ? <small>CV gần nhất của bạn được lưu lúc {savedCvTime(storedCv.created_at)}. Bạn đã cập nhật CV? Hãy tải bản PDF mới nhất ở trên rồi chọn Thay CV đã lưu. Để xem trước lộ trình, hãy chọn tệp PDF muốn dùng ở trên.</small> : <small>Tài khoản chưa lưu CV nào.</small>}</div>
         {storedCv && <div className={styles.cvActions}>
-          <button className="btn btn-secondary" type="button" onClick={() => void downloadCv()} disabled={cvAction !== null}>{cvAction === 'download' ? 'Downloading…' : 'Download'}</button>
-          <button className="btn btn-secondary" type="button" onClick={() => void deleteCv()} disabled={cvAction !== null}>{cvAction === 'delete' ? 'Deleting…' : 'Delete'}</button>
+          <button className="btn btn-secondary" type="button" onClick={() => void downloadCv()} disabled={cvAction !== null}>{cvAction === 'download' ? 'Đang tải...' : 'Tải xuống'}</button>
+          <button className="btn btn-secondary" type="button" onClick={() => void deleteCv()} disabled={cvAction !== null}>{cvAction === 'delete' ? 'Đang xóa...' : 'Xóa'}</button>
         </div>}
       </section>
       <div className={styles.cvSaveRow}>
         <button className="btn btn-secondary" type="button" onClick={() => void saveSelectedCv()} disabled={!cvFile || !saveCvConsent || cvAction !== null || loading}>
-          {cvAction === 'save' ? 'Saving CV…' : storedCv ? 'Replace saved CV' : 'Save CV'}
+          {cvAction === 'save' ? 'Đang lưu CV...' : storedCv ? 'Thay CV đã lưu' : 'Lưu CV'}
         </button>
-        {storedCv && cvFile && <small>Saving this PDF replaces your current saved CV.</small>}
+        {storedCv && cvFile && <small>Lưu tệp PDF này sẽ thay thế CV đã lưu hiện tại.</small>}
       </div>
-      {loading && <p className={styles.loading} role="status"><span className={styles.spinner} aria-hidden="true" /> Analyzing your goals, matching courses and checking learning resources…</p>}
-      <div className={styles.actions}><button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Building roadmap…' : 'Preview my roadmap'}</button><button className="btn btn-secondary" type="button" onClick={onBack}>Back to Chat</button></div>
+      {loading && <p className={styles.loading} role="status"><span className={styles.spinner} aria-hidden="true" /> Đang phân tích mục tiêu, ghép khóa học và kiểm tra tài nguyên học tập...</p>}
+      <div className={styles.actions}><button className="btn btn-primary" type="submit" disabled={loading}>{loading ? 'Đang tạo lộ trình...' : 'Xem trước lộ trình'}</button><button className="btn btn-secondary" type="button" onClick={onBack}>Quay lại trò chuyện</button></div>
     </form>
   </div>;
 }
