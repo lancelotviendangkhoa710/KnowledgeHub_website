@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { aiCompanionClient } from '@/lib/aiCompanionClient';
 import RoadmapForm from '@/components/learning/RoadmapForm';
+import { LogoMark } from '@/components/layout/Logo';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
 import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
@@ -1045,7 +1046,7 @@ export default function AICompanionPage() {
                     }
                     return (
                       <div key={message.id} className={styles.bot}>
-                        <span className={styles.botAv} aria-hidden="true" />
+                        <span className={styles.botAv} aria-hidden="true"><LogoMark size={22} /></span>
                         <div className={styles.botTxt}>
                           <AssistantMarkdown content={message.content} />
                           {message.id === lastAssistantId && (
@@ -1067,7 +1068,7 @@ export default function AICompanionPage() {
 
                 {sending && (
                   <div className={styles.bot} role="status" aria-label="Trợ lý đang trả lời">
-                    <span className={styles.botAv} aria-hidden="true" />
+                    <span className={styles.botAv} aria-hidden="true"><LogoMark size={22} /></span>
                     <span className={styles.dots} aria-hidden="true"><i /><i /><i /></span>
                   </div>
                 )}
