@@ -3,6 +3,10 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { isCredentialError, loginErrorText } from '@/components/auth/authErrors';
+import GoogleButton from '@/components/auth/GoogleButton';
+import AuthShell from '@/components/auth/AuthShell';
+import styles from '@/components/auth/authForm.module.css';
 import { login, probeSession } from '@/lib/auth';
 
 function getSafeRedirectUrl(param: string | null): string {
@@ -50,13 +54,13 @@ function takeParkedRedirect(): string | null {
 
 // Error codes the backend puts in /login?error=... after a Google sign-in attempt (AUTH-07).
 const GOOGLE_ERRORS: Record<string, string> = {
-  google_failed: 'Google sign-in was cancelled or failed. Please try again.',
-  google_unverified: 'Your Google email address is not verified, so it cannot be used to sign in.',
-  google_unavailable: 'This account cannot sign in with Google. It may be pending approval or suspended; contact an administrator.',
-  google_domain_not_allowed: 'This email domain is not approved for new accounts. Use an approved address (such as a school email) or ask an administrator to allow your domain.',
-  google_too_many_signups: 'Too many new accounts were created recently. Please try again later.',
-  google_email_unconfirmed: 'Google cannot confirm that you own this email address. Sign in with a Gmail account or your school or work Google account.',
-  google_not_configured: 'Google sign-in is not set up on this server.',
+  google_failed: 'Đăng nhập bằng Google đã bị hủy hoặc không thành công. Vui lòng thử lại.',
+  google_unverified: 'Email Google của bạn chưa được xác minh nên không dùng để đăng nhập được.',
+  google_unavailable: 'Tài khoản này không thể đăng nhập bằng Google. Có thể tài khoản đang chờ duyệt hoặc bị tạm khóa; hãy liên hệ quản trị viên.',
+  google_domain_not_allowed: 'Tên miền email này chưa được duyệt để tạo tài khoản mới. Hãy dùng địa chỉ đã được duyệt (như email trường) hoặc nhờ quản trị viên cho phép tên miền của bạn.',
+  google_too_many_signups: 'Gần đây có quá nhiều tài khoản mới được tạo. Vui lòng thử lại sau.',
+  google_email_unconfirmed: 'Google không xác nhận được bạn sở hữu địa chỉ email này. Hãy đăng nhập bằng tài khoản Gmail hoặc tài khoản Google của trường hoặc cơ quan.',
+  google_not_configured: 'Máy chủ này chưa cấu hình đăng nhập bằng Google.',
 };
 
 export default function LoginPage() {
@@ -64,6 +68,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [credentialsInvalid, setCredentialsInvalid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const parkedRef = useRef<string | null | undefined>(undefined);
 
@@ -85,6 +90,7 @@ export default function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
+    setCredentialsInvalid(false);
     setSubmitting(true);
 
     try {
@@ -93,28 +99,32 @@ export default function LoginPage() {
       const targetUrl = getSafeRedirectUrl(searchParams?.get('redirect') ?? null);
       router.push(targetUrl);
     } catch (error) {
-      const response = error as { message?: string; errors?: Record<string, string[]> };
-      setMessage(response.errors?.email?.[0] ?? response.message ?? 'Unable to sign in. Check your credentials and account status.');
+      setMessage(loginErrorText(error));
+      setCredentialsInvalid(isCredentialError(error));
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <section className="auth-page content-container">
-      <div className="auth-card">
-        <h1>Sign in</h1>
-        <p className="auth-lead">Continue your learning journey.</p>
-        {message && <p className="auth-error" role="alert">{message}</p>}
-        <form onSubmit={handleSubmit} noValidate>
-          <label className="auth-field">Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
-          <label className="auth-field">Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>
-          <button className="button button--primary auth-submit" type="submit" disabled={submitting}>{submitting ? 'Signing in...' : 'Sign in'}</button>
-        </form>
-        {/* Full-page navigation on purpose: Google's consent screen is not an XHR. */}
-        <a className="button button--secondary" href="/api/auth/google/redirect" onClick={parkRedirect} style={{ width: '100%', minHeight: '2.9rem', marginTop: '0.75rem', textAlign: 'center' }}>Continue with Google</a>
-        <p className="auth-switch">New to KnowledgeHub? <Link href="/register">Create an account</Link></p>
-      </div>
-    </section>
+    <AuthShell>
+      <form onSubmit={handleSubmit} noValidate>
+        <h1>Đăng nhập</h1>
+        <p className={styles.lead}>Dùng email bạn đã đăng ký với KnowledgeHub.</p>
+        {message && <p id="login-error" className={styles.error} role="alert">{message}</p>}
+        <div className={styles.field}>
+          <label htmlFor="au-mail">Email</label>
+          <input id="au-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" aria-invalid={credentialsInvalid || undefined} aria-describedby={message ? 'login-error' : undefined} required />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="au-pass">Mật khẩu</label>
+          <input id="au-pass" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" aria-invalid={credentialsInvalid || undefined} aria-describedby={message ? 'login-error' : undefined} required />
+        </div>
+        <button className={`${styles.btn} ${styles.full}`} type="submit" disabled={submitting}>{submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</button>
+        <div className={styles.or}>hoặc</div>
+        <GoogleButton onClick={parkRedirect} />
+        <p className={styles.sw}>Chưa có tài khoản? <Link href="/register">Đăng ký</Link></p>
+      </form>
+    </AuthShell>
   );
 }

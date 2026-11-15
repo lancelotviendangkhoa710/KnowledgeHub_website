@@ -4,7 +4,7 @@ import SiteHeader from '@/components/layout/SiteHeader';
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg)' }}>
-      <header className="kh-top" role="banner">
+      <header className="kh-top kh-top--auth" role="banner">
         <SiteHeader />
       </header>
       <main style={{ flex: 1 }}>{children}</main>

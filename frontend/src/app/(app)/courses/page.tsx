@@ -365,7 +365,6 @@ function CoursesCatalog() {
       <section className={s.hero}>
         <div className={s.ghost} aria-hidden="true">KNOWLEDGE</div>
         <div className={s.disc} aria-hidden="true" />
-        <div className={s.ring} aria-hidden="true" />
         <div className={s.heroInner}>
           <p className={s.kicker}>Thư viện khóa học</p>
           <h1>Hôm nay bạn muốn học gì?</h1>

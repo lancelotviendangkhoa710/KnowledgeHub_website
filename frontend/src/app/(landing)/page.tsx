@@ -28,7 +28,7 @@ export default function HomePage() {
   return (
     <>
       <HeroMotion className={s.hero}>
-        <div className={s.ghost} aria-hidden="true" data-motion="ghost">HỌC</div>
+        <div className={s.ghost} aria-hidden="true" data-motion="ghost">KNOWLEDGE</div>
         <div className={s.disc} aria-hidden="true" data-motion="disc" />
         <div className={s.heroInner}>
           <div>

@@ -702,3 +702,7 @@ body[data-screen="tro-ly"] .kh-foot { display: none; }
   .kh-nav { order: 3; width: 100%; margin-left: 0; overflow-x: auto; }
   .kh-foot nav { margin-left: 0; gap: 32px; }
 }
+
+/* UX-02: màn đăng nhập và đăng ký ẩn điều hướng chính và nút Studio (mockup #dang-nhap) */
+.kh-top--auth .kh-nav, .kh-top--auth .kh-studio, .kh-top--auth .kh-auth { display: none; }
+.kh-top--auth .kh-top__inner { max-width: none; padding-left: clamp(16px, 4.5vw, 64px); padding-right: clamp(16px, 4.5vw, 64px); }
