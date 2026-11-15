@@ -11,7 +11,7 @@
 .field input[type=file] { padding: .6rem; }
 .field small { display: block; margin-top: .4rem; color: var(--color-gray); font-weight: 400; font-size: .76rem; overflow-wrap: anywhere; }
 .consent { display: flex; align-items: flex-start; gap: .65rem; color: var(--color-charcoal); font-size: .83rem; line-height: 1.5; font-weight: 600; }
-.consent input { flex: 0 0 auto; width: 1rem; height: 1rem; margin: .15rem 0 0; accent-color: var(--color-primary); }
+.consent input { flex: 0 0 auto; width: 18px; height: 18px; margin: .15rem 0 0; accent-color: var(--brand); }
 .cvManager { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; padding: .9rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-off-white); }
 .cvManager strong,.cvManager small { display: block; }
 .cvManager strong { color: var(--color-charcoal); font-size: .82rem; }
@@ -34,3 +34,16 @@
 .saved .actions { justify-content: center; margin-top: 1.25rem; }
 @media (max-width: 640px) { .formShell,.result { padding: 1rem .75rem 1.5rem; } .numberRow { grid-template-columns: 1fr; } .actions > * { flex: 1 1 100%; text-align: center; } }
 .select { margin-top: .4rem; font-weight: 400; }
+.fileInput { position: absolute; width: 1px; height: 1px; margin: 0; padding: 0; opacity: 0; overflow: hidden; }
+.fileRow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: .4rem; min-height: 44px; }
+.fileBtn {
+  display: inline-flex; align-items: center; padding: 9px 18px; border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.fileBtn:hover { border-color: var(--ink-3); }
+.fileInput:focus-visible + .fileRow .fileBtn { outline: 2px solid var(--brand); outline-offset: 2px; }
+.fileInput:disabled + .fileRow .fileBtn { opacity: .55; cursor: not-allowed; }
+.field .fileName { min-width: 0; overflow-wrap: anywhere; color: var(--ink-2); font-size: 14px; font-weight: 400; }
+.fileClear { border: 0; background: none; color: var(--brand); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.fileClear:hover { background: var(--brand-soft); }
+.field input:not([type=checkbox]):not([type=file]) { height: 44px; padding-top: 0; padding-bottom: 0; }

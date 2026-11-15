@@ -205,9 +205,10 @@
   width: 100%; min-width: 0; border: 1px solid var(--line); background-color: var(--bg); color: var(--ink);
   border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 13px;
 }
+.memForm textarea, .memForm input { box-sizing: border-box; height: 40px; min-height: 40px; }
 .memForm textarea { resize: vertical; }
 
-.memRow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.memRow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
 .memRow label, .memField { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); min-width: 0; }
 .memForm .btn { justify-self: start; }
 

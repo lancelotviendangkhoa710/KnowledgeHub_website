@@ -63,6 +63,7 @@ export default function RoadmapForm({ onBack }: Props) {
   const cvMutationVersionRef = useRef(0);
   const mountedRef = useRef(true);
   const viewRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function beginCvAction(action: CvAction): boolean {
     if (cvActionRef.current !== null) return false;
@@ -293,7 +294,7 @@ export default function RoadmapForm({ onBack }: Props) {
         <label className={styles.field}>Thời gian học (tuần) <span>*</span><input required type="number" min={1} max={104} value={weeks} onChange={(event) => setWeeks(event.target.value)} disabled={loading} /></label>
         <label className={styles.field}>Số giờ mỗi tuần <span>*</span><input required type="number" min={1} max={80} value={hoursPerWeek} onChange={(event) => setHoursPerWeek(event.target.value)} disabled={loading} /></label>
       </div>
-      <label className={styles.field}>CV (tùy chọn, PDF tối đa 2 MB)<input type="file" accept=".pdf,application/pdf" onChange={(event) => selectPdf(event.target.files?.[0] ?? null)} disabled={loading} /><small>{cvFile ? `${cvFile.name} — chỉ dùng cho bản xem trước này, trừ khi bạn chọn lưu.` : 'CV chỉ được dùng cho bản xem trước này, trừ khi bạn chọn lưu.'}</small></label>
+      <div className={styles.field}>CV (tùy chọn, PDF tối đa 2 MB)<input ref={fileRef} id="cv-file" className={styles.fileInput} type="file" accept=".pdf,application/pdf" onChange={(event) => selectPdf(event.target.files?.[0] ?? null)} disabled={loading} /><div className={styles.fileRow}><label htmlFor="cv-file" className={styles.fileBtn}>Chọn tệp</label><span className={styles.fileName}>{cvFile ? cvFile.name : 'Chưa chọn tệp'}</span>{cvFile && <button type="button" className={styles.fileClear} disabled={loading} onClick={() => { if (fileRef.current) fileRef.current.value = ''; selectPdf(null); }}>Bỏ chọn</button>}</div><small>CV chỉ được dùng cho bản xem trước này, trừ khi bạn chọn lưu.</small></div>
       <label className={styles.consent}>
         <input type="checkbox" checked={saveCvConsent} onChange={(event) => setSaveCvConsent(event.target.checked)} disabled={loading || !cvFile} />
         <span>Đây là CV tốt nhất hiện tại của tôi. Hãy lưu để cá nhân hóa các trải nghiệm AI sau này.</span>

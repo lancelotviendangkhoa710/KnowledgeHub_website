@@ -1167,7 +1167,7 @@ export default function AICompanionPage() {
                 id="memory-content"
                 required
                 maxLength={1000}
-                rows={2}
+                rows={1}
                 value={memoryContent}
                 onChange={(event) => setMemoryContent(event.target.value)}
                 placeholder="Thêm điều cần nhớ"
@@ -1175,7 +1175,7 @@ export default function AICompanionPage() {
               <div className={styles.memRow}>
                 <div className={styles.memField}>
                   Loại
-                  <Select ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
+                  <Select compact ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
                 </div>
                 <div className={styles.memField}>
                   Hết hạn (tùy chọn)

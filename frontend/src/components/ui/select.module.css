@@ -1,24 +1,44 @@
 .root { position: relative; }
 .trigger {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
-  padding: .75rem .85rem; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--surface); color: var(--ink); font: inherit; font-size: .95rem; text-align: left; cursor: pointer;
+  height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; text-align: left; cursor: pointer;
 }
+.compact { height: 40px; font-size: 13px; padding: 0 12px; }
 .root .trigger span { color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trigger svg { flex: none; color: var(--ink-3); }
 .trigger[aria-expanded="true"] { border-color: var(--brand); }
 .trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
+.trigger:focus-visible { border-color: var(--brand); outline: 2px solid var(--brand); outline-offset: 2px; }
 .trigger:disabled { opacity: .55; cursor: not-allowed; }
 .root .placeholder span { color: var(--ink-3); }
+
+/* Danh sách xổ: tách khỏi form bên dưới. Sáng: nền surface + một đổ bóng nhẹ duy nhất. Tối: nền surface-2, không bóng. */
 .list {
   position: absolute; z-index: 40; left: 0; right: 0; top: calc(100% + 6px);
-  max-height: 280px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; outline: none;
+  max-height: 280px; overflow-y: auto; margin: 0; padding: 6px; list-style: none; outline: none;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 18, 20, .12);
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+:global(:root[data-theme="dark"]) .list { background: var(--surface-2); box-shadow: none; }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .list { background: var(--surface-2); box-shadow: none; }
 }
 .list.up { top: auto; bottom: calc(100% + 6px); }
-.list:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-.list .group { display: block; padding: 10px 10px 4px; font-size: 12px; font-weight: 700; color: var(--ink-3); }
-.list .option { display: block; padding: 8px 10px; border-radius: 6px; font-size: 14px; color: var(--ink); cursor: pointer; }
+.list:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+.list .group { display: block; margin-top: 6px; padding: 10px 10px 4px; border-top: 1px solid var(--line); font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.list > li:first-child .group { margin-top: 0; border-top: 0; padding-top: 6px; }
+.list .option {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  min-height: 36px; padding: 6px 10px; border-radius: 6px; font-size: 14px; color: var(--ink); cursor: pointer;
+}
 .list .indent { padding-left: 18px; }
 .list .active { background: var(--surface-2); }
-.list .option[aria-selected="true"] { color: var(--brand); font-weight: 600; background: var(--brand-soft); }
+:global(:root[data-theme="dark"]) .list .active { background: var(--brand-soft); }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .list .active { background: var(--brand-soft); }
+}
+.list .option[aria-selected="true"] { color: var(--brand); font-weight: 600; }
+.check { flex: none; }

@@ -14,10 +14,12 @@ type Props = {
   disabled?: boolean;
   ariaLabel: string;
   className?: string;
+  /** Cỡ gọn 40px dùng trong cột ghi nhớ. */
+  compact?: boolean;
 };
 
 /** Ô chọn tự vẽ (thay select gốc để danh sách xổ ra theo giao diện). Hỗ trợ bàn phím: mũi tên, Home/End, Enter/Space, Esc, gõ chữ cái. */
-export default function Select({ value, onChange, options, placeholder = 'Chọn', disabled, ariaLabel, className }: Props) {
+export default function Select({ value, onChange, options, placeholder = 'Chọn', disabled, ariaLabel, className, compact }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [dropUp, setDropUp] = useState(false);
@@ -89,7 +91,7 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
       <button
         ref={buttonRef}
         type="button"
-        className={`${styles.trigger} ${selected ? '' : styles.placeholder}`}
+        className={`${styles.trigger} ${compact ? styles.compact : ''} ${selected ? '' : styles.placeholder}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${ariaLabel}: ${selected?.label ?? placeholder}`}
@@ -131,6 +133,9 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
                   onClick={() => choose(index)}
                 >
                   {option.label}
+                  {option.value === value && (
+                    <svg className={styles.check} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
+                  )}
                 </span>
               </li>
             );
