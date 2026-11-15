@@ -574,7 +574,11 @@ export default function CourseDetailPage() {
         i++;
         while (i < lines.length && lines[i].trim() === '') i++;
         const goalLines: string[] = [];
-        while (i < lines.length && lines[i].trim() !== '' && !/^(#|```|>|[*-]\s)/.test(lines[i])) {
+        // Dừng trước dòng nhúng video (@[youtube](...) hoặc liên kết YouTube riêng một dòng) để phần video xử lý tiếp.
+        const isVideoLine = (text: string) =>
+          /@\[youtube\]\(/i.test(text) ||
+          /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(text.trim());
+        while (i < lines.length && lines[i].trim() !== '' && !/^(#|```|>|[*-]\s)/.test(lines[i]) && !isVideoLine(lines[i])) {
           goalLines.push(lines[i].trim());
           i++;
         }
