@@ -1,0 +1,11 @@
+/* UX-02: hộp xác nhận theo hộp thoại của mockup (.dlg). Chỉ dùng token. */
+.overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(10, 12, 20, .55); }
+.panel { width: min(480px, 100%); padding: 22px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); color: var(--ink); }
+.title { margin: 0 0 14px; font-size: 18px; font-weight: 700; }
+.body { color: var(--ink-2); font-size: 14px; }
+.error { margin: 14px 0 0; padding: 10px 14px; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: var(--r-pill); font: inherit; font-weight: 600; font-size: 14px; background: var(--btn); color: var(--btn-ink); border: 1px solid transparent; cursor: pointer; }
+.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.ghost:hover { border-color: var(--ink-3); }
+.busy { opacity: .55; cursor: not-allowed; }
