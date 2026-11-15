@@ -20,6 +20,7 @@ type Props = {
 export default function Select({ value, onChange, options, placeholder = 'Chọn', disabled, ariaLabel, className }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [dropUp, setDropUp] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -44,6 +45,13 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
 
   function openList() {
     if (disabled) return;
+    // Thiếu chỗ phía dưới (ví dụ ô nằm sát đáy cột) mà phía trên rộng hơn thì sổ lên.
+    const rect = buttonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const need = Math.min(280, options.length * 38 + 20);
+      const below = window.innerHeight - rect.bottom;
+      setDropUp(below < need && rect.top > below);
+    }
     setActive(Math.max(0, options.findIndex((option) => option.value === value)));
     setOpen(true);
   }
@@ -100,7 +108,7 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
       {open && (
         <ul
           ref={listRef}
-          className={styles.list}
+          className={`${styles.list} ${dropUp ? styles.up : ''}`}
           role="listbox"
           tabIndex={-1}
           aria-label={ariaLabel}
