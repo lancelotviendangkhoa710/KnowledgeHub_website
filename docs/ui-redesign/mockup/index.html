@@ -280,6 +280,7 @@ body[data-screen="dang-nhap"] .nav,body[data-screen="dang-nhap"] .studio,body[da
 
 /* Form */
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field[hidden]{display:none}
 .field label{font-size:14px;font-weight:500}
 .field input,.field select{height:44px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 14px;font:inherit;color:var(--ink);width:100%}
 .field input:focus,.field select:focus{outline:none;border-color:var(--brand)}
@@ -1268,14 +1269,15 @@ $('#grid').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.c
   $$('#mCode [data-code]').forEach(function(b){b.onclick=function(){insert('\n```'+b.dataset.code+'\n','\n```\n','// viết code ở đây')}});
   $$('#mNote [data-note]').forEach(function(b){b.onclick=function(){insert('\n> **'+b.dataset.note+':** ','\n','nội dung ghi chú')}});
   var dlg=$('#ytDlg'),ytU=$('#ytUrl'),ytT=$('#ytTitle');
+  function ytFocusables(){return $$('input,button,select,textarea,a[href]',dlg).filter(function(x){return !x.disabled&&x.offsetParent!==null})}
   function ytId(u){var m=u.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{11})/);return m&&m[1]}
   function ytCheck(){var ok=!!ytId(ytU.value);$('#ytOk').hidden=!ok;$('#ytInsert').disabled=!ok}
   $('#btnYt').onclick=function(){dlg.classList.add('on');ytU.focus()};
   ytU.oninput=ytCheck;
-  function ytClose(){dlg.classList.remove('on');ytU.value='';ytT.value='';ytCheck()}
+  function ytClose(){dlg.classList.remove('on');ytU.value='';ytT.value='';ytCheck();$('#btnYt').focus()}
   $('#ytCancel').onclick=ytClose;
   dlg.addEventListener('click',function(e){if(e.target===dlg)ytClose()});
-  addEventListener('keydown',function(e){if(e.key==='Escape'&&dlg.classList.contains('on'))ytClose()});
+  addEventListener('keydown',function(e){if(!dlg.classList.contains('on'))return;if(e.key==='Escape'){ytClose();return}if(e.key==='Tab'){var f=ytFocusables();if(!f.length)return;var first=f[0],last=f[f.length-1],at=document.activeElement;if(!dlg.contains(at)){e.preventDefault();first.focus()}else if(e.shiftKey&&at===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&at===last){e.preventDefault();first.focus()}}});
   $('#ytInsert').onclick=function(){insert('\n> Video: '+(ytT.value.trim()||'Bài giảng')+' ('+ytU.value.trim()+')\n','','');ytClose()};
   $('#edMode').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;$$('#edMode button').forEach(function(x){x.setAttribute('aria-selected',x===b)});ed.dataset.mode=b.dataset.m});
   title.oninput=update;cat.onchange=update;body.oninput=update;
@@ -1309,7 +1311,7 @@ $('#grid').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.c
       var j=i;while(j<d.length&&d[j].t==='eq')j++;var len=j-i,first=i===0,last=j===d.length;
       var head=first?0:CTX,tail=last?0:CTX;
       if(len<=head+tail+2){for(var k=i;k<j;k++)h+=row(d[k])}
-      else{for(var k=i;k<i+head;k++)h+=row(d[k]);var hid=len-head-tail;h+='<button class="fold" data-fold="'+i+','+j+','+head+','+tail+'">Hiện '+hid+' dòng không đổi</button>';}
+      else{for(var k=i;k<i+head;k++)h+=row(d[k]);var hid=len-head-tail;h+='<button class="fold" data-fold="'+i+','+j+','+head+','+tail+'">Hiện '+hid+' dòng không đổi</button>';for(var k=j-tail;k<j;k++)h+=row(d[k])}
       i=j}
     return {h:h,d:d}}
   function stateCard(t,p,btn){return '<section class="pn"><div class="state"><h3>'+t+'</h3><p>'+p+'</p>'+(btn||'')+'</div></section>'}
@@ -1326,7 +1328,7 @@ $('#grid').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.c
     h+='<section class="pn">';
     if(state==='author'){h+='<div class="cmpbar"><div class="seg" id="vMode"><button aria-pressed="'+(mode==='view')+'" data-m="view">Xem</button><button aria-pressed="'+(mode==='cmp')+'" data-m="cmp">So sánh</button></div>';
       if(mode==='cmp'){var opt=function(s){return V.map(function(v){return '<option value="'+v.n+'"'+(v.n===s?' selected':'')+'>Phiên bản '+v.n+'</option>'}).join('')};
-        h+='<span class="lbl">Gốc</span><select class="sel" id="vBase" aria-label="Phiên bản gốc">'+opt(base)+'</select><button class="btn ghost sm" id="vSwap">Đổi chỗ</button><span class="lbl">So với</span><select class="sel" id="vCmp" aria-label="Phiên bản so sánh">'+opt(cmp)+'</select><button class="btn ghost sm" id="vPrev">So với bản trước</button>'}
+        h+='<span class="lbl">Gốc</span><select class="sel" id="vBase" aria-label="Phiên bản gốc">'+opt(base)+'</select><button class="btn ghost sm" id="vSwap">Đổi chỗ</button><span class="lbl">So với</span><select class="sel" id="vCmp" aria-label="Phiên bản so sánh">'+opt(cmp)+'</select><button class="btn ghost sm" id="vPrev"'+(sel>1?'':' disabled')+'>So với bản trước</button>'}
       h+='</div>'}
     if(mode==='view'||state==='reader'){var v=V[sel-1];h+='<div class="vhead"><h2>'+v.title+'</h2><p>Phiên bản '+v.n+', '+v.by+', '+v.at+'</p></div><pre class="vpre">'+v.body.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</pre>'}
     else{var A=V[base-1],B=V[cmp-1];
@@ -1342,7 +1344,7 @@ $('#grid').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.c
     if(t.dataset.v){sel=+t.dataset.v;render()}
     else if(t.closest('#vMode')){mode=t.dataset.m;render()}
     else if(t.id==='vSwap'){var x=base;base=cmp;cmp=x;render()}
-    else if(t.id==='vPrev'){cmp=sel>1?sel:2;base=cmp-1;render()}
+    else if(t.id==='vPrev'&&sel>1){cmp=sel;base=sel-1;render()}
     else if(t.dataset.fold){var p=t.dataset.fold.split(',').map(Number),d=box._d,h='';for(var k=p[0]+p[2];k<p[1]-p[3];k++)h+=row(d[k]);var tmp=document.createElement('div');tmp.innerHTML=h;while(tmp.firstChild)t.parentNode.insertBefore(tmp.firstChild,t);t.remove()}
   });
   box.addEventListener('change',function(e){if(e.target.id==='vBase'){base=+e.target.value;render()}else if(e.target.id==='vCmp'){cmp=+e.target.value;render()}});
@@ -1414,6 +1416,7 @@ function cardHTML(c,i,saved){return '<article class="card" tabindex="0" role="li
 $('#homeGrid').innerHTML=[8,5,0].map(function(k,j){return cardHTML(C[k],j)}).join('');
 $('#savedGrid').innerHTML=[4,5,8].map(function(k,j){return cardHTML(C[k],j,true)}).join('');
 ['#homeGrid','#savedGrid'].forEach(function(sel){
+  $(sel).addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.classList.contains('card')) location.hash='bai-hoc'});
   $(sel).addEventListener('click',function(e){
     var s=e.target.closest('.save');
     if(s){var on=s.getAttribute('aria-pressed')!=='true';s.setAttribute('aria-pressed',on);toast(on?'Đã lưu khóa học':'Đã bỏ lưu');return}
