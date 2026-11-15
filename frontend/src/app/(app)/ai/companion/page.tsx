@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { aiCompanionClient } from '@/lib/aiCompanionClient';
 import RoadmapForm from '@/components/learning/RoadmapForm';
 import { LogoMark } from '@/components/layout/Logo';
+import DatePicker from '@/components/ui/DatePicker';
 import Select from '@/components/ui/Select';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
@@ -1177,10 +1178,10 @@ export default function AICompanionPage() {
                   Loại
                   <Select ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
                 </div>
-                <label>
+                <div className={styles.memField}>
                   Hết hạn (tùy chọn)
-                  <input type="date" value={memoryExpires} onChange={(event) => setMemoryExpires(event.target.value)} />
-                </label>
+                  <DatePicker ariaLabel="Ngày hết hạn" value={memoryExpires} onChange={setMemoryExpires} />
+                </div>
               </div>
               <button type="submit" className={`${styles.btn} ${styles.btnSm}`} disabled={savingMemory || !memoryContent.trim()}>
                 {savingMemory ? 'Đang lưu...' : 'Thêm'}
