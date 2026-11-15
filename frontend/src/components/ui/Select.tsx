@@ -13,13 +13,15 @@ type Props = {
   placeholder?: string;
   disabled?: boolean;
   ariaLabel: string;
+  /** Trường bắt buộc: báo cho trình đọc màn hình qua aria-required trên danh sách. */
+  required?: boolean;
   className?: string;
   /** Cỡ gọn 40px dùng trong cột ghi nhớ. */
   compact?: boolean;
 };
 
 /** Ô chọn tự vẽ (thay select gốc để danh sách xổ ra theo giao diện). Hỗ trợ bàn phím: mũi tên, Home/End, Enter/Space, Esc, gõ chữ cái. */
-export default function Select({ value, onChange, options, placeholder = 'Chọn', disabled, ariaLabel, className, compact }: Props) {
+export default function Select({ value, onChange, options, placeholder = 'Chọn', disabled, ariaLabel, required, className, compact }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [dropUp, setDropUp] = useState(false);
@@ -73,7 +75,10 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
     else if (event.key === 'Enter' || event.key === ' ') choose(active);
     else if (event.key === 'Escape' || event.key === 'Tab') {
       setOpen(false);
-      if (event.key === 'Escape') buttonRef.current?.focus();
+      if (event.key === 'Escape') {
+        event.stopPropagation(); // do not also close a panel that contains this select
+        buttonRef.current?.focus();
+      }
       return;
     } else if (event.key.length === 1) {
       const key = event.key.toLowerCase();
@@ -114,6 +119,7 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
           role="listbox"
           tabIndex={-1}
           aria-label={ariaLabel}
+          aria-required={required || undefined}
           aria-activedescendant={`${id}-${active}`}
           onKeyDown={onListKeyDown}
         >

@@ -172,6 +172,7 @@ export default function AICompanionPage() {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const aiRef = useRef<HTMLDivElement | null>(null);
   const memoryCloseRef = useRef<HTMLButtonElement | null>(null);
+  const memoryToggleRef = useRef<HTMLButtonElement | null>(null);
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -290,6 +291,38 @@ export default function AICompanionPage() {
     if (memoryOpen && window.matchMedia(MOBILE_QUERY).matches) {
       memoryCloseRef.current?.focus();
     }
+  }, [memoryOpen]);
+
+  // Bảng ghi nhớ trên điện thoại là drawer: giữ focus trong bảng, vô hiệu hóa phần phía sau, đóng thì trả focus về nút "Ghi nhớ".
+  // Cột ghi nhớ trên máy tính không bị giới hạn.
+  useEffect(() => {
+    if (!memoryOpen || !window.matchMedia(MOBILE_QUERY).matches) return;
+    const behind = Array.from(aiRef.current?.querySelectorAll<HTMLElement>(':scope > aside:not(#memory-panel), :scope > section') ?? []);
+    const toggle = memoryToggleRef.current;
+    behind.forEach((element) => element.setAttribute('inert', ''));
+    function trapTab(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(document.querySelectorAll<HTMLElement>(
+        '#memory-panel button:not([disabled]), #memory-panel input:not([disabled]), #memory-panel textarea:not([disabled]), #memory-panel [href], #memory-panel [tabindex]:not([tabindex="-1"])',
+      ));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const current = document.activeElement;
+      if (event.shiftKey && (current === first || !focusable.includes(current as HTMLElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && current === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', trapTab);
+    return () => {
+      document.removeEventListener('keydown', trapTab);
+      behind.forEach((element) => element.removeAttribute('inert'));
+      toggle?.focus();
+    };
   }, [memoryOpen]);
 
   function handleApiError(caught: unknown, fallback: string): void {
@@ -941,6 +974,7 @@ export default function AICompanionPage() {
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                ref={memoryToggleRef}
                 onClick={toggleMemoryPanel}
                 aria-pressed={memoryOpen}
                 aria-controls="memory-panel"

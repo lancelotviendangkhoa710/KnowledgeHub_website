@@ -61,7 +61,12 @@ export default function DatePicker({ value, onChange, ariaLabel, disabled }: Pro
   }
 
   function shift(days: number, months = 0) {
-    setFocusDay((current) => new Date(current.getFullYear(), current.getMonth() + months, current.getDate() + days));
+    setFocusDay((current) => {
+      if (months === 0) return new Date(current.getFullYear(), current.getMonth(), current.getDate() + days);
+      // Clamp to the target month's length so 31 Jan + 1 month is 28/29 Feb, not 3 Mar.
+      const lastDay = new Date(current.getFullYear(), current.getMonth() + months + 1, 0).getDate();
+      return new Date(current.getFullYear(), current.getMonth() + months, Math.min(current.getDate(), lastDay) + days);
+    });
   }
 
   function onGridKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -71,6 +76,7 @@ export default function DatePicker({ value, onChange, ariaLabel, disabled }: Pro
     };
     if (event.key === 'Escape') {
       event.preventDefault();
+      event.stopPropagation(); // do not also close a panel that contains this picker
       setOpen(false);
       buttonRef.current?.focus();
     } else if (moves[event.key]) {

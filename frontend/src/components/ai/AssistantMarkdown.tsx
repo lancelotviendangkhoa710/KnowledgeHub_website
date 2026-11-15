@@ -29,10 +29,13 @@ function parse(source: string): Block[] {
   };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (line.trim().startsWith('```')) {
+    const open = /^\s{0,3}(`{3,})/.exec(line);
+    if (open) {
       flush();
       const code: string[] = [];
-      for (i++; i < lines.length && !lines[i].trim().startsWith('```'); i++) code.push(lines[i]);
+      // CommonMark: the closing fence is only backticks, at least as long as the opening one.
+      const close = new RegExp('^\\s{0,3}`{' + open[1].length + ',}\\s*$');
+      for (i++; i < lines.length && !close.test(lines[i]); i++) code.push(lines[i]);
       blocks.push({ kind: 'code', text: code.join('\n') });
       continue;
     }
