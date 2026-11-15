@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import Link from 'next/link';
 import { aiRoadmapClient } from '@/lib/aiRoadmapClient';
 import type { CompanionPreviewResult, StoredCvMetadata } from '@/lib/aiRoadmapClient';
+import Select from '@/components/ui/Select';
 import CompanionRoadmapPreview from './CompanionRoadmapPreview';
 import styles from './roadmapForm.module.css';
 
@@ -283,19 +284,9 @@ export default function RoadmapForm({ onBack }: Props) {
     <div className={styles.intro}><h2>Tạo lộ trình bằng AI</h2><p>Cho chúng tôi biết bạn muốn đi đến đâu và hiện đã làm được gì. Chúng tôi sẽ tìm tài nguyên học tập cho mục tiêu của bạn.</p></div>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <form className={styles.form} onSubmit={(event) => void submit(event)}>
-      <label className={styles.field}>Mục tiêu nghề nghiệp <span>*</span><select required value={careerChoice} onChange={(event) => { const choice = event.target.value; setCareerChoice(choice); setCareerGoal(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
-        <option value="">Chọn một nghề CNTT</option>
-        {CAREER_GROUPS.map((group) => <optgroup key={group.label} label={group.label}>{group.roles.map((role) => <option key={role} value={role}>{role}</option>)}</optgroup>)}
-        <option value={CUSTOM_CHOICE}>Mục tiêu nghề nghiệp khác</option>
-      </select></label>
+      <div className={styles.field}>Mục tiêu nghề nghiệp <span>*</span><Select className={styles.select} ariaLabel="Mục tiêu nghề nghiệp" value={careerChoice} placeholder="Chọn một nghề CNTT" disabled={loading} onChange={(choice) => { setCareerChoice(choice); setCareerGoal(choice === CUSTOM_CHOICE ? '' : choice); }} options={[...CAREER_GROUPS.flatMap((group) => group.roles.map((role) => ({ value: role, label: role, group: group.label }))), { value: CUSTOM_CHOICE, label: 'Mục tiêu nghề nghiệp khác' }]} /></div>
       {careerChoice === CUSTOM_CHOICE && <label className={styles.field}>Mô tả mục tiêu nghề nghiệp <span>*</span><input required maxLength={500} value={careerGoal} onChange={(event) => setCareerGoal(event.target.value)} placeholder="Ví dụ: trở thành technical writer" disabled={loading} /></label>}
-      <label className={styles.field}>Trình độ hiện tại <span>*</span><select required value={levelChoice} onChange={(event) => { const choice = event.target.value; setLevelChoice(choice); setCurrentLevel(choice === CUSTOM_CHOICE ? '' : choice); }} disabled={loading}>
-        <option value="">Chọn trình độ của bạn</option>
-        <option value="Beginner">Mới bắt đầu</option>
-        <option value="Intermediate">Trung cấp</option>
-        <option value="Advanced">Nâng cao</option>
-        <option value={CUSTOM_CHOICE}>Khác, tôi tự mô tả trình độ</option>
-      </select></label>
+      <div className={styles.field}>Trình độ hiện tại <span>*</span><Select className={styles.select} ariaLabel="Trình độ hiện tại" value={levelChoice} placeholder="Chọn trình độ của bạn" disabled={loading} onChange={(choice) => { setLevelChoice(choice); setCurrentLevel(choice === CUSTOM_CHOICE ? '' : choice); }} options={[{ value: 'Beginner', label: 'Mới bắt đầu' }, { value: 'Intermediate', label: 'Trung cấp' }, { value: 'Advanced', label: 'Nâng cao' }, { value: CUSTOM_CHOICE, label: 'Khác, tôi tự mô tả trình độ' }]} /></div>
       {levelChoice === CUSTOM_CHOICE && <label className={styles.field}>Mô tả trình độ hiện tại <span>*</span><input required maxLength={200} value={currentLevel} onChange={(event) => setCurrentLevel(event.target.value)} placeholder="Ví dụ: dùng Python thoải mái, mới học SQL" disabled={loading} /></label>}
       <label className={styles.field}>Yêu cầu của công việc mục tiêu (tùy chọn)<textarea maxLength={5000} rows={5} value={jobRequirements} onChange={(event) => setJobRequirements(event.target.value)} placeholder="Dán mô tả công việc hoặc mô tả các kỹ năng vị trí đó cần" disabled={loading} /></label>
       <div className={styles.numberRow}>

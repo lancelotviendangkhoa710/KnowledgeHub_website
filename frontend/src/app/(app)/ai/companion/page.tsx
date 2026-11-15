@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { aiCompanionClient } from '@/lib/aiCompanionClient';
 import RoadmapForm from '@/components/learning/RoadmapForm';
 import { LogoMark } from '@/components/layout/Logo';
+import Select from '@/components/ui/Select';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
 import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
@@ -1172,14 +1173,10 @@ export default function AICompanionPage() {
                 placeholder="Thêm điều cần nhớ"
               />
               <div className={styles.memRow}>
-                <label>
+                <div className={styles.memField}>
                   Loại
-                  <select value={memoryType} onChange={(event) => setMemoryType(event.target.value as MemoryType)}>
-                    {(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => (
-                      <option key={type} value={type}>{memoryTypeLabels[type]}</option>
-                    ))}
-                  </select>
-                </label>
+                  <Select ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
+                </div>
                 <label>
                   Hết hạn (tùy chọn)
                   <input type="date" value={memoryExpires} onChange={(event) => setMemoryExpires(event.target.value)} />

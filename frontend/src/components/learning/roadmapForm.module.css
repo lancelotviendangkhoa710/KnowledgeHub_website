@@ -33,3 +33,4 @@
 .saved p { color: var(--color-gray); }
 .saved .actions { justify-content: center; margin-top: 1.25rem; }
 @media (max-width: 640px) { .formShell,.result { padding: 1rem .75rem 1.5rem; } .numberRow { grid-template-columns: 1fr; } .actions > * { flex: 1 1 100%; text-align: center; } }
+.select { margin-top: .4rem; font-weight: 400; }
