@@ -3,7 +3,6 @@
 .heroInner { position: relative; max-width: 1200px; margin: 0 auto; padding: 72px 24px 84px; }
 .ghost { position: absolute; left: -2vw; top: 50%; transform: translateY(-52%); font-family: var(--display); font-weight: 800; font-size: clamp(150px, 25vw, 360px); letter-spacing: -.04em; line-height: 1; color: rgba(255, 255, 255, .055); white-space: nowrap; pointer-events: none; user-select: none; }
 .disc { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: var(--mark); right: -70px; bottom: -170px; }
-.ring { position: absolute; width: 150px; height: 150px; border-radius: 50%; border: 26px solid rgba(255, 255, 255, .14); right: 170px; top: -60px; }
 .kicker { font-family: var(--display); font-weight: 600; font-size: 16px; color: rgba(255, 255, 255, .82); }
 .hero h1 { color: #fff; font-size: clamp(34px, 4.6vw, 54px); font-weight: 800; margin: 8px 0 28px; max-width: 16ch; }
 .search { position: relative; display: flex; align-items: center; gap: 10px; background: var(--surface); color: var(--ink); border-radius: var(--r-pill); padding: 7px 7px 7px 20px; max-width: 640px; box-shadow: 0 12px 36px rgba(6, 12, 60, .35); }
@@ -65,7 +64,6 @@
 
 @media (max-width: 640px) {
   .heroInner { padding: 44px 16px 60px; }
-  .ring { display: none; }
   .wrap { padding: 0 16px; }
   .count { margin-left: 0; width: 100%; }
 }
