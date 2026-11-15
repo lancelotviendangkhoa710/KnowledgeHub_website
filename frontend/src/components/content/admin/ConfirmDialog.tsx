@@ -7,6 +7,8 @@ type ConfirmDialogProps = {
   title: string;
   children: ReactNode;
   confirmLabel: string;
+  /** Nhãn nút hủy; mặc định là "Hủy". */
+  cancelLabel?: string;
   busy: boolean;
   error?: string | null;
   onConfirm: () => void;
@@ -17,7 +19,7 @@ type ConfirmDialogProps = {
  * Accessible, non-native confirmation modal: focus moves to Cancel on open, Tab is trapped inside,
  * Escape cancels (unless a request is running) and focus returns to the opener on close.
  */
-export default function ConfirmDialog({ title, children, confirmLabel, busy, error, onConfirm, onCancel }: ConfirmDialogProps) {
+export default function ConfirmDialog({ title, children, confirmLabel, cancelLabel = 'Hủy', busy, error, onConfirm, onCancel }: ConfirmDialogProps) {
   const titleId = useId();
   const bodyId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -100,7 +102,7 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
             onClick={() => { if (!busy) onCancel(); }}
             aria-disabled={busy}
           >
-            Hủy
+            {cancelLabel}
           </button>
           <button
             type="button"

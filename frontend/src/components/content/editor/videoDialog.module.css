@@ -1,0 +1,20 @@
+/* Hộp thoại chèn video YouTube (mockup .dlg, .dlg-bg) và thông báo đã chèn. Chỉ dùng token. */
+.notice { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); color: var(--ok); font-size: 13.5px; font-weight: 500; }
+
+.overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgba(10, 12, 20, .55); }
+.panel { width: min(480px, 100%); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; padding: 22px; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); color: var(--ink); }
+.title { margin: 0 0 14px; font-size: 18px; font-weight: 700; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.field label { font-size: 14px; font-weight: 500; }
+.field input { height: 44px; width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 0 14px; font: inherit; color: var(--ink); }
+.field input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.field input[aria-invalid="true"] { border-color: var(--danger); }
+.field small { color: var(--ink-3); font-size: 13px; }
+.field small.okv { color: var(--ok); }
+.field small.bad { color: var(--danger); }
+.thumb { width: 96px; height: 54px; object-fit: cover; border-radius: 6px; border: 1px solid var(--line); }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: var(--r-pill); font: inherit; font-weight: 600; font-size: 14px; background: var(--btn); color: var(--btn-ink); border: 1px solid transparent; cursor: pointer; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.ghost:hover:not(:disabled) { border-color: var(--ink-3); }

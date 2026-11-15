@@ -1,0 +1,25 @@
+/* Thanh công cụ định dạng, menu thả xuống và ô nhập nội dung (mockup .tb, .dd, .menu, textarea.md). */
+.slot > :not([role="toolbar"]) { margin-left: 16px; margin-right: 16px; margin-top: 12px; }
+.tb { display: flex; flex-wrap: wrap; gap: 2px; padding: 8px; border-bottom: 1px solid var(--line); position: relative; align-items: center; }
+.tb > button, .dd > button { min-width: 32px; height: 32px; padding: 0 9px; border: 0; background: none; border-radius: 6px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; }
+.tb > button:hover, .dd > button:hover, .tb button[aria-expanded="true"], .tb button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); }
+.tb svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.tb svg.fill { fill: currentColor; stroke: none; }
+.bold { font-weight: 800 !important; }
+.italic { font-style: italic; }
+.strike { text-decoration: line-through; }
+.vsep { width: 1px; height: 20px; background: var(--line); margin: 0 6px; }
+.dd { position: relative; }
+.menu { position: absolute; top: 36px; left: 0; z-index: 5; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: 4px; min-width: 190px; }
+.menu button { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 7px 10px; border: 0; background: none; border-radius: 6px; font: inherit; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.menu button:hover { background: var(--surface-2); }
+.ext { font-family: var(--mono); font-size: 12px; color: var(--ink-3); }
+.dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.dotNote { background: var(--brand); }
+.dotTip { background: var(--mark); }
+.dotWarn { background: var(--danger); }
+.menu .lead { justify-content: flex-start; }
+
+textarea.md { display: block; width: 100%; min-height: 440px; border: 0; background: none; resize: vertical; padding: 16px; font-family: var(--mono); font-size: 13.5px; line-height: 1.7; color: var(--ink); outline: none; border-radius: 0 0 var(--r-card) var(--r-card); }
+textarea.md:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+textarea.md::placeholder { color: var(--ink-3); }

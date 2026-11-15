@@ -1,0 +1,18 @@
+/* Bảng kiểm tra trước khi xuất bản (mockup .pre, .meter, .chk). */
+.pre { margin-top: 20px; padding: 16px 18px; }
+.preH { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; font-weight: 600; }
+.preH span { font-weight: 400; font-size: 14px; color: var(--ink-2); }
+.meter { height: 6px; border-radius: 99px; background: var(--surface-2); overflow: hidden; margin: 12px 0 16px; }
+.meter b { display: block; height: 100%; background: var(--brand); border-radius: 99px; transition: width .3s; }
+.ready .meter b { background: var(--ok); }
+.ready .preH span { color: var(--ok); font-weight: 600; }
+.chk { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; list-style: none; padding: 0; margin: 0; }
+.chk li { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+.chk .dot { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; color: var(--btn-ink); margin-top: 1px; }
+.chk .dot svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.chk li.ok .dot { background: var(--ok); border-color: var(--ok); }
+.chk li.ok .dot svg { opacity: 1; }
+.chk small { display: block; color: var(--ink-3); font-size: 12.5px; }
+.chk li.ok small { color: var(--ok); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 900px) { .chk { grid-template-columns: minmax(0, 1fr); } }

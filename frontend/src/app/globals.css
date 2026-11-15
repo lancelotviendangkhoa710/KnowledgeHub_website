@@ -23,6 +23,7 @@
   --display:var(--f-display,'Plus Jakarta Sans'),'Roboto',system-ui,sans-serif;
   --body:var(--f-body,'Roboto'),system-ui,-apple-system,'Segoe UI',sans-serif;
   --mono:var(--f-mono,'JetBrains Mono'),ui-monospace,Consolas,monospace;
+  --code-bg:#12141C; --code-ink:#DDE2F0; --code-mute:#8E97AE; --code-line:#262A38; --code-ok:#6FD9AE; /* khối code luôn tối ở cả hai chế độ, như màn bài học */
   --r-card:10px; --r-pill:999px; --head:64px;
 }
 @media (prefers-color-scheme: dark) {
