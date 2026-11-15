@@ -1,6 +1,6 @@
 ﻿/* UX-02: đăng nhập, đăng ký và biểu mẫu tài khoản theo mockup (#dang-nhap, #tai-khoan). Chỉ dùng token. */
 .auth { --ease: cubic-bezier(.16, 1, .3, 1); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: calc(100vh - var(--head)); }
-.art { background: var(--hero); color: #fff; position: relative; overflow: hidden; padding: 64px; display: flex; flex-direction: column; justify-content: flex-end; }
+.art { background: var(--hero); color: #fff; position: relative; overflow: hidden; padding: 64px clamp(16px, 4.5vw, 64px); display: flex; flex-direction: column; justify-content: flex-end; }
 .ghost { position: absolute; top: 6%; right: 3%; font-family: var(--display); font-weight: 800; font-size: clamp(160px, 22vw, 320px); line-height: 1; color: rgba(255, 255, 255, .05); pointer-events: none; user-select: none; animation: slideIn 1.1s var(--ease) both; }
 .disc { position: absolute; left: -90px; top: -110px; width: 280px; height: 280px; border-radius: 50%; background: var(--mark); animation: rise 1s var(--ease) both; }
 .ring { position: absolute; right: -50px; bottom: -50px; width: 170px; height: 170px; border-radius: 50%; border: 28px solid rgba(255, 255, 255, .14); animation: rise .9s var(--ease) .1s both; }
@@ -85,7 +85,7 @@
 
 @media (max-width: 860px) {
   .auth { grid-template-columns: 1fr; }
-  .art { min-height: 220px; padding: 32px; }
+  .art { min-height: 220px; padding: 32px clamp(16px, 4.5vw, 64px); }
   .disc { width: 120px; height: 120px; left: -40px; top: -50px; }
   .ring, .demo { display: none; }
   .ghost { font-size: 120px; }
