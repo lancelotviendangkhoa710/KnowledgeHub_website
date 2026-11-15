@@ -663,6 +663,8 @@ input::placeholder, textarea::placeholder {
 .kh-foot nav b { font-weight: 500; margin-bottom: 2px; color: var(--ink); }
 .kh-foot nav a { color: var(--ink-2); }
 .kh-foot nav a:hover { color: var(--ink); }
+/* Màn trợ lý AI chiếm trọn chiều cao, không có chân trang (trang đặt data-screen trên body) */
+body[data-screen="tro-ly"] .kh-foot { display: none; }
 
 @media (max-width: 860px) {
   .kh-top__inner { flex-wrap: wrap; gap: 8px 12px; padding-top: 10px; padding-bottom: 10px; }
