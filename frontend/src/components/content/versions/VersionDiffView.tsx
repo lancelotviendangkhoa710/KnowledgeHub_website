@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { diffLines, DiffLine, type ArticleVersionEntry } from '@/lib/versionClient';
+import styles from './versions.module.css';
 
 /** Unchanged lines kept visible around each change. */
 const CONTEXT_LINES = 3;
@@ -40,41 +41,10 @@ function buildRows(lines: DiffLine[], expanded: Set<number>): Row[] {
   return rows;
 }
 
-const markerFor: Record<DiffLine['kind'], { symbol: string; label: string }> = {
-  added: { symbol: '+', label: 'Added line' },
-  removed: { symbol: '−', label: 'Removed line' },
-  equal: { symbol: ' ', label: 'Unchanged line' },
-};
-
-const rowStyle: Record<DiffLine['kind'], React.CSSProperties> = {
-  // Added: warm-paper surface, solid charcoal bar, bold text. Removed: pale burgundy surface, dashed burgundy bar.
-  added: {
-    backgroundColor: 'var(--color-off-white)',
-    boxShadow: 'inset 6px 0 0 var(--color-charcoal)',
-    fontWeight: 600,
-  },
-  removed: {
-    backgroundColor: 'var(--color-primary-pale)',
-    borderLeft: '6px dashed var(--color-primary)',
-  },
-  equal: { backgroundColor: 'var(--color-white)' },
-};
-
-const cellBase: React.CSSProperties = {
-  padding: '0.1rem 0.5rem',
-  verticalAlign: 'top',
-  fontFamily: 'var(--font-mono, monospace)',
-  fontSize: '0.85rem',
-  lineHeight: 1.55,
-};
-
-const numCell: React.CSSProperties = {
-  ...cellBase,
-  width: '3.5rem',
-  textAlign: 'right',
-  color: 'var(--color-gray)',
-  userSelect: 'none',
-  whiteSpace: 'nowrap',
+const MARKER: Record<DiffLine['kind'], { symbol: string; label: string; className: string }> = {
+  added: { symbol: '+', label: 'Thêm: ', className: styles.add },
+  removed: { symbol: '−', label: 'Xóa: ', className: styles.del },
+  equal: { symbol: '', label: '', className: '' },
 };
 
 interface VersionDiffViewProps {
@@ -83,8 +53,8 @@ interface VersionDiffViewProps {
 }
 
 /**
- * Unified line diff between two version snapshots.
- * Changes carry +/− markers and screen-reader labels, not only colour.
+ * So sánh từng dòng giữa hai phiên bản.
+ * Dòng thay đổi có dấu +/− và chữ ẩn cho trình đọc màn hình, không chỉ dựa vào màu.
  * Mount with a `key` built from both version ids so expansion state resets on selection change.
  */
 export default function VersionDiffView({ base, target }: VersionDiffViewProps) {
@@ -108,124 +78,62 @@ export default function VersionDiffView({ base, target }: VersionDiffViewProps) 
 
   return (
     <div>
-      <p
-        role="status"
-        aria-live="polite"
-        style={{ margin: '0 0 1rem 0', color: 'var(--color-charcoal)', fontSize: 'var(--text-sm)' }}
-      >
-        Comparing <strong>v{base.version_no}</strong> → <strong>v{target.version_no}</strong>:{' '}
+      <div className={styles.dsum} role="status" aria-live="polite">
+        <span className={styles.sr}>So sánh phiên bản {base.version_no} với phiên bản {target.version_no}: </span>
         {identical ? (
-          'no differences.'
+          <span>Hai phiên bản có cùng tiêu đề và nội dung.</span>
         ) : (
           <>
-            <span>+{result.added} added</span>, <span>{'−'}{result.removed} removed</span>
-            {titleChanged ? ', title changed' : ''}.
+            <span><span className={styles.a}>+{result.added} dòng</span> thêm</span>
+            <span><span className={styles.r}>−{result.removed} dòng</span> xóa</span>
           </>
         )}
-      </p>
+      </div>
 
       {result.approximate && (
-        <p
-          style={{
-            margin: '0 0 1rem 0',
-            padding: '0.6rem 0.85rem',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--color-primary-faint)',
-            color: 'var(--color-charcoal)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
-          These versions differ too much for a line-by-line match; the changed block is shown as a full replacement.
-        </p>
+        <p className={styles.approx}>Hai phiên bản khác nhau quá nhiều để so từng dòng, nên khối thay đổi được hiện như một lần thay thế toàn bộ (kết quả chỉ là gần đúng).</p>
       )}
 
       {titleChanged && (
-        <div style={{ marginBottom: '1rem', fontSize: 'var(--text-sm)' }}>
-          <h3 style={{ fontSize: 'var(--text-sm)', margin: '0 0 0.35rem 0', color: 'var(--color-gray)' }}>Title</h3>
-          <div style={{ ...rowStyle.removed, padding: '0.35rem 0.75rem', color: 'var(--color-charcoal)' }}>
-            <span aria-hidden="true">{'−'} </span>
-            <span className="visually-hidden">Old title: </span>
-            {base.title || 'Untitled'}
-          </div>
-          <div style={{ ...rowStyle.added, padding: '0.35rem 0.75rem', color: 'var(--color-charcoal)' }}>
-            <span aria-hidden="true">+ </span>
-            <span className="visually-hidden">New title: </span>
-            {target.title || 'Untitled'}
-          </div>
+        <div className={styles.tchg}>
+          Tiêu đề đổi: <s>{base.title || 'Chưa có tiêu đề'}</s> thành <ins>{target.title || 'Chưa có tiêu đề'}</ins>
         </div>
       )}
 
-      {identical ? (
-        <p style={{ color: 'var(--color-gray)', margin: 0 }}>Both versions have the same title and content.</p>
-      ) : result.lines.length === 0 ? null : (
-        <div
-          style={{
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            overflowX: 'auto',
-            backgroundColor: 'var(--color-white)',
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: 'var(--color-charcoal)' }}>
-            <caption className="visually-hidden">
-              Line changes from version {base.version_no} to version {target.version_no}
-            </caption>
-            <thead className="visually-hidden">
-              <tr>
-                <th scope="col">Line in v{base.version_no}</th>
-                <th scope="col">Line in v{target.version_no}</th>
-                <th scope="col">Change</th>
-                <th scope="col">Text</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleRows.map((row, idx) => {
-                if (row.type === 'gap') {
-                  return (
-                    <tr key={`gap-${row.id}`} style={{ backgroundColor: 'var(--color-off-white)' }}>
-                      <td colSpan={4} style={{ ...cellBase, textAlign: 'center', padding: '0.25rem' }}>
-                        <button
-                          type="button"
-                          onClick={() => expandGap(row.id)}
-                          className="btn btn-outline"
-                          style={{ fontSize: 'var(--text-xs)', padding: '0.2rem 0.75rem' }}
-                        >
-                          Show {row.lines.length} unchanged {row.lines.length === 1 ? 'line' : 'lines'}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                }
-                const { line } = row;
-                const marker = markerFor[line.kind];
+      {!identical && result.lines.length > 0 && (
+        <>
+          <div className={styles.diff} role="region" aria-label="So sánh nội dung" tabIndex={0}>
+            {visibleRows.map((row, idx) => {
+              if (row.type === 'gap') {
                 return (
-                  <tr key={`l-${idx}-${line.oldNo ?? ''}-${line.newNo ?? ''}`} style={rowStyle[line.kind]}>
-                    <td style={numCell}>{line.oldNo ?? ''}</td>
-                    <td style={numCell}>{line.newNo ?? ''}</td>
-                    <td style={{ ...cellBase, width: '1.5rem', textAlign: 'center', fontWeight: 700 }}>
-                      <span aria-hidden="true">{marker.symbol}</span>
-                      {line.kind !== 'equal' && <span className="visually-hidden">{marker.label}</span>}
-                    </td>
-                    <td style={{ ...cellBase, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                      {line.text === '' ? ' ' : line.text}
-                    </td>
-                  </tr>
+                  <button key={`gap-${row.id}`} type="button" className={styles.fold} onClick={() => expandGap(row.id)}>
+                    Hiện {row.lines.length} dòng không đổi
+                  </button>
                 );
-              })}
-            </tbody>
-          </table>
+              }
+              const { line } = row;
+              const marker = MARKER[line.kind];
+              return (
+                <div key={`l-${idx}-${line.oldNo ?? ''}-${line.newNo ?? ''}`} className={`${styles.dl} ${marker.className}`}>
+                  <span className={styles.n}>{line.oldNo ?? ''}</span>
+                  <span className={styles.n}>{line.newNo ?? ''}</span>
+                  <span className={styles.mk} aria-hidden="true">{marker.symbol}</span>
+                  <span className={styles.tx}>
+                    {marker.label && <span className={styles.sr}>{marker.label}</span>}
+                    {line.text === '' ? ' ' : line.text}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
           {rows.length > rowLimit && (
-            <div style={{ padding: '0.75rem', textAlign: 'center', borderTop: '1px solid var(--color-border)' }}>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => setRowLimit((n) => n + ROW_PAGE)}
-              >
-                Show more ({rows.length - rowLimit} rows remaining)
+            <div className={styles.more}>
+              <button type="button" className={`${styles.btn} ${styles.ghost} ${styles.sm}`} onClick={() => setRowLimit((n) => n + ROW_PAGE)}>
+                Hiện thêm (còn {rows.length - rowLimit} dòng)
               </button>
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   );

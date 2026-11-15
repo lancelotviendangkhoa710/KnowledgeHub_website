@@ -1,18 +1,15 @@
 'use client';
 
 import type { ArticleVersionEntry } from '@/lib/versionClient';
+import styles from './versions.module.css';
 
-const dateFormatter =
-  typeof Intl !== 'undefined'
-    ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-    : null;
-
-/** Format an ISO timestamp for display; falls back to the raw value when it cannot be parsed. */
+/** dd/mm/yyyy theo giờ máy; trả lại chuỗi gốc nếu không đọc được ngày. */
 export function formatVersionDate(value: string | null | undefined): string {
-  if (!value) return 'Unknown date';
+  if (!value) return 'Chưa rõ ngày';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime()) || !dateFormatter) return value;
-  return dateFormatter.format(date);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
 /** Display name of the version author; never shows contact details returned by the API. */
@@ -26,95 +23,38 @@ interface VersionTimelineProps {
   selectedId: string | null;
   publishedVersionId: string | null;
   publishedLabel: string;
+  /** Id of the newest version, or null when the viewer cannot see it (readers only see the published one). */
+  latestId: string | null;
   onSelect: (versionId: string) => void;
 }
 
-/** Newest-first list of version snapshots; each entry is a keyboard-focusable button. */
-export default function VersionTimeline({
-  versions,
-  selectedId,
-  publishedVersionId,
-  publishedLabel,
-  onSelect,
-}: VersionTimelineProps) {
+/** Danh sách phiên bản, mới nhất lên đầu; mỗi mục là một nút bấm được bằng bàn phím. */
+export default function VersionTimeline({ versions, selectedId, publishedVersionId, publishedLabel, latestId, onSelect }: VersionTimelineProps) {
   return (
-    <section aria-label="Course versions">
-      <h2
-        style={{
-          fontSize: 'var(--text-sm)',
-          textTransform: 'uppercase',
-          letterSpacing: '0.06em',
-          color: 'var(--color-gray)',
-          margin: '0 0 0.75rem 0',
-          fontWeight: 600,
-        }}
-      >
-        {versions.length} {versions.length === 1 ? 'version' : 'versions'}
-      </h2>
-      <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: '0.5rem' }}>
-        {versions.map((version, index) => {
-          const isSelected = version.id === selectedId;
-          const isPublished = version.id === publishedVersionId;
-          const isLatest = index === 0;
-          const author = versionAuthorName(version);
-          return (
-            <li key={version.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(version.id)}
-                aria-pressed={isSelected}
-                aria-describedby={`version-meta-${version.id}`}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  padding: '0.75rem 0.9rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  borderLeft: `4px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                  backgroundColor: isSelected ? 'var(--color-primary-pale)' : 'var(--color-white)',
-                  color: 'var(--color-charcoal)',
-                  font: 'inherit',
-                  display: 'grid',
-                  gap: '0.3rem',
-                }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                  <strong style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)' }}>
-                    v{version.version_no}
-                  </strong>
-                  {isPublished && <span className="badge badge-status-published">{publishedLabel}</span>}
-                  {isLatest && !isPublished && (
-                    <span
-                      className="badge"
-                      style={{
-                        backgroundColor: 'var(--color-off-white)',
-                        color: 'var(--color-gray)',
-                        border: '1px solid var(--color-border)',
-                      }}
-                    >
-                      Latest
-                    </span>
-                  )}
+    <ul className={styles.vlist} aria-label="Các phiên bản của khóa học">
+      {versions.map((version) => {
+        const isPublished = version.id === publishedVersionId;
+        const isLatest = version.id === latestId;
+        const author = versionAuthorName(version);
+        return (
+          <li key={version.id}>
+            <button type="button" className={styles.vitem} onClick={() => onSelect(version.id)} aria-pressed={version.id === selectedId}>
+              <b>Phiên bản {version.version_no}</b>
+              <span className={styles.m}>{version.title || 'Chưa có tiêu đề'}</span>
+              <span className={styles.m}>
+                {author ? `${author}, ` : ''}
+                <time dateTime={version.created_at}>{formatVersionDate(version.created_at)}</time>
+              </span>
+              {(isPublished || isLatest) && (
+                <span className={styles.bd}>
+                  {isPublished && <span className={`${styles.st} ${styles.ok}`}>{publishedLabel}</span>}
+                  {isLatest && <span className={`${styles.st} ${styles.draft}`}>Mới nhất</span>}
                 </span>
-                <span
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 'var(--text-base)',
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  {version.title || 'Untitled'}
-                </span>
-                <span id={`version-meta-${version.id}`} style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray)' }}>
-                  {author ? `${author} · ` : ''}
-                  <time dateTime={version.created_at}>{formatVersionDate(version.created_at)}</time>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
+              )}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
