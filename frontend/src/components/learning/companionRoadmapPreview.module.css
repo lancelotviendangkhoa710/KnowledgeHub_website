@@ -2,7 +2,6 @@
 .heading { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
 .heading h2 { margin: .3rem 0 .5rem; font-size: 1.45rem; line-height: 1.25; }
 .heading p { color: var(--color-gray); line-height: 1.55; margin: 0; }
-.eyebrow { font-size: .72rem; text-transform: uppercase; letter-spacing: .09em; color: var(--color-primary); font-weight: 800; }
 .close { background: transparent; border: 0; color: var(--color-gray); font-size: 1.7rem; cursor: pointer; line-height: 1; }
 .scoreGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; margin-top: 1.4rem; }
 .scoreGrid > div { display: flex; flex-direction: column; justify-content: center; gap: .2rem; padding: 1rem; background: var(--color-off-white); border-right: 1px solid var(--color-border); }
@@ -20,7 +19,7 @@
 .skillList { display: grid; gap: .45rem; }
 .skill { display: flex; justify-content: space-between; gap: .65rem; border-bottom: 1px solid var(--color-border-light); padding: .4rem 0; font-size: .85rem; }
 .skill span:last-child { color: var(--color-gray); white-space: nowrap; }
-.gaps { color: #9a3412; font-size: .85rem; margin: .8rem 0 0; }
+.gaps { color: var(--ink-2); font-size: .85rem; margin: .8rem 0 0; }
 .cvBlock { background: var(--color-primary-faint); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.3rem; }
 .cvBlock h3 { margin: 0 0 .5rem; font-size: .95rem; }
 .cvBlock p { color: var(--color-gray); font-size: .82rem; line-height: 1.5; margin: .35rem 0; overflow-wrap: anywhere; }
@@ -38,6 +37,6 @@
 .externalBlock { display: grid; gap: .4rem; margin-top: .75rem; font-size: .82rem; }
 .externalBlock a { color: var(--color-primary); text-decoration: underline; }
 .externalBlock small { display: block; color: var(--color-gray); font-size: .73rem; line-height: 1.45; margin-top: .15rem; text-decoration: none; }
-.gapNotice { color: #9a3412 !important; margin-top: .7rem !important; }
+.gapNotice { color: var(--ink-2) !important; margin-top: .7rem !important; }
 .actions { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: .65rem; padding: 1rem 0 .3rem; border-top: 1px solid var(--color-border-light); background: var(--color-white); box-shadow: 0 -10px 15px -14px rgba(0, 0, 0, .35); }
 @media (max-width: 640px) { .preview { padding: 1rem; } .scoreGrid { grid-template-columns: 1fr; } .scoreGrid > div { border-right: 0; border-bottom: 1px solid var(--color-border); } .scoreGrid > div:last-child { border-bottom: 0; } .skill { flex-direction: column; gap: .15rem; } .actions > button { width: 100%; } }

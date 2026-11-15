@@ -6,14 +6,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { aiCompanionClient } from '@/lib/aiCompanionClient';
 import RoadmapForm from '@/components/learning/RoadmapForm';
+import { LogoMark } from '@/components/layout/Logo';
+import DatePicker from '@/components/ui/DatePicker';
+import Select from '@/components/ui/Select';
+import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
 import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
 import styles from './companion.module.css';
 
+const MOBILE_QUERY = '(max-width: 980px)';
 const LOGIN_REDIRECT = '/login?redirect=%2Fai%2Fcompanion';
 const MAX_MESSAGE_LENGTH = 8000;
-const STALE_CONVERSATION_MESSAGE = 'This conversation no longer exists. It may have been deleted.';
-const ASSISTANT_STARTING_MESSAGE = 'The assistant is starting up. Please retry in a moment.';
+const STALE_CONVERSATION_MESSAGE = 'Cuộc trò chuyện này không còn tồn tại, có thể đã bị xóa.';
+const ASSISTANT_STARTING_MESSAGE = 'Trợ lý đang khởi động, vui lòng thử lại sau ít phút.';
 
 type ApiError = { status?: number; message?: string; code?: string };
 
@@ -30,24 +35,15 @@ type FailedSend = {
 };
 
 const memoryTypeLabels: Record<MemoryType, string> = {
-  preference: 'Preference',
-  fact: 'Fact',
-  goal: 'Goal',
+  preference: 'Sở thích',
+  fact: 'Thông tin',
+  goal: 'Mục tiêu',
 };
 
-const STARTER_PROMPTS: Array<{ label: string; prompt: string }> = [
-  {
-    label: 'Explain a concept',
-    prompt: 'Can you explain a concept from my current course in simple terms?',
-  },
-  {
-    label: 'Plan my study week',
-    prompt: 'Help me build a realistic study plan for this week based on my learning goals.',
-  },
-  {
-    label: 'Quiz me',
-    prompt: 'Quiz me on what I have learned recently, one question at a time.',
-  },
+const STARTER_PROMPTS: string[] = [
+  'ETL và ELT khác nhau thế nào?',
+  'Gợi ý khóa học tiếp theo cho mình',
+  'Giải thích Raft bằng ví dụ đời thường',
 ];
 
 function Icon({ children, size = 16 }: { children: ReactNode; size?: number }) {
@@ -89,19 +85,19 @@ function isNotFoundError(apiError: ApiError): boolean {
 }
 
 function formatRelativeTime(value: string | null): string {
-  if (!value) return 'No activity';
+  if (!value) return 'Chưa có hoạt động';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
   const diffMs = Date.now() - date.getTime();
-  if (diffMs < 60_000) return 'Just now';
+  if (diffMs < 60_000) return 'Vừa xong';
   const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes} phút trước`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours} giờ trước`;
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return `${days} ngày trước`;
   const includeYear = date.getFullYear() !== new Date().getFullYear();
-  return date.toLocaleDateString('en-US', includeYear
+  return date.toLocaleDateString('vi-VN', includeYear
     ? { month: 'short', day: 'numeric', year: 'numeric' }
     : { month: 'short', day: 'numeric' });
 }
@@ -112,57 +108,19 @@ function formatMessageTime(value: string | null): string {
   if (Number.isNaN(date.getTime())) return '';
   const isToday = date.toDateString() === new Date().toDateString();
   return isToday
-    ? date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    : date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    ? date.toLocaleTimeString('vi-VN', { hour: 'numeric', minute: '2-digit' })
+    : date.toLocaleString('vi-VN', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 function formatExpiryDate(value: string | null): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function messagesLabel(count: number): string {
-  return `${count} ${count === 1 ? 'message' : 'messages'}`;
-}
-
-function EmptyThread({
-  hasConversation,
-  onSuggestion,
-}: {
-  hasConversation: boolean;
-  onSuggestion: (prompt: string) => void;
-}) {
-  return (
-    <div className={styles.emptyState}>
-      <span className={styles.emptyIcon} aria-hidden="true">
-        <Icon size={24}>
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </Icon>
-      </span>
-      <h2 className={styles.emptyTitle}>
-        {hasConversation ? 'How can I help you learn today?' : 'Start a new conversation'}
-      </h2>
-      <p className={styles.emptyText}>
-        {hasConversation
-          ? 'Ask about a course, untangle a concept, or plan what to study next.'
-          : 'Send a message below and a new chat will be created for you automatically.'}
-      </p>
-      <div className={styles.suggestions} aria-label="Suggested prompts">
-        {STARTER_PROMPTS.map((suggestion) => (
-          <button
-            key={suggestion.label}
-            type="button"
-            className={styles.suggestion}
-            onClick={() => onSuggestion(suggestion.prompt)}
-          >
-            {suggestion.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+  return `${count} tin nhắn`;
 }
 
 export default function AICompanionPage() {
@@ -212,7 +170,9 @@ export default function AICompanionPage() {
   const roadmapReturnScrollRef = useRef<number | null>(null);
   const roadmapPaneRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const aiRef = useRef<HTMLDivElement | null>(null);
   const memoryCloseRef = useRef<HTMLButtonElement | null>(null);
+  const memoryToggleRef = useRef<HTMLButtonElement | null>(null);
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -228,6 +188,16 @@ export default function AICompanionPage() {
     }
   }, [roadmapMode]);
 
+  // Chiều cao header đổi theo khổ màn hình (nav xuống dòng trên điện thoại) nên đo thực tế thay vì dùng --head.
+  useEffect(() => {
+    const el = aiRef.current;
+    if (!el) return;
+    const measure = () => el.style.setProperty('--ai-offset', `${el.getBoundingClientRect().top + window.scrollY}px`);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [booting]);
+
   useEffect(() => {
     mountedRef.current = true;
     if (!getAccessToken()) {
@@ -235,7 +205,15 @@ export default function AICompanionPage() {
       return;
     }
     void loadConversations();
+    // Như mockup: trên máy tính cột ghi nhớ mở sẵn.
+    if (!window.matchMedia(MOBILE_QUERY).matches) {
+      setMemoryOpen(true);
+      void loadMemories();
+    }
+    // Ẩn chân trang ở màn này (quy tắc body[data-screen] trong globals.css).
+    document.body.dataset.screen = 'tro-ly';
     return () => {
+      delete document.body.dataset.screen;
       mountedRef.current = false;
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
@@ -285,7 +263,8 @@ export default function AICompanionPage() {
   }, [draft]);
 
   useEffect(() => {
-    const overlayOpen = memoryOpen || sidebarOpen;
+    // Trên máy tính ghi nhớ là một cột cố định nên chỉ khóa cuộn khi bảng trượt ra trên điện thoại.
+    const overlayOpen = sidebarOpen || (memoryOpen && window.matchMedia(MOBILE_QUERY).matches);
     if (!overlayOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -309,9 +288,41 @@ export default function AICompanionPage() {
   }, [memoryOpen, sidebarOpen]);
 
   useEffect(() => {
-    if (memoryOpen) {
+    if (memoryOpen && window.matchMedia(MOBILE_QUERY).matches) {
       memoryCloseRef.current?.focus();
     }
+  }, [memoryOpen]);
+
+  // Bảng ghi nhớ trên điện thoại là drawer: giữ focus trong bảng, vô hiệu hóa phần phía sau, đóng thì trả focus về nút "Ghi nhớ".
+  // Cột ghi nhớ trên máy tính không bị giới hạn.
+  useEffect(() => {
+    if (!memoryOpen || !window.matchMedia(MOBILE_QUERY).matches) return;
+    const behind = Array.from(aiRef.current?.querySelectorAll<HTMLElement>(':scope > aside:not(#memory-panel), :scope > section') ?? []);
+    const toggle = memoryToggleRef.current;
+    behind.forEach((element) => element.setAttribute('inert', ''));
+    function trapTab(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(document.querySelectorAll<HTMLElement>(
+        '#memory-panel button:not([disabled]), #memory-panel input:not([disabled]), #memory-panel textarea:not([disabled]), #memory-panel [href], #memory-panel [tabindex]:not([tabindex="-1"])',
+      ));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const current = document.activeElement;
+      if (event.shiftKey && (current === first || !focusable.includes(current as HTMLElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && current === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener('keydown', trapTab);
+    return () => {
+      document.removeEventListener('keydown', trapTab);
+      behind.forEach((element) => element.removeAttribute('inert'));
+      toggle?.focus();
+    };
   }, [memoryOpen]);
 
   function handleApiError(caught: unknown, fallback: string): void {
@@ -356,7 +367,7 @@ export default function AICompanionPage() {
         }
         return;
       }
-      setError('Unable to load your conversations. Please retry.');
+      setError('Không tải được danh sách cuộc trò chuyện. Vui lòng thử lại.');
     } finally {
       if (!isRetry && mountedRef.current) setBooting(false);
     }
@@ -383,7 +394,7 @@ export default function AICompanionPage() {
         router.replace(LOGIN_REDIRECT);
         return;
       }
-      setError('Unable to refresh your conversations. Please retry.');
+      setError('Không làm mới được danh sách cuộc trò chuyện. Vui lòng thử lại.');
     }
   }
 
@@ -418,7 +429,7 @@ export default function AICompanionPage() {
         await handleStaleConversation();
         return;
       }
-      handleApiError(caught, 'Unable to load this conversation. Please retry.');
+      handleApiError(caught, 'Không tải được cuộc trò chuyện này. Vui lòng thử lại.');
     } finally {
       if (requestId === messageRequestRef.current) setLoadingMessages(false);
     }
@@ -439,7 +450,7 @@ export default function AICompanionPage() {
         router.replace(LOGIN_REDIRECT);
         return;
       }
-      setMemoryError('Unable to load your memories. Please retry.');
+      setMemoryError('Không tải được ghi nhớ. Vui lòng thử lại.');
       setMemoryLoadFailed(true);
     } finally {
       if (mountedRef.current) setMemoryLoading(false);
@@ -469,7 +480,7 @@ export default function AICompanionPage() {
       setSidebarOpen(false);
       return conversation;
     } catch (caught) {
-      handleApiError(caught, 'Unable to create a conversation. Please retry.');
+      handleApiError(caught, 'Không tạo được cuộc trò chuyện. Vui lòng thử lại.');
       return null;
     } finally {
       creatingRef.current = false;
@@ -492,7 +503,7 @@ export default function AICompanionPage() {
   function startRename(conversation: AIConversation): void {
     setRenamingId(conversation.id);
     setRenameValue(conversation.title ?? '');
-    if (window.matchMedia('(max-width: 960px)').matches) {
+    if (window.matchMedia(MOBILE_QUERY).matches) {
       setSidebarOpen(true);
     }
     setError(null);
@@ -520,12 +531,12 @@ export default function AICompanionPage() {
         await handleStaleConversation();
         return;
       }
-      handleApiError(caught, 'Unable to rename this conversation. Please retry.');
+      handleApiError(caught, 'Không đổi được tên cuộc trò chuyện. Vui lòng thử lại.');
     }
   }
 
   async function deleteConversation(conversation: AIConversation): Promise<void> {
-    if (!window.confirm(`Delete conversation "${conversation.title ?? 'Untitled chat'}" and its messages?`)) {
+    if (!window.confirm(`Xóa cuộc trò chuyện "${conversation.title ?? 'Chưa đặt tên'}" cùng các tin nhắn của nó?`)) {
       return;
     }
     setError(null);
@@ -549,7 +560,7 @@ export default function AICompanionPage() {
         await handleStaleConversation();
         return;
       }
-      handleApiError(caught, 'Unable to delete this conversation. Please retry.');
+      handleApiError(caught, 'Không xóa được cuộc trò chuyện. Vui lòng thử lại.');
     }
   }
 
@@ -615,7 +626,7 @@ export default function AICompanionPage() {
     const content = rawContent.trim();
     if (!content || sendingRef.current || creatingRef.current || chatDisabled) return;
     if (content.length > MAX_MESSAGE_LENGTH) {
-      setError('Messages must be 8000 characters or fewer.');
+      setError('Tin nhắn tối đa 8000 ký tự.');
       return;
     }
 
@@ -680,9 +691,9 @@ export default function AICompanionPage() {
       if (activeIdRef.current !== conversationId) {
         setRetryNotice(null);
         if (outcome.kind === 'unavailable') {
-          setError('Your last message could not be sent. Open that conversation and try again.');
+          setError('Không gửi được tin nhắn gần nhất. Hãy mở lại cuộc trò chuyện đó và thử lại.');
         } else {
-          handleApiError(outcome.kind === 'error' ? outcome.error : null, 'Unable to send your message. Please retry.');
+          handleApiError(outcome.kind === 'error' ? outcome.error : null, 'Không gửi được tin nhắn. Vui lòng thử lại.');
         }
         return;
       }
@@ -696,12 +707,12 @@ export default function AICompanionPage() {
 
       setRetryNotice(null);
       setDraft((current) => current || content);
-      handleApiError(outcome.kind === 'error' ? outcome.error : null, 'Unable to send your message. Nothing was saved; please retry.');
+      handleApiError(outcome.kind === 'error' ? outcome.error : null, 'Không gửi được tin nhắn, chưa có gì được lưu. Vui lòng thử lại.');
     } catch (caught) {
       if (optimisticId) {
         setMessages((current) => current.filter((message) => message.id !== optimisticId));
       }
-      handleApiError(caught, 'Unable to send your message. Please retry.');
+      handleApiError(caught, 'Không gửi được tin nhắn. Vui lòng thử lại.');
     } finally {
       sendingRef.current = false;
       if (mountedRef.current) setSending(false);
@@ -758,14 +769,14 @@ export default function AICompanionPage() {
         router.replace(LOGIN_REDIRECT);
         return;
       }
-      setMemoryError('Unable to save this memory. Please retry.');
+      setMemoryError('Không lưu được ghi nhớ. Vui lòng thử lại.');
     } finally {
       setSavingMemory(false);
     }
   }
 
   async function removeMemory(memory: UserMemory): Promise<void> {
-    if (!window.confirm('Delete this memory? It will no longer be used by the AI companion.')) return;
+    if (!window.confirm('Xóa ghi nhớ này? Trợ lý sẽ không dùng nó nữa.')) return;
     setMemoryError(null);
     try {
       await aiCompanionClient.deleteMemory(memory.id);
@@ -778,10 +789,10 @@ export default function AICompanionPage() {
       }
       if (isNotFoundError(apiError)) {
         setMemories((current) => current.filter((entry) => entry.id !== memory.id));
-        setMemoryError('That memory no longer exists. It may have been deleted.');
+        setMemoryError('Ghi nhớ này không còn tồn tại, có thể đã bị xóa.');
         return;
       }
-      setMemoryError('Unable to delete this memory. Please retry.');
+      setMemoryError('Không xóa được ghi nhớ. Vui lòng thử lại.');
     }
   }
 
@@ -802,7 +813,7 @@ export default function AICompanionPage() {
         <div className={styles.loadingShell}>
           <div className={styles.loadingCard} role="status" aria-live="polite">
             <span className={styles.spinner} aria-hidden="true" />
-            <p className={styles.loadingText}>Loading your AI companion…</p>
+            <p className={styles.loadingText}>Đang tải trợ lý AI...</p>
           </div>
         </div>
       </div>
@@ -812,87 +823,74 @@ export default function AICompanionPage() {
   const composerDisabled = sending || creating || chatDisabled;
   const canSend = !composerDisabled && draft.trim().length > 0;
   const composerPlaceholder = chatDisabled
-    ? 'AI chat is not enabled yet.'
-    : active
-      ? 'Message the AI Companion…'
-      : 'Ask anything to start a new chat…';
+    ? 'Trò chuyện với AI chưa được bật.'
+    : 'Hỏi về bài học hoặc lộ trình';
   const showRetryAction = Boolean(failedSend && failedSend.conversationId === activeId);
+  const lastAssistantId = [...messages].reverse().find((message) => message.role !== 'user')?.id ?? null;
+  const openRoadmapForm = () => {
+    roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null;
+    setRoadmapMode(true);
+  };
+  const dismissButton = (label: string, onClick: () => void) => (
+    <button type="button" className={styles.iconButton} onClick={onClick} aria-label={label}>
+      <Icon size={14}><path d="M18 6 6 18M6 6l12 12" /></Icon>
+    </button>
+  );
 
   return (
     <div className={styles.page}>
-      <div className={styles.shell}>
-        {sidebarOpen && (
+      <div ref={aiRef} className={`${styles.ai} ${memoryOpen ? '' : styles.noMem}`}>
+        {(sidebarOpen || memoryOpen) && (
           <div
-            className={styles.sidebarOverlay}
-            onClick={() => setSidebarOpen(false)}
+            className={`${styles.overlay} ${sidebarOpen ? '' : styles.overlayMem}`}
+            onClick={() => { setSidebarOpen(false); setMemoryOpen(false); }}
             aria-hidden="true"
           />
         )}
 
         <aside
           id="companion-sidebar"
-          className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ''}`}
-          aria-label="Conversations"
+          className={`${styles.list} ${sidebarOpen ? styles.listOpen : ''}`}
+          aria-label="Cuộc trò chuyện"
         >
-          <div className={styles.sidebarHeader}>
-            <div className={styles.brand}>
-              <span className={styles.brandMark} aria-hidden="true">
-                <Icon size={17}>
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </Icon>
-              </span>
-              <span className={styles.brandText}>
-                <strong className={styles.brandTitle}>AI Companion</strong>
-                <span className={styles.brandSubtitle}>Your learning copilot</span>
-              </span>
-            </div>
+          <div className={styles.listHead}>
+            <h2>Trợ lý AI</h2>
             <button
               type="button"
-              className={`${styles.iconButton} ${styles.sidebarClose}`}
+              className={`${styles.iconButton} ${styles.mobileOnly}`}
               onClick={() => setSidebarOpen(false)}
-              aria-label="Close conversation list"
+              aria-label="Đóng danh sách cuộc trò chuyện"
             >
-              <Icon size={16}>
-                <path d="M18 6 6 18M6 6l12 12" />
-              </Icon>
+              <Icon size={16}><path d="M18 6 6 18M6 6l12 12" /></Icon>
             </button>
           </div>
 
           <button
             type="button"
-            className={styles.newChatButton}
+            className={styles.btn}
             onClick={() => void createConversation()}
             disabled={creating}
           >
-            <Icon size={16}>
-              <path d="M12 5v14M5 12h14" />
-            </Icon>
-            {creating ? 'Creating…' : 'New chat'}
+            <Icon size={16}><path d="M12 5v14M5 12h14" /></Icon>
+            {creating ? 'Đang tạo...' : 'Cuộc trò chuyện mới'}
           </button>
 
-          <div className={styles.conversations}>
+          <div className={styles.convs}>
             {conversations.length === 0 ? (
-              <div className={styles.sidebarEmpty}>
-                <p className={styles.sidebarEmptyTitle}>No conversations yet</p>
-                <p className={styles.sidebarEmptyText}>Start a new chat to see it here.</p>
+              <div className={styles.emptyList}>
+                <p>Chưa có cuộc trò chuyện nào</p>
+                <p>Bắt đầu một cuộc trò chuyện mới để thấy nó ở đây.</p>
               </div>
             ) : (
-              <ul className={styles.conversationList}>
+              <ul className={styles.convList}>
                 {conversations.map((conversation) => {
                   const isActive = activeId === conversation.id;
+                  const title = conversation.title ?? 'Chưa đặt tên';
                   return (
-                    <li
-                      key={conversation.id}
-                      className={`${styles.conversationItem} ${isActive ? styles.conversationItemActive : ''}`}
-                    >
+                    <li key={conversation.id} className={`${styles.convItem} ${isActive ? styles.convItemActive : ''}`}>
                       {renamingId === conversation.id ? (
-                        <form
-                          className={styles.renameForm}
-                          onSubmit={(event) => void saveRename(event, conversation.id)}
-                        >
-                          <label className={styles.srOnly} htmlFor={`rename-${conversation.id}`}>
-                            Conversation title
-                          </label>
+                        <form className={styles.renameForm} onSubmit={(event) => void saveRename(event, conversation.id)}>
+                          <label className={styles.srOnly} htmlFor={`rename-${conversation.id}`}>Tên cuộc trò chuyện</label>
                           <input
                             id={`rename-${conversation.id}`}
                             className={styles.renameInput}
@@ -908,51 +906,31 @@ export default function AICompanionPage() {
                             autoFocus
                           />
                           <div className={styles.renameActions}>
-                            <button type="submit" className={styles.smallPrimaryButton}>Save</button>
-                            <button
-                              type="button"
-                              className={styles.smallSecondaryButton}
-                              onClick={() => setRenamingId(null)}
-                            >
-                              Cancel
-                            </button>
+                            <button type="submit" className={`${styles.btn} ${styles.btnSm}`}>Lưu</button>
+                            <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => setRenamingId(null)}>Hủy</button>
                           </div>
                         </form>
                       ) : (
                         <>
                           <button
                             type="button"
-                            className={styles.conversationButton}
+                            className={styles.conv}
                             onClick={() => selectConversation(conversation)}
-                            aria-pressed={isActive}
+                            aria-current={isActive ? 'true' : undefined}
                           >
-                            <span className={styles.conversationTitle}>
-                              {conversation.title ?? 'Untitled chat'}
-                            </span>
-                            <span className={styles.conversationMeta}>
-                              <span>{messagesLabel(conversation.messages_count ?? 0)}</span>
-                              <span aria-hidden="true">·</span>
-                              <span>{formatRelativeTime(conversation.updated_at ?? conversation.created_at)}</span>
-                            </span>
+                            <b>{title}</b>
+                            <small>
+                              {messagesLabel(conversation.messages_count ?? 0)}, {formatRelativeTime(conversation.updated_at ?? conversation.created_at)}
+                            </small>
                           </button>
-                          <div className={styles.conversationActions}>
-                            <button
-                              type="button"
-                              className={styles.iconButton}
-                              onClick={() => startRename(conversation)}
-                              aria-label={`Rename ${conversation.title ?? 'untitled chat'}`}
-                            >
+                          <div className={styles.convActions}>
+                            <button type="button" className={styles.iconButton} onClick={() => startRename(conversation)} aria-label={`Đổi tên cuộc trò chuyện ${title}`}>
                               <Icon size={14}>
                                 <path d="M12 20h9" />
                                 <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
                               </Icon>
                             </button>
-                            <button
-                              type="button"
-                              className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                              onClick={() => void deleteConversation(conversation)}
-                              aria-label={`Delete ${conversation.title ?? 'untitled chat'}`}
-                            >
+                            <button type="button" className={`${styles.iconButton} ${styles.iconButtonDanger}`} onClick={() => void deleteConversation(conversation)} aria-label={`Xóa cuộc trò chuyện ${title}`}>
                               <Icon size={14}>
                                 <path d="M3 6h18" />
                                 <path d="M8 6V4h8v2" />
@@ -969,397 +947,282 @@ export default function AICompanionPage() {
             )}
           </div>
 
-          <div className={styles.sidebarFooter}>
-            Chats are private to your account.
-          </div>
+          <p className={styles.listFoot}>Chỉ bạn xem được các cuộc trò chuyện này.</p>
         </aside>
 
-        <section className={styles.chatPanel} aria-label="Chat with AI Companion">
-          <header className={styles.chatHeader}>
+        <section className={styles.chat} aria-label="Trò chuyện với trợ lý AI">
+          <div className={styles.chatHead}>
             <button
               type="button"
-              className={`${styles.iconButton} ${styles.sidebarToggle}`}
+              className={`${styles.iconButton} ${styles.mobileOnly}`}
               onClick={() => setSidebarOpen((current) => !current)}
-              aria-label="Open conversation list"
+              aria-label="Mở danh sách cuộc trò chuyện"
               aria-expanded={sidebarOpen}
               aria-controls="companion-sidebar"
             >
-              <Icon size={18}>
-                <path d="M3 6h18M3 12h18M3 18h18" />
-              </Icon>
+              <Icon size={18}><path d="M3 6h18M3 12h18M3 18h18" /></Icon>
             </button>
-
             <div className={styles.chatHeading}>
-              <h1 className={styles.chatTitle}>
-                {active ? (active.title ?? 'Untitled chat') : 'AI Companion'}
-              </h1>
-              <p className={styles.chatSubtitle}>
+              <h1>{active ? (active.title ?? 'Chưa đặt tên') : 'Trợ lý AI'}</h1>
+              <small>
                 {active
-                  ? `${messagesLabel(active.messages_count ?? messages.length)} · Updated ${formatRelativeTime(active.updated_at ?? active.created_at)}`
-                  : 'Ask a question to begin a new chat'}
-              </p>
+                  ? `${messagesLabel(active.messages_count ?? messages.length)}, cập nhật ${formatRelativeTime(active.updated_at ?? active.created_at)}`
+                  : 'Đặt câu hỏi để bắt đầu một cuộc trò chuyện mới'}
+              </small>
             </div>
-
-            <div className={styles.chatActions}>
+            <div className={styles.acts}>
               <button
                 type="button"
-                className={styles.actionButton}
+                className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
+                ref={memoryToggleRef}
                 onClick={toggleMemoryPanel}
-                aria-expanded={memoryOpen}
-                aria-controls="memory-drawer"
-                aria-label="Open memory panel"
+                aria-pressed={memoryOpen}
+                aria-controls="memory-panel"
               >
                 <Icon size={15}>
-                  <rect x="7" y="7" width="10" height="10" rx="2" />
-                  <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
+                  <path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" />
                 </Icon>
-                <span className={styles.actionLabel}>Memory</span>
-                {memories.length > 0 && <span className={styles.countBadge}>{memories.length}</span>}
+                Ghi nhớ
+                {memories.length > 0 && <span className={styles.count}>{memories.length}</span>}
               </button>
-              <button
-                type="button"
-                className={styles.actionButton}
-                onClick={() => { if (active) startRename(active); }}
-                disabled={!active}
-                aria-label="Rename current conversation"
-              >
-                <Icon size={15}>
+              <button type="button" className={styles.iconButton} onClick={() => { if (active) startRename(active); }} disabled={!active} aria-label="Đổi tên cuộc trò chuyện">
+                <Icon size={16}>
                   <path d="M12 20h9" />
                   <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
                 </Icon>
-                <span className={styles.actionLabel}>Rename</span>
               </button>
-              <button
-                type="button"
-                className={`${styles.actionButton} ${styles.actionButtonDanger}`}
-                onClick={() => { if (active) void deleteConversation(active); }}
-                disabled={!active}
-                aria-label="Delete current conversation"
-              >
-                <Icon size={15}>
+              <button type="button" className={`${styles.iconButton} ${styles.iconButtonDanger}`} onClick={() => { if (active) void deleteConversation(active); }} disabled={!active} aria-label="Xóa cuộc trò chuyện">
+                <Icon size={16}>
                   <path d="M3 6h18" />
                   <path d="M8 6V4h8v2" />
                   <path d="M19 6l-1 14H6L5 6" />
                 </Icon>
-                <span className={styles.actionLabel}>Delete</span>
               </button>
             </div>
-          </header>
+          </div>
 
           {(staleNotice || error || retryNotice || chatDisabled) && (
-            <div className={styles.noticeStack} aria-live="polite">
+            <div className={styles.notices}>
               {staleNotice && (
-                <div className={`${styles.notice} ${styles.noticeWarning}`} role="alert">
-                  <span className={styles.noticeText}>{STALE_CONVERSATION_MESSAGE}</span>
-                  <button
-                    type="button"
-                    className={styles.iconButton}
-                    onClick={() => setStaleNotice(false)}
-                    aria-label="Dismiss conversation notice"
-                  >
-                    <Icon size={14}>
-                      <path d="M18 6 6 18M6 6l12 12" />
-                    </Icon>
-                  </button>
+                <div className={`${styles.notice} ${styles.noticeWarn}`} role="alert">
+                  <span>{STALE_CONVERSATION_MESSAGE}</span>
+                  {dismissButton('Đóng thông báo', () => setStaleNotice(false))}
                 </div>
               )}
-
               {error && (
                 <div className={`${styles.notice} ${styles.noticeError}`} role="alert">
-                  <span className={styles.noticeText}>{error}</span>
-                  <button
-                    type="button"
-                    className={styles.iconButton}
-                    onClick={() => setError(null)}
-                    aria-label="Dismiss error"
-                  >
-                    <Icon size={14}>
-                      <path d="M18 6 6 18M6 6l12 12" />
-                    </Icon>
-                  </button>
+                  <span>{error}</span>
+                  {dismissButton('Đóng thông báo lỗi', () => setError(null))}
                 </div>
               )}
-
               {retryNotice && (
-                <div className={`${styles.notice} ${styles.noticeWarning}`} role="status">
-                  <span className={styles.noticeText}>{retryNotice}</span>
+                <div className={`${styles.notice} ${styles.noticeWarn}`} role="status">
+                  <span>{retryNotice}</span>
                   {showRetryAction && (
-                    <button
-                      type="button"
-                      className={styles.smallPrimaryButton}
-                      onClick={retryFailedSend}
-                      disabled={sending || creating}
-                    >
-                      Retry
+                    <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={retryFailedSend} disabled={sending || creating}>
+                      Thử lại
                     </button>
                   )}
                 </div>
               )}
-
               {chatDisabled && (
                 <div className={styles.notice} role="status">
-                  <span className={styles.noticeText}>
-                    AI chat is not enabled yet on this platform. You can still review history and manage memories.
-                  </span>
+                  <span>Trò chuyện với AI chưa được bật trên nền tảng này. Bạn vẫn xem được lịch sử và quản lý ghi nhớ.</span>
                 </div>
               )}
             </div>
           )}
 
-          <div ref={roadmapPaneRef} style={{ display: roadmapMode ? 'block' : 'none', flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <div ref={roadmapPaneRef} className={styles.roadmapPane} style={{ display: roadmapMode ? 'block' : 'none' }}>
             <RoadmapForm onBack={() => setRoadmapMode(false)} />
           </div>
           {!roadmapMode && <>
-          <div
-            ref={threadRef}
-            className={styles.thread}
-            role="log"
-            aria-live="polite"
-            aria-label="Conversation messages"
-            tabIndex={0}
-          >
-            <div className={styles.threadInner}>
-              {active && hasMore && (
-                <button
-                  type="button"
-                  className={styles.loadEarlierButton}
-                  onClick={() => void loadMessages(active.id, nextBeforeId)}
-                  disabled={loadingMessages}
-                >
-                  <Icon size={14}>
-                    <path d="M18 15l-6-6-6 6" />
-                  </Icon>
-                  {loadingMessages ? 'Loading…' : 'Load earlier messages'}
-                </button>
-              )}
+            <div
+              ref={threadRef}
+              className={styles.thread}
+              role="log"
+              aria-live="polite"
+              aria-relevant="additions"
+              aria-label="Tin nhắn của cuộc trò chuyện"
+              tabIndex={0}
+            >
+              <div className={styles.threadIn}>
+                {active && hasMore && (
+                  <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm} ${styles.loadEarlier}`} onClick={() => void loadMessages(active.id, nextBeforeId)} disabled={loadingMessages}>
+                    {loadingMessages ? 'Đang tải...' : 'Tải tin nhắn cũ hơn'}
+                  </button>
+                )}
 
-              {loadingMessages && messages.length === 0 ? (
-                <div className={styles.threadLoading} role="status">
-                  <span className={styles.spinner} aria-hidden="true" />
-                  <span>Loading conversation…</span>
-                </div>
-              ) : messages.length === 0 ? (
-                <EmptyThread hasConversation={Boolean(active)} onSuggestion={fillComposer} />
-              ) : (
-                <ul className={styles.messageList}>
-                  {messages.map((message) => {
+                {loadingMessages && messages.length === 0 ? (
+                  <div className={styles.threadLoading} role="status">
+                    <span className={styles.spinner} aria-hidden="true" />
+                    <span>Đang tải cuộc trò chuyện...</span>
+                  </div>
+                ) : messages.length === 0 ? (
+                  <div className={styles.emptyThread}>
+                    <h2>{active ? 'Hôm nay bạn muốn học gì?' : 'Bắt đầu cuộc trò chuyện mới'}</h2>
+                    <p>
+                      {active
+                        ? 'Hỏi về một khóa học, nhờ giải thích một khái niệm hoặc lên kế hoạch học tiếp theo.'
+                        : 'Gửi tin nhắn bên dưới, cuộc trò chuyện sẽ được tạo tự động.'}
+                    </p>
+                  </div>
+                ) : (
+                  messages.map((message) => {
                     const isUser = message.role === 'user';
                     const isPending = message.id.startsWith('pending-');
-                    return (
-                      <li
-                        key={message.id}
-                        className={`${styles.messageRow} ${isUser ? styles.messageRowUser : styles.messageRowAssistant}`}
-                      >
-                        {!isUser && (
-                          <span className={styles.avatar} aria-hidden="true">AI</span>
-                        )}
-                        <div className={`${styles.messageBody} ${isUser ? styles.messageBodyUser : ''}`}>
-                          <div className={`${styles.bubble} ${isUser ? styles.bubbleUser : styles.bubbleAssistant}`}>
-                            {message.content}
-                          </div>
-                          <div className={styles.messageMeta}>
-                            <span>{isUser ? 'You' : 'AI Companion'}</span>
-                            <span aria-hidden="true">·</span>
-                            <span>{isPending ? 'Sending…' : formatMessageTime(message.created_at)}</span>
-                            {isPending && <span className={styles.pendingDot} aria-hidden="true" />}
-                          </div>
+                    if (isUser) {
+                      return (
+                        <div key={message.id} className={styles.me}>
+                          {message.content}
+                          {isPending && <small className={styles.pending}>Đang gửi...</small>}
                         </div>
-                      </li>
+                      );
+                    }
+                    return (
+                      <div key={message.id} className={styles.bot}>
+                        <span className={styles.botAv} aria-hidden="true"><LogoMark size={22} /></span>
+                        <div className={styles.botTxt}>
+                          <AssistantMarkdown content={message.content} />
+                          {message.id === lastAssistantId && (
+                            <div className={styles.offer}>
+                              <p>
+                                <b>Biến câu trả lời này thành lộ trình</b>
+                                Lộ trình sẽ có từng bước, khóa học cần học trước và theo dõi tiến độ.
+                              </p>
+                              <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={openRoadmapForm}>
+                                Tạo lộ trình bằng AI
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
-                  })}
-                </ul>
-              )}
-            </div>
-          </div>
+                  })
+                )}
 
-          <div className={styles.composerArea}>
-            <form className={styles.composer} onSubmit={handleSend}>
-              <label className={styles.srOnly} htmlFor="ai-companion-message">
-                Message the AI companion
-              </label>
-              <textarea
-                id="ai-companion-message"
-                ref={textareaRef}
-                className={styles.textarea}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={handleComposerKeyDown}
-                rows={1}
-                maxLength={MAX_MESSAGE_LENGTH}
-                disabled={composerDisabled}
-                placeholder={composerPlaceholder}
-                aria-describedby="ai-companion-helper"
-              />
-              <div className={styles.composerToolbar}>
-                <span className={styles.composerHint}>Enter to send · Shift+Enter for a new line</span>
-                <span className={styles.charCount}>{draft.length}/{MAX_MESSAGE_LENGTH}</span>
-                <button
-                  type="submit"
-                  className={styles.sendButton}
-                  aria-label="Send message"
-                  disabled={!canSend}
-                >
-                  {sending ? (
-                    <span className={styles.spinnerSmall} aria-hidden="true" />
-                  ) : (
-                    <Icon size={18}>
-                      <path d="M12 19V5" />
-                      <path d="M5 12l7-7 7 7" />
-                    </Icon>
-                  )}
-                </button>
+                {sending && (
+                  <div className={styles.bot} role="status" aria-label="Trợ lý đang trả lời">
+                    <span className={styles.botAv} aria-hidden="true"><LogoMark size={22} /></span>
+                    <span className={styles.dots} aria-hidden="true"><i /><i /><i /></span>
+                  </div>
+                )}
               </div>
-            </form>
-            <p id="ai-companion-helper" className={styles.helperText}>
-              AI Companion can make mistakes. Check important information against your course material.
-            </p>
-            <div className={styles.roadmapActionButtons} style={{ justifyContent: 'center', marginTop: '0.75rem' }}>
-              <Link className={styles.smallSecondaryButton} href="/learning/my-roadmaps">My AI Roadmaps</Link>
-              <button type="button" className={styles.smallPrimaryButton} onClick={() => { roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null; setRoadmapMode(true); }}>Create Roadmap with AI</button>
             </div>
-          </div>
+
+            <div className={styles.compose}>
+              <div className={styles.composeIn}>
+                <div className={styles.sugg} role="group" aria-label="Gợi ý câu hỏi">
+                  {STARTER_PROMPTS.map((suggestion) => (
+                    <button key={suggestion} type="button" onClick={() => fillComposer(suggestion)}>{suggestion}</button>
+                  ))}
+                  <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
+                  <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
+                </div>
+                <form className={styles.box} onSubmit={handleSend}>
+                  <label className={styles.srOnly} htmlFor="ai-companion-message">Tin nhắn</label>
+                  <textarea
+                    id="ai-companion-message"
+                    ref={textareaRef}
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onKeyDown={handleComposerKeyDown}
+                    rows={1}
+                    maxLength={MAX_MESSAGE_LENGTH}
+                    disabled={composerDisabled}
+                    placeholder={composerPlaceholder}
+                    aria-describedby="ai-companion-helper"
+                  />
+                  <button type="submit" className={styles.send} aria-label="Gửi tin nhắn" disabled={!canSend}>
+                    {sending ? (
+                      <span className={styles.spinnerSmall} aria-hidden="true" />
+                    ) : (
+                      <Icon size={18}><path d="M12 19V5" /><path d="M5 12l7-7 7 7" /></Icon>
+                    )}
+                  </button>
+                </form>
+                <div className={styles.hint}>
+                  <span id="ai-companion-helper">Enter để gửi, Shift + Enter để xuống dòng. Trợ lý có thể sai, hãy đối chiếu với nội dung khóa học.</span>
+                  <span className={styles.charCount}>{draft.length}/{MAX_MESSAGE_LENGTH}</span>
+                </div>
+              </div>
+            </div>
           </>}
         </section>
-      </div>
 
-      {memoryOpen && (
-        <>
-          <div
-            className={styles.drawerOverlay}
-            onClick={() => setMemoryOpen(false)}
-            aria-hidden="true"
-          />
-          <aside
-            id="memory-drawer"
-            className={styles.drawer}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="memory-drawer-title"
-          >
-            <header className={styles.drawerHeader}>
-              <div>
-                <h2 id="memory-drawer-title" className={styles.drawerTitle}>Memory</h2>
-                <p className={styles.drawerSubtitle}>
-                  Only memories you add explicitly are saved. The companion never extracts memories on its own.
-                </p>
-              </div>
-              <button
-                type="button"
-                ref={memoryCloseRef}
-                className={styles.iconButton}
-                onClick={() => setMemoryOpen(false)}
-                aria-label="Close memory panel"
-              >
-                <Icon size={16}>
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </Icon>
+        {memoryOpen && (
+          <aside id="memory-panel" className={styles.mem} aria-label="Ghi nhớ">
+            <div className={styles.memHead}>
+              <h2><Icon size={18}><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" /></Icon>Ghi nhớ</h2>
+              <button type="button" ref={memoryCloseRef} className={`${styles.iconButton} ${styles.mobileOnly}`} onClick={() => setMemoryOpen(false)} aria-label="Đóng bảng ghi nhớ">
+                <Icon size={16}><path d="M18 6 6 18M6 6l12 12" /></Icon>
               </button>
-            </header>
-
-            <div className={styles.drawerBody}>
-              <form className={styles.memoryForm} onSubmit={(event) => void addMemory(event)}>
-                <div className={styles.formRow}>
-                  <label className={styles.field}>
-                    Memory type
-                    <select
-                      value={memoryType}
-                      onChange={(event) => setMemoryType(event.target.value as MemoryType)}
-                    >
-                      {(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => (
-                        <option key={type} value={type}>{memoryTypeLabels[type]}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    Expires on (optional)
-                    <input
-                      type="date"
-                      value={memoryExpires}
-                      onChange={(event) => setMemoryExpires(event.target.value)}
-                    />
-                  </label>
-                </div>
-                <label className={styles.field}>
-                  Memory content
-                  <textarea
-                    required
-                    maxLength={1000}
-                    rows={3}
-                    value={memoryContent}
-                    onChange={(event) => setMemoryContent(event.target.value)}
-                    placeholder="e.g. I prefer hands-on projects before theory."
-                  />
-                </label>
-                <button
-                  type="submit"
-                  className={styles.primaryButton}
-                  disabled={savingMemory || !memoryContent.trim()}
-                >
-                  {savingMemory ? 'Saving…' : 'Add memory'}
-                </button>
-              </form>
-
-              {memoryError && (
-                <div className={styles.memoryError} role="alert">
-                  <span>{memoryError}</span>
-                  {memoryLoadFailed && (
-                    <button
-                      type="button"
-                      className={styles.smallSecondaryButton}
-                      onClick={() => void loadMemories()}
-                      disabled={memoryLoading}
-                    >
-                      Retry
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {memoryLoading ? (
-                <div className={styles.memoryLoading} role="status">
-                  <span className={styles.spinner} aria-hidden="true" />
-                  <span>Loading memories…</span>
-                </div>
-              ) : memories.length === 0 ? (
-                <div className={styles.memoryEmpty}>
-                  <p className={styles.memoryEmptyTitle}>No memories yet</p>
-                  <p className={styles.memoryEmptyText}>
-                    Add a preference, fact, or goal above and the companion will keep it in mind.
-                  </p>
-                </div>
-              ) : (
-                <ul className={styles.memoryList}>
-                  {memories.map((memory) => (
-                    <li key={memory.id} className={styles.memoryCard}>
-                      <div className={styles.memoryBody}>
-                        <span className={styles.memoryBadge}>{memoryTypeLabels[memory.memory_type]}</span>
-                        <p className={styles.memoryContent}>{memory.content}</p>
-                        {memory.expires_at && (
-                          <small className={styles.memoryExpiry}>
-                            Expires {formatExpiryDate(memory.expires_at)}
-                          </small>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                        onClick={() => void removeMemory(memory)}
-                        aria-label="Delete memory"
-                      >
-                        <Icon size={14}>
-                          <path d="M3 6h18" />
-                          <path d="M8 6V4h8v2" />
-                          <path d="M19 6l-1 14H6L5 6" />
-                        </Icon>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
+            <p>Những điều trợ lý nhớ về bạn để trả lời sát hơn. Chỉ các ghi nhớ bạn tự thêm mới được lưu, bạn xóa được bất cứ lúc nào.</p>
+
+            {memoryError && (
+              <div className={styles.memError} role="alert">
+                <span>{memoryError}</span>
+                {memoryLoadFailed && (
+                  <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void loadMemories()} disabled={memoryLoading}>
+                    Thử lại
+                  </button>
+                )}
+              </div>
+            )}
+
+            {memoryLoading ? (
+              <div className={styles.threadLoading} role="status">
+                <span className={styles.spinner} aria-hidden="true" />
+                <span>Đang tải ghi nhớ...</span>
+              </div>
+            ) : memories.length === 0 ? (
+              <p className={styles.memEmpty}>Chưa có ghi nhớ nào. Thêm một sở thích, thông tin hoặc mục tiêu bên dưới.</p>
+            ) : (
+              <ul className={styles.memList}>
+                {memories.map((memory) => (
+                  <li key={memory.id} className={styles.memItem}>
+                    <span>
+                      <small className={styles.memType}>{memoryTypeLabels[memory.memory_type]}</small>
+                      {memory.content}
+                      {memory.expires_at && <small className={styles.memExpiry}>Hết hạn {formatExpiryDate(memory.expires_at)}</small>}
+                    </span>
+                    <button type="button" className={styles.memDel} onClick={() => void removeMemory(memory)} aria-label={`Xóa ghi nhớ: ${memory.content.slice(0, 60)}`}>
+                      <Icon size={15}><path d="M18 6 6 18M6 6l12 12" /></Icon>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <form className={styles.memForm} onSubmit={(event) => void addMemory(event)}>
+              <label className={styles.srOnly} htmlFor="memory-content">Thêm điều cần nhớ</label>
+              <textarea
+                id="memory-content"
+                required
+                maxLength={1000}
+                rows={1}
+                value={memoryContent}
+                onChange={(event) => setMemoryContent(event.target.value)}
+                placeholder="Thêm điều cần nhớ"
+              />
+              <div className={styles.memRow}>
+                <div className={styles.memField}>
+                  Loại
+                  <Select compact ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
+                </div>
+                <div className={styles.memField}>
+                  Hết hạn (tùy chọn)
+                  <DatePicker ariaLabel="Ngày hết hạn" value={memoryExpires} onChange={setMemoryExpires} />
+                </div>
+              </div>
+              <button type="submit" className={`${styles.btn} ${styles.btnSm}`} disabled={savingMemory || !memoryContent.trim()}>
+                {savingMemory ? 'Đang lưu...' : 'Thêm'}
+              </button>
+            </form>
           </aside>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }
