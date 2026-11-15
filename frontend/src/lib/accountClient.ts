@@ -11,7 +11,7 @@ export type AdminUsersPage = {
   meta: { current_page: number; last_page: number; per_page: number; total: number };
 };
 
-export type AdminUserFilters = { status?: string; role?: string; search?: string; page?: number };
+export type AdminUserFilters = { status?: string; role?: string; search?: string; page?: number; sort?: 'newest' | 'oldest'; created_within_days?: number };
 
 export const accountClient = {
   me: () => api.get<Envelope<{ user: AccountUser }>>('/me'),

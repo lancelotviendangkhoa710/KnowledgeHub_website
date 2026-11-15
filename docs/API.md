@@ -54,7 +54,7 @@ Identity/Auth, Content, and Learning progress endpoints are documented below.
 
 | Domain | Owner | Implemented | Approved contract | Notes |
 | --- | --- | ---: | ---: | --- |
-| Identity/Auth | TEAM_MEMBER_A | 10 | 10 | AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
+| Identity/Auth | TEAM_MEMBER_A | 12 | 12 | AUTH-07 Google sign-in (2 browser routes); AUTH-01 registration, login and logout; AUTH-02 profile, password, account deletion and admin user management; role assignment (AUTH-03) deferred |
 | Content | TEAM_MEMBER_B | 21 | 21 | Implemented in routes/api/content.php; verified with 37 tests |
 | Learning/Engagement | TEAM_MEMBER_C | 12 | 2 | 5 roadmap, 3 item, 2 progress, 2 prerequisite routes; only progress contract approved |
 | AI Companion | TBD | 11 | 0 | AI-01..03 V1 implemented in routes/api/ai.php; contract is a V1 draft pending approval; chat is feature-flagged (`AI_CHAT_ENABLED=false`); owner still TBD |
@@ -114,7 +114,9 @@ Guest login accepts `email` and `password`. Only a non-deleted user with
 one-time plain token in `data.token`; the stored token is hashed. Invalid
 credentials and non-active accounts return `422` with a generic credentials
 error. Login is throttled: five attempts per minute per email + source IP pair,
-and twenty-five attempts per minute per source IP; a throttled request returns
+and twenty-five attempts per minute per public source IP (not applied to a private or
+internal address: behind a proxy that does not forward the client IP it stands for
+every visitor); a throttled request returns
 `429`. Requests that already carry an authenticated credential are rejected
 with `403`. Token expiration and activation delivery remain deferred decisions.
 
@@ -128,6 +130,18 @@ return `401`; other tokens belonging to the same user remain valid.
 normalization, duplicate and soft-deleted email behavior, pending-login
 rejection, guest-only authorization failures, login throttling, token issuance,
 and current-token-only revocation.
+
+### IMPLEMENTED - GET `/api/auth/google/redirect` and `/api/auth/google/callback` (AUTH-07)
+
+Browser navigations for "Continue with Google" (decision: `docs/decisions/2026-11-13-google-sign-in.md`).
+They are web routes, not JSON endpoints, and are reached through the same `/api` proxy.
+
+- `redirect`: `302` to Google's consent screen. Without `GOOGLE_CLIENT_ID` it answers `302 /login?error=google_not_configured`.
+- `callback`: needs the `state` Google echoes back (no per-IP throttle: behind the proxy all visitors share one IP). Always answers `302` to a relative URL:
+  - `/login` on success: a cookie session is started (same limits as the password login) and the login page forwards the signed-in visitor.
+  - `/login?error=google_failed` (consent denied, bad or expired state, Google error), `google_unverified` (email not verified by Google), `google_email_unconfirmed` (verified, but Google does not vouch for ownership: not Gmail and no matching hosted domain), `google_unavailable` (the account exists but is not `active`) or `google_domain_not_allowed` (no account yet and the email domain is not in `GOOGLE_ALLOWED_DOMAINS`) or `google_too_many_signups` (the per-IP or overall hourly limit on new accounts is reached).
+- A verified email without an account, on an allowed domain (default `*.edu`, `*.edu.vn`; configurable, empty = no limit) and under the new-account limits (per public IP per day, default 3; overall per hour, default 30), creates an `active` account with the `user` role; an `active` account is reused with its roles; any other status is refused. Accounts are matched by lowercased email only.
+- A Google-only account has no usable password, so password login, change-password, account deletion and admin role changes (which ask for the current password) are not possible for it yet.
 
 ### IMPLEMENTED - GET `/api/me`
 
@@ -166,8 +180,9 @@ returns `422`. Throttled to 6 requests per minute.
 
 Admin only (`403` for User/Contributor, `401` for Guest). Query: `status`
 (`active|inactive|banned|pending`), `role` (`user|contributor|admin`),
-`search` (name/email substring, max 100), `per_page` (1-100, default 20).
-Soft-deleted users are excluded. Returns
+`search` (name/email substring, max 100), `per_page` (1-100, default 20),
+`sort` (`oldest` default, or `newest`) and `created_within_days` (1-365, only users who joined
+in the last N days; used to review new sign-ups). Soft-deleted users are excluded. Returns
 `{ status, data: [user...], meta: { current_page, last_page, per_page, total } }`.
 
 ### IMPLEMENTED - GET `/api/admin/users/{id}`
@@ -676,15 +691,15 @@ Previously saved roadmaps have `origin=legacy`; no old data is reclassified.
 The independent form in `/ai/companion` uses two additional authenticated
 endpoints. `POST /api/ai/roadmaps/form-preview` accepts multipart fields
 `career_goal` (3–500 characters), `current_level` (free text, 3–200),
-`target_job_requirements` (1–5000), `weeks` (1–104),
+optional `target_job_requirements` (up to 5000 characters), `weeks` (1–104),
 `hours_per_week` (1–80), and optional `cv_file` (PDF, at most 2 MiB).
 It returns the same `state=ready`, `draft`, `preview_token`, `expires_at`
 envelope as the conversation preview. The PDF is parsed in memory by FastAPI;
 blank/scanned/encrypted or malformed PDFs receive 422. The draft includes
 `week_start`/`week_end`, total item minutes equal to the requested study budget,
-and optional `cv_analysis` with quoted skill evidence, gaps, recommendations
-and a deterministic CV match percentage. Raw PDF and extracted CV text are not
-stored. `POST /api/ai/roadmaps/form-confirm` accepts only
+and optional `cv_analysis` with quoted skill evidence, gaps, recommendations,
+an encouraging CV comment and a deterministic CV evidence percentage. Raw PDF
+and extracted CV text are not stored. `POST /api/ai/roadmaps/form-confirm` accepts only
 `{ "preview_token": "..." }`; it saves without a conversation link and has
 the same owner binding, 30-minute expiry, course/resource recheck and
 idempotent 201/200 behavior. Unauthorized requests return 401, invalid input

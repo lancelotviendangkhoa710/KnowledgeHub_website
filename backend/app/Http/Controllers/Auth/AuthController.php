@@ -42,15 +42,7 @@ class AuthController extends Controller
 
         // Web app (stateful request): the session cookie is the credential, no token in JSON.
         if ($this->isCookieSession($request)) {
-            $guard = Auth::guard('web');
-            $guard->login($result['user']);
-            $request->session()->regenerate();
-            // Same value Sanctum's AuthenticateSession compares: a password change made before this
-            // session's first request must still end the session.
-            $request->session()->put('password_hash_web', method_exists($guard, 'hashPasswordForCookie')
-                ? $guard->hashPasswordForCookie($result['user']->getAuthPassword())
-                : $result['user']->getAuthPassword());
-            $request->session()->put('login_at', time());
+            $this->authService->startWebSession($request, $result['user']);
         }
 
         return response()->json([

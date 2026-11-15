@@ -7,8 +7,8 @@
 .form { display: grid; gap: 1rem; }
 .field { display: block; color: var(--color-charcoal); font-size: .84rem; font-weight: 700; }
 .field span { color: var(--color-primary); }
-.field input,.field textarea { display: block; width: 100%; margin-top: .4rem; padding: .75rem .85rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-charcoal); background: var(--color-white); font: inherit; font-weight: 400; }
-.field input:focus,.field textarea:focus { outline: 2px solid var(--color-primary-pale); border-color: var(--color-primary); }
+.field input,.field select,.field textarea { display: block; width: 100%; margin-top: .4rem; padding: .75rem .85rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); color: var(--color-charcoal); background: var(--color-white); font: inherit; font-weight: 400; }
+.field input:focus,.field select:focus,.field textarea:focus { outline: 2px solid var(--color-primary-pale); border-color: var(--color-primary); }
 .field input[type=file] { padding: .6rem; }
 .field small { display: block; margin-top: .4rem; color: var(--color-gray); font-weight: 400; font-size: .76rem; overflow-wrap: anywhere; }
 .consent { display: flex; align-items: flex-start; gap: .65rem; color: var(--color-charcoal); font-size: .83rem; line-height: 1.5; font-weight: 600; }

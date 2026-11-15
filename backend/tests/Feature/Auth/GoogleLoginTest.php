@@ -1,0 +1,365 @@
+<?php
+
+namespace Tests\Feature\Auth;
+
+use App\Models\Role;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Cache\RateLimiter as LimiterStore;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Contracts\Provider;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as GoogleUser;
+use Mockery;
+use RuntimeException;
+use Tests\TestCase;
+
+/** AUTH-07: Google sign-in. The Google API itself is mocked; only our rules are under test. */
+class GoogleLoginTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.google.allowed_domains' => 'example.com,*.edu.vn']);
+        // Rate limits count in the cache that backend/.env selects (file), so reruns would add up:
+        // skip the route throttle and reset the per-IP signup counters.
+        $this->withoutMiddleware(ThrottleRequests::class);
+        foreach (['8.8.4.4', '1.1.1.1', '9.9.9.9', 'all'] as $key) {
+            RateLimiter::clear('google-signup:'.$key);
+        }
+
+        Role::insert([
+            ['id' => (string) Str::uuid(), 'name' => 'user', 'description' => 'Default user role'],
+            ['id' => (string) Str::uuid(), 'name' => 'contributor', 'description' => 'Content team'],
+        ]);
+    }
+
+    public function test_redirect_sends_the_browser_to_google(): void
+    {
+        config(['services.google.client_id' => 'test-client']);
+        $provider = Mockery::mock(Provider::class);
+        $provider->shouldReceive('redirect')->once()->andReturn(new RedirectResponse('https://accounts.google.com/o/oauth2/auth'));
+        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+        $this->get('/api/auth/google/redirect')->assertRedirect('https://accounts.google.com/o/oauth2/auth');
+    }
+
+    public function test_redirect_without_google_credentials_goes_back_to_login(): void
+    {
+        config(['services.google.client_id' => null]);
+
+        $this->get('/api/auth/google/redirect')->assertRedirect('/login?error=google_not_configured');
+    }
+
+    public function test_new_verified_email_creates_an_active_user_and_signs_in(): void
+    {
+        $this->mockGoogle('New.Person@Example.com', 'New Person');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $user = User::where('email', 'new.person@example.com')->firstOrFail();
+        $this->assertSame('active', $user->status);
+        $this->assertNotNull($user->email_verified_at);
+        $this->assertSame(['user'], $user->roles()->pluck('name')->all());
+        $this->assertAuthenticatedAs($user, 'web');
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_google_only_account_has_no_usable_password(): void
+    {
+        $this->mockGoogle('nopass@example.com', 'No Pass');
+        $this->get('/api/auth/google/callback');
+
+        $user = User::where('email', 'nopass@example.com')->firstOrFail();
+        $this->assertFalse(Hash::check('', $user->password));
+        $this->flushSession();
+        $this->app['auth']->forgetGuards(); // sign out of the Google session first (login is guest-only)
+        $this->postJson('/api/auth/login', ['email' => 'nopass@example.com', 'password' => 'anything-123'])
+            ->assertUnprocessable();
+    }
+
+    public function test_existing_active_account_is_reused_with_its_roles(): void
+    {
+        $existing = $this->createUser('member@example.com', 'active', 'contributor');
+        $this->mockGoogle('member@example.com', 'Member');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertDatabaseCount('users', 1);
+        $this->assertAuthenticatedAs($existing, 'web');
+        $this->assertSame(['contributor'], $existing->roles()->pluck('name')->all());
+    }
+
+    public function test_existing_account_that_is_not_active_is_refused(): void
+    {
+        foreach (['pending', 'inactive', 'banned'] as $i => $status) {
+            $email = "blocked{$i}@example.com";
+            $this->createUser($email, $status);
+            $this->mockGoogle($email, 'Blocked');
+
+            $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_unavailable');
+
+            $this->assertGuest('web');
+            $this->assertSame($status, User::where('email', $email)->value('status'));
+        }
+    }
+
+    public function test_unverified_google_email_is_refused_and_creates_nothing(): void
+    {
+        $this->mockGoogle('unverified@example.com', 'Unverified', verified: false);
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_unverified');
+
+        $this->assertDatabaseCount('users', 0);
+        $this->assertGuest('web');
+    }
+
+    public function test_an_address_google_does_not_vouch_for_cannot_sign_in_even_to_an_existing_account(): void
+    {
+        // Not Gmail and no hosted domain: email_verified alone does not prove the person owns the mailbox.
+        $admin = $this->createUser('boss@example.com', 'active', 'contributor');
+        $this->mockGoogle('boss@example.com', 'Previous Owner', hosted: null);
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_email_unconfirmed');
+        $this->assertGuest('web');
+
+        // A hosted domain that is not the address's own domain proves nothing either.
+        $this->mockGoogle('boss@example.com', 'Previous Owner', hosted: 'other-company.com');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_email_unconfirmed');
+        $this->assertGuest('web');
+
+        // A managed account whose hosted domain matches is vouched for.
+        $this->mockGoogle('boss@example.com', 'Real Owner');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->assertAuthenticatedAs($admin, 'web');
+    }
+
+    public function test_gmail_needs_no_hosted_domain_and_the_check_can_be_switched_off(): void
+    {
+        config(['services.google.allowed_domains' => 'gmail.com,example.com']);
+        $this->mockGoogle('person@gmail.com', 'Person', hosted: null);
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->assertDatabaseHas('users', ['email' => 'person@gmail.com']);
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        config(['services.google.require_authoritative_email' => false]);
+        $this->mockGoogle('plain@example.com', 'Plain', hosted: null);
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+    }
+
+    public function test_someone_already_signed_in_is_sent_back_without_touching_google_or_accounts(): void
+    {
+        $member = $this->createUser('member2@example.com', 'active');
+        Socialite::shouldReceive('driver')->never();
+
+        $this->actingAs($member, 'web')->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_google_failure_goes_back_to_login(): void
+    {
+        $provider = Mockery::mock(Provider::class);
+        $provider->shouldReceive('user')->andThrow(new RuntimeException('invalid state'));
+        Socialite::shouldReceive('driver')->with('google')->andReturn($provider);
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_failed');
+
+        $this->assertGuest('web');
+    }
+
+    public function test_new_accounts_are_limited_to_the_allowed_domains(): void
+    {
+        $this->mockGoogle('student@hcmus.edu.vn', 'Student');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->assertDatabaseHas('users', ['email' => 'student@hcmus.edu.vn', 'status' => 'active']);
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('spam@notallowed.xyz', 'Spam');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_domain_not_allowed');
+        $this->assertDatabaseMissing('users', ['email' => 'spam@notallowed.xyz']);
+        $this->assertGuest('web');
+    }
+
+    public function test_an_existing_active_account_may_use_google_whatever_its_domain(): void
+    {
+        $existing = $this->createUser('old.member@legacy-domain.org', 'active');
+        $this->mockGoogle('old.member@legacy-domain.org', 'Old Member');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertAuthenticatedAs($existing, 'web');
+    }
+
+    public function test_domain_matching_is_exact_for_plain_entries_and_suffix_for_wildcards(): void
+    {
+        config(['services.google.allowed_domains' => 'gmail.com,*.edu']);
+
+        foreach (['x@evilgmail.com', 'x@gmail.com.evil.test', 'x@edu', 'x@notedu'] as $i => $email) {
+            $this->mockGoogle($email, 'X');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_domain_not_allowed');
+        }
+        foreach (['x@gmail.com', 'x@mit.edu', 'x@cs.mit.edu'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'X');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+    }
+
+    public function test_an_empty_allowlist_means_no_restriction(): void
+    {
+        config(['services.google.allowed_domains' => '']);
+        $this->mockGoogle('anyone@anywhere.test', 'Anyone');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertDatabaseHas('users', ['email' => 'anyone@anywhere.test']);
+    }
+
+    public function test_new_accounts_per_public_ip_are_limited_but_sign_ins_are_not(): void
+    {
+        config(['services.google.max_new_accounts_per_ip_per_day' => 2]);
+        $ip = ['REMOTE_ADDR' => '8.8.4.4'];
+
+        foreach (['a@example.com', 'b@example.com'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'New');
+            $this->withServerVariables($ip)->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('c@example.com', 'Third');
+        $this->withServerVariables($ip)->get('/api/auth/google/callback')->assertRedirect('/login?error=google_too_many_signups');
+        $this->assertDatabaseMissing('users', ['email' => 'c@example.com']);
+
+        // An existing account still signs in from the same address, and another address may still sign up.
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('a@example.com', 'New');
+        $this->withServerVariables($ip)->get('/api/auth/google/callback')->assertRedirect('/login');
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('c@example.com', 'Third');
+        $this->withServerVariables(['REMOTE_ADDR' => '1.1.1.1'])->get('/api/auth/google/callback')->assertRedirect('/login');
+    }
+
+    public function test_a_sign_up_wave_is_stopped_whatever_the_addresses(): void
+    {
+        config(['services.google.max_new_accounts_per_hour' => 2]);
+
+        foreach (['w1@example.com', 'w2@example.com'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'W');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login'); // internal address: only the overall limit counts
+        }
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('w3@example.com', 'W');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_too_many_signups');
+        $this->assertDatabaseMissing('users', ['email' => 'w3@example.com']);
+    }
+
+    public function test_a_broken_limiter_does_not_break_sign_in(): void
+    {
+        $limiter = Mockery::mock(LimiterStore::class);
+        $limiter->shouldReceive('tooManyAttempts')->andThrow(new RuntimeException('Permission denied'));
+        $limiter->shouldReceive('hit')->andThrow(new RuntimeException('Permission denied'));
+        $this->app->instance(LimiterStore::class, $limiter);
+        RateLimiter::clearResolvedInstance(LimiterStore::class);
+        $this->mockGoogle('resilient@example.com', 'Resilient');
+
+        $this->withServerVariables(['REMOTE_ADDR' => '8.8.4.4'])->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertAuthenticatedAs(User::where('email', 'resilient@example.com')->firstOrFail(), 'web');
+    }
+
+    public function test_sign_ups_are_serialized_by_a_lock_and_a_busy_lock_means_retry(): void
+    {
+        $lock = Cache::lock('google-signup', 10);
+        $this->assertTrue($lock->get()); // another sign-up is in the middle of check, create and count
+        $this->mockGoogle('late@example.com', 'Late');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login?error=google_failed'); // waits 3 seconds
+
+        $this->assertDatabaseMissing('users', ['email' => 'late@example.com']);
+        $lock->release();
+
+        $this->flushSession();
+        $this->app['auth']->forgetGuards();
+        $this->mockGoogle('late@example.com', 'Late');
+        $this->get('/api/auth/google/callback')->assertRedirect('/login'); // free again: the same sign-up works
+        $this->assertDatabaseHas('users', ['email' => 'late@example.com']);
+    }
+
+    public function test_internal_addresses_and_a_zero_limit_are_never_limited(): void
+    {
+        config(['services.google.max_new_accounts_per_ip_per_day' => 1, 'services.google.max_new_accounts_per_hour' => 0]);
+
+        foreach (['p1@example.com', 'p2@example.com', 'p3@example.com'] as $email) { // 127.0.0.1 = a proxy, not a person
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'P');
+            $this->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+
+        config(['services.google.max_new_accounts_per_ip_per_day' => 0]);
+        foreach (['q1@example.com', 'q2@example.com'] as $email) {
+            $this->flushSession();
+            $this->app['auth']->forgetGuards();
+            $this->mockGoogle($email, 'Q');
+            $this->withServerVariables(['REMOTE_ADDR' => '9.9.9.9'])->get('/api/auth/google/callback')->assertRedirect('/login');
+        }
+    }
+
+    public function test_email_of_a_deleted_account_gets_a_fresh_account(): void
+    {
+        $old = $this->createUser('back@example.com', 'active');
+        $old->delete(); // soft delete frees the email
+        $this->mockGoogle('back@example.com', 'Back Again');
+
+        $this->get('/api/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertNotSame($old->id, User::where('email', 'back@example.com')->value('id'));
+    }
+
+    /** $hosted: the Workspace domain Google reports; 'same' = the email's own domain (a managed account), null = none. */
+    private function mockGoogle(string $email, string $name, bool $verified = true, ?string $hosted = 'same'): void
+    {
+        $raw = ['email_verified' => $verified];
+        $hd = $hosted === 'same' ? substr(strrchr($email, '@'), 1) : $hosted;
+        if ($hd !== null && $hd !== 'gmail.com') {
+            $raw['hd'] = $hd;
+        }
+        $googleUser = (new GoogleUser)->setRaw($raw)->map(['id' => '1', 'name' => $name, 'email' => $email]);
+        $provider = Mockery::mock(Provider::class);
+        // once(): each call consumes one expectation, so a test can mock several sign-ins in a row.
+        $provider->shouldReceive('user')->once()->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->once()->andReturn($provider);
+    }
+
+    private function createUser(string $email, string $status, string $role = 'user'): User
+    {
+        $user = new User(['name' => 'Test User', 'email' => $email, 'password' => Hash::make('password-123')]);
+        $user->id = (string) Str::uuid();
+        $user->status = $status;
+        $user->save();
+        $user->roles()->attach(Role::where('name', $role)->value('id'));
+
+        return $user;
+    }
+}

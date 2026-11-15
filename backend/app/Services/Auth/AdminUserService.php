@@ -25,7 +25,8 @@ class AdminUserService
                 $like = '%'.addcslashes($term, '%_\\').'%';
                 $q->where(fn ($w) => $w->whereRaw('LOWER(name) LIKE LOWER(?)', [$like])->orWhereRaw('LOWER(email) LIKE LOWER(?)', [$like]));
             })
-            ->orderBy('created_at')
+            ->when($filters['created_within_days'] ?? null, fn ($q, $days) => $q->where('created_at', '>=', now()->subDays((int) $days)))
+            ->orderBy('created_at', ($filters['sort'] ?? 'oldest') === 'newest' ? 'desc' : 'asc')
             ->orderBy('id')
             ->paginate((int) ($filters['per_page'] ?? 20))
             ->withQueryString();

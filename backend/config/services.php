@@ -28,6 +28,29 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    // AUTH-07: Google sign-in. The redirect URI must be registered in Google Cloud and point at the
+    // web origin, e.g. http://localhost:3000/api/auth/google/callback (the /api proxy forwards it).
+    'google' => [
+        // Socialite passes this to Guzzle, which has no time limit by default: a silent Google must not hang the callback.
+        'guzzle' => ['connect_timeout' => 5, 'timeout' => 15],
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        // Only emails Google itself vouches for may sign in: a Gmail address, or one whose domain equals the
+        // account's hosted domain (`hd`, Google Workspace). For any other address `email_verified` does not
+        // prove the person still owns the mailbox (recycled mailbox, old owner keeps the Google account).
+        'require_authoritative_email' => (bool) env('GOOGLE_REQUIRE_AUTHORITATIVE_EMAIL', true),
+        // Email domains that may CREATE an account through Google (existing active accounts are not
+        // restricted). Comma separated; "*.edu" matches any subdomain suffix; empty = no restriction.
+        'allowed_domains' => env('GOOGLE_ALLOWED_DOMAINS', '*.edu,*.edu.vn'),
+        // New Google accounts one public IP address may create per day; 0 = unlimited. Ignored for
+        // private/internal addresses (a proxy in front of the API would otherwise make it global).
+        'max_new_accounts_per_ip_per_day' => (int) env('GOOGLE_MAX_NEW_ACCOUNTS_PER_IP', 3),
+        // Brake for a sign-up wave from any number of addresses (the IP limit needs real client IPs,
+        // which the Next.js /api proxy does not forward). New Google accounts per hour overall; 0 = unlimited.
+        'max_new_accounts_per_hour' => (int) env('GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR', 30),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

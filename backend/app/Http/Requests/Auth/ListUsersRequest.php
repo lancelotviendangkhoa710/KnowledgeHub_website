@@ -19,6 +19,8 @@ class ListUsersRequest extends FormRequest
             'role' => ['sometimes', 'string', Rule::in(['user', 'contributor', 'admin'])],
             'search' => ['sometimes', 'string', 'max:100'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'sort' => ['sometimes', 'string', Rule::in(['oldest', 'newest'])],
+            'created_within_days' => ['sometimes', 'integer', 'min:1', 'max:365'],
         ];
     }
 }
