@@ -791,7 +791,7 @@ export default function AICompanionPage() {
   const canSend = !composerDisabled && draft.trim().length > 0;
   const composerPlaceholder = chatDisabled
     ? 'Trò chuyện với AI chưa được bật.'
-    : 'Hỏi về bài học, khóa học hoặc lộ trình của bạn';
+    : 'Hỏi về bài học hoặc lộ trình';
   const showRetryAction = Boolean(failedSend && failedSend.conversationId === activeId);
   const lastAssistantId = [...messages].reverse().find((message) => message.role !== 'user')?.id ?? null;
   const openRoadmapForm = () => {

@@ -233,6 +233,10 @@
   .convActions { opacity: 1; }
 }
 @media (max-width: 640px) {
+  /* Gợi ý thành một hàng cuộn ngang, không hiện thanh cuộn; các nút vẫn focus được bằng Tab */
+  .sugg { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -16px; padding-inline: 16px; scroll-padding-inline: 16px; }
+  .sugg::-webkit-scrollbar { display: none; }
+  .sugg button, .sugg .suggAction { flex: none; white-space: nowrap; }
   .acts .btn { padding: 7px 10px; }
   .me { max-width: 90%; }
   .hint { flex-direction: column; gap: 4px; }
