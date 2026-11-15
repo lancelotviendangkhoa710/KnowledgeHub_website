@@ -160,6 +160,13 @@ class FormIntentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(["Practice SQL"], analysis.recommendations)
         self.assertIsNone(analysis.encouragement)
 
+    async def test_unrecognized_provider_gaps_are_omitted(self):
+        analysis = {"strengths": [], "gaps": ["SQL", "Invented skill"], "recommendations": []}
+        output = main.FormIntentOutput(profile=PROFILE, cv_analysis=analysis)
+        with patch.object(main, "_structured_completion", new=AsyncMock(return_value=output)):
+            result = await main.roadmap_form_intent(self.request("Built SQL queries."), "internal")
+        self.assertEqual(["SQL"], result["cv_analysis"]["gaps"])
+
     async def test_provider_cannot_change_user_level_or_study_time(self):
         output = main.FormIntentOutput(profile={**PROFILE, "weeks": 24}, cv_analysis=None)
         with patch.object(main, "_structured_completion", new=AsyncMock(return_value=output)):
