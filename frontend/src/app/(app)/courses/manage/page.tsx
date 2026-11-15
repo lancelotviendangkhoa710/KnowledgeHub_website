@@ -30,6 +30,8 @@ export default function ContributorCourseManagementPage() {
   const [archivingId, setArchivingId] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Article | null>(null);
   const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [refocusSearch, setRefocusSearch] = useState(false);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const [toastNotice, setToastNotice] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -176,6 +178,7 @@ export default function ContributorCourseManagementPage() {
       await archiveArticle(courseId);
       setArticles((prev) => prev.map((a) => (a.id === courseId ? { ...a, status: 'archived' } : a)));
       setArchiveTarget(null);
+      setRefocusSearch(true); // the row's Archive button is gone, so focus needs a stable target
       showToast('Đã lưu trữ khóa học');
     } catch {
       setArchiveError('Không lưu trữ được khóa học. Vui lòng thử lại.');
@@ -183,6 +186,14 @@ export default function ContributorCourseManagementPage() {
       setArchivingId(null);
     }
   };
+
+  // After the dialog has closed and unmounted, move focus to the search box (the opener no longer exists).
+  useEffect(() => {
+    if (refocusSearch && !archiveTarget) {
+      searchRef.current?.focus();
+      setRefocusSearch(false);
+    }
+  }, [refocusSearch, archiveTarget]);
 
   const clearFilters = () => {
     setQuery('');
@@ -228,7 +239,7 @@ export default function ContributorCourseManagementPage() {
         <StudioEmpty />
       ) : (
         <>
-          <StudioToolbar query={query} onQuery={setQuery} status={status} onStatus={setStatus} counts={counts} />
+          <StudioToolbar searchRef={searchRef} query={query} onQuery={setQuery} status={status} onStatus={setStatus} counts={counts} />
           {filteredArticles.length === 0 ? (
             <StudioNoMatch onClear={clearFilters} />
           ) : (

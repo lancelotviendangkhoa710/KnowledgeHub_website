@@ -1,5 +1,6 @@
 'use client';
 
+import type { Ref } from 'react';
 import Select from '@/components/ui/Select';
 import styles from './studio.module.css';
 import type { StatusFilter } from './studioUtils';
@@ -10,15 +11,18 @@ type Props = {
   status: StatusFilter;
   onStatus: (value: StatusFilter) => void;
   counts: { published: number; draft: number; archived: number };
+  /** Đích nhận focus dự phòng khi nút đã mở hộp thoại bị gỡ khỏi bảng. */
+  searchRef?: Ref<HTMLInputElement>;
 };
 
 /** Thanh công cụ: ô tìm theo tên hoặc slug và ô chọn trạng thái kèm số lượng. */
-export default function StudioToolbar({ query, onQuery, status, onStatus, counts }: Props) {
+export default function StudioToolbar({ query, onQuery, status, onStatus, counts, searchRef }: Props) {
   return (
     <div className={styles.tools}>
       <label className={styles.search}>
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
         <input
+          ref={searchRef}
           type="search"
           value={query}
           onChange={(event) => onQuery(event.target.value)}
