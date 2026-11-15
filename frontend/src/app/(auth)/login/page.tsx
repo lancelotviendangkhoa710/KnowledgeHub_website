@@ -111,7 +111,7 @@ export default function LoginPage() {
         {message && <p id="login-error" className={styles.error} role="alert">{message}</p>}
         <div className={styles.field}>
           <label htmlFor="au-mail">Email</label>
-          <input id="au-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder="ten@truong.edu.vn" aria-describedby={message ? 'login-error' : undefined} required />
+          <input id="au-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" aria-describedby={message ? 'login-error' : undefined} required />
         </div>
         <div className={styles.field}>
           <label htmlFor="au-pass">Mật khẩu</label>
