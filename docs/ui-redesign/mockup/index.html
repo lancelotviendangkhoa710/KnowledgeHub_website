@@ -531,6 +531,54 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
 .state h3{font-size:20px;margin-bottom:8px}
 .state p{color:var(--ink-2);margin-bottom:18px}
 @media (max-width:900px){.ed{grid-template-columns:minmax(0,1fr)}.vh{grid-template-columns:minmax(0,1fr)}.fgrid{grid-template-columns:minmax(0,1fr)}.chk{grid-template-columns:minmax(0,1fr)}}
+/* ===== Hoạt động học tập (tài khoản) ===== */
+.acct{max-width:900px}
+.acct>.panel:not(.hm){max-width:720px}
+.hm{padding:0}
+.hm-h{padding:20px 24px 0;display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.hm-h h2{font-size:18px;font-weight:700;margin:0 0 4px}
+.hm-h p{margin:0;color:var(--ink-2);font-size:14px;max-width:56ch}
+.hm-stats{display:flex;gap:28px;padding:18px 24px 4px;flex-wrap:wrap}
+.hm-stats div{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--ink-3)}
+.hm-stats b{font-family:var(--display);font-size:20px;color:var(--ink);font-weight:700;letter-spacing:-.01em}
+.hm-body{padding:14px 24px 0;display:flex;gap:8px}
+.hm-days{display:grid;grid-template-rows:repeat(7,12px);gap:3px;margin-top:20px;font-size:11px;color:var(--ink-3);line-height:12px;flex:none;width:22px}
+.hm-scroll{overflow-x:auto;padding-bottom:10px;flex:1;min-width:0}
+.hm-in{position:relative;width:max-content}
+.hm-months{height:20px;position:relative;font-size:12px;color:var(--ink-3)}
+.hm-months span{position:absolute;top:0;white-space:nowrap}
+.hm-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,12px);grid-auto-columns:12px;gap:3px}
+.hm-c{width:12px;height:12px;border-radius:3px;background:var(--surface-2);padding:0;border:0;display:block}
+.hm-c[data-l="1"]{background:color-mix(in srgb,var(--brand) 30%,var(--surface-2))}
+.hm-c[data-l="2"]{background:color-mix(in srgb,var(--brand) 52%,var(--surface-2))}
+.hm-c[data-l="3"]{background:color-mix(in srgb,var(--brand) 76%,var(--surface-2))}
+.hm-c[data-l="4"]{background:var(--brand)}
+.hm-c.fut{visibility:hidden}
+.hm-c.today{outline:2px solid var(--mark);outline-offset:1px}
+.hm-c[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+.hm-c:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.hm-c:hover{filter:brightness(1.12)}
+.hm-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;padding:0 24px 18px;font-size:12px;color:var(--ink-3)}
+.hm-leg{display:flex;align-items:center;gap:4px}
+.hm-leg .hm-c{cursor:default}
+.hm-leg .hm-c:hover{filter:none}
+.hm-leg span{margin:0 4px}
+.hm-day{border-top:1px solid var(--line);padding:16px 24px 20px}
+.hm-day h3{font-size:15px;font-weight:700;margin-bottom:10px}
+.hm-day h3 small{font-weight:400;color:var(--ink-3);font-size:13px;margin-left:6px}
+.hm-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hm-list li{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:baseline;padding:9px 0;border-top:1px solid var(--line);font-size:14px}
+.hm-list li:first-child{border-top:0}
+.hm-list time{color:var(--ink-3);font-size:13px;font-variant-numeric:tabular-nums}
+.hm-list .c{color:var(--ink-3);font-size:13px}
+.hm-list .t{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:var(--r-pill);background:var(--brand-soft);color:var(--brand);white-space:nowrap}
+.hm-list .t.ex{background:var(--mark);color:var(--mark-ink)}
+.hm-empty{padding:4px 24px 22px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;color:var(--ink-2);font-size:14px}
+.hm-tip{position:fixed;z-index:60;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 10px;border-radius:6px;white-space:nowrap;opacity:0;transform:translate(-50%,-100%)}
+.hm-tip.on{opacity:1}
+.hm-tip b{font-weight:600}
+.hm-mock{max-width:900px;margin:0 auto;display:flex;justify-content:flex-end}
+@media (max-width:640px){.hm-h,.hm-stats,.hm-body,.hm-foot,.hm-day{padding-left:16px;padding-right:16px}.hm-stats{gap:20px}.hm-list li{grid-template-columns:40px 1fr}.hm-list .t{grid-column:2;justify-self:start}}
 </style>
 </head>
 <body>
@@ -870,6 +918,29 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
   <div class="wrap">
     <div class="ph"><h1>Tài khoản</h1></div>
     <div class="acct">
+      <section class="panel hm" aria-labelledby="hmT">
+        <div class="hm-h">
+          <div><h2 id="hmT">Hoạt động học tập</h2><p>Mỗi video xem xong, bài học hoàn thành hoặc bài tập đã nộp được tính 1 hoạt động vào ngày đó.</p></div>
+          <div class="seg" id="hmYear" role="group" aria-label="Khoảng thời gian">
+            <button type="button" data-y="rolling" aria-pressed="true">12 tháng qua</button>
+            <button type="button" data-y="2026" aria-pressed="false">2026</button>
+            <button type="button" data-y="2025" aria-pressed="false">2025</button>
+          </div>
+        </div>
+        <div class="hm-stats" id="hmStats"></div>
+        <div class="hm-body">
+          <div class="hm-days" aria-hidden="true"><span>T2</span><span></span><span>T4</span><span></span><span>T6</span><span></span><span></span></div>
+          <div class="hm-scroll" id="hmScroll"><div class="hm-in"><div class="hm-months" id="hmMonths" aria-hidden="true"></div><div class="hm-grid" id="hmGrid" role="group" aria-label="Lịch hoạt động theo ngày"></div></div></div>
+        </div>
+        <div class="hm-foot">
+          <span>Mỗi ô là một ngày. Bấm vào ô để xem chi tiết.</span>
+          <span class="hm-leg">Ít <span></span><i class="hm-c"></i><i class="hm-c" data-l="1"></i><i class="hm-c" data-l="2"></i><i class="hm-c" data-l="3"></i><i class="hm-c" data-l="4"></i><span></span>Nhiều</span>
+        </div>
+        <div id="hmDay"></div>
+      </section>
+      <div class="hm-mock"><label class="state-sel">Xem thử trạng thái
+        <select class="sel" id="hmState" aria-label="Xem thử trạng thái của bảng hoạt động"><option value="busy">Học đều</option><option value="new">Người mới, chưa có hoạt động</option></select></label></div>
+      <div class="hm-tip" id="hmTip" role="presentation"></div>
       <form class="panel" data-save>
         <div class="who"><span class="avatar">TA</span><div><b>Team Test Admin</b><span class="mu">Quản trị viên</span></div></div>
         <h2>Hồ sơ</h2>
@@ -1388,6 +1459,111 @@ $('#adTabs').addEventListener('click',function(e){var b=e.target.closest('.chip'
 $('#tagList').addEventListener('click',function(e){var b=e.target.closest('button');if(b){b.parentNode.remove();toast('Đã xóa thẻ')}});
 $('#tagForm').addEventListener('submit',function(e){e.preventDefault();var v=$('#tagIn').value.trim();if(!v)return;
   var s=document.createElement('span');s.className='tag';s.innerHTML='<span></span> <small>0</small><button aria-label="Xóa thẻ"><svg class="i" style="width:14px;height:14px"><use href="#i-x"/></svg></button>';s.firstChild.textContent=v;$('#tagList').appendChild(s);$('#tagIn').value=''});
+
+/* ---- Hoạt động học tập ---- */
+(function(){
+var TODAY=new Date(2026,10,15), DAY=864e5;
+var WD=['Chủ nhật','Thứ hai','Thứ ba','Thứ tư','Thứ năm','Thứ sáu','Thứ bảy'];
+var ACTS=[
+ ['Hệ thống phân tán: Những đánh đổi cơ bản','Hoàn thành bài học'],
+ ['Hệ thống phân tán: Những đánh đổi cơ bản','Xem xong video'],
+ ['Thiết kế cơ sở dữ liệu quan hệ','Hoàn thành bài học'],
+ ['Thiết kế cơ sở dữ liệu quan hệ','Nộp bài tập'],
+ ['Python cho phân tích dữ liệu','Xem xong video'],
+ ['Python cho phân tích dữ liệu','Nộp bài tập'],
+ ['Kho dữ liệu và OLAP','Hoàn thành bài học'],
+ ['Kho dữ liệu và OLAP','Xem xong video']];
+function rng(s){return function(){s|=0;s=s+0x6D2B79F5|0;var t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function key(d){return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+function count(d){
+  if(d>TODAY||d<new Date(2025,2,3))return 0;
+  var r=rng(d.getFullYear()*372+d.getMonth()*31+d.getDate()), x=r(), wd=d.getDay();
+  var busy=(d.getMonth()===10&&d.getDate()>=2)||(d.getMonth()===3&&d.getDate()>=4&&d.getDate()<=16)||(d.getMonth()===8&&d.getDate()>=22)||(d.getFullYear()===2025&&d.getMonth()>=8);
+  var p=busy?.78:(wd===0||wd===6?.2:.3);
+  if(d.getFullYear()===2026&&(d.getMonth()===5||d.getMonth()===6))p*=.25;
+  if(x>p)return 0;
+  var y=r(); return 1+Math.floor(y*y*(busy?8:4));
+}
+function lvl(n){return n===0?0:n<=2?1:n<=4?2:n<=6?3:4}
+function fmt(d){return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear()}
+var mode='rolling', cur='busy', sel=null, cells=[];
+function range(){
+  if(mode==='rolling'){var e=TODAY,s=new Date(e.getTime()-364*DAY);return [s,e,'12 tháng qua']}
+  var y=+mode;return [new Date(y,0,1),y===2026?TODAY:new Date(y,11,31),'năm '+y]
+}
+function toEnd(end){var sc=$('#hmScroll');function go(){sc.scrollLeft=end?sc.scrollWidth:0}go();
+  if(!sc.scrollWidth||!sc.offsetParent){var io=new IntersectionObserver(function(en){if(en[0].isIntersecting){go();io.disconnect()}});io.observe(sc)}}
+function n(d){return cur==='new'?0:count(d)}
+function streaks(){
+  var best=0,run=0,c=0,d=new Date(TODAY);
+  for(var i=0;i<730;i++){var t=new Date(TODAY.getTime()-i*DAY);if(n(t)>0)run++;else{ if(i>0||true){best=Math.max(best,run);run=0}}}
+  best=Math.max(best,run);
+  var st=n(TODAY)>0?0:1;
+  for(var j=st;j<730;j++){if(n(new Date(TODAY.getTime()-j*DAY))>0)c++;else break}
+  return [c,best]
+}
+function render(){
+  var R=range(),s=R[0],e=R[1],g=$('#hmGrid'),m=$('#hmMonths');g.innerHTML='';m.innerHTML='';cells=[];
+  var lead=(s.getDay()+6)%7, total=0, active=0, best=null;
+  for(var i=0;i<lead;i++){var b=document.createElement('i');b.className='hm-c fut';g.appendChild(b)}
+  var weeks=0,lastMonth=-1,idx=lead;
+  for(var d=new Date(s);d<=e;d=new Date(d.getTime()+DAY)){
+    var c=n(d);total+=c;if(c)active++;if(!best||c>best[1])best=[new Date(d),c];
+    var btn=document.createElement('button');btn.type='button';btn.className='hm-c'+(key(d)===key(TODAY)?' today':'');
+    btn.dataset.l=lvl(c);btn.dataset.t=d.getTime();btn.dataset.c=c;btn.tabIndex=-1;btn.setAttribute('aria-pressed','false');
+    btn.setAttribute('aria-label',(c||'Không')+' hoạt động, '+WD[d.getDay()]+' '+fmt(d));
+    g.appendChild(btn);cells.push(btn);
+    var col=Math.floor(idx/7);
+    if(d.getDate()<=7&&d.getMonth()!==lastMonth&&(col>0||d.getDate()===1)){
+      var sp=document.createElement('span');sp.style.left=(col*15)+'px';sp.textContent='Th'+(d.getMonth()+1);m.appendChild(sp);lastMonth=d.getMonth()}
+    idx++;
+  }
+  m.style.width=(Math.ceil(idx/7)*15)+'px';
+  var sk=streaks();
+  $('#hmStats').innerHTML=
+   '<div><b>'+total+'</b>hoạt động trong '+R[2]+'</div>'+
+   '<div><b>'+active+'</b>ngày có học</div>'+
+   (mode==='rolling'||mode==='2026'?'<div><b>'+sk[0]+' ngày</b>chuỗi hiện tại</div>':'')+
+   '<div><b>'+sk[1]+' ngày</b>chuỗi dài nhất</div>';
+  toEnd(mode!=='2025');
+  if(total===0){sel=null;$('#hmDay').innerHTML='<div class="hm-empty" style="border-top:1px solid var(--line);padding-top:18px">Bạn chưa có hoạt động nào. Hoàn thành bài học đầu tiên và ô của hôm nay sẽ được tô màu. <a class="btn" href="#khoa-hoc">Xem khóa học</a></div>';return}
+  var pick=cells.filter(function(x){return +x.dataset.t<=TODAY.getTime()&&+x.dataset.c>0}).pop()||cells[cells.length-1];
+  choose(pick,false);
+}
+function detail(d){
+  var c=n(d),r=rng(d.getTime()/DAY|0),h='<div class="hm-day"><h3>'+WD[d.getDay()]+', '+fmt(d)+'<small>'+(c?c+' hoạt động':'Không có hoạt động')+'</small></h3>';
+  if(!c)return h+'<p class="mu" style="margin:0">Ngày này bạn không học. Chuỗi ngày liên tiếp bị ngắt ở đây.</p></div>';
+  var rows=[],t0=7*60+Math.floor(r()*120),it=[];
+  for(var i=0;i<c;i++){t0+=10+Math.floor(r()*70);it.push([Math.min(t0,23*60+50),ACTS[Math.floor(r()*ACTS.length)]])}
+  it.forEach(function(x){var a=x[1],m=x[0];
+    rows.push('<li><time>'+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+'</time><span>'+a[0]+'</span><span class="t'+(a[1]==='Nộp bài tập'?' ex':'')+'">'+a[1]+'</span></li>')});
+  return h+'<ul class="hm-list">'+rows.join('')+'</ul></div>'
+}
+function choose(b,focus){
+  cells.forEach(function(x){x.setAttribute('aria-pressed','false');x.tabIndex=-1});
+  b.setAttribute('aria-pressed','true');b.tabIndex=0;if(focus)b.focus();
+  $('#hmDay').innerHTML=detail(new Date(+b.dataset.t))
+}
+var tip=$('#hmTip');
+function showTip(b){
+  var d=new Date(+b.dataset.t),c=+b.dataset.c,r=b.getBoundingClientRect();
+  tip.innerHTML='<b>'+(c?c+' hoạt động':'Không có hoạt động')+'</b> ngày '+fmt(d);
+  tip.style.left=(r.left+r.width/2)+'px';tip.style.top=(r.top-6)+'px';tip.classList.add('on')
+}
+$('#hmGrid').addEventListener('mouseover',function(e){var b=e.target.closest('.hm-c:not(.fut)');if(b)showTip(b)});
+$('#hmGrid').addEventListener('mouseleave',function(){tip.classList.remove('on')});
+$('#hmGrid').addEventListener('focusin',function(e){var b=e.target.closest('.hm-c');if(b)showTip(b)});
+$('#hmGrid').addEventListener('focusout',function(){tip.classList.remove('on')});
+$('#hmScroll').addEventListener('scroll',function(){tip.classList.remove('on')});
+$('#hmGrid').addEventListener('click',function(e){var b=e.target.closest('.hm-c:not(.fut)');if(b)choose(b,false)});
+$('#hmGrid').addEventListener('keydown',function(e){
+  var b=e.target.closest('.hm-c');if(!b)return;var i=cells.indexOf(b),k={ArrowLeft:-7,ArrowRight:7,ArrowUp:-1,ArrowDown:1}[e.key];
+  if(k===undefined)return;e.preventDefault();var t=cells[i+k];if(t)choose(t,true)});
+$('#hmYear').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;mode=b.dataset.y;
+  $$('#hmYear button').forEach(function(x){x.setAttribute('aria-pressed',x===b)});render()});
+$('#hmState').addEventListener('change',function(e){cur=e.target.value;render()});
+render();
+})();
 
 chips();draw();route();
 })();
