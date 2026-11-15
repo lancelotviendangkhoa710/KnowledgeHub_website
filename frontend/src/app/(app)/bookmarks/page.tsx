@@ -54,6 +54,8 @@ export default function BookmarksPage() {
     } catch (caught) {
       if (request !== requestRef.current) return;
       if ((caught as { status?: number }).status === 401) {
+        // The 401 belongs to the session that sent the request; a different user signed in meanwhile must stay signed in.
+        if (getAccessToken() !== session) { void load(target); return; } // reload for the user who is signed in now
         setAccessToken(null);
         setCurrentUser(null);
         setRedirecting(true);
@@ -66,7 +68,11 @@ export default function BookmarksPage() {
     }
   }, [router]);
 
-  useEffect(() => { void load(page); }, [load, page]);
+  useEffect(() => {
+    void load(page);
+    // Unmount (or a new page number) invalidates the request in flight so its answer cannot redirect or overwrite anything.
+    return () => { requestRef.current += 1; };
+  }, [load, page]);
 
   if (redirecting) return null;
 
