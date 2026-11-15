@@ -119,7 +119,7 @@ Mỗi dòng ứng với một màn hình trong mockup (mở bằng đường d�
 | 8 | soan-khoa-hoc | `courses/create` (hơn 3000 dòng) | chia thành component nhỏ khi làm, xem mục 7 |
 | 9 | lich-su-phien-ban | `courses/[id]/versions` | xem mục 7 |
 | 10 | quan-tri | quản trị | |
-| 11 | dang-nhap, tai-khoan | đăng nhập, tài khoản | AUTH-07 đã gộp, giữ nguyên chức năng đăng nhập Google |
+| 11 | dang-nhap, tai-khoan | đăng nhập, tài khoản | AUTH-07 đã gộp, giữ nguyên chức năng đăng nhập Google. Bảng hoạt động học tập trong tài khoản xem mục 7A |
 
 ## 7. Hai màn soạn khóa học và lịch sử phiên bản
 
@@ -138,6 +138,27 @@ Lịch sử phiên bản (`#lich-su-phien-ban`):
 - Hai chế độ: Xem (nội dung dạng văn bản thuần, không hiển thị HTML) và So sánh (chọn phiên bản gốc, phiên bản so sánh, đổi chỗ, so với bản trước).
 - So sánh theo từng dòng, có số dòng cũ và mới, dấu cộng và trừ kèm nhãn cho trình đọc màn hình (không chỉ dựa vào màu), thay đổi tiêu đề hiện riêng, các dòng không đổi được gấp lại và mở ra được. Khi thay đổi quá lớn, hiện thông báo kết quả chỉ là gần đúng như logic hiện tại.
 - Ô chọn Xem thử trạng thái chỉ có trong mockup để xem các trường hợp: tác giả, người đọc (chỉ thấy bản đang xuất bản), chưa đăng nhập, không có quyền, không tìm thấy, lỗi tải. Không đưa ô này vào dự án. Quy tắc hiển thị theo quyền giữ nguyên như code hiện tại.
+
+## 7A. Bảng hoạt động học tập (màn tai-khoan)
+
+Đây là chức năng mới, cần backend. Mockup nằm ở đầu màn `#tai-khoan`. Nhắc nhóm trước khi làm vì có đụng tới cơ sở dữ liệu.
+
+Hiển thị:
+- Lưới ngày kiểu lịch hoạt động: mỗi ô một ngày, mỗi cột một tuần, hàng đầu là Thứ hai. Nhãn tháng Th1 đến Th12, nhãn hàng T2, T4, T6.
+- Thang 5 mức màu theo token `--brand` pha với `--surface-2`: 0 hoạt động, 1 đến 2, 3 đến 4, 5 đến 6, từ 7. Không dùng màu xanh lá. Ngày hôm nay có viền `--mark`.
+- Số liệu phía trên: tổng hoạt động, số ngày có học, chuỗi ngày hiện tại, chuỗi ngày dài nhất.
+- Chuyển khoảng thời gian: 12 tháng qua, năm hiện tại, năm trước.
+- Rê chuột hoặc focus vào ô hiện ngày và số hoạt động. Bấm vào ô hiện danh sách hoạt động của ngày đó theo giờ, kèm loại: Hoàn thành bài học, Xem xong video, Nộp bài tập.
+- Di chuyển giữa các ô bằng phím mũi tên. Mỗi ô có nhãn đọc được cho trình đọc màn hình, không chỉ dựa vào màu.
+- Trạng thái người mới: lưới trống, có dòng gợi ý và nút dẫn tới danh sách khóa học.
+- Điện thoại: lưới cuộn ngang và tự cuộn tới tuần mới nhất.
+- Ô Xem thử trạng thái chỉ có trong mockup, không đưa vào dự án.
+
+Quy tắc dữ liệu cần chốt với nhóm trước khi code:
+- Mỗi hành động được tính 1 điểm vào ngày diễn ra. Một bài có thể sinh hơn một hoạt động (xem xong video và hoàn thành bài). Nếu muốn mỗi bài chỉ 1 điểm thì gộp lại trước khi ghi.
+- Ngày tính theo giờ Việt Nam (UTC+7).
+- Cần bảng ghi hoạt động (người dùng, loại, khóa học, bài học, thời điểm). Chỉ chủ tài khoản được xem hoạt động của mình. Kiểm tra lại bài đã hoàn thành trước đó để không ghi trùng. Theo quy tắc nhóm, cách làm này cần migration, ghi rõ trong PR.
+- Không thêm thư viện biểu đồ. Lưới vẽ bằng HTML và CSS thuần như mockup.
 
 ## 8. Trang chưa có mockup
 
