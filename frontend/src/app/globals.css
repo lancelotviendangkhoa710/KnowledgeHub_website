@@ -685,6 +685,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--ink-3); }
 .kh-foot { border-top: 1px solid var(--line); background: var(--surface); margin-top: 56px; }
 .kh-foot__inner { display: flex; gap: 32px; flex-wrap: wrap; padding-top: 32px; padding-bottom: 32px; align-items: flex-start; }
 .kh-foot .kh-logo { font-size: 16px; }
+/* Logo theo màu thương hiệu: xanh đậm ở nền sáng, xanh nhạt ở nền tối (token --brand) */
+.kh-logo .kh-logo__mark { color: var(--brand); }
 .kh-foot p { color: var(--ink-3); font-size: 13px; max-width: 34ch; margin-top: 8px; }
 .kh-foot nav { margin-left: auto; display: flex; gap: 56px; flex-wrap: wrap; }
 .kh-foot nav div { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }

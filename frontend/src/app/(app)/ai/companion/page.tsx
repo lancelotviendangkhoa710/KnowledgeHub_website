@@ -946,8 +946,7 @@ export default function AICompanionPage() {
                 aria-controls="memory-panel"
               >
                 <Icon size={15}>
-                  <rect x="7" y="7" width="10" height="10" rx="2" />
-                  <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
+                  <path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" />
                 </Icon>
                 Ghi nhớ
                 {memories.length > 0 && <span className={styles.count}>{memories.length}</span>}
@@ -1120,7 +1119,7 @@ export default function AICompanionPage() {
         {memoryOpen && (
           <aside id="memory-panel" className={styles.mem} aria-label="Ghi nhớ">
             <div className={styles.memHead}>
-              <h2>Ghi nhớ</h2>
+              <h2><Icon size={18}><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" /></Icon>Ghi nhớ</h2>
               <button type="button" ref={memoryCloseRef} className={`${styles.iconButton} ${styles.mobileOnly}`} onClick={() => setMemoryOpen(false)} aria-label="Đóng bảng ghi nhớ">
                 <Icon size={16}><path d="M18 6 6 18M6 6l12 12" /></Icon>
               </button>
