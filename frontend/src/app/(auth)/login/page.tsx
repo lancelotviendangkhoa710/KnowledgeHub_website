@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
-import { loginErrorText } from '@/components/auth/authErrors';
+import { isCredentialError, loginErrorText } from '@/components/auth/authErrors';
 import GoogleButton from '@/components/auth/GoogleButton';
 import AuthShell from '@/components/auth/AuthShell';
 import styles from '@/components/auth/authForm.module.css';
@@ -68,6 +68,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [credentialsInvalid, setCredentialsInvalid] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const parkedRef = useRef<string | null | undefined>(undefined);
 
@@ -89,6 +90,7 @@ export default function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage('');
+    setCredentialsInvalid(false);
     setSubmitting(true);
 
     try {
@@ -98,6 +100,7 @@ export default function LoginPage() {
       router.push(targetUrl);
     } catch (error) {
       setMessage(loginErrorText(error));
+      setCredentialsInvalid(isCredentialError(error));
     } finally {
       setSubmitting(false);
     }
@@ -111,11 +114,11 @@ export default function LoginPage() {
         {message && <p id="login-error" className={styles.error} role="alert">{message}</p>}
         <div className={styles.field}>
           <label htmlFor="au-mail">Email</label>
-          <input id="au-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" aria-describedby={message ? 'login-error' : undefined} required />
+          <input id="au-mail" type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" aria-invalid={credentialsInvalid || undefined} aria-describedby={message ? 'login-error' : undefined} required />
         </div>
         <div className={styles.field}>
           <label htmlFor="au-pass">Mật khẩu</label>
-          <input id="au-pass" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" aria-describedby={message ? 'login-error' : undefined} required />
+          <input id="au-pass" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" aria-invalid={credentialsInvalid || undefined} aria-describedby={message ? 'login-error' : undefined} required />
         </div>
         <button className={`${styles.btn} ${styles.full}`} type="submit" disabled={submitting}>{submitting ? 'Đang đăng nhập...' : 'Đăng nhập'}</button>
         <div className={styles.or}>hoặc</div>

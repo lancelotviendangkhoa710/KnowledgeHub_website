@@ -1,11 +1,17 @@
-// Chỉ đổi chữ hiển thị: nhận biết lỗi theo trạng thái và nội dung tiếng Anh của Laravel, không đổi mã lỗi hay logic.
+﻿// Chỉ đổi chữ hiển thị: nhận biết lỗi theo trạng thái và nội dung tiếng Anh của Laravel, không đổi mã lỗi hay logic.
 export const GENERIC_ERROR = 'Không thực hiện được, hãy thử lại sau.';
 
 type ApiError = { status?: number; message?: string; errors?: Record<string, string[]> };
 
+/** True when the API refused the email or password (not a network, throttle or Google error). */
+export function isCredentialError(error: unknown): boolean {
+  const e = error as ApiError;
+  return e.status === 401 || e.status === 422 || Boolean(e.errors?.email);
+}
+
 export function loginErrorText(error: unknown): string {
   const e = error as ApiError;
-  if (e.status === 401 || e.status === 422 || e.errors?.email) return 'Email hoặc mật khẩu không đúng.';
+  if (isCredentialError(error)) return 'Email hoặc mật khẩu không đúng.';
   if (e.status === 429) return 'Thử quá nhiều lần. Vui lòng đợi một phút rồi thử lại.';
   return GENERIC_ERROR;
 }

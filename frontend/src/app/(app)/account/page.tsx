@@ -45,17 +45,27 @@ export default function AccountPage() {
   useEffect(() => {
     const cachedUser = getCurrentUser();
     if (!cachedUser) return;
+    let active = true; // false after sign-out or a user change: a late /me answer must be ignored
     if (!nameTouched.current) setName(cachedUser.name);
     const tokenAtRequest = getAccessToken();
     setRefreshing(true);
     accountClient.me().then((response) => {
-      // Read the cached name before setCurrentUser overwrites it.
+      if (!active) return;
+      // Read the cached user before setCurrentUser overwrites it.
       const cachedName = getCurrentUser()?.name ?? '';
+      const switchedAccount = getCurrentUser()?.id !== response.data.user.id;
       setUser(response.data.user);
       setCurrentUser(response.data.user);
-      // Keep what the user already typed while /me was loading.
-      setName((current) => (current === cachedName ? response.data.user.name : current));
+      if (switchedAccount) {
+        // A draft typed for another account must never reach this one.
+        nameTouched.current = false;
+        setName(response.data.user.name);
+      } else {
+        // Keep what the user already typed while /me was loading.
+        setName((current) => (current === cachedName ? response.data.user.name : current));
+      }
     }).catch((error: { status?: number }) => {
+      if (!active) return;
       // Token revoked: drop the local session so the page shows signed-out state.
       if (error?.status === 401) {
         // Ignore a stale 401 if the user signed in again meanwhile.
@@ -66,7 +76,8 @@ export default function AccountPage() {
         return;
       }
       setProfileNotice({ kind: 'error', text: errorMessage(error, 'Không tải lại được hồ sơ của bạn.') });
-    }).finally(() => setRefreshing(false));
+    }).finally(() => { if (active) setRefreshing(false); });
+    return () => { active = false; };
   }, [userId]);
 
   if (!user) {
