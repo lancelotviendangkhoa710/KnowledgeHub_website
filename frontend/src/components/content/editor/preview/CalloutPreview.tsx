@@ -11,24 +11,20 @@ export function CalloutPreview({
 }) {
   const variants = {
     note: {
-      className: styles.note,
+      className: '',
       title: title || 'Lưu ý',
-      icon: null,
     },
     tip: {
-      className: styles.tip,
+      className: '',
       title: title || 'Mẹo',
-      icon: null,
     },
     warning: {
       className: styles.warning,
       title: title || 'Cảnh báo',
-      icon: null,
     },
     default: {
       className: '',
       title: undefined,
-      icon: null,
     },
   }[kind];
 
@@ -36,8 +32,7 @@ export function CalloutPreview({
     <div className={`${styles.callout} ${variants.className}`}>
       {variants.title && (
         <div className={styles.calloutTitle}>
-          {variants.icon}
-          <span>{variants.title}</span>
+          {variants.title}
         </div>
       )}
       <div className={styles.calloutBody}>{children}</div>

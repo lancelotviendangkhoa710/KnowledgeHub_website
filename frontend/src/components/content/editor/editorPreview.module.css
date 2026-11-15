@@ -38,13 +38,9 @@
 .code pre { margin: 0; padding: 16px; overflow-x: auto; font-family: var(--mono); font-size: 13.5px; line-height: 1.7; background: none; color: inherit; }
 .prose .code code { background: none; padding: 0; font-size: inherit; border-radius: 0; color: inherit; }
 
-.callout { padding: 12px 16px; border-left: 4px solid var(--brand); border-radius: 0 var(--r-card) var(--r-card) 0; background: var(--surface-2); color: var(--ink-2); }
-.calloutTitle { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-weight: 700; font-size: 14px; color: var(--ink); }
+.callout { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 14px 18px; color: var(--ink); }
+.calloutTitle { display: block; margin-bottom: 2px; font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--ink); }
 .calloutBody { font-size: 15px; line-height: 1.65; }
 .prose .calloutBody p { color: inherit; }
 .prose .calloutBody p + p { margin-top: 8px; }
-.note { border-left-color: var(--brand); background: var(--brand-soft); color: var(--ink); }
-.note .calloutTitle { color: var(--brand); }
-.tip { border-left-color: var(--mark); background: color-mix(in srgb, var(--mark) 22%, transparent); color: var(--ink); }
-.warning { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 11%, transparent); color: var(--ink); }
-.warning .calloutTitle { color: var(--danger); }
+.warning { border-color: var(--danger); }
