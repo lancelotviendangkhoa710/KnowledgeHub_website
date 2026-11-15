@@ -11,7 +11,7 @@ import VersionTimeline from '@/components/content/versions/VersionTimeline';
 import styles from '@/components/content/versions/versions.module.css';
 import VersionDetail, { type Mode } from './VersionDetail';
 import VersionsHeader from './VersionsHeader';
-import { VersionEmpty, VersionForbidden, VersionLoadError, VersionLoading, VersionNotFound, VersionSignIn } from './VersionStates';
+import { STATE_MESSAGES, VersionEmpty, VersionForbidden, VersionLoadError, VersionLoading, VersionNotFound, VersionSignIn } from './VersionStates';
 
 type LoadState =
   | { kind: 'loading' }
@@ -251,8 +251,18 @@ export default function CourseVersionHistoryPage() {
     );
   }
 
+  // Vùng thông báo có sẵn từ đầu: nội dung đổi khi tải xong, để trình đọc màn hình biết kết quả
+  // (đang tải có role="status" riêng, lỗi tải có role="alert").
+  const liveMessage =
+    state.kind === 'signin' ? STATE_MESSAGES.signin
+    : state.kind === 'forbidden' ? STATE_MESSAGES.forbidden
+    : state.kind === 'notfound' ? STATE_MESSAGES.notfound
+    : state.kind === 'ready' && versions.length === 0 ? STATE_MESSAGES.empty
+    : '';
+
   return (
     <div className={styles.wrap}>
+      <div className={styles.sr} role="status" aria-live="polite">{liveMessage}</div>
       {header}
       {body}
     </div>

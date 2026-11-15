@@ -115,8 +115,14 @@ export default function VersionDiffView({ base, target }: VersionDiffViewProps) 
               const marker = MARKER[line.kind];
               return (
                 <div key={`l-${idx}-${line.oldNo ?? ''}-${line.newNo ?? ''}`} className={`${styles.dl} ${marker.className}`}>
-                  <span className={styles.n}>{line.oldNo ?? ''}</span>
-                  <span className={styles.n}>{line.newNo ?? ''}</span>
+                  <span className={styles.n}>
+                    {line.oldNo != null && <span className={styles.sr}>Dòng {line.oldNo} của phiên bản gốc. </span>}
+                    <span aria-hidden="true">{line.oldNo ?? ''}</span>
+                  </span>
+                  <span className={styles.n}>
+                    {line.newNo != null && <span className={styles.sr}>Dòng {line.newNo} của phiên bản so sánh. </span>}
+                    <span aria-hidden="true">{line.newNo ?? ''}</span>
+                  </span>
                   <span className={styles.mk} aria-hidden="true">{marker.symbol}</span>
                   <span className={styles.tx}>
                     {marker.label && <span className={styles.sr}>{marker.label}</span>}
