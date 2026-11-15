@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import HeroMotion from '@/components/landing/HeroMotion';
 import HomeLatestCourses from '@/components/landing/HomeLatestCourses';
+import { LogoMark } from '@/components/layout/Logo';
 import s from '@/components/landing/home.module.css';
 import { roadmapTemplates } from '@/data/roadmapTemplates';
 
@@ -89,7 +90,7 @@ export default function HomePage() {
           <div className={s.chat} aria-label="Ví dụ hội thoại">
             <div className={s.me}>Mình học xong ETL và ELT rồi, nên học gì tiếp?</div>
             <div className={s.bot}>
-              <span className={s.botAv} aria-hidden="true" />
+              <span className={s.botAv} aria-hidden="true"><LogoMark size={22} /></span>
               <div className={s.botTxt}>
                 <p>
                   Bạn nên học <strong>Kiểm thử và quan sát pipeline</strong>. Khóa này dùng đúng phần ETL bạn vừa xong, và là điều kiện để mở khóa Hệ thống phân tán và độ tin cậy.

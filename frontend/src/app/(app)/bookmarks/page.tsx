@@ -1,159 +1,163 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import CourseCard from '@/components/content/CourseCard';
 import { Article } from '@/types/content';
 import { api } from '@/lib/api';
-import { getAccessToken } from '@/lib/authToken';
+import { setCurrentUser } from '@/lib/auth';
+import { getAccessToken, setAccessToken } from '@/lib/authToken';
+import styles from './bookmarks.module.css';
+
+const LOGIN_URL = '/login?redirect=%2Fbookmarks';
+
+// The API answers with a Laravel paginator; only the fields used here are typed.
+type BookmarkPage = { data: Article[]; last_page?: number };
 
 export default function BookmarksPage() {
-  const [bookmarkedArticles, setBookmarkedArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [hasAuth, setHasAuth] = useState<boolean>(false);
+  const router = useRouter();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const requestRef = useRef(0);
+  const listTopRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    async function loadBookmarks() {
-      const authBearer = getAccessToken();
-      if (!authBearer) {
-        setHasAuth(false);
-        setLoading(false);
+  const load = useCallback(async (target: number) => {
+    const session = getAccessToken();
+    if (!session) {
+      setRedirecting(true);
+      router.replace(LOGIN_URL);
+      return;
+    }
+    const request = ++requestRef.current;
+    setLoading(true);
+    setFailed(false);
+    try {
+      const result = await api.get<BookmarkPage>(`/v1/bookmarks?page=${target}`);
+      if (request !== requestRef.current) return; // a newer request owns the page
+      if (getAccessToken() !== session) {
+        setRedirecting(true);
+        router.replace(LOGIN_URL);
         return;
       }
-
-      setHasAuth(true);
-      setLoading(true);
-      try {
-        const response = await api.get<{ data: Article[] }>('/v1/bookmarks');
-        if (response?.data && Array.isArray(response.data)) {
-          setBookmarkedArticles(response.data.map((a) => ({ ...a, is_bookmarked: true })));
-        } else {
-          setBookmarkedArticles([]);
-        }
-      } catch {
-        setBookmarkedArticles([]);
-      } finally {
-        setLoading(false);
+      const pages = Math.max(1, Number(result.last_page) || 1);
+      if (target > pages) { // the last page emptied meanwhile: go back to the new last page
+        setPage(pages);
+        return;
       }
+      setArticles(Array.isArray(result.data) ? result.data.map((a) => ({ ...a, is_bookmarked: true })) : []);
+      setLastPage(pages);
+    } catch (caught) {
+      if (request !== requestRef.current) return;
+      if ((caught as { status?: number }).status === 401) {
+        // The 401 belongs to the session that sent the request; a different user signed in meanwhile must stay signed in.
+        if (getAccessToken() !== session) { void load(target); return; } // reload for the user who is signed in now
+        setAccessToken(null);
+        setCurrentUser(null);
+        setRedirecting(true);
+        router.replace(LOGIN_URL);
+        return;
+      }
+      setFailed(true); // never fall through to the empty state: an error is not "nothing saved"
+    } finally {
+      if (request === requestRef.current) setLoading(false);
     }
+  }, [router]);
 
-    loadBookmarks();
-  }, []);
+  useEffect(() => {
+    void load(page);
+    // Unmount (or a new page number) invalidates the request in flight so its answer cannot redirect or overwrite anything.
+    return () => { requestRef.current += 1; };
+  }, [load, page]);
+
+  if (redirecting) return null;
+
+  const goToPage = (target: number) => {
+    setPage(Math.min(Math.max(1, target), lastPage));
+    listTopRef.current?.scrollIntoView({ block: 'start' });
+    listTopRef.current?.focus({ preventScroll: true });
+  };
 
   return (
-    <div className="container" style={{ paddingTop: '2.5rem' }}>
-      <header style={{ marginBottom: '2.5rem' }}>
-        <span
-          className="badge"
-          style={{
-            backgroundColor: 'var(--color-primary-pale)',
-            color: 'var(--color-primary)',
-            border: '1px solid var(--color-border)',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            padding: '0.2rem 0.65rem',
-            borderRadius: 'var(--radius-full)',
-            marginBottom: '0.75rem',
-            display: 'inline-flex',
-          }}
-        >
-          Personal Course Archive
-        </span>
-        <h1 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '2.25rem', fontWeight: 800 }}>
-          My Saved Library
-        </h1>
-        <p style={{ color: 'var(--color-gray)', fontSize: '1.05rem', lineHeight: 1.6 }}>
-          Curated courses and deep-dive materials you have saved for continuous study and reference.
-        </p>
+    <div className={styles.wrap}>
+      <header className={styles.head}>
+        <h1>Đã lưu</h1>
+        <p>Các khóa học bạn đánh dấu để học sau.</p>
       </header>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
-          Loading your saved library...
-        </div>
-      ) : !hasAuth ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4.5rem 2rem',
-            background: 'var(--color-white)',
-            border: '1.5px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-xs)',
-            maxWidth: 580,
-            margin: '0 auto',
-          }}
-        >
-          <div
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-primary-pale)',
-              color: 'var(--color-primary)',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '1.25rem',
-            }}
-          >
-            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
+      <div ref={listTopRef} tabIndex={-1} style={{ outline: 'none' }}>
+        {failed ? (
+          <div role="alert" className={styles.state}>
+            <div className={styles.stateIcon} aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            </div>
+            <h2>Không tải được danh sách đã lưu</h2>
+            <p>Hãy kiểm tra kết nối hoặc thử lại.</p>
+            <button type="button" className={styles.btn} onClick={() => void load(page)} disabled={loading} aria-busy={loading}>
+              {loading ? 'Đang thử lại...' : 'Thử lại'}
+            </button>
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-charcoal)', marginBottom: '0.75rem' }}>
-            Sign In Required
-          </h2>
-          <p style={{ color: 'var(--color-gray)', marginBottom: '2rem', fontSize: '1rem', lineHeight: 1.6 }}>
-            Please sign in to view and manage your saved courses in your personal library.
-          </p>
-          <Link href="/login?redirect=/bookmarks" className="btn btn-primary" style={{ padding: '0.75rem 1.75rem', fontWeight: 600 }}>Sign In Now &rarr;</Link>
-        </div>
-      ) : bookmarkedArticles.length > 0 ? (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: '1.75rem',
-          }}
-        >
-          {bookmarkedArticles.map((article) => (
-            <CourseCard key={article.id} article={article} />
-          ))}
-        </div>
-      ) : (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '5rem 2rem',
-            background: 'var(--color-white)',
-            border: '1px dashed var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-xs)',
-          }}
-        >
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-primary)"
-            strokeWidth="1.5"
-            style={{ margin: '0 auto 1rem auto', display: 'block' }}
-          >
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
-            Your library is empty
-          </h3>
-          <p style={{ color: 'var(--color-gray)', marginBottom: '1.5rem', maxWidth: 460, margin: '0 auto 1.5rem auto' }}>
-            Browse through our verified engineering curricula and bookmark topics you want to master.
-          </p>
-          <Link href="/courses" className="btn btn-primary">
-            Explore Curricula &rarr;
-          </Link>
-        </div>
-      )}
+        ) : loading && articles.length === 0 ? (
+          <p role="status" className={styles.loading}>Đang tải khóa học đã lưu…</p>
+        ) : articles.length === 0 ? (
+          <div className={styles.state}>
+            <div className={styles.stateIcon} aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" /></svg>
+            </div>
+            <h2>Bạn chưa lưu khóa học nào</h2>
+            <p>Bấm biểu tượng đánh dấu trên thẻ khóa học để lưu lại và học sau.</p>
+            <Link className={styles.btn} href="/courses">Khám phá khóa học</Link>
+          </div>
+        ) : (
+          <>
+            {/* Unsaving here keeps the card in place (it can be saved again); it is gone on the next load. */}
+            <div className={styles.grid} aria-busy={loading}>
+              {articles.map((article) => <CourseCard key={article.id} article={article} />)}
+            </div>
+            {lastPage > 1 && <Pagination currentPage={page} lastPage={lastPage} onChange={goToPage} />}
+          </>
+        )}
+      </div>
     </div>
+  );
+}
+
+type PageItem = number | 'ellipsis-start' | 'ellipsis-end';
+
+// Same page list as the Courses page pager.
+function getPageItems(current: number, last: number): PageItem[] {
+  if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1);
+  let start = Math.max(2, current - 1);
+  let end = Math.min(last - 1, current + 1);
+  if (current <= 3) { start = 2; end = 4; } else if (current >= last - 2) { start = last - 3; end = last - 1; }
+  if (start === 3) start = 2;
+  if (end === last - 2) end = last - 1;
+  const items: PageItem[] = [1];
+  if (start > 2) items.push('ellipsis-start');
+  for (let p = start; p <= end; p++) items.push(p);
+  if (end < last - 1) items.push('ellipsis-end');
+  items.push(last);
+  return items;
+}
+
+function Pagination({ currentPage, lastPage, onChange }: { currentPage: number; lastPage: number; onChange: (page: number) => void }) {
+  return (
+    <nav aria-label="Phân trang">
+      <ul className={styles.pager}>
+        <li><button type="button" onClick={() => onChange(currentPage - 1)} disabled={currentPage <= 1} aria-label="Trang trước">Trước</button></li>
+        {getPageItems(currentPage, lastPage).map((item) => typeof item === 'number' ? (
+          <li key={item}>
+            <button type="button" onClick={() => onChange(item)} aria-label={`Trang ${item}`} aria-current={item === currentPage ? 'page' : undefined}>{item}</button>
+          </li>
+        ) : (
+          <li key={item} aria-hidden="true" className={styles.gap}>&hellip;</li>
+        ))}
+        <li><button type="button" onClick={() => onChange(currentPage + 1)} disabled={currentPage >= lastPage} aria-label="Trang sau">Sau</button></li>
+      </ul>
+    </nav>
   );
 }

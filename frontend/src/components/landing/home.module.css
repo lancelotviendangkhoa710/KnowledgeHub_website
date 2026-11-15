@@ -53,8 +53,7 @@
 .chat { display: flex; flex-direction: column; gap: 16px; background: var(--bg); border-radius: var(--r-card); padding: 22px; }
 .me { align-self: flex-end; max-width: 88%; background: var(--btn); color: var(--btn-ink); padding: 10px 16px; border-radius: 12px 12px 2px 12px; }
 .bot { display: flex; gap: 12px; align-items: flex-start; }
-.botAv { width: 32px; height: 32px; border-radius: 8px; background: var(--hero); position: relative; overflow: hidden; flex: none; margin-top: 2px; }
-.botAv::before { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: var(--mark); left: -5px; bottom: -5px; }
+.botAv { width: 32px; height: 32px; border-radius: 8px; background: var(--hero); color: #fff; display: grid; place-items: center; flex: none; margin-top: 2px; }
 .botTxt { min-width: 0; font-size: 15.5px; line-height: 1.7; }
 .botTxt p { margin: 0; max-width: none; color: var(--ink); }
 .botTxt strong { font-weight: 600; }

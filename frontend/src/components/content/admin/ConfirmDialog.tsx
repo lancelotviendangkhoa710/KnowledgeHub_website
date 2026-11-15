@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useId, useRef } from 'react';
+import styles from './confirmDialog.module.css';
 
 type ConfirmDialogProps = {
   title: string;
@@ -11,28 +12,6 @@ type ConfirmDialogProps = {
   onConfirm: () => void;
   onCancel: () => void;
 };
-
-const overlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  inset: 0,
-  zIndex: 1000,
-  display: 'grid',
-  placeItems: 'center',
-  padding: '1.5rem',
-  background: 'rgba(36, 33, 36, 0.45)',
-};
-
-const panelStyle: React.CSSProperties = {
-  width: 'min(100%, 30rem)',
-  padding: '1.75rem',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--color-white)',
-  boxShadow: 'var(--shadow-lg)',
-  color: 'var(--color-charcoal)',
-};
-
-const busyStyle: React.CSSProperties = { opacity: 0.55, cursor: 'not-allowed' };
 
 /**
  * Accessible, non-native confirmation modal: focus moves to Cancel on open, Tab is trapped inside,
@@ -103,36 +82,34 @@ export default function ConfirmDialog({ title, children, confirmLabel, busy, err
   }, []);
 
   return (
-    <div role="presentation" style={overlayStyle} onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
-      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId} style={panelStyle}>
-        <h2 id={titleId} style={{ margin: '0 0 0.75rem', fontSize: 'var(--text-xl)' }}>{title}</h2>
-        <div id={bodyId} style={{ color: 'var(--color-gray)' }}>{children}</div>
+    <div role="presentation" className={styles.overlay} onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) onCancel(); }}>
+      <div ref={panelRef} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={bodyId} className={styles.panel}>
+        <h2 id={titleId} className={styles.title}>{title}</h2>
+        <div id={bodyId} className={styles.body}>{children}</div>
         {error && (
-          <p ref={errorRef} tabIndex={-1} className="auth-error" role="alert" style={{ marginTop: '1rem' }}>
+          <p ref={errorRef} tabIndex={-1} className={styles.error} role="alert">
             {error}
           </p>
         )}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.5rem' }}>
+        <div className={styles.actions}>
           {/* aria-disabled + click guard (not `disabled`) so the focused button keeps focus while a request runs. */}
           <button
             ref={cancelRef}
             type="button"
-            className="button button--secondary"
+            className={`${styles.btn} ${styles.ghost} ${busy ? styles.busy : ''}`}
             onClick={() => { if (!busy) onCancel(); }}
             aria-disabled={busy}
-            style={busy ? busyStyle : undefined}
           >
-            Cancel
+            Hủy
           </button>
           <button
             type="button"
-            className="button button--primary"
+            className={`${styles.btn} ${busy ? styles.busy : ''}`}
             onClick={() => { if (!busy) onConfirm(); }}
             aria-disabled={busy}
             aria-busy={busy}
-            style={busy ? busyStyle : undefined}
           >
-            {busy ? 'Working...' : confirmLabel}
+            {busy ? 'Đang xử lý...' : confirmLabel}
           </button>
         </div>
       </div>
