@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback, useRef, type CSSProperties } from 'react';
+import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import CourseCard from '@/components/content/CourseCard';
@@ -8,6 +8,7 @@ import { Article, Category } from '@/types/content';
 import {
   fetchArticlesPage,
   fetchCategories,
+  fetchTags,
   ApiReadOptions,
   PaginationMeta,
   SERVER_WAKING_MESSAGE,
@@ -16,6 +17,8 @@ import { getCurrentUser, setCurrentUser as setGlobalCurrentUser, subscribeCurren
 import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 import { api } from '@/lib/api';
+import { popularTagNames } from '@/lib/courseDisplay';
+import s from './courses.module.css';
 
 /** Page size requested from `GET /api/v1/articles` (matches the backend default). */
 const COURSES_PER_PAGE = 15;
@@ -50,11 +53,7 @@ export default function CoursesPage() {
   // useSearchParams() needs a Suspense boundary so the route can still be prerendered at build time.
   return (
     <Suspense
-      fallback={
-        <div className="container" style={{ paddingTop: '2.5rem', textAlign: 'center', color: 'var(--color-gray)' }}>
-          Loading curated courses...
-        </div>
-      }
+      fallback={<div className={s.loading}>Đang tải khóa học...</div>}
     >
       <CoursesCatalog />
     </Suspense>
@@ -87,6 +86,8 @@ function CoursesCatalog() {
   // Which request (page + category) produced `articles` / `meta`; differs from the URL after a failed load.
   const [resultsKey, setResultsKey] = useState<ResultsKey | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  // Gợi ý "Chủ đề hay tìm": thẻ phổ biến nhất. Không thiết yếu, lỗi thì ẩn hàng gợi ý.
+  const [popularTags, setPopularTags] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [wakingUp, setWakingUp] = useState<boolean>(false);
@@ -160,7 +161,7 @@ function CoursesCatalog() {
       setCategoriesLoaded(true);
     } catch (err: unknown) {
       if (controller.signal.aborted) return;
-      setCategoriesError(err instanceof Error && err.message ? err.message : 'Unable to load course domains.');
+      setCategoriesError(err instanceof Error && err.message ? err.message : 'Không tải được danh sách lĩnh vực.');
     } finally {
       if (categoriesAbortRef.current === controller) {
         categoriesAbortRef.current = null;
@@ -177,6 +178,17 @@ function CoursesCatalog() {
       categoriesAbortRef.current = null;
     };
   }, [loadCategories]);
+
+  /** Loads the popular tag names once for the search suggestions. */
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchTags({ signal: controller.signal })
+      .then((tags) => {
+        if (!controller.signal.aborted) setPopularTags(popularTagNames(tags));
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
 
   /** Drops a category filter only when a successful categories load proves it does not exist. */
   useEffect(() => {
@@ -246,7 +258,7 @@ function CoursesCatalog() {
         setLoadError(
           err instanceof Error && err.message
             ? err.message
-            : 'Unable to load courses from KnowledgeHub API.'
+            : 'Không tải được khóa học từ máy chủ KnowledgeHub.'
         );
       } finally {
         // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
@@ -315,7 +327,8 @@ function CoursesCatalog() {
     const title = version?.title.toLowerCase() || '';
     const content = version?.content.toLowerCase() || '';
     const q = searchQuery.toLowerCase();
-    return !q || title.includes(q) || content.includes(q);
+    // Cũng khớp tên thẻ, để các gợi ý "Chủ đề hay tìm" (lấy từ tên thẻ) luôn ra đúng khóa có thẻ đó.
+    return !q || title.includes(q) || content.includes(q) || (article.tags ?? []).some((t) => t.name.toLowerCase().includes(q));
   });
 
   /** True when the shown results came from a different page/category than the URL now asks for. */
@@ -330,396 +343,180 @@ function CoursesCatalog() {
     if (resultsFromOtherCategory) {
       const previousDomain =
         resultsKey.category === 'all'
-          ? 'All Domains'
-          : categories.find((c) => c.id === resultsKey.category)?.name ?? 'the previous domain';
-      return `Still showing courses from ${previousDomain}${resultsKey.page > 1 ? `, page ${resultsKey.page}` : ''}: the selected domain could not be loaded.`;
+          ? 'Tất cả lĩnh vực'
+          : categories.find((c) => c.id === resultsKey.category)?.name ?? 'lĩnh vực trước';
+      return `Vẫn đang hiển thị khóa học của ${previousDomain}${resultsKey.page > 1 ? `, trang ${resultsKey.page}` : ''}: không tải được lĩnh vực đã chọn.`;
     }
-    return `Still showing page ${resultsKey.page}: page ${currentPage} could not be loaded.`;
+    return `Vẫn đang hiển thị trang ${resultsKey.page}: không tải được trang ${currentPage}.`;
   })();
 
   /** Final result range only (kept while a new page loads, then replaced once it arrives). */
   const summaryText =
     meta && meta.total > 0 && articles.length > 0
-      ? `Showing ${meta.from ?? 0}–${meta.to ?? 0} of ${meta.total} ${meta.total === 1 ? 'course' : 'courses'}`
+      ? `Hiển thị ${meta.from ?? 0}–${meta.to ?? 0} trong ${meta.total} khóa học`
       : '';
 
-  return (
-    <div className="container" style={{ paddingTop: '2.5rem' }}>
-      {/* Hero Section */}
-      <section style={{ textAlign: 'center', maxWidth: 780, margin: '0 auto 3.5rem auto' }}>
-        <div style={{ display: 'inline-flex', marginBottom: '1.25rem' }}>
-          <span
-            className="badge"
-            style={{
-              backgroundColor: 'var(--color-primary-pale)',
-              color: 'var(--color-primary)',
-              border: '1px solid var(--color-border)',
-              fontSize: '0.78rem',
-              fontWeight: 600,
-              padding: '0.25rem 0.85rem',
-              borderRadius: 'var(--radius-full)',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Official Knowledge Repository
-          </span>
-        </div>
-        <h1
-          style={{
-            marginBottom: '1rem',
-            color: 'var(--color-charcoal)',
-            fontSize: 'clamp(2.2rem, 4.5vw, 3.25rem)',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.15,
-          }}
-        >
-          Curated Engineering Courses & Deep Dives
-        </h1>
-        <p style={{ fontSize: '1.125rem', color: 'var(--color-gray)', marginBottom: '2rem', lineHeight: 1.65 }}>
-          High-fidelity, peer-reviewed curricula authored by internal staff engineers and domain specialists.
-        </p>
+  const isGuest = !currentUser && !(mounted && getAccessToken());
+  const isContributorOrAdmin =
+    currentUser?.roles?.some((r) => r === 'contributor' || r === 'admin') ?? false;
 
-        {/* Search Bar */}
-        <div style={{ position: 'relative', maxWidth: 560, margin: '0 auto' }}>
-          <input
-            type="text"
-            placeholder="Search systems, database internals, algorithms..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.85rem 1.25rem 0.85rem 2.85rem',
-              borderRadius: 'var(--radius-full)',
-              background: 'var(--color-white)',
-              border: '1.5px solid var(--color-border)',
-              color: 'var(--color-charcoal)',
-              fontSize: '1rem',
-              outline: 'none',
-              transition: 'border-color var(--transition-fast), box-shadow var(--transition-fast)',
-              boxShadow: 'var(--shadow-xs)',
-            }}
-          />
-          <svg
-            aria-hidden="true"
-            focusable="false"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--color-gray)"
-            strokeWidth="2"
-            style={{ position: 'absolute', left: '1.1rem', top: '50%', transform: 'translateY(-50%)' }}
-          >
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
+  return (
+    <div>
+      <section className={s.hero}>
+        <div className={s.ghost} aria-hidden="true">KNOWLEDGE</div>
+        <div className={s.disc} aria-hidden="true" />
+        <div className={s.ring} aria-hidden="true" />
+        <div className={s.heroInner}>
+          <p className={s.kicker}>Thư viện khóa học</p>
+          <h1>Hôm nay bạn muốn học gì?</h1>
+          <form className={s.search} role="search" onSubmit={(e) => e.preventDefault()}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+            <input
+              type="search"
+              placeholder="Raft, ETL, code review, index..."
+              aria-label="Tìm khóa học"
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button className={s.btn} type="submit">Tìm</button>
+          </form>
+          {popularTags.length > 0 && (
+            <div className={s.heroTags}>
+              <span>Chủ đề hay tìm</span>
+              {popularTags.map((name) => (
+                <button key={name} type="button" onClick={() => setSearchQuery(name)}>
+                  {name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Category Pills Navigation */}
-      <section
-        aria-label="Filter courses by domain"
-        style={{
-          marginBottom: '2.5rem',
-          display: 'flex',
-          gap: '0.65rem',
-          overflowX: 'auto',
-          paddingBottom: '0.5rem',
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => selectCategory('all')}
-          aria-pressed={selectedCategory === 'all'}
-          style={{
-            padding: '0.55rem 1.15rem',
-            borderRadius: 'var(--radius-full)',
-            border: '1.5px solid',
-            borderColor: selectedCategory === 'all' ? 'var(--color-primary)' : 'var(--color-border)',
-            background: selectedCategory === 'all' ? 'var(--color-primary-pale)' : 'var(--color-white)',
-            color: selectedCategory === 'all' ? 'var(--color-primary)' : 'var(--color-gray)',
-            fontWeight: 600,
-            fontSize: '0.875rem',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            transition: 'all var(--transition-fast)',
-            boxShadow: selectedCategory === 'all' ? 'var(--shadow-xs)' : 'none',
-          }}
-        >
-          All Domains{allTotal !== null ? ` (${allTotal})` : ''}
-        </button>
-
-        {categories.map((cat) => {
-          const isSelected = selectedCategory === cat.id;
-          return (
+      <div className={s.wrap}>
+        <div className={s.filters} role="group" aria-label="Lọc theo lĩnh vực">
+          <button type="button" className={s.chip} onClick={() => selectCategory('all')} aria-pressed={selectedCategory === 'all'}>
+            Tất cả{allTotal !== null ? <> <span>({allTotal})</span></> : null}
+          </button>
+          {categories.map((cat) => (
             <button
               key={cat.id}
               type="button"
+              className={s.chip}
               onClick={() => selectCategory(cat.id)}
-              aria-pressed={isSelected}
-              style={{
-                padding: '0.55rem 1.15rem',
-                borderRadius: 'var(--radius-full)',
-                border: '1.5px solid',
-                borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)',
-                background: isSelected ? 'var(--color-primary-pale)' : 'var(--color-white)',
-                color: isSelected ? 'var(--color-primary)' : 'var(--color-gray)',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all var(--transition-fast)',
-                boxShadow: isSelected ? 'var(--shadow-xs)' : 'none',
-              }}
+              aria-pressed={selectedCategory === cat.id}
             >
               {cat.name}
             </button>
-          );
-        })}
-      </section>
-
-      {categoriesError && (
-        <div
-          role="status"
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '0.75rem',
-            margin: '-1.5rem 0 2rem 0',
-            padding: '0.65rem 1rem',
-            background: 'var(--color-white)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-lg)',
-            color: 'var(--color-gray)',
-            fontSize: '0.875rem',
-          }}
-        >
-          <span>
-            Course domains could not be loaded{selectedCategory !== 'all' ? ' — your domain filter is still applied' : ''}.
-          </span>
-          <button
-            type="button"
-            onClick={() => loadCategories()}
-            disabled={categoriesLoading}
-            aria-busy={categoriesLoading}
-            className="btn btn-secondary"
-            style={{ padding: '0.35rem 0.95rem', fontSize: '0.8rem', fontWeight: 600 }}
-          >
-            {categoriesLoading ? 'Retrying...' : 'Retry domains'}
-          </button>
+          ))}
+          {meta && meta.lastPage > 1 && !resultsFromOtherCategory && (
+            <span className={s.count}>Trang {resultsKey?.page ?? currentPage} trên {meta.lastPage}</span>
+          )}
         </div>
-      )}
 
-      {/* Course Grid & State Feedback */}
-      <section
-        ref={listTopRef}
-        tabIndex={-1}
-        aria-label="Course results"
-        style={{ scrollMarginTop: '6rem', outline: 'none' }}
-      >
-        <ServerWakingStatus active={wakingUp} />
-        {/* Always mounted so screen readers announce each final result range; no transient loading text. */}
-        <p
-          aria-live="polite"
-          style={{
-            color: 'var(--color-gray)',
-            fontSize: '0.9rem',
-            margin: summaryText ? '0 0 0.35rem 0' : 0,
-          }}
-        >
-          {summaryText}
-        </p>
-        {loading && articles.length === 0 ? (
-          wakingUp ? null : (
-            <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--color-gray)' }}>
-              Loading curated courses...
-            </div>
-          )
-        ) : loadError && articles.length === 0 ? (
-          <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} />
-        ) : (
-          <>
-            {loadError && (
-              <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} compact />
-            )}
-            {summaryText && (
-              <p
-                style={{
-                  color: staleLabel ? 'var(--color-primary)' : 'var(--color-gray)',
-                  fontWeight: staleLabel ? 600 : 400,
-                  fontSize: '0.85rem',
-                  marginBottom: '1.25rem',
-                  minHeight: '1.2em',
-                }}
-              >
-                {loading ? 'Loading…' : staleLabel}
-                {!loading && !staleLabel && searchQuery && meta && meta.lastPage > 1
-                  ? 'Search filters the courses on this page only.'
-                  : ''}
-              </p>
-            )}
-            {filteredArticles.length > 0 ? (
-              <div
-                aria-busy={loading}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-                  gap: '1.75rem',
-                  opacity: loading ? 0.55 : 1,
-                  transition: 'opacity var(--transition-fast)',
-                }}
-              >
-                {filteredArticles.map((article) => (
-                  <CourseCard key={article.id} article={article} />
-                ))}
-              </div>
-            ) : articles.length === 0 && selectedCategory === 'all' ? (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '4rem 2rem',
-                  background: 'var(--color-white)',
-                  border: '1px dashed var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  boxShadow: 'var(--shadow-xs)',
-                }}
-              >
-                <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
-                  No courses published yet
-                </h3>
-                <p style={{ color: 'var(--color-gray)', maxWidth: 480, margin: '0 auto' }}>
-                  Published courses will appear here as soon as contributors release them.
-                </p>
-              </div>
-            ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '4rem 2rem',
-                  background: 'var(--color-white)',
-                  border: '1px dashed var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  boxShadow: 'var(--shadow-xs)',
-                }}
-              >
-                <h3 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 600 }}>
-                  No courses matched your query
-                </h3>
-                <p style={{ color: 'var(--color-gray)', marginBottom: '1.5rem', maxWidth: 480, margin: '0 auto 1.5rem auto' }}>
-                  Try adjusting your search terms or selecting another engineering domain.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    selectCategory('all');
-                    setSearchQuery('');
-                  }}
-                  className="btn btn-secondary"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            )}
-            {/* While loading, follow the requested page; after a failed load, mark the page actually shown.
-                Hidden when the shown data belongs to another domain (its page count does not apply). */}
-            {meta && resultsKey && !resultsFromOtherCategory && meta.lastPage > 1 && (
-              <Pagination
-                currentPage={resultsStale && !loading ? resultsKey.page : currentPage}
-                lastPage={meta.lastPage}
-                onChange={goToPage}
-              />
-            )}
-          </>
+        {categoriesError && (
+          <div role="status" className={s.note}>
+            <span>
+              Không tải được danh sách lĩnh vực{selectedCategory !== 'all' ? ', bộ lọc lĩnh vực của bạn vẫn đang áp dụng' : ''}.
+            </span>
+            <button
+              type="button"
+              onClick={() => loadCategories()}
+              disabled={categoriesLoading}
+              aria-busy={categoriesLoading}
+              className={`${s.btn} ${s.btnGhost} ${s.btnSm}`}
+            >
+              {categoriesLoading ? 'Đang thử lại...' : 'Thử lại'}
+            </button>
+          </div>
         )}
-      </section>
 
-      {/* Contributor Action Strip */}
-      {(() => {
-        const isGuest = !currentUser && !(mounted && getAccessToken());
-        const isContributorOrAdmin =
-          currentUser?.roles?.some((r) => r === 'contributor' || r === 'admin') ?? false;
+        <section ref={listTopRef} tabIndex={-1} aria-label="Kết quả khóa học" className={s.results}>
+          <ServerWakingStatus active={wakingUp} />
+          {/* Always mounted so screen readers announce each final result range; no transient loading text. */}
+          <p aria-live="polite" className={s.summary}>{summaryText}</p>
+          {loading && articles.length === 0 ? (
+            wakingUp ? null : <div className={s.loading}>Đang tải khóa học...</div>
+          ) : loadError && articles.length === 0 ? (
+            <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} />
+          ) : (
+            <>
+              {loadError && (
+                <LoadErrorBanner message={loadError} onRetry={retryLoad} retrying={loading} compact />
+              )}
+              {(loading || staleLabel || (searchQuery && meta && meta.lastPage > 1)) && (
+                <p className={s.stale}>
+                  {loading ? 'Đang tải…' : staleLabel}
+                  {!loading && !staleLabel && searchQuery && meta && meta.lastPage > 1
+                    ? 'Ô tìm kiếm chỉ lọc các khóa học trong trang này.'
+                    : ''}
+                </p>
+              )}
+              {filteredArticles.length > 0 ? (
+                <div className={s.grid} aria-busy={loading}>
+                  {filteredArticles.map((article) => (
+                    <CourseCard key={article.id} article={article} />
+                  ))}
+                </div>
+              ) : articles.length === 0 && selectedCategory === 'all' ? (
+                <div className={s.state}>
+                  <h3>Chưa có khóa học nào được xuất bản</h3>
+                  <p>Khóa học sẽ xuất hiện ở đây ngay khi người đóng góp xuất bản.</p>
+                </div>
+              ) : (
+                <div className={s.state}>
+                  <h3>
+                    {searchQuery ? `Không có khóa học nào khớp với “${searchQuery}”` : 'Không có khóa học nào khớp'}
+                  </h3>
+                  <p>Thử từ khóa ngắn hơn hoặc bỏ bộ lọc lĩnh vực.</p>
+                  <button
+                    type="button"
+                    className={`${s.btn} ${s.btnGhost}`}
+                    onClick={() => {
+                      selectCategory('all');
+                      setSearchQuery('');
+                    }}
+                  >
+                    Đặt lại bộ lọc
+                  </button>
+                </div>
+              )}
+              {/* While loading, follow the requested page; after a failed load, mark the page actually shown.
+                  Hidden when the shown data belongs to another domain (its page count does not apply). */}
+              {meta && resultsKey && !resultsFromOtherCategory && meta.lastPage > 1 && (
+                <Pagination
+                  currentPage={resultsStale && !loading ? resultsKey.page : currentPage}
+                  lastPage={meta.lastPage}
+                  onChange={goToPage}
+                />
+              )}
+            </>
+          )}
+        </section>
 
-        return (
-          <section
-            style={{
-              marginTop: '4.5rem',
-              padding: '2.5rem',
-              borderRadius: 'var(--radius-lg)',
-              background: 'var(--color-primary-faint)',
-              border: '1px solid var(--color-primary-pale)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1.5rem',
-              boxShadow: 'var(--shadow-xs)',
-            }}
-          >
-            <div>
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: 'var(--color-primary-pale)',
-                  color: 'var(--color-primary)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                  marginBottom: '0.75rem',
-                  display: 'inline-flex',
-                }}
-              >
-                {isContributorOrAdmin
-                  ? 'Active Contributor Workspace'
-                  : 'KnowledgeHub Publishing System'}
-              </span>
-              <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 700 }}>
-                {isContributorOrAdmin
-                  ? 'Author & Publish Course Curricula'
-                  : 'Interested in Authoring Course Material?'}
-              </h2>
-              <p style={{ color: 'var(--color-gray)', maxWidth: 620, lineHeight: 1.65 }}>
-                {isContributorOrAdmin
-                  ? 'Create new course modules with immutable version snapshots, structured markdown, and direct publishing workflow.'
-                  : isGuest
-                  ? 'Are you a domain expert interested in publishing technical curricula? Sign in and request Contributor access via your account profile.'
-                  : 'Course authoring access is granted exclusively by Administrators. Update your profile and submit a request to an Administrator.'}
-              </p>
-            </div>
-
-            {isContributorOrAdmin ? (
-              <Link
-                href="/courses/create"
-                className="btn btn-primary"
-                style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
-              >
-                Open Contributor Studio &rarr;
-              </Link>
-            ) : isGuest ? (
-              <Link
-                href="/login?redirect=/courses"
-                className="btn btn-primary"
-                style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
-              >
-                Sign In to Request Access &rarr;
-              </Link>
-            ) : (
-              <Link
-                href="/account"
-                className="btn btn-secondary"
-                style={{ padding: '0.7rem 1.5rem', fontWeight: 600 }}
-              >
-                Request Access via Account &rarr;
-              </Link>
-            )}
-          </section>
-        );
-      })()}
+        <section className={s.cta}>
+          <div>
+            <h2>
+              {isContributorOrAdmin ? 'Biên soạn và xuất bản khóa học' : 'Bạn muốn viết khóa học?'}
+            </h2>
+            <p>
+              {isContributorOrAdmin
+                ? 'Tạo khóa học mới với phiên bản được lưu lại, nội dung Markdown có cấu trúc và xuất bản trực tiếp.'
+                : isGuest
+                ? 'Nếu bạn là chuyên gia muốn chia sẻ kiến thức, hãy đăng nhập và gửi yêu cầu quyền Contributor trong trang tài khoản.'
+                : 'Quyền biên soạn do Quản trị viên cấp. Hãy cập nhật hồ sơ và gửi yêu cầu cho Quản trị viên.'}
+            </p>
+          </div>
+          {isContributorOrAdmin ? (
+            <Link href="/courses/create" className={s.btn}>Mở Studio &rarr;</Link>
+          ) : isGuest ? (
+            <Link href="/login?redirect=/courses" className={s.btn}>Đăng nhập để yêu cầu quyền &rarr;</Link>
+          ) : (
+            <Link href="/account" className={`${s.btn} ${s.btnGhost}`}>Yêu cầu quyền trong tài khoản &rarr;</Link>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
@@ -755,7 +552,8 @@ function getPageItems(current: number, last: number): PageItem[] {
   return items;
 }
 
-/** Accessible Previous / page numbers / Next control styled with UX-01 tokens. */
+
+/** Phân trang: Trước / số trang / Sau. */
 function Pagination({
   currentPage,
   lastPage,
@@ -765,64 +563,15 @@ function Pagination({
   lastPage: number;
   onChange: (page: number) => void;
 }) {
-  /** Default look of a pagination button (UX-01 tokens). */
-  const baseStyle: CSSProperties = {
-    minWidth: '2.5rem',
-    height: '2.5rem',
-    padding: '0 0.85rem',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 'var(--radius-full)',
-    border: '1.5px solid var(--color-border)',
-    background: 'var(--color-white)',
-    color: 'var(--color-charcoal)',
-    fontWeight: 600,
-    fontSize: '0.875rem',
-    cursor: 'pointer',
-    transition: 'all var(--transition-fast)',
-  };
-  /** Current page: brand background with inverted text. */
-  const activeStyle: CSSProperties = {
-    ...baseStyle,
-    borderColor: 'var(--color-primary)',
-    background: 'var(--color-primary)',
-    color: 'var(--color-white)',
-    boxShadow: 'var(--shadow-xs)',
-  };
-  /** Unavailable Previous/Next: muted text on the paper background. */
-  const disabledStyle: CSSProperties = {
-    ...baseStyle,
-    background: 'var(--color-off-white)',
-    color: 'var(--color-gray-light)',
-    cursor: 'not-allowed',
-  };
   const isFirst = currentPage <= 1;
   const isLast = currentPage >= lastPage;
 
   return (
-    <nav aria-label="Pagination" style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'center' }}>
-      <ul
-        style={{
-          listStyle: 'none',
-          margin: 0,
-          padding: 0,
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '0.5rem',
-        }}
-      >
+    <nav aria-label="Phân trang">
+      <ul className={s.pager}>
         <li>
-          <button
-            type="button"
-            onClick={() => onChange(currentPage - 1)}
-            disabled={isFirst}
-            aria-label="Previous page"
-            style={isFirst ? disabledStyle : baseStyle}
-          >
-            &larr; Previous
+          <button type="button" onClick={() => onChange(currentPage - 1)} disabled={isFirst} aria-label="Trang trước">
+            Trước
           </button>
         </li>
         {getPageItems(currentPage, lastPage).map((item) =>
@@ -831,28 +580,21 @@ function Pagination({
               <button
                 type="button"
                 onClick={() => onChange(item)}
-                aria-label={`Page ${item}`}
+                aria-label={`Trang ${item}`}
                 aria-current={item === currentPage ? 'page' : undefined}
-                style={item === currentPage ? activeStyle : baseStyle}
               >
                 {item}
               </button>
             </li>
           ) : (
-            <li key={item} aria-hidden="true" style={{ color: 'var(--color-gray)', padding: '0 0.25rem' }}>
+            <li key={item} aria-hidden="true" className={s.gap}>
               &hellip;
             </li>
           )
         )}
         <li>
-          <button
-            type="button"
-            onClick={() => onChange(currentPage + 1)}
-            disabled={isLast}
-            aria-label="Next page"
-            style={isLast ? disabledStyle : baseStyle}
-          >
-            Next &rarr;
+          <button type="button" onClick={() => onChange(currentPage + 1)} disabled={isLast} aria-label="Trang sau">
+            Sau
           </button>
         </li>
       </ul>
@@ -861,8 +603,8 @@ function Pagination({
 }
 
 /**
- * Error state for a failed course list load, styled with UX-01 brand tokens.
- * `compact` renders a slim inline notice above existing (stale) results instead of a full card.
+ * Trạng thái lỗi khi không tải được danh sách khóa học.
+ * `compact` hiện thành thông báo gọn phía trên kết quả cũ thay vì một thẻ đầy đủ.
  */
 function LoadErrorBanner({
   message,
@@ -875,67 +617,18 @@ function LoadErrorBanner({
   retrying: boolean;
   compact?: boolean;
 }) {
-  /** Retry action shared by the compact and full layouts. */
   const retryButton = (
-    <button
-      type="button"
-      onClick={() => onRetry()}
-      disabled={retrying}
-      aria-busy={retrying}
-      className="btn btn-primary"
-      style={{
-        padding: compact ? '0.45rem 1.1rem' : '0.7rem 1.75rem',
-        fontWeight: 600,
-        fontSize: compact ? '0.85rem' : '0.95rem',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        flexShrink: 0,
-      }}
-    >
-      <svg
-        aria-hidden="true"
-        focusable="false"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <polyline points="23 4 23 10 17 10" />
-        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-      </svg>
-      {retrying ? 'Retrying...' : 'Retry'}
+    <button type="button" onClick={() => onRetry()} disabled={retrying} aria-busy={retrying} className={s.btn}>
+      {retrying ? 'Đang thử lại...' : 'Thử lại'}
     </button>
   );
 
   if (compact) {
     return (
-      <div
-        role="alert"
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          padding: '0.85rem 1.25rem',
-          marginBottom: '1.5rem',
-          background: 'var(--color-primary-faint)',
-          border: '1px solid var(--color-primary-pale)',
-          borderRadius: 'var(--radius-lg)',
-          color: 'var(--color-charcoal)',
-          fontSize: '0.95rem',
-        }}
-      >
+      <div role="alert" className={s.alert}>
         <span>
-          <strong style={{ color: 'var(--color-primary)' }}>Could not refresh courses.</strong> {message}
-          <span style={{ display: 'block', color: 'var(--color-gray)', marginTop: '0.25rem' }}>
-            Please check your connection or try again.
-          </span>
+          <strong>Không làm mới được danh sách khóa học.</strong> {message}
+          <small>Hãy kiểm tra kết nối hoặc thử lại.</small>
         </span>
         {retryButton}
       </div>
@@ -943,126 +636,35 @@ function LoadErrorBanner({
   }
 
   return (
-    <div
-      role="alert"
-      style={{
-        textAlign: 'center',
-        padding: '3.5rem 2rem',
-        background: 'var(--color-white)',
-        border: '1.5px solid var(--color-primary-pale)',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: 'var(--shadow-sm)',
-        maxWidth: 600,
-        margin: '0 auto',
-      }}
-    >
-      <div
-        aria-hidden="true"
-        style={{
-          width: 52,
-          height: 52,
-          borderRadius: '50%',
-          backgroundColor: 'var(--color-primary-faint)',
-          color: 'var(--color-primary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 1.25rem auto',
-        }}
-      >
-        <svg
-          aria-hidden="true"
-          focusable="false"
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
+    <div role="alert" className={s.state}>
+      <div className={s.stateIcon} aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
           <circle cx="12" cy="12" r="10" />
           <line x1="12" y1="8" x2="12" y2="12" />
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       </div>
-      <h3
-        style={{
-          marginBottom: '0.75rem',
-          color: 'var(--color-charcoal)',
-          fontSize: '1.25rem',
-          fontWeight: 700,
-        }}
-      >
-        Unable to Load Courses
-      </h3>
-      <p
-        style={{
-          color: 'var(--color-charcoal)',
-          marginBottom: '0.5rem',
-          lineHeight: 1.6,
-          fontSize: '1rem',
-        }}
-      >
-        {message}
-      </p>
-      <p
-        style={{
-          color: 'var(--color-gray)',
-          marginBottom: '1.75rem',
-          lineHeight: 1.6,
-          fontSize: '0.95rem',
-        }}
-      >
-        Please check your connection or try again.
-      </p>
+      <h3>Không tải được khóa học</h3>
+      <p>{message}</p>
+      <p>Hãy kiểm tra kết nối hoặc thử lại.</p>
       {retryButton}
     </div>
   );
 }
 
 /**
- * Calm, non-error status shown while GET requests are retried during a backend cold start.
- * The polite live region is always mounted and only its content toggles, so screen readers
- * reliably announce the message when it appears.
+ * Trạng thái nhẹ nhàng (không phải lỗi) khi các yêu cầu GET đang được thử lại lúc backend khởi động nguội.
+ * Vùng thông báo luôn có mặt, chỉ nội dung thay đổi, để trình đọc màn hình đọc được thông báo.
  *
- * @param props.active Whether the backend is currently being retried (cold start in progress).
+ * @param props.active Backend có đang được thử lại (khởi động nguội) hay không.
  */
 function ServerWakingStatus({ active }: { active: boolean }) {
   if (!active) {
     return <div role="status" aria-live="polite" />;
   }
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '0.75rem',
-        maxWidth: 600,
-        margin: '0 auto 1.5rem auto',
-        padding: '1rem 1.25rem',
-        background: 'var(--color-white)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-lg)',
-        color: 'var(--color-charcoal)',
-        fontSize: '0.95rem',
-        textAlign: 'center',
-      }}
-    >
-      <span
-        aria-hidden="true"
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: '50%',
-          background: 'var(--color-primary)',
-          flexShrink: 0,
-        }}
-      />
+    <div role="status" aria-live="polite" className={s.waking}>
+      <span aria-hidden="true" className={s.wakingDot} />
       <span>{SERVER_WAKING_MESSAGE}</span>
     </div>
   );

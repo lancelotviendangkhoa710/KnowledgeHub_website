@@ -3,12 +3,12 @@ import SiteHeader from '@/components/layout/SiteHeader';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--color-off-white)' }}>
-      <header className="site-header" role="banner">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: 'var(--bg)' }}>
+      <header className="kh-top" role="banner">
         <SiteHeader />
       </header>
       <main style={{ flex: 1, paddingBottom: '4rem' }}>{children}</main>
-      <footer className="site-footer" role="contentinfo">
+      <footer className="kh-foot" role="contentinfo">
         <SiteFooter />
       </footer>
     </div>

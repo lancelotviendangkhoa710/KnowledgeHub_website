@@ -11,7 +11,17 @@ import { accountClient } from '@/lib/accountClient';
 import { getAccessToken } from '@/lib/authToken';
 import YouTubeEmbed from '@/components/content/YouTubeEmbed';
 import { extractYouTubeVideoId } from '@/lib/videoUtils';
+import { courseLevel, splitCourseTitle } from '@/lib/courseDisplay';
+import { coverTheme, type CoverTheme } from '@/lib/courseCover';
+import { highlightCode } from '@/lib/highlightCode';
+import s from './lesson.module.css';
 
+const THEME_COLOR: Record<CoverTheme, string> = {
+  sys: 'var(--c-sys)',
+  prog: 'var(--c-prog)',
+  data: 'var(--c-data)',
+  career: 'var(--c-career)',
+};
 
 function CodeBlock({ code, language }: { code: string; language?: string }) {
   const [copied, setCopied] = useState(false);
@@ -29,79 +39,26 @@ function CodeBlock({ code, language }: { code: string; language?: string }) {
   };
 
   return (
-    <div
-      style={{
-        margin: '1.75rem 0',
-        borderRadius: 'var(--radius-md)',
-        overflow: 'hidden',
-        border: '1px solid #334155',
-        backgroundColor: '#0F172A',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '0.45rem 1rem',
-          backgroundColor: '#1E293B',
-          borderBottom: '1px solid #334155',
-          fontSize: '0.75rem',
-          color: '#94A3B8',
-          fontFamily: 'var(--font-mono, monospace)',
-          textTransform: 'lowercase',
-        }}
-      >
+    <div className={s.code}>
+      <div className={s.codeTop}>
         <span>{language || 'code'}</span>
-        <button
-          type="button"
-          onClick={handleCopy}
-          style={{
-            background: 'transparent',
-            border: '1px solid #475569',
-            color: copied ? '#4ADE80' : '#E2E8F0',
-            borderRadius: '4px',
-            padding: '0.2rem 0.55rem',
-            fontSize: '0.72rem',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.35rem',
-            transition: 'all var(--transition-fast)',
-          }}
-        >
-          {copied ? (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Copied!
-            </>
-          ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              Copy
-            </>
-          )}
+        <button type="button" onClick={handleCopy}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            {copied ? <path d="m5 12 5 5 9-10" /> : <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V6a2 2 0 0 1 2-2h9" /></>}
+          </svg>
+          <span>{copied ? 'Đã sao chép' : 'Sao chép'}</span>
         </button>
       </div>
-      <pre
-        style={{
-          padding: '1.25rem',
-          margin: 0,
-          overflowX: 'auto',
-          fontSize: '0.9rem',
-          lineHeight: 1.65,
-          color: '#F8FAFC',
-          fontFamily: 'var(--font-mono, monospace)',
-          backgroundColor: '#0F172A',
-        }}
-      >
-        <code>{code}</code>
+      <pre>
+        <code>
+          {highlightCode(code, language).map((tok, idx) =>
+            tok.kind === 'plain' ? tok.text : (
+              <span key={idx} className={s[tok.kind]}>
+                {tok.text}
+              </span>
+            )
+          )}
+        </code>
       </pre>
     </div>
   );
@@ -116,82 +73,10 @@ function Callout({
   title?: string;
   children: React.ReactNode;
 }) {
-  const styles = {
-    note: {
-      border: '#3B82F6',
-      bg: '#EFF6FF',
-      text: '#1E40AF',
-      title: title || 'Note',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="16" x2="12" y2="12" />
-          <line x1="12" y1="8" x2="12.01" y2="8" />
-        </svg>
-      ),
-    },
-    tip: {
-      border: '#10B981',
-      bg: '#ECFDF5',
-      text: '#065F46',
-      title: title || 'Tip',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2">
-          <path d="M9 18h6m-4 4h2m-1-18a7 7 0 0 0-7 7c0 2.22 1.2 4.15 3 5.19V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-.81c1.8-1.04 3-2.97 3-5.19a7 7 0 0 0-7-7z" />
-        </svg>
-      ),
-    },
-    warning: {
-      border: '#F59E0B',
-      bg: '#FFFBEB',
-      text: '#92400E',
-      title: title || 'Warning',
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-      ),
-    },
-    default: {
-      border: 'var(--color-primary, #0284C7)',
-      bg: 'var(--color-primary-faint, #F0F9FF)',
-      text: 'var(--color-charcoal, #0F172A)',
-      title: undefined,
-      icon: null,
-    },
-  }[kind];
-
   return (
-    <div
-      style={{
-        borderLeft: `4px solid ${styles.border}`,
-        backgroundColor: styles.bg,
-        padding: '1rem 1.25rem',
-        borderRadius: '0 var(--radius-md) var(--radius-md) 0',
-        margin: '1.5rem 0',
-      }}
-    >
-      {styles.title && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            marginBottom: '0.4rem',
-            fontWeight: 700,
-            color: styles.text,
-            fontSize: '0.9rem',
-          }}
-        >
-          {styles.icon}
-          <span>{styles.title}</span>
-        </div>
-      )}
-      <div style={{ color: styles.text, fontSize: '0.975rem', lineHeight: 1.7 }}>
-        {children}
-      </div>
+    <div className={`${s.note} ${kind === 'warning' ? s.noteWarning : ''}`}>
+      {title && <b>{title}</b>}
+      {children}
     </div>
   );
 }
@@ -209,22 +94,7 @@ function renderInlineFormatting(text: string): React.ReactNode {
     }
     const matchedPart = match[0];
     if (matchedPart.startsWith('`') && matchedPart.endsWith('`')) {
-      parts.push(
-        <code
-          key={`code-${match.index}`}
-          style={{
-            backgroundColor: '#F1F5F9',
-            color: '#0F172A',
-            padding: '0.15rem 0.4rem',
-            borderRadius: '4px',
-            fontSize: '0.88em',
-            fontFamily: 'var(--font-mono, monospace)',
-            border: '1px solid var(--color-border)',
-          }}
-        >
-          {matchedPart.slice(1, -1)}
-        </code>
-      );
+      parts.push(<code key={`code-${match.index}`}>{matchedPart.slice(1, -1)}</code>);
     } else if (matchedPart.startsWith('**') && matchedPart.endsWith('**')) {
       parts.push(<strong key={`bold-${match.index}`}>{matchedPart.slice(2, -2)}</strong>);
     } else if (matchedPart.startsWith('*') && matchedPart.endsWith('*')) {
@@ -251,7 +121,6 @@ function renderInlineFormatting(text: string): React.ReactNode {
             href={linkHref}
             target={linkHref.startsWith('http') ? '_blank' : undefined}
             rel={linkHref.startsWith('http') ? 'noopener noreferrer' : undefined}
-            style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
           >
             {linkText}
           </a>
@@ -387,7 +256,7 @@ export default function CourseDetailPage() {
       if (controller.signal.aborted) return;
       setArticle(null);
       setLoadError(
-        err instanceof Error && err.message ? err.message : 'Unable to load this course from KnowledgeHub API.'
+        err instanceof Error && err.message ? err.message : 'Không tải được khóa học từ máy chủ KnowledgeHub.'
       );
     } finally {
       // Only the current load may clear the loading state (an aborted one was superseded or unmounted).
@@ -416,7 +285,7 @@ export default function CourseDetailPage() {
     const v = article.published_version || article.latest_version;
     const raw = v?.content || '';
     const lines = raw.split('\n');
-    const items: { id: string; text: string; level: number; hasVideo?: boolean }[] = [];
+    const items: { id: string; text: string; level: number }[] = [];
     const seenIds = new Set<string>();
     let inCode = false;
 
@@ -432,28 +301,7 @@ export default function CourseDetailPage() {
         const text = line.replace(/^#{2,3}\s+/, '').trim();
         const id = getHeadingSlug(text, idx, seenIds);
 
-        let hasVideo = /video|bài giảng|lecture/i.test(text);
-        if (!hasVideo) {
-          let inCodeFence = false;
-          for (let j = idx + 1; j < lines.length; j++) {
-            const next = lines[j].trim();
-            if (next.startsWith('```')) {
-              inCodeFence = !inCodeFence;
-              continue;
-            }
-            if (inCodeFence) continue;
-            if (next.startsWith('## ') || next.startsWith('### ')) break;
-            if (
-              next.match(/^@\[youtube\]\((.+?)\)$/i) ||
-              /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(next)
-            ) {
-              hasVideo = true;
-              break;
-            }
-          }
-        }
-
-        items.push({ id, text, level: isH2 ? 2 : 3, hasVideo });
+        items.push({ id, text, level: isH2 ? 2 : 3 });
         return;
       }
     });
@@ -464,18 +312,21 @@ export default function CourseDetailPage() {
   useEffect(() => {
     if (tocItems.length === 0) return;
 
+    // Mục đang đọc: tiêu đề cuối cùng đã chạm vạch cách đầu màn hình 120px (tiêu đề gần đầu màn hình nhất);
+    // chưa tới tiêu đề nào thì lấy mục đầu; cuộn hết trang thì lấy mục cuối.
     const handleScroll = () => {
-      const scrollY = window.scrollY + 120;
-      let currentId = '';
-      for (const item of tocItems) {
-        const el = document.getElementById(item.id);
-        if (el && el.offsetTop <= scrollY) {
-          currentId = item.id;
+      const present = tocItems.filter((item) => document.getElementById(item.id));
+      if (present.length === 0) return;
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      let currentId = present[0].id;
+      if (atBottom) {
+        currentId = present[present.length - 1].id;
+      } else {
+        for (const item of present) {
+          if ((document.getElementById(item.id) as HTMLElement).getBoundingClientRect().top <= 120) currentId = item.id;
         }
       }
-      if (currentId) {
-        setActiveHeadingId(currentId);
-      }
+      setActiveHeadingId(currentId);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -504,7 +355,7 @@ export default function CourseDetailPage() {
     const authBearer = getAccessToken();
 
     if (!authBearer) {
-      setBookmarkNotice('Please sign in to save courses to your library.');
+      setBookmarkNotice('Hãy đăng nhập để lưu khóa học vào thư viện của bạn.');
       router.push(`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`);
       return;
     }
@@ -523,7 +374,7 @@ export default function CourseDetailPage() {
     } catch {
       // Revert optimistic update on error
       setBookmarked(!targetState);
-      setBookmarkNotice('Unable to sync bookmark with server. Please try again.');
+      setBookmarkNotice('Không đồng bộ được mục đã lưu với máy chủ. Vui lòng thử lại.');
       setTimeout(() => setBookmarkNotice(null), 4000);
     } finally {
       setIsBookmarkPending(false);
@@ -596,7 +447,7 @@ export default function CourseDetailPage() {
   };
 
   const version = article?.published_version || article?.latest_version;
-  const content = version?.content || 'No content recorded for this version.';
+  const content = version?.content || 'Phiên bản này chưa có nội dung.';
   const isGuest = !currentUser && !(mounted && getAccessToken());
 
   const { introContent, remainingContent } = useMemo(() => {
@@ -648,7 +499,7 @@ export default function CourseDetailPage() {
     const fallbackCut = Math.max(1, Math.min(4, Math.floor(lines.length / 2)));
     return {
       introContent: lines.slice(0, fallbackCut).join('\n'),
-      remainingContent: lines.slice(fallbackCut).join('\n') || 'Sign in to access the complete curriculum material.',
+      remainingContent: lines.slice(fallbackCut).join('\n') || 'Đăng nhập để xem toàn bộ nội dung khóa học.',
     };
   }, [content, article]);
 
@@ -656,118 +507,35 @@ export default function CourseDetailPage() {
     // The live region stays mounted for the whole loading phase; only its content toggles,
     // so screen readers announce the wake-up notice when it appears.
     return (
-      <div className="container" style={{ padding: '6rem 0' }}>
-        <div
-          role="status"
-          aria-live="polite"
-          style={
-            wakingUp
-              ? {
-                  maxWidth: 600,
-                  margin: '0 auto',
-                  padding: '1.25rem 1.5rem',
-                  textAlign: 'center',
-                  background: 'var(--color-white)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  color: 'var(--color-charcoal)',
-                }
-              : undefined
-          }
-        >
+      <div className={s.wrap}>
+        <div role="status" aria-live="polite" className={wakingUp ? s.waking : undefined}>
           {wakingUp ? SERVER_WAKING_MESSAGE : null}
         </div>
-        {!wakingUp && (
-          <div style={{ textAlign: 'center', color: 'var(--color-gray)' }}>Loading course curriculum...</div>
-        )}
+        {!wakingUp && <div className={s.loading}>Đang tải khóa học...</div>}
       </div>
     );
   }
 
   if (loadError) {
     return (
-      <div className="container" style={{ padding: '6rem 0' }}>
-        <div
-          role="alert"
-          style={{
-            textAlign: 'center',
-            padding: '3.5rem 2rem',
-            background: 'var(--color-white)',
-            border: '1.5px solid var(--color-primary-pale)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-sm)',
-            maxWidth: 600,
-            margin: '0 auto',
-          }}
-        >
-          <div
-            aria-hidden="true"
-            style={{
-              width: 52,
-              height: 52,
-              borderRadius: '50%',
-              backgroundColor: 'var(--color-primary-faint)',
-              color: 'var(--color-primary)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 1.25rem auto',
-            }}
-          >
-            <svg
-              aria-hidden="true"
-              focusable="false"
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+      <div className={s.wrap}>
+        <div role="alert" className={s.state}>
+          <div className={s.stateIcon} aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
           </div>
-          <h2 style={{ marginBottom: '0.75rem', color: 'var(--color-charcoal)', fontSize: '1.25rem', fontWeight: 700 }}>
-            Unable to Load Course
-          </h2>
-          <p style={{ color: 'var(--color-charcoal)', marginBottom: '0.5rem', lineHeight: 1.6 }}>
-            {loadError}
-          </p>
-          <p style={{ color: 'var(--color-gray)', marginBottom: '1.75rem', lineHeight: 1.6, fontSize: '0.95rem' }}>
-            Please check your connection or try again.
-          </p>
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={() => loadCourse()}
-              disabled={loading}
-              aria-busy={loading}
-              className="btn btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}
-            >
-              <svg
-                aria-hidden="true"
-                focusable="false"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-              Retry
+          <h2>Không tải được khóa học</h2>
+          <p>{loadError}</p>
+          <p>Hãy kiểm tra kết nối hoặc thử lại.</p>
+          <div className={s.stateActions}>
+            <button type="button" onClick={() => loadCourse()} disabled={loading} aria-busy={loading} className={s.btn}>
+              Thử lại
             </button>
-            <Link href="/courses" className="btn btn-secondary">
-              Back to Courses
+            <Link href="/courses" className={`${s.btn} ${s.btnGhost}`}>
+              Về danh sách khóa học
             </Link>
           </div>
         </div>
@@ -777,21 +545,21 @@ export default function CourseDetailPage() {
 
   if (!article) {
     return (
-      <div className="container" style={{ textAlign: 'center', padding: '6rem 0' }}>
-        <h2 style={{ marginBottom: '1rem', color: 'var(--color-charcoal)' }}>Course Material Not Found</h2>
-        <p style={{ color: 'var(--color-gray)', marginBottom: '2rem' }}>
-          The requested course material does not exist or has been archived.
-        </p>
-        <Link href="/courses" className="btn btn-primary">
-          Back to Courses
-        </Link>
+      <div className={s.wrap}>
+        <div className={s.state}>
+          <h2>Không tìm thấy khóa học</h2>
+          <p>Khóa học này không tồn tại hoặc đã được lưu trữ.</p>
+          <div className={s.stateActions}>
+            <Link href="/courses" className={s.btn}>
+              Về danh sách khóa học
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
 
-
-
-  // Advanced parser for technical long-form reading with Dracula code blocks and alert callouts
+  // Advanced parser for technical long-form reading with code blocks and alert callouts
   const renderFormattedContent = (raw: string, headingTracker?: Set<string>) => {
     const lines = raw.split('\n');
     const elements: React.ReactNode[] = [];
@@ -800,6 +568,28 @@ export default function CourseDetailPage() {
     let i = 0;
     while (i < lines.length) {
       const line = lines[i];
+
+      // Khối "Mục tiêu": dòng "# Mục tiêu" ở đầu nội dung, kèm đoạn văn ngay sau đó
+      if (elements.length === 0 && /^#\s+Mục tiêu\s*$/i.test(line.trim())) {
+        i++;
+        while (i < lines.length && lines[i].trim() === '') i++;
+        const goalLines: string[] = [];
+        // Dừng trước dòng nhúng video (@[youtube](...) hoặc liên kết YouTube riêng một dòng) để phần video xử lý tiếp.
+        const isVideoLine = (text: string) =>
+          /@\[youtube\]\(/i.test(text) ||
+          /^(https?:\/\/)?(www\.|m\.)?(youtube\.com|youtube-nocookie\.com|youtu\.be)\/[^\s]+$/i.test(text.trim());
+        while (i < lines.length && lines[i].trim() !== '' && !/^(#|```|>|[*-]\s)/.test(lines[i]) && !isVideoLine(lines[i])) {
+          goalLines.push(lines[i].trim());
+          i++;
+        }
+        elements.push(
+          <div key="goal" className={s.goal}>
+            <h4>Mục tiêu</h4>
+            {goalLines.length > 0 && <p>{renderInlineFormatting(goalLines.join(' '))}</p>}
+          </div>
+        );
+        continue;
+      }
 
       // Code Block
       if (line.startsWith('```')) {
@@ -826,21 +616,7 @@ export default function CourseDetailPage() {
         const text = line.replace('## ', '').trim();
         const headingId = getHeadingSlug(text, i, seenHeadingIds);
         elements.push(
-          <h2
-            key={`h2-${i}`}
-            id={headingId}
-            style={{
-              color: 'var(--color-charcoal)',
-              marginTop: '3rem',
-              marginBottom: '1.25rem',
-              borderBottom: '1.5px solid var(--color-border)',
-              paddingBottom: '0.65rem',
-              fontSize: '1.85rem',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              scrollMarginTop: 'calc(var(--header-height) + 1.5rem)',
-            }}
-          >
+          <h2 key={`h2-${i}`} id={headingId}>
             {text}
           </h2>
         );
@@ -852,19 +628,7 @@ export default function CourseDetailPage() {
         const text = line.replace('### ', '').trim();
         const headingId = getHeadingSlug(text, i, seenHeadingIds);
         elements.push(
-          <h3
-            key={`h3-${i}`}
-            id={headingId}
-            style={{
-              color: 'var(--color-charcoal)',
-              marginTop: '2.25rem',
-              marginBottom: '0.85rem',
-              fontSize: '1.4rem',
-              fontWeight: 700,
-              letterSpacing: '-0.015em',
-              scrollMarginTop: 'calc(var(--header-height) + 1.5rem)',
-            }}
-          >
+          <h3 key={`h3-${i}`} id={headingId}>
             {text}
           </h3>
         );
@@ -881,17 +645,17 @@ export default function CourseDetailPage() {
         const firstClean = line.replace(/^>\s*/, '');
         if (/^\[!(NOTE|IMPORTANT)\]/i.test(firstClean)) {
           calloutKind = 'note';
-          calloutTitle = 'Note';
+          calloutTitle = 'Ghi chú';
           const rest = firstClean.replace(/^\[!(NOTE|IMPORTANT)\]\s*/i, '').trim();
           if (rest) quoteContents.push(rest);
         } else if (/^\[!TIP\]/i.test(firstClean)) {
           calloutKind = 'tip';
-          calloutTitle = 'Tip & Best Practice';
+          calloutTitle = 'Mẹo hay';
           const rest = firstClean.replace(/^\[!TIP\]\s*/i, '').trim();
           if (rest) quoteContents.push(rest);
         } else if (/^\[!(WARNING|CAUTION)\]/i.test(firstClean)) {
           calloutKind = 'warning';
-          calloutTitle = 'Warning';
+          calloutTitle = 'Cảnh báo';
           const rest = firstClean.replace(/^\[!(WARNING|CAUTION)\]\s*/i, '').trim();
           if (rest) quoteContents.push(rest);
         } else {
@@ -907,9 +671,7 @@ export default function CourseDetailPage() {
         elements.push(
           <Callout key={`quote-${i}`} kind={calloutKind} title={calloutTitle}>
             {quoteContents.map((qc, qIdx) => (
-              <p key={qIdx} style={{ margin: qIdx > 0 ? '0.5rem 0 0 0' : 0 }}>
-                {renderInlineFormatting(qc)}
-              </p>
+              <p key={qIdx}>{renderInlineFormatting(qc)}</p>
             ))}
           </Callout>
         );
@@ -918,27 +680,14 @@ export default function CourseDetailPage() {
 
       // List Items
       if (line.startsWith('* ') || line.startsWith('- ')) {
-        elements.push(
-          <li
-            key={`li-${i}`}
-            style={{
-              marginLeft: '1.5rem',
-              color: 'var(--color-charcoal)',
-              marginBottom: '0.65rem',
-              lineHeight: 1.75,
-              fontSize: '1.05rem',
-            }}
-          >
-            {renderInlineFormatting(line.replace(/^[*-]\s+/, ''))}
-          </li>
-        );
+        elements.push(<li key={`li-${i}`}>{renderInlineFormatting(line.replace(/^[*-]\s+/, ''))}</li>);
         i++;
         continue;
       }
 
       // Horizontal Rule
       if (line.trim() === '---') {
-        elements.push(<hr key={`hr-${i}`} style={{ borderColor: 'var(--color-border)', margin: '2.5rem 0' }} />);
+        elements.push(<hr key={`hr-${i}`} />);
         i++;
         continue;
       }
@@ -992,20 +741,7 @@ export default function CourseDetailPage() {
 
       // Paragraph
       if (line.trim().length > 0) {
-        elements.push(
-          <p
-            key={`p-${i}`}
-            style={{
-              color: 'var(--color-charcoal)',
-              marginBottom: '1.4rem',
-              lineHeight: 1.85,
-              fontSize: '1.075rem',
-              letterSpacing: '0.005em',
-            }}
-          >
-            {renderInlineFormatting(line)}
-          </p>
-        );
+        elements.push(<p key={`p-${i}`}>{renderInlineFormatting(line)}</p>);
       }
 
       i++;
@@ -1014,256 +750,99 @@ export default function CourseDetailPage() {
     return elements;
   };
 
+  const { kicker, main: mainTitle } = splitCourseTitle(version?.title ?? '', courseLevel(article.tags));
+  const isAuthor = Boolean(
+    currentUser && (article.author_id === currentUser.id || article.author?.id === currentUser.id)
+  );
+  const canEdit = isAuthor || Boolean(currentUser?.roles?.includes('admin'));
+  const dateLabel =
+    article.status === 'draft'
+      ? 'Bản nháp chưa xuất bản'
+      : article.status === 'archived'
+      ? 'Khóa học đã lưu trữ'
+      : `Xuất bản ${article.published_at ? new Date(article.published_at).toLocaleDateString('vi-VN') : 'gần đây'}`;
+
   return (
-    <div className="container" style={{ paddingTop: '2.5rem' }}>
-      {/* Top Reading Progress Bar */}
+    <div>
+      {/* Thanh tiến độ đọc */}
       <div
         role="progressbar"
+        aria-label="Tiến độ đọc"
         aria-valuenow={readingProgress}
         aria-valuemin={0}
         aria-valuemax={100}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: `${readingProgress}%`,
-          height: '4px',
-          backgroundColor: 'var(--color-primary, #0284C7)',
-          zIndex: 9999,
-          transition: 'width 100ms ease-out',
-        }}
-      />
-      {/* Breadcrumbs */}
-      <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--color-gray)', marginBottom: '1.75rem' }}>
-        <Link href="/courses" style={{ color: 'var(--color-gray)', transition: 'color var(--transition-fast)' }}>
-          Courses
-        </Link>
-        <span style={{ color: 'var(--color-gray-light)' }}>/</span>
-        {article.category && (
-          <>
-            <span style={{ color: 'var(--color-charcoal)', fontWeight: 500 }}>{article.category.name}</span>
-            <span style={{ color: 'var(--color-gray-light)' }}>/</span>
-          </>
-        )}
-        <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Current Course</span>
-      </nav>
+        className={s.progress}
+      >
+        <b style={{ width: `${readingProgress}%` }} />
+      </div>
 
-      {/* Reader Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '3rem', alignItems: 'start' }}>
-        {/* Main Content Column */}
-        <article
-          id="course-article-content"
-          style={{ maxWidth: 'var(--max-w-reader)', background: 'var(--color-white)', padding: '2.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-xs)' }}
-        >
-          <header style={{ marginBottom: '2.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '2rem' }}>
-            {article.status === 'draft' && (
-              <div
-                style={{
-                  backgroundColor: '#FEF3C7',
-                  color: '#92400E',
-                  border: '1px solid #FCD34D',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontSize: '0.875rem',
-                  flexWrap: 'wrap',
-                  gap: '0.5rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <span style={{ fontWeight: 700 }}>Course Draft Preview</span>
-                  <span>— This course is currently unpublished and visible only to its author and platform administrators.</span>
-                </div>
-                <Link
-                  href={`/courses/create?parent_id=${article.id}`}
-                  style={{
-                    fontWeight: 600,
-                    color: '#B45309',
-                    textDecoration: 'underline',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Edit in Studio →
-                </Link>
-              </div>
+      <div className={`${s.wrap} ${s.lesson}`}>
+        <article id="course-article-content" className={s.article}>
+          <nav className={s.crumb} aria-label="Đường dẫn">
+            <Link href="/courses">Khóa học</Link>
+            {article.category && (
+              <>
+                <span aria-hidden="true">/</span>
+                <Link href={`/courses?category=${article.category.id}`}>{article.category.name}</Link>
+              </>
             )}
-            {article.status === 'archived' && (
-              <div
-                style={{
-                  backgroundColor: '#F1F5F9',
-                  color: '#475569',
-                  border: '1px solid #CBD5E1',
-                  padding: '0.75rem 1rem',
-                  borderRadius: 'var(--radius-md)',
-                  marginBottom: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontSize: '0.875rem',
-                  gap: '0.5rem',
-                }}
-              >
-                <span style={{ fontWeight: 700 }}>Archived Course</span>
-                <span>— This course has been archived by platform administrators and is preserved for historical reference.</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <span
-                className="badge"
-                style={{
-                  backgroundColor: 'var(--color-primary-pale)',
-                  color: 'var(--color-primary)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                Version {version?.version_no || 1}.0
+          </nav>
+
+          {article.status === 'draft' && (
+            <div className={s.banner}>
+              <span>
+                <b>Xem trước bản nháp.</b> Khóa học chưa xuất bản, chỉ tác giả và quản trị viên nhìn thấy.
               </span>
-              <Link
-                href={`/courses/${encodeURIComponent(idOrSlug)}/versions`}
-                style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'underline' }}
-              >
-                Version history
-              </Link>
-              <span
-                className="badge"
-                style={{
-                  backgroundColor:
-                    article.status === 'draft'
-                      ? '#FEF3C7'
-                      : article.status === 'archived'
-                      ? '#F1F5F9'
-                      : '#EBF5EE',
-                  color:
-                    article.status === 'draft'
-                      ? '#92400E'
-                      : article.status === 'archived'
-                      ? '#475569'
-                      : '#1B6E34',
-                  border: `1px solid ${
-                    article.status === 'draft'
-                      ? '#FCD34D'
-                      : article.status === 'archived'
-                      ? '#CBD5E1'
-                      : '#D2EBD9'
-                  }`,
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  padding: '0.2rem 0.65rem',
-                  borderRadius: 'var(--radius-full)',
-                }}
-              >
-                {article.status === 'draft'
-                  ? 'Draft Material'
-                  : article.status === 'archived'
-                  ? 'Archived Course'
-                  : 'Verified Curriculum'}
+              <Link href={`/courses/create?parent_id=${article.id}`}>Sửa trong Studio →</Link>
+            </div>
+          )}
+          {article.status === 'archived' && (
+            <div className={s.banner}>
+              <span>
+                <b>Khóa học đã lưu trữ.</b> Quản trị viên đã lưu trữ khóa học này để tham khảo.
               </span>
             </div>
+          )}
 
-            <h1 style={{ marginBottom: '1.25rem', lineHeight: 1.2, color: 'var(--color-charcoal)', fontSize: 'clamp(2rem, 3.5vw, 2.75rem)', fontWeight: 800 }}>
-              {version?.title}
-            </h1>
+          {kicker && <span className={s.kicker}>{kicker}</span>}
+          <h1>{mainTitle}</h1>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', color: 'var(--color-gray)', fontSize: '0.9rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: '50%',
-                    background: 'var(--color-primary-pale)',
-                    border: '1px solid var(--color-border)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--color-primary)',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                  }}
-                >
-                  {article.author?.name ? article.author.name[0] : 'C'}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 600, color: 'var(--color-charcoal)' }}>
-                    {article.author?.name || 'Staff Engineer'}
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--color-gray)' }}>
-                    {article.status === 'draft'
-                      ? 'Unpublished Draft'
-                      : article.status === 'archived'
-                      ? 'Archived Material'
-                      : `Published on ${article.published_at ? new Date(article.published_at).toLocaleDateString() : 'Recent'}`}
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: '0.65rem' }}>
-                <div style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={toggleBookmark}
-                    disabled={isBookmarkPending}
-                    className="btn btn-secondary"
-                    style={{
-                      padding: '0.45rem 0.95rem',
-                      fontSize: '0.85rem',
-                      backgroundColor: bookmarked ? 'var(--color-primary-pale)' : undefined,
-                      color: bookmarked ? 'var(--color-primary)' : undefined,
-                      borderColor: bookmarked ? 'var(--color-primary)' : undefined,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill={bookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    {bookmarked ? 'Bookmarked' : 'Bookmark'}
-                  </button>
-                  {bookmarkNotice && (
-                    <div
-                      role="status"
-                      style={{
-                        position: 'absolute',
-                        top: '115%',
-                        right: 0,
-                        backgroundColor: '#0F172A',
-                        color: '#F8FAFC',
-                        padding: '0.5rem 0.75rem',
-                        borderRadius: 'var(--radius-md)',
-                        fontSize: '0.75rem',
-                        whiteSpace: 'nowrap',
-                        boxShadow: 'var(--shadow-md)',
-                        zIndex: 50,
-                        border: '1px solid #334155',
-                      }}
-                    >
-                      {bookmarkNotice}
-                    </div>
-                  )}
-                </div>
-
+          <div className={s.meta}>
+            <span className={s.by}>
+              <span className={s.avatar} aria-hidden="true">{article.author?.name ? article.author.name[0] : 'C'}</span>
+              {article.author?.name || 'Contributor'}
+            </span>
+            <span>{dateLabel}</span>
+            <Link className={s.ver} href={`/courses/${encodeURIComponent(idOrSlug)}/versions`}>
+              Phiên bản {version?.version_no || 1}, xem lịch sử
+            </Link>
+            <span className={s.acts}>
+              <span className={s.saveWrap}>
                 <button
                   type="button"
-                  onClick={handleShare}
-                  className="btn btn-outline"
-                  style={{ padding: '0.45rem 0.95rem', fontSize: '0.85rem' }}
+                  onClick={toggleBookmark}
+                  disabled={isBookmarkPending}
+                  aria-pressed={bookmarked}
+                  className={`${s.btn} ${s.btnGhost} ${s.btnSm}`}
                 >
-                  {copied ? 'Copied URL!' : 'Share'}
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16l-6-4-6 4z" /></svg>
+                  <span>{bookmarked ? 'Đã lưu' : 'Lưu'}</span>
                 </button>
-              </div>
-            </div>
-          </header>
+                {bookmarkNotice && (
+                  <div role="status" className={s.notice}>
+                    {bookmarkNotice}
+                  </div>
+                )}
+              </span>
+              <button type="button" onClick={handleShare} className={`${s.btn} ${s.btnGhost} ${s.btnSm}`}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0L8 8m4-4 4 4M5 13v6h14v-6" /></svg>
+                {copied ? 'Đã chép liên kết' : 'Chia sẻ'}
+              </button>
+            </span>
+          </div>
 
           {/* Prose Content */}
-          <div className="prose">
+          <div className={s.prose}>
             {isGuest ? (
               (() => {
                 const guestTracker = new Set<string>();
@@ -1277,15 +856,7 @@ export default function CourseDetailPage() {
                         aria-hidden="true"
                         tabIndex={-1}
                         inert={true as any}
-                        style={{
-                          filter: 'blur(5px)',
-                          opacity: 0.35,
-                          pointerEvents: 'none',
-                          userSelect: 'none',
-                          maxHeight: 220,
-                          overflow: 'hidden',
-                          marginTop: '1.5rem',
-                        }}
+                        className={s.teaser}
                       >
                         {renderFormattedContent(
                           remainingContent.length > 800
@@ -1297,406 +868,126 @@ export default function CourseDetailPage() {
                     )}
 
                     {/* Curriculum Access Gate */}
-                <div
-                  id="curriculum-access-gate"
-                  style={{
-                    marginTop: '2rem',
-                    padding: '2.75rem 2rem',
-                    borderRadius: 'var(--radius-lg)',
-                    background: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
-                    border: '1.5px solid var(--color-border)',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.03)',
-                    textAlign: 'center',
-                    position: 'relative',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 56,
-                      height: 56,
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--color-primary-pale, #E0F2FE)',
-                      color: 'var(--color-primary, #0284C7)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '1.25rem',
-                      boxShadow: 'var(--shadow-xs)',
-                    }}
-                  >
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                  </div>
-                  <h3
-                    style={{
-                      fontSize: '1.45rem',
-                      fontWeight: 700,
-                      color: 'var(--color-charcoal)',
-                      marginBottom: '0.75rem',
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    Exclusive Member Curriculum
-                  </h3>
-                  <p
-                    style={{
-                      color: 'var(--color-gray)',
-                      fontSize: '1rem',
-                      lineHeight: 1.65,
-                      maxWidth: 540,
-                      margin: '0 auto 1.75rem auto',
-                    }}
-                  >
-                    Please sign in to your KnowledgeHub account to unlock the full technical curriculum, interactive code blocks, and progress tracking.
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-                    <Link
-                      href={`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`}
-                      className="btn btn-primary"
-                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 600 }}
-                    >
-                      Sign In Now
-                    </Link>
-                    <Link
-                      href={`/register?redirect=/courses/${encodeURIComponent(idOrSlug)}`}
-                      className="btn btn-secondary"
-                      style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem', fontWeight: 600 }}
-                    >
-                      Create Free Account
-                    </Link>
-                  </div>
-                </div>
-              </>
-            );
-          })()
-        ) : (
-          renderFormattedContent(content)
-        )}
+                    <div id="curriculum-access-gate" className={s.gate}>
+                      <div className={s.stateIcon} aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <rect x="5" y="11" width="14" height="9" rx="2" />
+                          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+                        </svg>
+                      </div>
+                      <h3>Nội dung dành cho thành viên</h3>
+                      <p>
+                        Hãy đăng nhập tài khoản KnowledgeHub để xem toàn bộ nội dung khóa học, khối mã và theo dõi tiến độ.
+                      </p>
+                      <div className={s.stateActions}>
+                        <Link href={`/login?redirect=/courses/${encodeURIComponent(idOrSlug)}`} className={s.btn}>
+                          Đăng nhập
+                        </Link>
+                        <Link
+                          href={`/register?redirect=/courses/${encodeURIComponent(idOrSlug)}`}
+                          className={`${s.btn} ${s.btnGhost}`}
+                        >
+                          Tạo tài khoản miễn phí
+                        </Link>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            ) : (
+              renderFormattedContent(content)
+            )}
           </div>
 
           {/* Completion Footer Action */}
           {!isGuest && (
-            <div
-              style={{
-                marginTop: '3.5rem',
-              padding: '2rem',
-              borderRadius: 'var(--radius-lg)',
-              backgroundColor: isCompleted ? '#F0FDF4' : 'var(--color-background)',
-              border: isCompleted ? '1.5px solid #86EFAC' : '1px solid var(--color-border)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '1.25rem',
-              boxShadow: 'var(--shadow-xs)',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                {isCompleted ? (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                ) : (
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-gray)" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 14 14" />
-                  </svg>
-                )}
-                <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: isCompleted ? '#166534' : 'var(--color-charcoal)' }}>
-                  {isCompleted ? 'Lesson Completed' : 'Complete Lesson'}
-                </h4>
+            <div className={`${s.complete} ${isCompleted ? s.completeDone : ''}`}>
+              <div>
+                <h4>{isCompleted ? 'Đã hoàn thành bài học' : 'Hoàn thành bài học'}</h4>
+                <p>
+                  {isCompleted
+                    ? 'Bạn đã hoàn thành bài này trên trình duyệt này. Tiến độ chỉ được lưu cục bộ trên thiết bị.'
+                    : 'Đánh dấu hoàn thành để lưu lịch sử học trên trình duyệt này.'}
+                </p>
               </div>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: isCompleted ? '#15803D' : 'var(--color-gray)' }}>
-                {isCompleted
-                  ? 'You have completed this module on this browser. Lesson progress is recorded locally on this device.'
-                  : 'Mark this module as complete to save your learning history on this browser.'}
-              </p>
+              <button
+                type="button"
+                onClick={handleToggleCompleted}
+                className={`${s.btn} ${isCompleted ? s.btnGhost : ''}`}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
+                {isCompleted ? 'Đã hoàn thành (bấm để hủy)' : 'Đánh dấu hoàn thành'}
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={handleToggleCompleted}
-              className={isCompleted ? 'btn btn-secondary' : 'btn btn-primary'}
-              style={{
-                padding: '0.65rem 1.4rem',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-              }}
-            >
-              {isCompleted ? (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Completed (Click to undo)
-                </>
-              ) : (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Mark as Completed
-                </>
-              )}
-            </button>
-          </div>
           )}
         </article>
 
-        {/* Sidebar Info & Controls */}
-        <aside style={{ position: 'sticky', top: 'calc(var(--header-height) + 1.5rem)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Dynamic Table of Contents */}
+        {/* Mục lục và khóa học liên quan */}
+        <aside className={s.side}>
           {tocItems.length > 0 && (
-            <nav
-              aria-label="Table of Contents"
-              style={{
-                background: 'var(--color-white)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '1.5rem',
-                boxShadow: 'var(--shadow-xs)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.2">
-                  <line x1="8" y1="6" x2="21" y2="6" />
-                  <line x1="8" y1="12" x2="21" y2="12" />
-                  <line x1="8" y1="18" x2="21" y2="18" />
-                  <line x1="3" y1="6" x2="3.01" y2="6" />
-                  <line x1="3" y1="12" x2="3.01" y2="12" />
-                  <line x1="3" y1="18" x2="3.01" y2="18" />
-                </svg>
-                <h4 style={{ margin: 0, color: 'var(--color-charcoal)', fontWeight: 700, fontSize: '1rem' }}>
-                  Table of Contents
-                </h4>
-              </div>
-              <ul
-                style={{
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: 0,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem',
-                }}
-              >
-                {tocItems.map((item) => {
-                  const isActive = activeHeadingId === item.id;
-                  return (
-                    <li key={item.id} style={{ paddingLeft: item.level === 3 ? '1.25rem' : '0' }}>
-                      <a
-                        href={`#${item.id}`}
-                        onClick={(e) => scrollToSection(e, item.id)}
-                        style={{
-                          fontSize: item.level === 3 ? '0.82rem' : '0.875rem',
-                          color: isActive ? 'var(--color-primary)' : 'var(--color-gray)',
-                          fontWeight: isActive ? 600 : 400,
-                          textDecoration: 'none',
-                          lineHeight: 1.45,
-                          display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem',
-                          transition: 'color var(--transition-fast)',
-                          borderLeft: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
-                          paddingLeft: '0.5rem',
-                        }}
-                      >
-                        <span style={{ wordBreak: 'break-word', lineHeight: 1.45, flex: 1 }}>
-                          {item.text}
-                        </span>
-                        {item.hasVideo && (
-                          <span
-                            title="Lecture includes video"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: isActive ? 'var(--color-primary)' : '#DC2626',
-                              flexShrink: 0,
-                              backgroundColor: isActive ? 'var(--color-primary-pale, #E0F2FE)' : '#FEE2E2',
-                              borderRadius: '4px',
-                              padding: '2px 4px',
-                            }}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                              <polygon points="5 3 19 12 5 21 5 3" />
-                            </svg>
-                          </span>
-                        )}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-            </nav>
-          )}
-          <div
-            style={{
-              background: 'var(--color-white)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '1.5rem',
-              boxShadow: 'var(--shadow-xs)',
-            }}
-          >
-            <h4 style={{ marginBottom: '1rem', color: 'var(--color-charcoal)', fontWeight: 600, fontSize: '1.1rem' }}>
-              Course Information
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.875rem' }}>
-              {article.category && (
-                <div>
-                  <span style={{ color: 'var(--color-gray)' }}>Domain: </span>
-                  <span style={{ color: 'var(--color-charcoal)', fontWeight: 600 }}>{article.category.name}</span>
-                </div>
-              )}
-              <div>
-                <span style={{ color: 'var(--color-gray)' }}>Snapshot ID: </span>
-                <span style={{ color: 'var(--color-charcoal)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                  {version?.id || 'Draft (No Snapshot)'}
-                </span>
-              </div>
-              {article.status !== 'draft' && (
-                <div>
-                  <span style={{ color: 'var(--color-gray)' }}>Peer Review: </span>
-                  <span style={{ color: '#1B6E34', fontWeight: 600 }}>Internal Core Approved</span>
-                </div>
-              )}
+            <div>
+              <h4>Mục lục</h4>
+              <nav className={s.toc} aria-label="Mục lục">
+                {tocItems.map((item) => (
+                  <a
+                    key={item.id}
+                    href={`#${item.id}`}
+                    onClick={(e) => scrollToSection(e, item.id)}
+                    className={`${activeHeadingId === item.id ? s.tocOn : ''} ${item.level === 3 ? s.tocSub : ''}`}
+                    aria-current={activeHeadingId === item.id ? 'location' : undefined}
+                  >
+                    <span>{item.text}</span>
+                  </a>
+                ))}
+              </nav>
             </div>
-          </div>
+          )}
 
-          {/* Author Actions (Only for Author or Admin) vs Related Modules (for Users & Guests) */}
-          {(() => {
-            const isAuthor = Boolean(
-              currentUser &&
-                article &&
-                (article.author_id === currentUser.id || article.author?.id === currentUser.id)
-            );
-            const isAdmin = Boolean(currentUser?.roles?.includes('admin'));
-            const canEdit = isAuthor || isAdmin;
-
-            if (canEdit) {
-              return (
-                <div
-                  style={{
-                    background: 'var(--color-primary-faint)',
-                    border: '1px solid var(--color-primary-pale)',
-                    borderRadius: 'var(--radius-lg)',
-                    padding: '1.5rem',
-                    boxShadow: 'var(--shadow-xs)',
-                  }}
-                >
-                  <span
-                    className="badge"
-                    style={{
-                      backgroundColor: 'var(--color-primary-pale)',
-                      color: 'var(--color-primary)',
-                      border: '1px solid var(--color-border)',
-                      marginBottom: '0.5rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      padding: '0.2rem 0.65rem',
-                      borderRadius: 'var(--radius-full)',
-                      display: 'inline-flex',
-                    }}
-                  >
-                    Author Actions
-                  </span>
-                  <h4 style={{ marginBottom: '0.5rem', color: 'var(--color-charcoal)', fontWeight: 600 }}>
-                    Update Curriculum
-                  </h4>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.5 }}>
-                    Need to add sections or fix technical details? Create an immutable Version {(version?.version_no || 1) + 1}.
-                  </p>
-                  <Link
-                    href={`/courses/create?parent_id=${article.id}&slug=${article.slug}`}
-                    className="btn btn-secondary"
-                    style={{ width: '100%', fontSize: '0.85rem' }}
-                  >
-                    Draft Revision &rarr;
-                  </Link>
-                </div>
-              );
-            }
-
-            return (
-              <div
-                style={{
-                  background: 'var(--color-white)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '1.5rem',
-                  boxShadow: 'var(--shadow-xs)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2.2">
-                    <polygon points="12 2 2 7 12 12 22 7 12 2" />
-                    <polyline points="2 17 12 22 22 17" />
-                    <polyline points="2 12 12 17 22 12" />
-                  </svg>
-                  <h4 style={{ margin: 0, color: 'var(--color-charcoal)', fontWeight: 700, fontSize: '1rem' }}>
-                    Related Curricula
-                  </h4>
-                </div>
-                <p style={{ fontSize: '0.82rem', color: 'var(--color-gray)', marginBottom: '1rem', lineHeight: 1.45 }}>
-                  Related modules in the {article.category ? `"${article.category.name}"` : 'technical'} domain:
+          {canEdit ? (
+            <div>
+              <h4>Cập nhật khóa học</h4>
+              <div className={s.panel}>
+                <p>
+                  Cần thêm phần hoặc sửa chi tiết kỹ thuật? Tạo phiên bản {(version?.version_no || 1) + 1}, các phiên bản cũ vẫn được giữ.
                 </p>
-                {relatedArticles.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {relatedArticles.map((rel) => {
-                      const relVersion = rel.published_version || rel.latest_version;
-                      return (
-                        <Link
-                          key={rel.id}
-                          href={`/courses/${rel.slug || rel.id}`}
-                          style={{
-                            display: 'block',
-                            padding: '0.75rem',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--color-border-light)',
-                            textDecoration: 'none',
-                            backgroundColor: 'var(--color-background)',
-                            transition: 'border-color var(--transition-fast)',
-                          }}
-                        >
-                          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-charcoal)', marginBottom: '0.2rem' }}>
-                            {relVersion?.title || rel.slug}
-                          </div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--color-gray)' }}>
-                            Version {relVersion?.version_no || 1}.0 • {rel.category?.name || 'Technical'}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '0.82rem', color: 'var(--color-gray)', fontStyle: 'italic' }}>
-                    Additional modules for this learning domain are currently in preparation.
-                  </div>
-                )}
-                <div style={{ marginTop: '1.25rem', paddingTop: '0.85rem', borderTop: '1px solid var(--color-border-light)' }}>
-                  <Link
-                    href="/learning/roadmaps"
-                    style={{
-                      fontSize: '0.82rem',
-                      color: 'var(--color-primary)',
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.35rem',
-                    }}
-                  >
-                    Explore Learning Roadmaps &rarr;
-                  </Link>
-                </div>
+                <Link
+                  href={`/courses/create?parent_id=${article.id}&slug=${article.slug}`}
+                  className={`${s.btn} ${s.btnGhost} ${s.btnSm}`}
+                >
+                  Soạn bản sửa &rarr;
+                </Link>
               </div>
-            );
-          })()}
+            </div>
+          ) : (
+            <div>
+              <h4>Khóa học liên quan</h4>
+              {relatedArticles.length > 0 ? (
+                <div className={s.rel}>
+                  {relatedArticles.map((rel) => {
+                    const relVersion = rel.published_version || rel.latest_version;
+                    const relLevel = courseLevel(rel.tags);
+                    const relTitle = splitCourseTitle(relVersion?.title || rel.slug, relLevel).main;
+                    return (
+                      <Link key={rel.id} href={`/courses/${rel.slug || rel.id}`}>
+                        <span className={s.sw} style={{ background: THEME_COLOR[coverTheme(rel.category ?? article.category)] }} aria-hidden="true" />
+                        <span>
+                          <b>{relTitle}</b>
+                          <small>
+                            {relLevel ? `${relLevel}, ` : ''}phiên bản {relVersion?.version_no || 1}.0
+                          </small>
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className={s.muted}>Các khóa khác cùng lĩnh vực đang được chuẩn bị.</p>
+              )}
+              <p className={s.more}>
+                <Link href="/learning/roadmaps">Xem lộ trình học &rarr;</Link>
+              </p>
+            </div>
+          )}
         </aside>
       </div>
     </div>

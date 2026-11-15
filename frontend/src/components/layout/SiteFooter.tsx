@@ -1,45 +1,58 @@
-import Link from 'next/link';
+'use client';
 
-function BrandMark() {
-  return (
-    <span className="nav-logo__mark footer-logo__mark" aria-hidden="true">
-      <span className="logo-node logo-node--a" style={{ backgroundColor: 'var(--color-primary-light)' }} />
-      <span className="logo-node logo-node--b" style={{ backgroundColor: 'var(--color-primary-light)' }} />
-      <span className="logo-node logo-node--c" style={{ backgroundColor: 'var(--color-primary-light)' }} />
-    </span>
-  );
-}
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import Logo from '@/components/layout/Logo';
+import { getCurrentUser, subscribeCurrentUser } from '@/lib/auth';
+import { getAccessToken } from '@/lib/authToken';
 
 export default function SiteFooter() {
+  // Cùng nguồn trạng thái với SiteHeader/AuthActions: người dùng trong kho `auth` (SiteHeader đã gọi restoreSession)
+  // hoặc dấu "đã đăng nhập". Chưa mount thì chưa biết, nên giữ chỗ vô hình để chân trang không nhấp nháy.
+  const [mounted, setMounted] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    const read = () => setSignedIn(Boolean(getCurrentUser() || getAccessToken()));
+    read();
+    setMounted(true);
+    return subscribeCurrentUser(read);
+  }, []);
+
   return (
-    <div className="site-footer__inner content-container" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', padding: '3rem 0' }}>
-      <div className="site-footer__brand" style={{ maxWidth: 440 }}>
-        <Link className="site-brand nav-logo footer-logo" href="/" aria-label="KnowledgeHub home" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <BrandMark />
-          <span className="nav-logo__wordmark" style={{ color: 'var(--color-white)', fontSize: '1.2rem', fontWeight: 600 }}>
-            Knowledge<strong style={{ color: 'var(--color-primary-light)' }}>Hub</strong>
-          </span>
-        </Link>
-        <p style={{ marginTop: '0.75rem', color: 'rgba(255, 255, 255, 0.58)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-          A curated learning platform with an AI Learning Companion. Operated by the internal engineering content team for serious learners.
-        </p>
+    <div className="kh-wrap kh-foot__inner">
+      <div>
+        <Logo />
+        <p>Nền tảng học tập có chọn lọc, kèm trợ lý AI. Do đội ngũ nội dung KnowledgeHub vận hành.</p>
       </div>
-      <nav className="site-footer__nav" aria-label="Footer navigation" style={{ display: 'flex', flexWrap: 'wrap', gap: '1.75rem' }}>
-        <Link href="/courses" style={{ color: 'rgba(255, 255, 255, 0.58)', fontSize: '0.875rem', transition: 'color 150ms ease' }}>
-          Explore courses
-        </Link>
-        <Link href="/learning/roadmaps" style={{ color: 'rgba(255, 255, 255, 0.58)', fontSize: '0.875rem', transition: 'color 150ms ease' }}>
-          Learning roadmaps
-        </Link>
-        <Link href="/bookmarks" style={{ color: 'rgba(255, 255, 255, 0.58)', fontSize: '0.875rem', transition: 'color 150ms ease' }}>
-          Saved library
-        </Link>
-        <Link href="/login" style={{ color: 'rgba(255, 255, 255, 0.58)', fontSize: '0.875rem', transition: 'color 150ms ease' }}>
-          Sign in
-        </Link>
-        <Link href="/register" style={{ color: 'rgba(255, 255, 255, 0.58)', fontSize: '0.875rem', transition: 'color 150ms ease' }}>
-          Create account
-        </Link>
+      <nav aria-label="Chân trang">
+        <div>
+          <b>Học tập</b>
+          <Link href="/courses">Khóa học</Link>
+          <Link href="/learning/roadmaps">Lộ trình</Link>
+          <Link href="/ai/companion">Trợ lý AI</Link>
+        </div>
+        <div>
+          <b>Tài khoản</b>
+          {!mounted ? (
+            <>
+              {/* Giữ đủ chiều cao ba dòng, chưa hiện chữ cho tới khi biết trạng thái đăng nhập */}
+              <Link href="/login" aria-hidden="true" tabIndex={-1} style={{ visibility: 'hidden' }}>Đăng nhập</Link>
+              <Link href="/bookmarks" aria-hidden="true" tabIndex={-1} style={{ visibility: 'hidden' }}>Đã lưu</Link>
+              <Link href="/account" aria-hidden="true" tabIndex={-1} style={{ visibility: 'hidden' }}>Tài khoản</Link>
+            </>
+          ) : signedIn ? (
+            <>
+              <Link href="/account">Tài khoản</Link>
+              <Link href="/bookmarks">Đã lưu</Link>
+            </>
+          ) : (
+            <>
+              <Link href="/login">Đăng nhập</Link>
+              <Link href="/bookmarks">Đã lưu</Link>
+              <Link href="/account">Tài khoản</Link>
+            </>
+          )}
+        </div>
       </nav>
     </div>
   );
