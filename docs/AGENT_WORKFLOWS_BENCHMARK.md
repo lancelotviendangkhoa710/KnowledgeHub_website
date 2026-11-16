@@ -66,15 +66,17 @@ py scripts/benchmark-agent-workflows.py --execute --iterations 20 --cases-file <
 Kiểm tra nhanh trước khi chạy đủ 20 vòng: `--smoke` gửi đúng một course (cần
 `--topic` có playlist công khai 2–20 video); `--pilot` cho phép 4–19 vòng.
 Pilot vẫn giữ khoảng cách 21 giây và **không thể đạt** `benchmark_gate_pass`
-vì cổng yêu cầu đủ 20 lượt.
+vì cổng yêu cầu đủ 20 lượt cho mỗi workflow; báo cáo và telemetry của pilot
+vẫn ghép và ghi được bình thường.
 
 ```powershell
 py scripts/benchmark-agent-workflows.py --execute --smoke --topic <chu-de> --credentials-file <duong-dan-credentials.json>
 py scripts/benchmark-agent-workflows.py --execute --pilot --iterations 4 --cases-file <cases-pilot.json> --credentials-file <duong-dan-credentials.json> --output agent-benchmark-pilot.json
 ```
 
-Mỗi vòng cách nhau ít nhất 21 giây để không vượt giới hạn 3 yêu cầu/phút của
-route course và CV; 20 vòng mất tối thiểu khoảng 7 phút, chưa tính thời gian AI.
+Mỗi route agent có bộ đếm throttle riêng (tiền tố khác nhau), nên mỗi vòng
+cách nhau ít nhất 21 giây để từng bộ đếm, gồm preview và confirm của CV, vẫn
+dưới 3 yêu cầu/phút; 20 vòng mất tối thiểu khoảng 7 phút, chưa tính thời gian AI.
 
 Không commit file kết quả. Script chỉ ghi trạng thái HTTP, thời gian và UUID
 `X-Request-ID` cho từng lời gọi; không ghi token, CV, prompt, đối tượng Admin,
@@ -93,8 +95,9 @@ hoặc YouTube. Sau khi kiểm tra chất lượng và bảo mật thủ công, 
 py scripts/benchmark-agent-workflows.py --join-report agent-benchmark-results.json --telemetry metrics.csv --quality-reviewed --output agent-benchmark-reviewed.json
 ```
 
-Script chỉ đặt `benchmark_gate_pass=true` nếu mọi lượt thành công, đầy đủ
-telemetry cho từng UUID và người vận hành đã xác nhận rà soát chất lượng.
+Script chỉ đặt `benchmark_gate_pass=true` nếu mỗi workflow đủ 20 lượt, mọi lượt
+thành công, đầy đủ telemetry cho từng UUID và người vận hành đã xác nhận rà
+soát chất lượng.
 Nếu telemetry chưa có, các trường đó ở `null`; **không tự suy đoán chi phí**
 và **không cho phép bật workflow** vì cổng benchmark chưa đạt. Đánh giá thủ công ít nhất 20 kết quả course
 và CV về độ chính xác, cùng các ca prompt injection, sai quyền, role thay đổi
