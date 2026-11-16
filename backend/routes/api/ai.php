@@ -8,6 +8,9 @@ use App\Http\Controllers\AI\RetentionPurgeController;
 use App\Http\Controllers\AI\RoadmapGenerationController;
 use App\Http\Controllers\AI\UserMemoryController;
 use App\Http\Controllers\AI\UserCvController;
+use App\Http\Controllers\AI\AgentCourseController;
+use App\Http\Controllers\AI\AdminAgentController;
+use App\Http\Controllers\AI\CvAssessmentController;
 use Illuminate\Support\Facades\Route;
 
 // Internal retention trigger for hosts without a scheduler. Protected by
@@ -18,6 +21,14 @@ Route::post('/internal/ai/purge-deleted-users', RetentionPurgeController::class)
 // assigned in docs/team/OWNERSHIP.md before merge (still TBD at the time of writing).
 
 Route::middleware('auth:sanctum')->group(function () {
+    // Role-scoped agent workflows. Laravel validates every action and owns all writes.
+    Route::post('/ai/agents/courses', AgentCourseController::class)->middleware('throttle:3,1');
+    Route::post('/ai/agents/admin/plan', [AdminAgentController::class, 'plan'])->middleware('throttle:10,1');
+    Route::post('/ai/agents/admin/confirm', [AdminAgentController::class, 'confirm'])->middleware('throttle:10,1');
+    Route::post('/ai/cv/assessment/preview', [CvAssessmentController::class, 'preview'])->middleware('throttle:3,1');
+    Route::post('/ai/cv/assessment/confirm', [CvAssessmentController::class, 'confirm'])->middleware('throttle:5,1');
+    Route::get('/ai/cv/assessment', [CvAssessmentController::class, 'show']);
+
     // AI-05 Roadmap Assistant - TEAM_MEMBER_C
     Route::post('/ai/roadmaps/preview', [RoadmapGenerationController::class, 'preview']);
     Route::post('/ai/roadmaps/confirm', [RoadmapGenerationController::class, 'confirm']);

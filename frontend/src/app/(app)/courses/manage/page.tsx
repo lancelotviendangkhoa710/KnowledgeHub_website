@@ -221,7 +221,7 @@ export default function ContributorCourseManagementPage() {
 
   return (
     <div className={styles.wrap}>
-      <StudioHeader canCreate />
+      <StudioHeader canCreate canUseAgent={Boolean(user?.roles?.includes('contributor') && !user?.roles?.includes('admin'))} />
 
       {toastNotice && <div role="status" className={styles.notice}>{toastNotice}</div>}
       {actionError && (

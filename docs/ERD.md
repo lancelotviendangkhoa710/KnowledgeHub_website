@@ -49,6 +49,8 @@ erDiagram
 > `article_reviews` is dormant legacy schema — no Reviewer role, no editorial submission workflow.
 > Contributor publishes content directly; Admin oversees platform-wide.
 
+The approved Contributor agent maps one verified public YouTube playlist to one published `articles` row and its initial `article_versions` snapshot; individual videos remain embedded content, not separate database rows.
+
 ```mermaid
 erDiagram
     categories {
@@ -161,6 +163,7 @@ erDiagram
         string filename
         bigint size_bytes
         text extracted_text "nullable; cleared on pending_delete"
+        jsonb assessment "nullable; explicit confirmation only"
         timestamptz consented_at
         string status "active|pending_delete"
         timestamptz created_at
@@ -169,6 +172,47 @@ erDiagram
 ```
 
 A partial unique index enforces at most one `active` row per `user_id`; pending cleanup rows remain until Storage deletion is verified. RLS is enabled and browser Data API access is not granted. Laravel owns application reads and writes. PDF bytes live only in the private Supabase Storage bucket.
+
+### Admin agent approvals
+
+```mermaid
+erDiagram
+    users ||--o{ ai_agent_approvals : "proposes as actor"
+    users ||--o{ ai_agent_approvals : "is target"
+    ai_agent_approvals {
+        uuid id PK
+        uuid actor_id FK "ON DELETE CASCADE"
+        uuid target_user_id FK "ON DELETE CASCADE"
+        string action "allowlisted role or status change"
+        string value "constrained by action"
+        string summary
+        string target_status
+        string target_roles_hash
+        timestamptz expires_at
+        timestamptz consumed_at "nullable; single use"
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+Laravel owns approval reads and writes and rechecks live actor and target permissions when the Admin accepts. RLS is enabled; browser Data API access is not granted.
+
+### CV preview confirmation claims
+
+```mermaid
+erDiagram
+    users ||--o{ ai_cv_confirmations : "confirms a preview"
+    ai_cv_confirmations {
+        uuid id PK
+        uuid user_id FK "ON DELETE CASCADE"
+        string token_hash "unique SHA-256; no raw token"
+        timestamptz expires_at
+        timestamptz created_at
+        timestamptz updated_at
+    }
+```
+
+The confirmation claim is inserted only after explicit consent and prevents concurrent or later replay. A daily job removes expired hashes after one day. RLS is enabled, with no browser Data API grants.
 
 ## Domain D – Learning Roadmap
 
@@ -293,6 +337,9 @@ erDiagram
 | conversation_id | messages | conversations | CASCADE |
 | user_id | user_memories | users | RESTRICT |
 | user_id | user_cvs | users | CASCADE |
+| actor_id | ai_agent_approvals | users | CASCADE |
+| target_user_id | ai_agent_approvals | users | CASCADE |
+| user_id | ai_cv_confirmations | users | CASCADE |
 | source_message_id | user_memories | messages | SET NULL |
 | user_id | learning_roadmaps | users | RESTRICT |
 | roadmap_id | roadmap_items | learning_roadmaps | CASCADE |

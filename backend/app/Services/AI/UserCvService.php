@@ -41,7 +41,7 @@ class UserCvService
             throw new RuntimeException('CV storage is temporarily unavailable. Please retry.', 503, $exception);
         }
     }
-    public function save(User $user, UploadedFile $file): UserCv
+    public function save(User $user, UploadedFile $file, ?array $assessment = null): UserCv
     {
         $text = $this->extractor->extractPdf($file);
         // Persist the cleanup marker before attempting the non-transactional upload.
@@ -55,10 +55,11 @@ class UserCvService
                 'consented_at' => now(),
                 'status' => 'pending_delete',
                 'extracted_text' => null,
+                'assessment' => null,
             ]);
         });
         try {
-            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text): array {
+            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text, $assessment): array {
                 $this->lockOwner($user);
                 $row = UserCv::query()->whereKey($cv->id)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
                 $stream = fopen($file->getRealPath(), 'rb');
@@ -74,8 +75,8 @@ class UserCvService
                 }
                 $active = UserCv::query()->where('user_id', $user->id)->where('status', 'active');
                 $replacedIds = (clone $active)->pluck('id')->all();
-                $active->update(['status' => 'pending_delete', 'extracted_text' => null, 'updated_at' => now()]);
-                $row->update(['status' => 'active', 'extracted_text' => $text]);
+                $active->update(['status' => 'pending_delete', 'extracted_text' => null, 'assessment' => null, 'updated_at' => now()]);
+                $row->update(['status' => 'active', 'extracted_text' => $text, 'assessment' => $assessment]);
                 return [$row, $replacedIds];
             });
             if ($replacedIds !== []) {
@@ -92,7 +93,7 @@ class UserCvService
         DB::transaction(function () use ($user): void {
             $this->lockOwner($user);
             UserCv::query()->where('user_id', $user->id)->where('status', 'active')
-                ->update(['status' => 'pending_delete', 'extracted_text' => null, 'updated_at' => now()]);
+                ->update(['status' => 'pending_delete', 'extracted_text' => null, 'assessment' => null, 'updated_at' => now()]);
         });
     }
 

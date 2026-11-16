@@ -61,6 +61,9 @@ return [
     'ai' => [
         'url' => env('AI_SERVICE_URL'),
         'token' => env('AI_SERVICE_TOKEN'),
+        'agent_courses_enabled' => filter_var(env('AI_AGENT_COURSES_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+        'agent_admin_enabled' => filter_var(env('AI_AGENT_ADMIN_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+        'agent_cv_enabled' => filter_var(env('AI_AGENT_CV_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
         // AI-01..03 chat was gated until the privacy/retention decision was approved.
         // Product/operator approval recorded 2026-11-08; enabled by default from this
         // release. Set AI_CHAT_ENABLED=false to disable it again (e.g. staging/incident).

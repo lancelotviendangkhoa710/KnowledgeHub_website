@@ -1,0 +1,18 @@
+.page { max-width: 880px; margin: 0 auto; padding: 2.5rem 1rem 5rem; }
+.eyebrow { color: var(--color-primary, #8b0000); font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.lead { color: var(--color-gray, #666); line-height: 1.6; }
+.card { background: var(--color-white, #fff); border: 1px solid var(--color-border, #ddd); border-radius: 16px; padding: 1.5rem; margin-top: 1.25rem; }
+.form { display: grid; gap: 1rem; }
+.field { display: grid; gap: .4rem; font-weight: 600; }
+.field input, .field select, .field textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--color-border, #bbb); border-radius: 8px; padding: .7rem .8rem; font: inherit; color: inherit; background: var(--color-white, #fff); }
+.field textarea { resize: vertical; }
+.hint { color: var(--color-gray, #666); font-size: .9rem; line-height: 1.5; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.error { color: #9b1c1c; background: #fff2f2; border: 1px solid #f3b1b1; border-radius: 8px; padding: .8rem; }
+.success { color: #176b38; background: #ebfaef; border: 1px solid #a8dab7; border-radius: 8px; padding: .8rem; }
+.list { display: grid; gap: .85rem; padding-left: 1.3rem; }
+.list li { line-height: 1.5; }
+.item { border-top: 1px solid var(--color-border, #ddd); padding-top: 1rem; margin-top: 1rem; }
+.danger { color: #9b1c1c; }
+.check { display: flex; align-items: flex-start; gap: .6rem; line-height: 1.5; }
+.check input { margin-top: .25rem; }
