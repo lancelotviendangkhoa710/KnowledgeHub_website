@@ -16,14 +16,14 @@
 
 <br><br>
 
-<img src="docs/assets/screenshot-home.png" alt="KnowledgeHub home page with the hero, a sample learning roadmap and the latest courses" width="880">
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshot-home-dark.png"><img src="docs/assets/screenshot-home.png" alt="KnowledgeHub home page with the hero, a sample learning roadmap and the latest courses" width="880"></picture>
 
 <br>
 
 <table>
   <tr>
-    <td><img src="docs/assets/screenshot-courses.png" alt="Course library with search, topic filters and course cards" width="430"></td>
-    <td><img src="docs/assets/screenshot-lesson.png" alt="Course page with table of contents, video and related courses" width="430"></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshot-courses-dark.png"><img src="docs/assets/screenshot-courses.png" alt="Course library with search, topic filters and course cards" width="430"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshot-lesson-dark.png"><img src="docs/assets/screenshot-lesson.png" alt="Course page with table of contents, video and related courses" width="430"></picture></td>
   </tr>
 </table>
 
