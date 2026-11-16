@@ -36,7 +36,7 @@ GitHub project search is deferred. The first release adds no database server, mi
 | WP4: integration | Update branch against `origin/dev`, reconcile shared Studio page, run security/contract review | WP1–3 | Clean diff and guardrails; no unrelated files or secrets |
 | WP5: staging | Forward-only migration with recovery plan, private credentials, real provider/YouTube smoke tests, 20-attempt benchmark | WP4 | All acceptance gates pass before a flag is enabled |
 
-The code for WP0–3 is present on `p3/agent-workflows` as of 2026-11-16. WP4 is necessary because `origin/dev` gained a Studio rewrite after this branch began; the new course link must be moved into that component without discarding either change. WP5 is pending: no YouTube API key is configured locally, feature flags default off, and no live DeepSeek/YouTube call or migration has been run.
+The code for WP0–3 is present on `p3/agent-workflows` as of 2026-11-16. WP4 is complete: the branch is based on the latest `origin/dev`, the course link was moved into the rewritten Studio header, the frontend build passed, and repository guardrails passed. WP2's database-backed Feature tests remain unexecuted because they currently use `RefreshDatabase`; the Docker daemon was also unavailable during the no-reset test attempt. WP5 is pending: no YouTube API key is configured locally, feature flags default off, and no live DeepSeek/YouTube call or migration has been run.
 
 ### Safe test and migration order
 
