@@ -33,39 +33,17 @@
 - [ ] `git diff --check`: pass
 - [ ] No `.env`, credentials, debug code, or edited existing migration.
 
+## Nếu PR có đổi giao diện
+
+- Màn hình liên quan: (tên màn hoặc id `#s-...` trong mockup)
+- Ảnh màn hình: (trước và sau, sáng và tối)
+- [ ] Đã đối chiếu với mockup, chỗ khác mockup đã nêu lý do bên dưới
+- [ ] Chạy đúng ở 1360px và 390px, sáng và tối, không tràn ngang
+- [ ] Không mã màu hex hoặc rgb, không style nội tuyến cho màu và khoảng cách
+- [ ] Không còn chữ tiếng Anh hiển thị cho người dùng
+- [ ] Dùng lại thành phần có sẵn
+- Chỗ khác mockup: (nêu lý do, hoặc "không có")
+
 ## Blockers / Follow-ups
 
 `None`
-
-## Mô tả
-
-(làm gì, vì sao)
-
-## Màn hình liên quan
-
-(tên màn trong mockup, liên kết hoặc id `#s-...`)
-
-## Ảnh màn hình
-
-(trước và sau, sáng và tối nếu có đổi giao diện)
-
-## Danh sách kiểm tra
-
-- [ ] Đã đối chiếu với mockup
-- [ ] Chạy đúng ở 1360px và 390px, sáng và tối, không tràn ngang
-- [ ] Không màu hex hoặc rgb, không style nội tuyến cho màu và khoảng cách
-- [ ] Không còn chữ tiếng Anh hiển thị cho người dùng
-- [ ] Dùng lại thành phần có sẵn (Select, ConfirmDialog, Pagination...)
-- [ ] Lint, typecheck, build đều qua
-
-## Chỗ khác mockup
-
-(nêu lý do, hoặc ghi "không có")
-
-## File dùng chung bị sửa
-
-(globals.css, components/ui, SiteHeader... hoặc ghi "không có")
-
-## Chưa kiểm tra
-
-(nêu rõ, hoặc ghi "không có")
