@@ -142,16 +142,19 @@ def join_telemetry(report, csv_path, parser):
         parser.error("Prior report must be a JSON object")
     workflows = report.get("workflows")
     if (report.get("environment") != "isolated_local_compose" or not isinstance(workflows, dict)
-            or set(workflows) != {"course", "admin", "cv"}
-            or report.get("case_topics_distinct", 0) < 5
-            or report.get("case_pdfs_distinct", 0) < 5):
-        parser.error("Prior report lacks required workflow and case diversity evidence")
+            or set(workflows) != {"course", "admin", "cv"}):
+        parser.error("Prior report lacks required workflow evidence")
     for workflow in workflows.values():
-        if (not isinstance(workflow, dict) or workflow.get("attempts", 0) < 20
+        if (not isinstance(workflow, dict) or workflow.get("attempts", 0) < 1
                 or not isinstance(workflow.get("samples"), list)
                 or len(workflow["samples"]) != workflow["attempts"]
                 or workflow.get("successes", 0) + workflow.get("errors", 0) != workflow["attempts"]):
             parser.error("Prior report attempts or samples are invalid")
+    # A pilot report is joinable; only the gate requires 20 attempts per workflow.
+    required_diversity = min(5, min(workflow["attempts"] for workflow in workflows.values()))
+    if (report.get("case_topics_distinct", 0) < required_diversity
+            or report.get("case_pdfs_distinct", 0) < required_diversity):
+        parser.error("Prior report lacks required case diversity evidence")
     metrics = {}
     try:
         with Path(csv_path).open(newline="", encoding="utf-8") as source:
@@ -189,6 +192,26 @@ def join_telemetry(report, csv_path, parser):
     return report
 
 
+def benchmark_gate(report, quality_reviewed):
+    if not quality_reviewed:
+        return False
+    # The gate alone enforces the full run: a smoke or pilot report keeps its
+    # report and telemetry, but stays below 20 attempts and cannot pass.
+    return all(
+        value.get("attempts", 0) >= 20 and value.get("errors") == 0 and value.get("telemetry_complete")
+        for value in report["workflows"].values()
+    )
+
+
+def reserve_output(output, parser):
+    destination = Path(output)
+    if destination.suffix.lower() != ".json":
+        parser.error("Output filename must end in .json")
+    if destination.exists():
+        parser.error("Output file already exists; refusing overwrite")
+    return destination
+
+
 def write_report(report, output, parser):
     destination = Path(output)
     if destination.suffix.lower() != ".json":
@@ -206,7 +229,7 @@ def main():
     parser.add_argument("--execute", action="store_true", help="Allow isolated local writes and provider calls")
     parser.add_argument("--iterations", type=int, default=20)
     parser.add_argument("--interval-seconds", type=float, default=21,
-                        help="Minimum pause between rounds; respects 3/minute route throttles")
+                        help="Minimum pause between rounds; every agent route has its own 3/minute limiter")
     parser.add_argument("--output", default="agent-benchmark-results.json")
     parser.add_argument("--cases-file", help="JSON manifest of representative synthetic cases")
     parser.add_argument("--credentials-file", help="Ignored private fixture credentials JSON")
@@ -231,19 +254,14 @@ def main():
     if args.iterations < 20 and not (args.smoke or args.pilot):
         parser.error("At least 20 attempts per workflow are required")
     if args.interval_seconds < 21 and not args.smoke:
-        parser.error("At least 21 seconds between rounds are required by route throttles")
+        parser.error("At least 21 seconds between rounds are required by the 3/minute preview throttle")
     if args.join_report:
         if args.execute or not args.telemetry:
             parser.error("--join-report requires --telemetry and cannot combine with --execute")
         try:
             report = json.loads(Path(args.join_report).read_text(encoding="utf-8"))
             report = join_telemetry(report, args.telemetry, parser)
-            report["benchmark_gate_pass"] = bool(
-                args.quality_reviewed and all(
-                    value["errors"] == 0 and value.get("telemetry_complete")
-                    for value in report["workflows"].values()
-                )
-            )
+            report["benchmark_gate_pass"] = benchmark_gate(report, args.quality_reviewed)
         except (OSError, ValueError, KeyError, TypeError):
             parser.error("Existing report is invalid")
         write_report(report, args.output, parser)
@@ -317,6 +335,8 @@ def main():
     if not args.cases_file:
         parser.error("--cases-file is required for live execution")
     cases = load_cases(args.cases_file, args.iterations, parser)
+    # Refuse an unusable destination before spending provider calls.
+    reserve_output(args.output, parser)
 
     results = {"course": [], "admin": [], "cv": []}
     target_status = credentials["target_initial_status"]
@@ -375,12 +395,7 @@ def main():
     }
     if args.telemetry:
         report = join_telemetry(report, args.telemetry, parser)
-    report["benchmark_gate_pass"] = bool(
-        args.quality_reviewed and all(
-            value["errors"] == 0 and value.get("telemetry_complete")
-            for value in report["workflows"].values()
-        )
-    )
+    report["benchmark_gate_pass"] = benchmark_gate(report, args.quality_reviewed)
     write_report(report, args.output, parser)
     return 0 if report["benchmark_gate_pass"] else 1
 
