@@ -36,6 +36,10 @@ const EXACT: Record<string, string> = {
   'This prerequisite relationship would create a cycle.': 'Quan hệ tiên quyết này sẽ tạo thành vòng lặp.',
   'This prerequisite relationship already exists.': 'Quan hệ tiên quyết này đã tồn tại.',
   'Prerequisite relationship not found.': 'Không tìm thấy quan hệ tiên quyết.',
+  // CV PDF (CompanionRoadmapAiClient)
+  'The uploaded PDF could not be read.': 'Không đọc được tệp PDF đã tải lên.',
+  'The CV must be a valid PDF.': 'CV phải là tệp PDF hợp lệ.',
+  'The PDF has no extractable text or exceeds the supported limit.': 'PDF không có chữ để đọc hoặc vượt quá giới hạn hỗ trợ.',
   // Chung
   'Unauthenticated.': 'Bạn chưa đăng nhập.',
   'Unauthorized.': 'Bạn không có quyền thực hiện thao tác này.',
@@ -63,6 +67,10 @@ const PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^The (.+) field must not be greater than (\d+) characters\.$/, (m) => `${label(m[1])} dài tối đa ${m[2]} ký tự.`],
   [/^The (.+) must not be greater than (\d+) characters\.$/, (m) => `${label(m[1])} dài tối đa ${m[2]} ký tự.`],
   [/^The (.+) has already been taken\.$/, (m) => `${label(m[1])} này đã được dùng.`],
+  [/^The cv file field must be a file of type: .+\.$/, () => 'CV phải là tệp PDF hợp lệ.'],
+  [/^The cv file field must have one of the following extensions: .+\.$/, () => 'CV phải có đuôi .pdf.'],
+  [/^The cv file field must be a file\.$/, () => 'CV phải là một tệp.'],
+  [/^The cv file field must not be greater than (\d+) kilobytes\.$/, (m) => `CV nặng tối đa ${Math.round(Number(m[1]) / 1024)} MB.`],
   [/^The selected (.+) is invalid\.$/, (m) => `${label(m[1])} đã chọn không hợp lệ.`],
 ];
 

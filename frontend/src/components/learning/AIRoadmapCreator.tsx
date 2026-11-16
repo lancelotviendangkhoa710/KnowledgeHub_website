@@ -132,9 +132,9 @@ export default function AIRoadmapCreator({ onSaved, authRequired }: Props) {
             disabled={loading}
             onChange={(value) => { setLevel(value as typeof level); clearDraft(); }}
             options={[
-              { value: 'beginner', label: 'Beginner' },
-              { value: 'intermediate', label: 'Intermediate' },
-              { value: 'advanced', label: 'Advanced' },
+              { value: 'beginner', label: 'Mới bắt đầu' },
+              { value: 'intermediate', label: 'Trung cấp' },
+              { value: 'advanced', label: 'Nâng cao' },
             ]}
           />
 
