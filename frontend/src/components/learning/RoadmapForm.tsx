@@ -1,5 +1,6 @@
 'use client';
 
+import { translateServerMessage } from '@/lib/serverMessages';
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Link from 'next/link';
@@ -207,7 +208,7 @@ export default function RoadmapForm({ onBack }: Props) {
       setError(status === 401
         ? 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tạo lộ trình.'
         : status === 422
-          ? (caught as { message?: string }).message ?? 'Hãy kiểm tra lại thông tin và CV PDF rồi thử lại.'
+          ? translateServerMessage((caught as { message?: string }).message ?? 'Hãy kiểm tra lại thông tin và CV PDF rồi thử lại.')
           : status === 429
             ? 'Bạn xem trước quá nhiều lần. Hãy đợi một phút rồi thử lại.'
             : 'Tạo lộ trình đang tạm thời không khả dụng. Biểu mẫu của bạn vẫn còn đây, hãy thử lại sau.');
