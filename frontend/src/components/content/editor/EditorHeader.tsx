@@ -19,14 +19,14 @@ export function EditorHeader({ viewMode, setViewMode }: { viewMode: ViewMode; se
 
           {/* Chế độ xem: chia đôi | chỉ soạn | chỉ xem */}
           <div className={styles.btns}>
-            <div className={styles.seg} role="tablist" aria-label="Chế độ xem">
-              <button type="button" role="tab" aria-selected={viewMode === 'split'} onClick={() => setViewMode('split')}>
+            <div className={styles.seg} role="group" aria-label="Chế độ xem">
+              <button type="button" aria-pressed={viewMode === 'split'} onClick={() => setViewMode('split')}>
                 <span>Chia đôi</span>
               </button>
-              <button type="button" role="tab" aria-selected={viewMode === 'editor'} onClick={() => setViewMode('editor')}>
+              <button type="button" aria-pressed={viewMode === 'editor'} onClick={() => setViewMode('editor')}>
                 <span>Chỉ soạn</span>
               </button>
-              <button type="button" role="tab" aria-selected={viewMode === 'preview'} onClick={() => setViewMode('preview')}>
+              <button type="button" aria-pressed={viewMode === 'preview'} onClick={() => setViewMode('preview')}>
                 <span>Chỉ xem</span>
               </button>
             </div>

@@ -45,11 +45,14 @@ export function EditorNotices({
   const btn = `${styles.btn} ${styles.sm}`;
   return (
     <>
-      {lastSavedNotice && (
-        <div className={`${styles.notice} ${styles.good} ${styles.saved}`}>
-          <span>{lastSavedNotice}</span>
-        </div>
-      )}
+      {/* Vùng thông báo có sẵn trong DOM từ đầu, để trình đọc màn hình đọc được kết quả lưu. */}
+      <div role="status" aria-live="polite">
+        {lastSavedNotice && (
+          <div className={`${styles.notice} ${styles.good} ${styles.saved}`}>
+            <span>{lastSavedNotice}</span>
+          </div>
+        )}
+      </div>
 
       {parentId && (
         <div className={styles.notice}>
@@ -126,9 +129,9 @@ export function EditorNotices({
         </div>
       )}
 
-      {successMessage && (
-        <div className={`${styles.notice} ${styles.good}`}>{successMessage}</div>
-      )}
+      <div role="status" aria-live="polite">
+        {successMessage && <div className={`${styles.notice} ${styles.good}`}>{successMessage}</div>}
+      </div>
     </>
   );
 }

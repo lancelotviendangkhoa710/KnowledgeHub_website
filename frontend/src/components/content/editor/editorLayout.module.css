@@ -12,7 +12,7 @@
 .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface); padding: 3px; gap: 2px; }
 .seg button { padding: 6px 14px; border: 0; background: none; border-radius: var(--r-pill); font: inherit; font-size: 13px; font-weight: 500; color: var(--ink-2); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 .seg button:hover { color: var(--ink); }
-.seg button[aria-selected="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.seg button[aria-pressed="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: var(--r-pill); font: inherit; font-weight: 600; font-size: 14px; background: var(--btn); color: var(--btn-ink); border: 1px solid transparent; white-space: nowrap; cursor: pointer; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }

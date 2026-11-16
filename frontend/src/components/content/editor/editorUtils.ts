@@ -1,8 +1,20 @@
 import type { Category } from '@/types/content';
 import { getHeadingSlug } from './preview/getHeadingSlug';
 
-export function groupCategories(categories: Category[]) {
-  if (!categories || categories.length === 0) return [];
+/** API trả danh mục gốc kèm cấp con trong `children` (chỉ hai cấp): làm phẳng một cấp, bỏ trùng id. */
+export function flattenCategories(categories: Category[]): Category[] {
+  const seen = new Set<string>();
+  return (categories ?? []).flatMap((c) => [c, ...(c.children ?? [])]).filter((c) => !seen.has(c.id) && seen.add(c.id));
+}
+
+/** Một bản nháp đáng giữ khi người dùng đã nhập gì đó (dùng chung cho lúc ghi và lúc đọc bản nháp). */
+export function hasDraftContent(draft: { title?: string; tags?: string[]; content?: string }): boolean {
+  return Boolean(draft.title?.trim() || draft.tags?.length || draft.content?.trim());
+}
+
+export function groupCategories(rawCategories: Category[]) {
+  const categories = flattenCategories(rawCategories);
+  if (categories.length === 0) return [];
 
   const topLevel = categories.filter((c) => !c.parent_id);
   const subCats = categories.filter((c) => !!c.parent_id);

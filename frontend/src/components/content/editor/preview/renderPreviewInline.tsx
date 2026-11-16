@@ -41,8 +41,7 @@ export function renderPreviewInline(text: string): React.ReactNode {
           <a
             key={`link-${match.index}`}
             href={linkHref}
-            target="_blank"
-            rel="noopener noreferrer"
+            {...(linkHref.startsWith('#') ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
           >
             {linkText}
           </a>

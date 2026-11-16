@@ -36,7 +36,7 @@ export function CourseInfoPanel({
   selectedTags: string[];
   tagInput: string;
   setTagInput: (val: string) => void;
-  handleAddTag: (raw: string) => void;
+  handleAddTag: (raw: string | string[]) => void;
   handleRemoveTag: (tag: string) => void;
   tagNotice: string | null;
   /** Đã bấm Xuất bản: hiện lỗi cho mọi ô còn thiếu dù người dùng chưa chạm vào. */
@@ -149,7 +149,7 @@ export function CourseInfoPanel({
                   if (value.includes(',')) {
                     // Gõ hoặc dán "a,b,c": mỗi đoạn trước dấu phẩy thành một thẻ, đoạn cuối ở lại trong ô.
                     const parts = value.split(',');
-                    parts.slice(0, -1).forEach((part) => handleAddTag(part));
+                    handleAddTag(parts.slice(0, -1));
                     setTagInput(parts[parts.length - 1]);
                   } else {
                     setTagInput(value);
@@ -160,8 +160,10 @@ export function CourseInfoPanel({
                   const pasted = e.clipboardData.getData('text');
                   if (!pasted.includes(',')) return;
                   e.preventDefault();
-                  `${tagInput}${pasted}`.split(',').forEach((part) => handleAddTag(part));
-                  setTagInput('');
+                  // Dán đè lên vùng đang chọn (nếu có), rồi mới tách theo dấu phẩy.
+                  const { selectionStart, selectionEnd } = e.currentTarget;
+                  const next = tagInput.slice(0, selectionStart ?? tagInput.length) + pasted + tagInput.slice(selectionEnd ?? tagInput.length);
+                  handleAddTag(next.split(','));
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ',') {

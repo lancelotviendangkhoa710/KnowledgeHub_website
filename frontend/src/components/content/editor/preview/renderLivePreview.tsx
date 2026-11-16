@@ -8,6 +8,8 @@ import { getHeadingSlug } from './getHeadingSlug';
 export function renderLivePreview(raw: string): React.ReactNode[] {
   const lines = raw.split('\n');
   const elements: React.ReactNode[] = [];
+  // Dùng chung cho cả bài để tiêu đề trùng tên có id khác nhau, khớp với mục lục.
+  const seenIds = new Set<string>();
 
   let i = 0;
   while (i < lines.length) {
@@ -36,7 +38,7 @@ export function renderLivePreview(raw: string): React.ReactNode[] {
     // Headings
     if (line.startsWith('## ')) {
       const text = line.replace('## ', '').trim();
-      const hId = getHeadingSlug(text, i, new Set());
+      const hId = getHeadingSlug(text, i, seenIds);
       elements.push(
         <h2
           key={`h2-${i}`}
@@ -51,7 +53,7 @@ export function renderLivePreview(raw: string): React.ReactNode[] {
 
     if (line.startsWith('### ')) {
       const text = line.replace('### ', '').trim();
-      const hId = getHeadingSlug(text, i, new Set());
+      const hId = getHeadingSlug(text, i, seenIds);
       elements.push(
         <h3
           key={`h3-${i}`}
@@ -109,16 +111,15 @@ export function renderLivePreview(raw: string): React.ReactNode[] {
       continue;
     }
 
-    // Lists
+    // Lists: gom các dòng danh sách liên tiếp vào một <ul>
     if (line.startsWith('* ') || line.startsWith('- ')) {
-      elements.push(
-        <li
-          key={`li-${i}`}
-        >
-          {renderPreviewInline(line.replace(/^[*-]\s+/, ''))}
-        </li>
-      );
-      i++;
+      const startIdx = i;
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && (lines[i].startsWith('* ') || lines[i].startsWith('- '))) {
+        items.push(<li key={`li-${i}`}>{renderPreviewInline(lines[i].replace(/^[*-]\s+/, ''))}</li>);
+        i++;
+      }
+      elements.push(<ul key={`ul-${startIdx}`}>{items}</ul>);
       continue;
     }
 

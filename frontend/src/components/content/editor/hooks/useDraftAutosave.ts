@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LOCAL_STUDIO_DRAFT_KEY, StoredDraft } from '../editorConstants';
-import { formatClock } from '../editorUtils';
+import { formatClock, hasDraftContent } from '../editorUtils';
 
 interface DraftFields {
   title: string;
@@ -34,7 +34,13 @@ export function useDraftAutosave({
   const [pendingDraft, setPendingDraft] = useState<StoredDraft | null>(null);
   const [lastSavedNotice, setLastSavedNotice] = useState<string | null>(null);
 
-  // Auto-save draft every 20 seconds if title or content exists and no draft restore prompt is pending
+  // Giữ giá trị mới nhất trong ref để lịch tự lưu 20 giây không bị đặt lại sau mỗi ký tự gõ.
+  const latest = useRef<StoredDraft>({ title, slug, categoryId, tags: selectedTags, content, isSlugLocked, savedAt: 0 });
+  useEffect(() => {
+    latest.current = { title, slug, categoryId, tags: selectedTags, content, isSlugLocked, savedAt: 0 };
+  });
+
+  // Tự lưu bản nháp mỗi 20 giây khi đã nhập gì đó và không có lời nhắc khôi phục đang mở
   useEffect(() => {
     // Keep pending restore draft safe from being overwritten while prompt is open
     if (pendingDraft !== null) {
@@ -42,22 +48,10 @@ export function useDraftAutosave({
     }
 
     const timer = setInterval(() => {
-      // Re-verify pendingDraft is null before writing
-      if (pendingDraft !== null) {
-        return;
-      }
-      if ((title.trim().length > 0 || selectedTags.length > 0 || content.trim().length > 0) && typeof window !== 'undefined') {
-        const draftData: StoredDraft = {
-          title,
-          slug,
-          categoryId,
-          tags: selectedTags,
-          content,
-          isSlugLocked,
-          savedAt: Date.now(),
-        };
+      const draft = latest.current;
+      if (hasDraftContent(draft) && typeof window !== 'undefined') {
         try {
-          localStorage.setItem(LOCAL_STUDIO_DRAFT_KEY, JSON.stringify(draftData));
+          localStorage.setItem(LOCAL_STUDIO_DRAFT_KEY, JSON.stringify({ ...draft, savedAt: Date.now() }));
           setLastSavedNotice(`Đã tự lưu bản nháp lúc ${formatClock(Date.now())}`);
         } catch {
           // ignore localStorage quota error
@@ -66,15 +60,16 @@ export function useDraftAutosave({
     }, 20000);
 
     return () => clearInterval(timer);
-  }, [pendingDraft, title, slug, categoryId, selectedTags, content, isSlugLocked]);
+  }, [pendingDraft]);
 
   const handleRestoreDraft = () => {
     if (!pendingDraft) return;
-    if (pendingDraft.title) setTitle(pendingDraft.title);
-    if (pendingDraft.slug) setSlug(pendingDraft.slug);
-    if (pendingDraft.categoryId) setCategoryId(pendingDraft.categoryId);
-    if (pendingDraft.tags && Array.isArray(pendingDraft.tags)) setSelectedTags(pendingDraft.tags);
-    if (pendingDraft.content) setContent(pendingDraft.content);
+    // Trả lại đúng nháp đã lưu, kể cả trường rỗng, để không ghép với dữ liệu đang có trên form.
+    if (typeof pendingDraft.title === 'string') setTitle(pendingDraft.title);
+    if (typeof pendingDraft.slug === 'string') setSlug(pendingDraft.slug);
+    if (typeof pendingDraft.categoryId === 'string') setCategoryId(pendingDraft.categoryId);
+    if (Array.isArray(pendingDraft.tags)) setSelectedTags(pendingDraft.tags);
+    if (typeof pendingDraft.content === 'string') setContent(pendingDraft.content);
     if (typeof pendingDraft.isSlugLocked === 'boolean') setIsSlugLocked(pendingDraft.isSlugLocked);
     setPendingDraft(null);
     setLastSavedNotice('Đã khôi phục bản nháp từ máy này.');

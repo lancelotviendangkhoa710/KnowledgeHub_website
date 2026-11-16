@@ -56,11 +56,12 @@ export function useEditorFormatting(content: string, setContent: Dispatch<SetSta
 
   const handleInsertVideo = () => {
     if (!detectedVideoId) return;
-    const cleanUrl = videoInputUrl.trim();
+    // Dựng đường dẫn chuẩn từ mã video đã nhận diện, không dùng chuỗi người dùng nhập (có thể đã bọc @[youtube](...)).
+    const cleanUrl = `https://www.youtube.com/watch?v=${detectedVideoId}`;
     const cleanTitle = videoCustomTitle.trim();
     const snippet = cleanTitle
-      ? `\n\n@[youtube](${cleanUrl || detectedVideoId} "${cleanTitle}")\n\n`
-      : `\n\n@[youtube](${cleanUrl || detectedVideoId})\n\n`;
+      ? `\n\n@[youtube](${cleanUrl} "${cleanTitle}")\n\n`
+      : `\n\n@[youtube](${cleanUrl})\n\n`;
 
     const textarea = textareaRef.current;
     if (textarea) {

@@ -19,6 +19,8 @@ import {
   countWords,
   buildQualityChecks,
   generateSlug,
+  flattenCategories,
+  hasDraftContent,
 } from '@/components/content/editor/editorUtils';
 import { useDraftAutosave } from '@/components/content/editor/hooks/useDraftAutosave';
 import { useEditorLoaders } from '@/components/content/editor/hooks/useEditorLoaders';
@@ -78,7 +80,7 @@ export default function ContributorCourseCreatePage() {
 
 
   const selectedCategory = useMemo(() => {
-    return categories.find((c) => c.id === categoryId) || null;
+    return flattenCategories(categories).find((c) => c.id === categoryId) || null;
   }, [categories, categoryId]);
   // Dynamic live Table of Contents tree extracted in real-time from markdown content
   const tocItems = useMemo(() => buildTocItems(content), [content]);
@@ -197,7 +199,7 @@ export default function ContributorCourseCreatePage() {
           const parsedLocal: StoredDraft = JSON.parse(rawLocal);
           // Bản nháp cũ chỉ chứa nội dung mẫu (chưa ai sửa) thì coi như trống, không hỏi khôi phục.
           const isLegacyEmpty = !parsedLocal?.title?.trim() && parsedLocal?.content === LEGACY_SAMPLE_CONTENT;
-          if (parsedLocal && !isLegacyEmpty && (parsedLocal.title || parsedLocal.content?.length > 100)) {
+          if (parsedLocal && !isLegacyEmpty && hasDraftContent(parsedLocal)) {
             setPendingDraft(parsedLocal);
           }
         }
@@ -223,20 +225,28 @@ export default function ContributorCourseCreatePage() {
   }, [loadTaxonomy, loadParentCourse, setPendingDraft, taxonomyAbortRef, parentAbortRef]);
 
 
-    const handleAddTag = (raw: string) => {
-    const clean = raw
-      .trim()
-      .toLowerCase()
-      .replace(/^#+/, '')
-      .replace(/[^a-z0-9-]+/g, '-')
-      .replace(/^-|-$/g, '');
-    if (clean && selectedTags.includes(clean)) {
-      setTagNotice(`Thẻ “${clean}” đã có.`);
-    } else {
-      setTagNotice(null);
-      // Dạng hàm để thêm nhiều thẻ liên tiếp (dán "a,b,c") không bị trùng hoặc mất thẻ.
-      if (clean) setSelectedTags((prev) => (prev.includes(clean) ? prev : [...prev, clean]));
+  /** Thêm một hoặc nhiều thẻ trong một thao tác: bỏ thẻ rỗng và thẻ trùng, gộp thông báo trùng. */
+  const handleAddTag = (raw: string | string[]) => {
+    const seen = new Set(selectedTags);
+    const fresh: string[] = [];
+    const duplicates: string[] = [];
+    for (const part of Array.isArray(raw) ? raw : [raw]) {
+      const clean = part
+        .trim()
+        .toLowerCase()
+        .replace(/^#+/, '')
+        .replace(/[^a-z0-9-]+/g, '-')
+        .replace(/^-|-$/g, '');
+      if (!clean) continue;
+      if (seen.has(clean)) {
+        if (!duplicates.includes(clean)) duplicates.push(clean);
+      } else {
+        seen.add(clean);
+        fresh.push(clean);
+      }
     }
+    setTagNotice(duplicates.length > 0 ? `Thẻ ${duplicates.map((t) => `“${t}”`).join(', ')} đã có.` : null);
+    if (fresh.length > 0) setSelectedTags((prev) => [...prev, ...fresh.filter((t) => !prev.includes(t))]);
     setTagInput('');
   };
 
@@ -366,8 +376,19 @@ export default function ContributorCourseCreatePage() {
         const detail = firstErr || errorObj.message;
         setErrorMessage(`Không lưu được khóa học. Hãy kiểm tra lại thông tin đã nhập.${detail ? ` Chi tiết: ${detail}` : ''}`);
       } else {
+        // Chỉ khẳng định "đã giữ bản nháp" khi thật sự ghi được snapshot hiện tại vào máy.
+        let draftKept = false;
+        if (pendingDraft === null && typeof window !== 'undefined') {
+          try {
+            const snapshot: StoredDraft = { title, slug, categoryId, tags: selectedTags, content, isSlugLocked, savedAt: Date.now() };
+            localStorage.setItem(LOCAL_STUDIO_DRAFT_KEY, JSON.stringify(snapshot));
+            draftKept = true;
+          } catch {
+            // bộ nhớ trình duyệt đầy hoặc bị chặn: không cam kết đã giữ bản nháp
+          }
+        }
         setErrorMessage(
-          `Không thực hiện được. Kiểm tra kết nối rồi thử lại. Bản nháp của bạn vẫn được giữ trên máy này.${errorObj?.message ? ` Chi tiết: ${errorObj.message}` : ''}`
+          `Không thực hiện được. Kiểm tra kết nối rồi thử lại.${draftKept ? ' Bản nháp của bạn đã được giữ trên máy này.' : ' Hãy sao chép nội dung của bạn trước khi rời trang.'}${errorObj?.message ? ` Chi tiết: ${errorObj.message}` : ''}`
         );
       }
       setIsSubmitting(false);
