@@ -95,8 +95,9 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
   }
 
   function choose(index: number) {
-    if (options[index].disabled) return;
-    onChange(options[index].value);
+    const option = options[index];
+    if (!option || option.disabled) return; // empty or all-disabled list: Enter does nothing
+    onChange(option.value);
     setOpen(false);
     buttonRef.current?.focus();
   }
@@ -110,8 +111,8 @@ export default function Select({ value, onChange, options, placeholder = 'Chọn
   function onListKeyDown(event: KeyboardEvent<HTMLUListElement>) {
     if (event.key === 'ArrowDown') setActive((i) => step(i, 1));
     else if (event.key === 'ArrowUp') setActive((i) => step(i, -1));
-    else if (event.key === 'Home') setActive(step(-1, 1));
-    else if (event.key === 'End') setActive(step(options.length, -1));
+    else if (event.key === 'Home') setActive((i) => { const first = step(-1, 1); return first >= 0 && first < options.length ? first : i; });
+    else if (event.key === 'End') setActive((i) => { const last = step(options.length, -1); return last >= 0 && last < options.length ? last : i; });
     else if (event.key === 'Enter' || event.key === ' ') choose(active);
     else if (event.key === 'Escape' || event.key === 'Tab') {
       setOpen(false);

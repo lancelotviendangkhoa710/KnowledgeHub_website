@@ -43,7 +43,7 @@ function writeErrorMessage(error: CategoryApiError, fallback: string): string {
  * The client-side gate mirrors the backend; the API remains the real authority (401/403 handled).
  */
 export default function AdminCategoriesPage() {
-  const { user, authState } = useAdminSession(LOGIN_URL);
+  const { user, authState, retry } = useAdminSession(LOGIN_URL);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [forbidden, setForbidden] = useState(false);
 
@@ -194,6 +194,14 @@ export default function AdminCategoriesPage() {
 
   // ── Gates ────────────────────────────────────────────────────────────────────────────────────
   if (authState === 'checking') return <AdminChecking />;
+
+  if (authState === 'error') {
+    return (
+      <AdminGate alert title="Không kiểm tra được quyền truy cập" text="Kiểm tra kết nối mạng rồi thử lại.">
+        <button type="button" className={styles.btn} onClick={retry}>Thử lại</button>
+      </AdminGate>
+    );
+  }
 
   if (authState === 'guest' || !user || sessionExpired) {
     return (

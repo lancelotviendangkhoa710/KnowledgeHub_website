@@ -805,7 +805,7 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
           <button>ETL và ELT khác nhau thế nào?</button><button>Gợi ý khóa học tiếp theo cho mình</button><button>Giải thích Raft bằng ví dụ đời thường</button>
         </div>
         <form class="box" id="composer">
-          <textarea id="msg" rows="1" placeholder="Hỏi về bài học, khóa học hoặc lộ trình của bạn" aria-label="Tin nhắn"></textarea>
+          <textarea id="msg" rows="1" maxlength="8000" placeholder="Hỏi về bài học, khóa học hoặc lộ trình của bạn" aria-label="Tin nhắn"></textarea>
           <button class="send" type="submit" aria-label="Gửi tin nhắn"><svg class="i"><use href="#i-send"/></svg></button>
         </form>
         <div class="hint"><span>Enter để gửi, Shift + Enter để xuống dòng. Trợ lý có thể sai, hãy đối chiếu với nội dung khóa học.</span><span id="cnt" style="font-variant-numeric:tabular-nums">0/8000</span></div>
@@ -1221,7 +1221,7 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
       <p class="mu">Thẻ dùng chung cho mọi khóa học. Hãy xem danh sách trước khi thêm. Tên chỉ khác hoa thường, dấu, khoảng trắng hay dấu câu được tính là cùng một thẻ.</p>
       <form class="pn" id="tagForm" style="margin-top:16px">
         <div class="pn-h">Tạo thẻ</div>
-        <div class="pn-b"><div class="field"><label for="tagIn">Tên thẻ</label><input id="tagIn" maxlength="120" autocomplete="off" aria-describedby="tagHint"><small id="tagHint">Tối đa 100 ký tự.</small></div>
+        <div class="pn-b"><div class="field"><label for="tagIn">Tên thẻ</label><input id="tagIn" maxlength="100" autocomplete="off" aria-describedby="tagHint"><small id="tagHint">Tối đa 100 ký tự.</small></div>
         <button class="btn" type="submit" id="tagGo" disabled>Tạo thẻ</button></div>
       </form>
       <div class="tools"><label class="search-s"><svg class="i"><use href="#i-search"/></svg><input id="tagQ" placeholder="Lọc thẻ theo tên hoặc đường dẫn" aria-label="Lọc thẻ"></label></div>
@@ -1500,7 +1500,7 @@ var msg=$('#msg');
 function grow(){msg.style.height='auto';msg.style.height=Math.min(140,msg.scrollHeight)+'px';$('#cnt').textContent=msg.value.length+'/8000'}
 msg.addEventListener('input',grow);
 function send(text){
-  text=text.trim();if(!text)return;
+  text=text.trim();if(!text||text.length>8000)return;
   var me=document.createElement('div');me.className='me';me.textContent=text;$('#msgs').appendChild(me);
   var bot=document.createElement('div');bot.className='bot';bot.innerHTML='<span class="bot-av"></span><div class="bot-txt"><div class="dots"><i></i><i></i><i></i></div></div>';$('#msgs').appendChild(bot);
   if(G) G.from([me,bot],{y:10,opacity:0,duration:.3,stagger:.12,clearProps:'all'});
@@ -1584,13 +1584,14 @@ $('#adTabs').addEventListener('click',function(e){var b=e.target.closest('.chip'
   ['users','cats','tags'].forEach(function(k){$('#p-'+k).hidden=(k!==panel)});showState()});
 /* người dùng: đổi vai trò, kích hoạt */
 var rc=$('#roleConfirm'),pend=null;
+$$('#usTbl tbody tr').forEach(function(tr){var rs=tr.querySelector('select[aria-label*="vai trò"]');if(rs)tr.dataset.role=rs.value});
 $('#usTbl').addEventListener('change',function(e){var s=e.target.closest('select');if(!s)return;var tr=s.closest('tr'),n=tr.dataset.n,lab=s.getAttribute('aria-label')||'';
-  if(lab.indexOf('vai trò')>-1){var v=s.value,was=tr.dataset.role||s.querySelector('option[selected]')&&s.querySelector('option[selected]').textContent;
-    if(v==='Quản trị viên'||tr.dataset.wasAdmin){pend={s:s,v:v};$('#roleConfirmTxt').innerHTML='Đổi <b></b> thành <b></b>? Nhập mật khẩu của bạn để xác nhận.';var bs=$$('b',$('#roleConfirmTxt'));bs[0].textContent=n;bs[1].textContent=v;rc.hidden=false;$('#roleConfirmPw').focus()}
-    else toast('Đã đổi vai trò của '+n+'. Người này sẽ phải đăng nhập lại.')}
+  if(lab.indexOf('vai trò')>-1){var v=s.value,was=tr.dataset.role;
+    if(v==='Quản trị viên'||was==='Quản trị viên'){pend={s:s,v:v,tr:tr,was:was};$('#roleConfirmTxt').innerHTML='Đổi <b></b> thành <b></b>? Nhập mật khẩu của bạn để xác nhận.';var bs=$$('b',$('#roleConfirmTxt'));bs[0].textContent=n;bs[1].textContent=v;rc.hidden=false;$('#roleConfirmPw').focus()}
+    else{tr.dataset.role=v;toast('Đã đổi vai trò của '+n+'. Người này sẽ phải đăng nhập lại.')}}
   else{var st=s.value,b=tr.querySelector('.st');b.textContent=st;b.className='st '+(st==='Hoạt động'?'ok':st==='Bị khóa'?'bad':'draft');toast('Đã đổi trạng thái của '+n)}});
-rc.addEventListener('submit',function(e){e.preventDefault();if(!$('#roleConfirmPw').value){$('#roleConfirmPw').focus();return}rc.hidden=true;$('#roleConfirmPw').value='';toast('Đã đổi vai trò. Người này sẽ phải đăng nhập lại.')});
-$('#roleConfirmNo').onclick=function(){rc.hidden=true;$('#roleConfirmPw').value='';if(pend){pend.s.selectedIndex=0}};
+rc.addEventListener('submit',function(e){e.preventDefault();if(!$('#roleConfirmPw').value){$('#roleConfirmPw').focus();return}rc.hidden=true;$('#roleConfirmPw').value='';if(pend){pend.tr.dataset.role=pend.v;pend=null}toast('Đã đổi vai trò. Người này sẽ phải đăng nhập lại.')});
+$('#roleConfirmNo').onclick=function(){rc.hidden=true;$('#roleConfirmPw').value='';if(pend){pend.s.value=pend.was;pend=null}};
 $('#usTbl').addEventListener('click',function(e){var b=e.target.closest('[data-act="activate"]');if(!b)return;var tr=b.closest('tr');var st=tr.querySelector('.st');st.textContent='Hoạt động';st.className='st ok';
   b.outerHTML='<select class="sel" aria-label="Đổi trạng thái của '+tr.dataset.n+'"><option selected>Hoạt động</option><option>Ngưng hoạt động</option><option>Bị khóa</option></select>';toast('Đã kích hoạt '+tr.dataset.n)});
 /* danh mục */
@@ -1607,7 +1608,7 @@ $('#p-cats').addEventListener('click',function(e){var b=e.target.closest('[data-
     dlg.classList.add('on');$('#catDlgNo').focus()}
   else if(b.dataset.act==='reload')toast('Đã tải lại danh sách')});
 function dClose(){dlg.classList.remove('on');if(target)target.focus()}
-$('#catDlgNo').onclick=dClose;$('#catDlgGo').onclick=function(){var c=target.closest('.cat');dlg.classList.remove('on');c.remove();toast('Đã xóa danh mục')};
+$('#catDlgNo').onclick=dClose;$('#catDlgGo').onclick=function(){var c=target.closest('.cat');dlg.classList.remove('on');if(+c.dataset.n||+c.dataset.k){toast('Không thể xóa danh mục còn khóa học hoặc danh mục con.');return}c.remove();toast('Đã xóa danh mục')};
 dlg.addEventListener('click',function(e){if(e.target===dlg)dClose()});
 addEventListener('keydown',function(e){if(!dlg.classList.contains('on'))return;if(e.key==='Escape'){dClose();return}if(e.key==='Tab'){var f=[$('#catDlgNo'),$('#catDlgGo')],i=f.indexOf(document.activeElement);e.preventDefault();f[(i+(e.shiftKey?-1:1)+2)%2].focus()}});
 /* thẻ */
@@ -1615,10 +1616,11 @@ function norm2(s){return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').repla
 var tin=$('#tagIn'),th=$('#tagHint'),tg=$('#tagGo');
 tin.addEventListener('input',function(){var v=tin.value.trim(),s=norm2(v),ex=null;$$('#tagTbl tbody tr').forEach(function(r){if(r.children[1].textContent===s)ex=r.children[0].textContent});
   if(!v){th.textContent='Tối đa 100 ký tự.';tg.disabled=true}
+  else if(v.length>100){th.textContent='Tối đa 100 ký tự.';tg.disabled=true}
   else if(!s){th.textContent='Cần ít nhất một chữ cái Latin hoặc chữ số.';tg.disabled=true}
   else if(ex){th.textContent='Đã có thẻ “'+ex+'” ('+s+'). Hãy dùng thẻ có sẵn.';tg.disabled=true}
   else{th.textContent='Đường dẫn: '+s;tg.disabled=false}});
-$('#tagForm').addEventListener('submit',function(e){e.preventDefault();if(tg.disabled)return;var v=tin.value.trim(),s=norm2(v);
+$('#tagForm').addEventListener('submit',function(e){e.preventDefault();if(tg.disabled)return;var v=tin.value.trim(),s=norm2(v);if(v.length>100)return;
   var tr=document.createElement('tr');tr.innerHTML='<td></td><td><code></code></td><td>0</td>';tr.children[0].textContent=v;tr.querySelector('code').textContent=s;
   var rows=$$('#tagTbl tbody tr'),at=null;rows.forEach(function(r){if(!at&&r.children[0].textContent.toLowerCase()>v.toLowerCase())at=r});$('#tagTbl tbody').insertBefore(tr,at);
   tin.value='';th.textContent='Đã tạo thẻ “'+v+'” ('+s+').';tg.disabled=true;tagCnt()});

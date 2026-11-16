@@ -35,11 +35,13 @@ export default function AdminUsersPage() {
   const latestRequest = useRef(0);
   // Cancel returns focus to the role select that opened the confirmation (it is disabled until the form closes).
   const focusRoleOf = useRef<string | null>(null);
+  // Waits while the table reloads; if that row is gone afterwards, focus falls back to the search box.
   useEffect(() => {
-    if (roleChange || !focusRoleOf.current) return;
-    document.querySelector<HTMLElement>(`[data-role-for="${CSS.escape(focusRoleOf.current)}"] button`)?.focus();
+    if (roleChange || loading || !focusRoleOf.current) return;
+    const row = document.querySelector<HTMLElement>(`[data-role-for="${CSS.escape(focusRoleOf.current)}"] button`);
+    (row ?? document.querySelector<HTMLElement>('input[aria-label="Tìm theo tên hoặc email"]'))?.focus();
     focusRoleOf.current = null;
-  }, [roleChange]);
+  }, [roleChange, loading, users]);
 
   const load = useCallback(async () => {
     const requestId = ++latestRequest.current;
