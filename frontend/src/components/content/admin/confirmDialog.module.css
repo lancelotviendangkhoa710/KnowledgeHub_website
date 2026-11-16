@@ -8,4 +8,5 @@
 .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: var(--r-pill); font: inherit; font-weight: 600; font-size: 14px; background: var(--btn); color: var(--btn-ink); border: 1px solid transparent; cursor: pointer; }
 .ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
 .ghost:hover { border-color: var(--ink-3); }
+.danger { background: var(--danger); color: var(--btn-ink); } /* --btn-ink: trắng ở sáng, tối ở nền tối: đủ tương phản trên --danger cả hai chế độ */
 .busy { opacity: .55; cursor: not-allowed; }

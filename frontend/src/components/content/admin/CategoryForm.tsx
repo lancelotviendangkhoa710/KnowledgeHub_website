@@ -2,6 +2,9 @@
 
 import { FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AdminCategory, CategoryInput, flattenTree, selfAndDescendantIds } from '@/lib/categoryAdminClient';
+import Select from '@/components/ui/Select';
+import { translateServerMessage } from '@/lib/serverMessages';
+import styles from './admin.module.css';
 
 type CategoryFormProps = {
   /** Category being edited; undefined means "create". */
@@ -16,25 +19,6 @@ type CategoryFormProps = {
   onCancel: () => void;
 };
 
-const panelStyle: React.CSSProperties = {
-  padding: '1.5rem',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-lg)',
-  background: 'var(--color-white)',
-  boxShadow: 'var(--shadow-sm)',
-};
-
-const controlStyle: React.CSSProperties = {
-  width: '100%',
-  minHeight: '2.8rem',
-  padding: '0.6rem 0.8rem',
-  border: '1px solid var(--color-border)',
-  borderRadius: 'var(--radius-md)',
-  color: 'var(--color-charcoal)',
-  background: 'var(--color-white)',
-  font: 'inherit',
-};
-
 /** Same shape `Str::slug` produces; the backend does not enforce it, so the form does. */
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 /**
@@ -46,11 +30,7 @@ const HAS_LETTER_OR_DIGIT = new RegExp('[\\p{L}\\p{N}]', 'u');
 /** Field-level error text, referenced by the control's `aria-describedby`; renders nothing without messages. */
 function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   if (!messages?.length) return null;
-  return (
-    <small id={id} style={{ color: 'var(--color-primary-light)', fontWeight: 'var(--weight-regular)' }}>
-      {messages.join(' ')}
-    </small>
-  );
+  return <small id={id} className={styles.fieldErr}>{messages.map(translateServerMessage).join(' ')}</small>;
 }
 
 /**
@@ -102,10 +82,10 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
     const trimmedSlug = slug.trim();
     const problems: Record<string, string[]> = {};
     if (!HAS_LETTER_OR_DIGIT.test(trimmedName)) {
-      problems.name = ['The name must contain at least one letter or digit.'];
+      problems.name = ['Tên phải có ít nhất một chữ cái hoặc chữ số.'];
     }
     if (trimmedSlug && !SLUG_PATTERN.test(trimmedSlug)) {
-      problems.slug = ['Use lowercase letters, digits and single hyphens only (e.g. web-development).'];
+      problems.slug = ['Chỉ dùng chữ thường, số và dấu gạch nối đơn (ví dụ lap-trinh-web).'];
     }
     setLocalErrors(problems);
     if (Object.keys(problems).length > 0) {
@@ -120,92 +100,91 @@ export default function CategoryForm({ editing, roots, treeComplete, busy, error
   // cannot know every descendant, so moving is locked rather than risking a cycle.
   const parentLocked = Boolean(editing) && !treeComplete;
 
-  const title = editing ? `Edit "${editing.name}"` : 'New category';
+  const title = editing ? `Sửa “${editing.name}”` : 'Danh mục mới';
 
   return (
-    <form style={panelStyle} onSubmit={submit} aria-label={title} noValidate>
-      <h2 style={{ margin: '0 0 0.25rem', fontSize: 'var(--text-xl)', color: 'var(--color-charcoal)' }}>{title}</h2>
+    <form className={styles.panel} onSubmit={submit} aria-label={title} noValidate>
+      <div className={styles.panelH}>{title}</div>
+      <div className={styles.panelB}>
+        {error && <p className={styles.notice} role="alert">{translateServerMessage(error)}</p>}
 
-      {error && <p className="auth-error" role="alert" style={{ marginTop: '0.75rem' }}>{error}</p>}
+        <div className={`${styles.fgrid} ${error ? styles.formGap : ''}`}>
+          <div className={styles.field}>
+            <label htmlFor={ids.name}>Tên danh mục</label>
+            <input
+              ref={nameRef}
+              id={ids.name}
+              value={name}
+              onChange={(event) => { setName(event.target.value); markEdited('name'); }}
+              required
+              maxLength={255}
+              autoComplete="off"
+              aria-invalid={Boolean(errors.name?.length)}
+              aria-describedby={errors.name?.length ? ids.nameErr : undefined}
+              disabled={busy}
+            />
+            <FieldError id={ids.nameErr} messages={errors.name} />
+          </div>
 
-      <div className="auth-field">
-        <label htmlFor={ids.name}>Name</label>
-        <input
-          ref={nameRef}
-          id={ids.name}
-          style={controlStyle}
-          value={name}
-          onChange={(event) => { setName(event.target.value); markEdited('name'); }}
-          required
-          maxLength={255}
-          aria-invalid={Boolean(errors.name?.length)}
-          aria-describedby={errors.name?.length ? ids.nameErr : undefined}
-          disabled={busy}
-        />
-        <FieldError id={ids.nameErr} messages={errors.name} />
-      </div>
+          <div className={styles.field}>
+            <label htmlFor={ids.slug}>Đường dẫn (tùy chọn)</label>
+            <input
+              id={ids.slug}
+              value={slug}
+              onChange={(event) => { setSlug(event.target.value); markEdited('slug'); }}
+              maxLength={255}
+              autoComplete="off"
+              aria-invalid={Boolean(errors.slug?.length)}
+              aria-describedby={[ids.slugHint, errors.slug?.length ? ids.slugErr : ''].filter(Boolean).join(' ')}
+              disabled={busy}
+            />
+            <small id={ids.slugHint}>
+              Chữ thường, số và dấu gạch nối, ví dụ <code>lap-trinh-web</code>.{' '}
+              {editing
+                ? 'Để trống để tạo lại từ tên. Nếu đường dẫn đã có, máy chủ sẽ thêm số vào cuối.'
+                : 'Để trống để tự tạo từ tên.'}
+            </small>
+            <FieldError id={ids.slugErr} messages={errors.slug} />
+          </div>
 
-      <div className="auth-field">
-        <label htmlFor={ids.slug}>
-          Slug <span className="account-hint">(optional)</span>
-        </label>
-        <input
-          id={ids.slug}
-          style={controlStyle}
-          value={slug}
-          onChange={(event) => { setSlug(event.target.value); markEdited('slug'); }}
-          maxLength={255}
-          aria-invalid={Boolean(errors.slug?.length)}
-          aria-describedby={[ids.slugHint, errors.slug?.length ? ids.slugErr : ''].filter(Boolean).join(' ')}
-          disabled={busy}
-        />
-        <small id={ids.slugHint} className="account-hint">
-          Lowercase letters, digits and single hyphens (e.g. <code>web-development</code>).{' '}
-          {editing
-            ? 'Leave empty to regenerate it from the name. If the slug is taken, the server adds a numeric suffix.'
-            : 'Leave empty to generate it from the name.'}
-        </small>
-        <FieldError id={ids.slugErr} messages={errors.slug} />
-      </div>
+          <div className={`${styles.field} ${styles.full}`}>
+            <span className={styles.lbl}>Danh mục cha</span>
+            <Select
+              ariaLabel="Danh mục cha"
+              value={parentId}
+              onChange={(value) => { setParentId(value); markEdited('parent_id'); }}
+              disabled={busy || parentLocked}
+              options={[
+                { value: '', label: 'Không có (cấp cao nhất)' },
+                ...options.map(({ node, depth }) => {
+                  const off = blocked.has(node.id);
+                  return {
+                    value: node.id,
+                    disabled: off,
+                    label: `${'\u2014 '.repeat(depth)}${node.name}${off ? (node.id === editing?.id ? ' (danh mục này)' : ' (danh mục con)') : ''}`,
+                  };
+                }),
+              ]}
+            />
+            <FieldError id={ids.parentErr} messages={errors.parent_id} />
+          </div>
+        </div>
 
-      <div className="auth-field">
-        <label htmlFor={ids.parent}>Parent category</label>
-        <select
-          id={ids.parent}
-          style={controlStyle}
-          value={parentId}
-          onChange={(event) => { setParentId(event.target.value); markEdited('parent_id'); }}
-          aria-invalid={Boolean(errors.parent_id?.length)}
-          aria-describedby={errors.parent_id?.length ? ids.parentErr : undefined}
-          disabled={busy || parentLocked}
-        >
-          <option value="">None (top level)</option>
-          {options.map(({ node, depth }) => {
-            const disabled = blocked.has(node.id);
-            return (
-              <option key={node.id} value={node.id} disabled={disabled}>
-                {`${'\u2014 '.repeat(depth)}${node.name}${disabled ? (node.id === editing?.id ? ' (this category)' : ' (descendant)') : ''}`}
-              </option>
-            );
-          })}
-        </select>
-        <FieldError id={ids.parentErr} messages={errors.parent_id} />
-      </div>
+        {editing && !treeComplete && (
+          <p className={styles.info}>
+            Chưa tải được một số cấp sâu hơn của cây, nên chưa biết hết danh mục con của danh mục này. Chưa đổi được
+            danh mục cha cho đến khi tải đủ cây; hãy tải lại danh sách rồi thử lại. Vẫn đổi tên được.
+          </p>
+        )}
 
-      {editing && !treeComplete && (
-        <p className="auth-message" style={{ marginTop: '1rem' }}>
-          Some deeper levels of the tree could not be loaded, so descendants of this category are unknown. The parent
-          cannot be changed until the full tree loads; reload the list and try again. Renaming is still possible.
-        </p>
-      )}
-
-      <div className="account-actions">
-        <button type="submit" className="button button--primary account-submit" style={{ marginTop: 0 }} disabled={busy || !name.trim()} aria-busy={busy}>
-          {busy ? 'Saving...' : editing ? 'Save changes' : 'Create category'}
-        </button>
-        <button type="button" className="button button--secondary" onClick={onCancel} disabled={busy}>
-          Cancel
-        </button>
+        <div className={`${styles.btns} ${editing && !treeComplete ? styles.formGap : ''}`}>
+          <button type="submit" className={styles.btn} disabled={busy || !name.trim()} aria-busy={busy}>
+            {busy ? 'Đang lưu...' : editing ? 'Lưu thay đổi' : 'Tạo danh mục'}
+          </button>
+          <button type="button" className={`${styles.btn} ${styles.ghost}`} onClick={onCancel} disabled={busy}>
+            Hủy
+          </button>
+        </div>
       </div>
     </form>
   );

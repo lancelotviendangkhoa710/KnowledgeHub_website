@@ -44,8 +44,8 @@ export const ASSIGNABLE_ROLES: AssignableRole[] = ['user', 'contributor', 'admin
 export function errorMessage(error: unknown, fallback: string): string {
   const e = error as { message?: string; errors?: Record<string, string[]>; status?: number };
   const first = e.errors ? Object.values(e.errors)[0]?.[0] : undefined;
-  if (e.status === 401) return 'Your session has expired. Please sign in again.';
-  if (e.status === 403) return 'You do not have permission to do that.';
+  if (e.status === 401) return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  if (e.status === 403) return 'Bạn không có quyền thực hiện thao tác này.';
   if (e.status === 429) return 'Thử quá nhiều lần. Vui lòng đợi một phút rồi thử lại.';
   return first ?? e.message ?? fallback;
 }
