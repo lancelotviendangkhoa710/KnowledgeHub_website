@@ -49,6 +49,8 @@ return new class extends Migration {
 
     public function down(): void
     {
+        // Destructive and irreversible: stored CV assessments and pending agent
+        // approvals are dropped with their tables. Roll back only on disposable data.
         Schema::dropIfExists('ai_cv_confirmations');
         Schema::dropIfExists('ai_agent_approvals');
         Schema::table('user_cvs', function (Blueprint $table): void {
