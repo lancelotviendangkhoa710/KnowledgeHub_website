@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Exceptions\AI\AgentServiceException;
 use App\Models\User;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\UploadedFile;
@@ -9,7 +10,6 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 class CvAssessmentService
 {
@@ -24,11 +24,12 @@ class CvAssessmentService
         $assessment = $this->validateAssessment($result, $text);
         $digest = hash_file('sha256', $file->getRealPath());
         if ($digest === false) {
-            throw new RuntimeException('CV analysis is temporarily unavailable.', 503);
+            throw new AgentServiceException('CV analysis is temporarily unavailable.', 503);
         }
         $expires = now()->addMinutes(15);
         $previewToken = Crypt::encryptString(json_encode(['user_id' => $user->id,
-            'file_hash' => $digest, 'assessment' => $assessment,
+            'file_hash' => $digest, 'claim_id' => (string) Str::uuid(),
+            'assessment' => $assessment,
             'expires_at' => $expires->timestamp], JSON_THROW_ON_ERROR));
         return ['assessment' => $assessment, 'preview_token' => $previewToken,
             'expires_at' => $expires->toISOString()];
@@ -45,14 +46,15 @@ class CvAssessmentService
         if (! is_array($payload) || ($payload['user_id'] ?? null) !== $user->id
             || ! is_string($digest) || ! is_string($payload['file_hash'] ?? null)
             || ! hash_equals($payload['file_hash'], $digest)
+            || ! is_string($payload['claim_id'] ?? null) || ! Str::isUuid($payload['claim_id'])
             || ! is_int($payload['expires_at'] ?? null) || $payload['expires_at'] < now()->timestamp
             || ! is_array($payload['assessment'] ?? null)) {
             throw ValidationException::withMessages(['preview_token' => ['Preview expired or CV changed.']]);
         }
-        // The preview wrote no database state. Claim its hash atomically now:
-        // one confirmation wins, including under concurrent requests.
+        // The preview wrote no database state. Claim its one-time id atomically
+        // now: one confirmation wins, including under concurrent requests.
         $claimed = DB::table('ai_cv_confirmations')->insertOrIgnore(['id' => (string) Str::uuid(),
-            'user_id' => $user->id, 'token_hash' => hash('sha256', $token),
+            'user_id' => $user->id, 'token_hash' => $payload['claim_id'],
             'expires_at' => now()->setTimestamp($payload['expires_at']),
             'created_at' => now(), 'updated_at' => now()]);
         if ($claimed !== 1) {
@@ -76,14 +78,14 @@ class CvAssessmentService
         if ($summary === null || ! is_array($strengths) || count($strengths) > 12
             || ! is_array($recommendations) || count($recommendations) > 10
             || ! is_array($gaps) || count($gaps) > 10) {
-            throw new RuntimeException('AI agent returned an invalid assessment.', 502);
+            throw new AgentServiceException('AI agent returned an invalid assessment.', 502);
         }
         $validStrengths = [];
         foreach ($strengths as $entry) {
             $skill = is_array($entry) ? $this->bounded($entry['skill'] ?? null, 100) : null;
             $evidence = is_array($entry) ? $this->bounded($entry['evidence'] ?? null, 500) : null;
             if ($skill === null || $evidence === null || ! str_contains($text, $evidence)) {
-                throw new RuntimeException('AI agent returned unsupported CV evidence.', 502);
+                throw new AgentServiceException('AI agent returned unsupported CV evidence.', 502);
             }
             $validStrengths[] = ['skill' => $skill, 'evidence' => $evidence];
         }
@@ -99,7 +101,7 @@ class CvAssessmentService
         foreach ($values as $value) {
             $bounded = $this->bounded($value, $max);
             if ($bounded === null) {
-                throw new RuntimeException('AI agent returned an invalid assessment.', 502);
+                throw new AgentServiceException('AI agent returned an invalid assessment.', 502);
             }
             $result[] = $bounded;
         }
