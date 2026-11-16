@@ -113,12 +113,12 @@ Mỗi dòng ứng với một màn hình trong mockup (mở bằng đường d�
 | 2 | trang-chu | trang giới thiệu (landing) | tiêu đề lớn là "KnowledgeHub" |
 | 3 | bai-hoc | trang học | |
 | 4 | lo-trinh, lo-trinh-cua-toi | lộ trình | |
-| 5 | tro-ly | trợ lý AI | ẩn chân trang ở màn hình này |
+| 5 | tro-ly | trợ lý AI | ẩn chân trang ở màn hình này. Tin nhắn tối đa 8000 ký tự. Ghi nhớ có loại (Sở thích, Thông tin, Mục tiêu) và ngày hết hạn tùy chọn |
 | 6 | da-luu | đã lưu | |
-| 7 | studio | danh sách khóa học của contributor | |
+| 7 | studio | danh sách khóa học của contributor | mỗi dòng có Xem, Phiên bản mới, Lịch sử; bản nháp có thêm Xuất bản, bản đã xuất bản có thêm Lưu trữ. Không có nút Sửa |
 | 8 | soan-khoa-hoc | `courses/create` (hơn 3000 dòng) | chia thành component nhỏ khi làm, xem mục 7 |
 | 9 | lich-su-phien-ban | `courses/[id]/versions` | xem mục 7 |
-| 10 | quan-tri | quản trị | |
+| 10 | quan-tri | `admin/users`, `admin/categories`, `admin/tags` | giữ ba đường dẫn riêng, dùng chung một thanh tab ở đầu trang. Xem mục 7B |
 | 11 | dang-nhap, tai-khoan | đăng nhập, tài khoản | AUTH-07 đã gộp, giữ nguyên chức năng đăng nhập Google. Bảng hoạt động học tập trong tài khoản xem mục 7A |
 
 ## 7. Hai màn soạn khóa học và lịch sử phiên bản
@@ -131,7 +131,9 @@ Soạn khóa học (`#soan-khoa-hoc`):
 - Thông tin khóa học: tên (5 đến 120 ký tự), đường dẫn tự tạo từ tên và có nút khóa hoặc sửa tay, danh mục, thẻ dạng chip nhập bằng Enter.
 - Thanh công cụ: H2, H3, in đậm, in nghiêng, gạch ngang, danh sách, trích dẫn, đường kẻ, khối code nhiều ngôn ngữ, ghi chú (lưu ý, mẹo, cảnh báo), chèn video YouTube bằng hộp thoại.
 - Xem trước dùng cùng kiểu chữ với trang học. Trong dự án, giữ nguyên bộ hiển thị markdown hiện có, chỉ đổi kiểu dáng.
-- Bảng kiểm tra trước khi xuất bản có 4 điều kiện: tên hợp lệ, đã chọn danh mục, có ít nhất 1 thẻ, nội dung từ 50 từ. Nút Xuất bản chỉ bật khi đạt đủ. Giữ nguyên bước xác nhận trước khi xuất bản như trong code hiện tại.
+- Khóa học mới bắt đầu trống: không có thẻ mặc định, không có nội dung mẫu, khung xem trước chỉ hiện câu hướng dẫn. Dòng báo lỗi (thiếu thẻ, tên chưa hợp lệ) chỉ chuyển đỏ sau khi người dùng đã chạm vào ô rồi rời đi, hoặc sau khi bấm Xuất bản.
+- Nút có chữ thì không thêm biểu tượng (nhóm chế độ xem, thanh công cụ, đường dẫn). Biểu tượng chỉ dùng cho nút không có chữ hoặc khi mang thông tin thật, như dấu tích trong bảng kiểm tra và biểu tượng play ở nút Video YouTube.
+- Bảng kiểm tra trước khi xuất bản có 4 điều kiện: tên hợp lệ, đã chọn danh mục, có ít nhất 1 thẻ, nội dung từ 50 từ. Nút Xuất bản luôn bấm được. Khi còn thiếu điều kiện, hiện hộp xác nhận liệt kê điều kiện chưa đạt với hai nút Quay lại chỉnh sửa và Vẫn xuất bản; đủ điều kiện thì xuất bản ngay.
 
 Lịch sử phiên bản (`#lich-su-phien-ban`):
 - Danh sách phiên bản mới nhất ở trên, có nhãn Đang xuất bản và Mới nhất. Tên người tạo chỉ hiện tên, không hiện email.
@@ -160,9 +162,31 @@ Quy tắc dữ liệu cần chốt với nhóm trước khi code:
 - Cần bảng ghi hoạt động (người dùng, loại, khóa học, bài học, thời điểm). Chỉ chủ tài khoản được xem hoạt động của mình. Kiểm tra lại bài đã hoàn thành trước đó để không ghi trùng. Theo quy tắc nhóm, cách làm này cần migration, ghi rõ trong PR.
 - Không thêm thư viện biểu đồ. Lưới vẽ bằng HTML và CSS thuần như mockup.
 
+## 7B. Màn quản trị (người dùng, danh mục, thẻ)
+
+Giữ nguyên toàn bộ chức năng và quy tắc hiện có, chỉ đổi giao diện và chữ. Mockup `#quan-tri` đặt ba phần trên một trang bằng ba tab; trong dự án giữ ba đường dẫn riêng (`/admin/users`, `/admin/categories`, `/admin/tags`) và đặt cùng một thanh tab (các liên kết, trang hiện tại có `aria-current="page"`) ở đầu mỗi trang. Thanh tab là thành phần dùng chung.
+
+Người dùng:
+- Bốn trạng thái: Hoạt động, Chờ duyệt, Ngưng hoạt động, Bị khóa. Ba vai trò: Người học, Người viết, Quản trị viên (mỗi tài khoản một vai trò, đổi vai trò sẽ đăng xuất người đó).
+- Dòng của chính người đang đăng nhập chỉ hiện "Bạn", không đổi được vai trò hay trạng thái. Tài khoản chờ duyệt có nút Kích hoạt. Tài khoản chờ duyệt hoặc bị khóa hiện vai trò dạng chữ.
+- Đổi vai trò từ hoặc sang quản trị viên cần nhập mật khẩu của người đang thao tác (API cũng kiểm tra), hiện ngay phía trên bảng.
+- Bộ lọc: tìm theo tên hoặc email, trạng thái, vai trò, ngày tham gia (bất kỳ lúc nào, 1, 7, 30 ngày qua). Mới tham gia nhất ở trên, không có ô sắp xếp. Có phân trang.
+- Mockup gộp tên và email vào một cột; không đổi dữ liệu.
+
+Danh mục:
+- Cây danh mục: tên, đường dẫn, số khóa học, số danh mục con. Nút Danh mục mới, Tải lại, Sửa, Xóa.
+- Khung nhập (tạo và sửa) gồm tên, đường dẫn tùy chọn, danh mục cha. Giữ nguyên các kiểm tra hợp lệ và thông báo lỗi theo từng ô như code hiện tại.
+- Xóa mở hộp xác nhận; khi danh mục còn khóa học hoặc danh mục con thì hiện cảnh báo máy chủ sẽ từ chối.
+
+Thẻ:
+- Chỉ có tạo và xem, không có xóa. Khi gõ tên hiện đường dẫn sẽ được tạo, báo nếu trùng với thẻ có sẵn (không phân biệt hoa thường, dấu, khoảng trắng, dấu câu).
+- Danh sách xếp theo chữ cái, có ô lọc theo tên hoặc đường dẫn, dòng "Hiển thị n trên m thẻ", bảng Tên, Đường dẫn, Khóa học.
+
+Trạng thái chung của mỗi phần: đang tải, không có dữ liệu, lỗi tải kèm nút Thử lại, chưa đăng nhập, không có quyền quản trị. Ô Xem thử trạng thái ở đầu mockup chỉ dùng cho mockup, không đưa vào dự án.
+
 ## 8. Trang chưa có mockup
 
-Áp dụng cho các trang quản trị chi tiết (danh mục, thẻ, contributor, phân quyền) và mọi trang chưa có trong mockup.
+Áp dụng cho mọi trang chưa có trong mockup. Các trang người dùng, danh mục và thẻ đã có mockup (mục 7B); nếu còn trang quản trị khác (contributor, phân quyền) thì áp dụng mục này.
 
 - Chỉ dùng token và component đã làm ở các bước trước. Bảng, biểu mẫu, hộp thoại, nhãn trạng thái làm giống màn Studio và Quản trị trong mockup.
 - Không thêm kiểu mới, màu mới hay hiệu ứng mới.
