@@ -100,7 +100,7 @@ export default function ContributorCourseCreatePage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [parentId, setParentId] = useState<string | null>(null);
 
-  const { pendingDraft, setPendingDraft, lastSavedNotice, handleRestoreDraft, handleDiscardDraft } = useDraftAutosave({
+  const { pendingDraft, setPendingDraft, lastSavedNotice, handleRestoreDraft, handleDiscardDraft, saveDraftNow } = useDraftAutosave({
     title,
     slug,
     categoryId,
@@ -376,17 +376,8 @@ export default function ContributorCourseCreatePage() {
         const detail = firstErr || errorObj.message;
         setErrorMessage(`Không lưu được khóa học. Hãy kiểm tra lại thông tin đã nhập.${detail ? ` Chi tiết: ${detail}` : ''}`);
       } else {
-        // Chỉ khẳng định "đã giữ bản nháp" khi thật sự ghi được snapshot hiện tại vào máy.
-        let draftKept = false;
-        if (pendingDraft === null && typeof window !== 'undefined') {
-          try {
-            const snapshot: StoredDraft = { title, slug, categoryId, tags: selectedTags, content, isSlugLocked, savedAt: Date.now() };
-            localStorage.setItem(LOCAL_STUDIO_DRAFT_KEY, JSON.stringify(snapshot));
-            draftKept = true;
-          } catch {
-            // bộ nhớ trình duyệt đầy hoặc bị chặn: không cam kết đã giữ bản nháp
-          }
-        }
+        // Chỉ khẳng định "đã giữ bản nháp" khi thật sự ghi được bản mới nhất vào máy.
+        const draftKept = saveDraftNow();
         setErrorMessage(
           `Không thực hiện được. Kiểm tra kết nối rồi thử lại.${draftKept ? ' Bản nháp của bạn đã được giữ trên máy này.' : ' Hãy sao chép nội dung của bạn trước khi rời trang.'}${errorObj?.message ? ` Chi tiết: ${errorObj.message}` : ''}`
         );

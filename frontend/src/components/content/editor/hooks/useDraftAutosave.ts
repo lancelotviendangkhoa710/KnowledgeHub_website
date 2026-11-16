@@ -40,6 +40,25 @@ export function useDraftAutosave({
     latest.current = { title, slug, categoryId, tags: selectedTags, content, isSlugLocked, savedAt: 0 };
   });
 
+  const pendingRef = useRef(pendingDraft);
+  useEffect(() => {
+    pendingRef.current = pendingDraft;
+  });
+
+  /**
+   * Ghi ngay bản nháp MỚI NHẤT (đọc từ ref, không phải giá trị cũ của một lần gửi đang chờ) và cho biết có ghi được không.
+   * Không ghi khi đang có lời nhắc khôi phục (tránh đè bản nháp cũ chưa được xử lý).
+   */
+  const saveDraftNow = (): boolean => {
+    if (pendingRef.current !== null || typeof window === 'undefined' || !hasDraftContent(latest.current)) return false;
+    try {
+      localStorage.setItem(LOCAL_STUDIO_DRAFT_KEY, JSON.stringify({ ...latest.current, savedAt: Date.now() }));
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   // Tự lưu bản nháp mỗi 20 giây khi đã nhập gì đó và không có lời nhắc khôi phục đang mở
   useEffect(() => {
     // Keep pending restore draft safe from being overwritten while prompt is open
@@ -83,5 +102,5 @@ export function useDraftAutosave({
     setPendingDraft(null);
   };
 
-  return { pendingDraft, setPendingDraft, lastSavedNotice, handleRestoreDraft, handleDiscardDraft };
+  return { pendingDraft, setPendingDraft, lastSavedNotice, handleRestoreDraft, handleDiscardDraft, saveDraftNow };
 }
