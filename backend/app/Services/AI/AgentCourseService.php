@@ -2,13 +2,13 @@
 
 namespace App\Services\AI;
 
+use App\Exceptions\AI\AgentServiceException;
 use App\Models\Article;
 use App\Models\User;
 use App\Services\Content\ArticleService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
-use RuntimeException;
 
 class AgentCourseService
 {
@@ -26,7 +26,7 @@ class AgentCourseService
         if ($title === null || $summary === null || ! is_string($playlistId)
             || ! preg_match('/^[A-Za-z0-9_-]{2,100}$/D', $playlistId)
             || $playlistTitle === null || ! is_array($lessons) || count($lessons) < 2 || count($lessons) > $max) {
-            throw new RuntimeException('AI agent returned an invalid course.', 502);
+            throw new AgentServiceException('AI agent returned an invalid course.', 502);
         }
 
         $seen = [];
@@ -34,14 +34,14 @@ class AgentCourseService
         foreach ($lessons as $lesson) {
             if (! is_array($lesson) || ! is_string($lesson['video_id'] ?? null)
                 || ! preg_match('/^[A-Za-z0-9_-]{11}$/D', $lesson['video_id'])) {
-                throw new RuntimeException('AI agent returned an invalid course.', 502);
+                throw new AgentServiceException('AI agent returned an invalid course.', 502);
             }
             $id = $lesson['video_id'];
             $videoTitle = $this->safeText($lesson['title'] ?? null, 255);
             $description = $this->safeText($lesson['description'] ?? null, 1000);
             $objective = $this->safeText($lesson['learning_objective'] ?? null, 500);
             if (isset($seen[$id]) || $videoTitle === null || $description === null || $objective === null) {
-                throw new RuntimeException('AI agent returned an invalid course.', 502);
+                throw new AgentServiceException('AI agent returned an invalid course.', 502);
             }
             $seen[$id] = true;
             $validated[] = ['video_id' => $id, 'title' => $videoTitle,
@@ -58,7 +58,8 @@ class AgentCourseService
 
         return DB::transaction(function () use ($actor, $input, $title, $content, $validated, $playlistId, $playlistTitle): array {
             $actor->refresh();
-            abort_unless($actor->status === 'active', 403);
+            // A Contributor deleted while the draft was generated must not publish.
+            abort_unless(! $actor->trashed() && $actor->status === 'active', 403);
             abort_unless($actor->roles()->where('name', 'contributor')->exists()
                 && ! $actor->roles()->where('name', 'admin')->exists(), 403);
             Gate::forUser($actor)->authorize('create', Article::class);
