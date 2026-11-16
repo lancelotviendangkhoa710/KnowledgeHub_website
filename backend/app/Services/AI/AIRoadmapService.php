@@ -13,7 +13,7 @@ class AIRoadmapService
     /** Generate and validate a roadmap draft through the private AI service. */
     public function generate(array $input): array
     {
-        $url = (string) config('services.ai.url', '');
+        $url = AiServiceUrl::configured();
         $token = (string) config('services.ai.token', '');
         if ($url === '' || $token === '') {
             throw new RuntimeException('AI service is not configured.');
