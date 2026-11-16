@@ -45,7 +45,7 @@ export default function AgentCoursePage() {
         </label>
         <label className={styles.field}>Số video tối đa
           <select value={maxVideos} onChange={(event) => setMaxVideos(Number(event.target.value))} disabled={busy}>
-            {[2, 3, 4, 5, 6].map((count) => <option key={count} value={count}>{count} video</option>)}
+            {Array.from({ length: 19 }, (_, index) => index + 2).map((count) => <option key={count} value={count}>{count} video</option>)}
           </select>
         </label>
         <p className={styles.hint}>Khi bạn chọn “Tạo và đăng”, khóa học sẽ được xuất bản ngay sau khi hệ thống kiểm tra video và nội dung. Bạn có thể quản lý khóa học trong Studio.</p>

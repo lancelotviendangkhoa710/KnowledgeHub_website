@@ -19,7 +19,7 @@ class CreateAgentCourseRequest extends FormRequest
     {
         return [
             'topic' => ['required', 'string', 'min:3', 'max:200'],
-            'max_videos' => ['sometimes', 'integer', 'between:2,6'],
+            'max_videos' => ['sometimes', 'integer', 'between:2,20'],
             'category_id' => ['sometimes', 'nullable', 'uuid', 'exists:categories,id'],
         ];
     }

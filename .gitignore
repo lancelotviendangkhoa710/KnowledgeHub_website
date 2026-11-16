@@ -61,5 +61,8 @@ venv/
 /.playwright-cli/
 /reviews/**/*.png
 
+# Local agent benchmark results
+agent-benchmark-*.json
+
 # Binaries
 *.exe

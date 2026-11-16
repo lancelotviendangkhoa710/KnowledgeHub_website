@@ -19,7 +19,7 @@ Tạm hoãn tìm project mã nguồn mở. Không thêm database server, microse
 ## Trình tự triển khai
 
 1. **Hợp đồng API và feature flag:** Ghi ADR, request/response giữa Laravel và FastAPI. Ba cờ riêng mặc định tắt; route cũ giữ nguyên hành vi.
-2. **AI service:** Ghim phiên bản LangChain/LangGraph. Tạo StateGraph ngắn với giới hạn đầu vào, schema đầu ra, timeout, danh sách thao tác cho phép và xác thực nguồn. Chỉ nhận playlist công khai gồm 2–6 video, tất cả công khai và cho phép nhúng. Xem CV, metadata YouTube và chỉ dẫn tự nhiên là dữ liệu không đáng tin cậy.
+2. **AI service:** Ghim phiên bản LangChain/LangGraph. Tạo StateGraph ngắn với giới hạn đầu vào, schema đầu ra, timeout, danh sách thao tác cho phép và xác thực nguồn. Chỉ nhận playlist công khai gồm 2–20 video, tất cả công khai và cho phép nhúng. Xem CV, metadata YouTube và chỉ dẫn tự nhiên là dữ liệu không đáng tin cậy.
 3. **Laravel:** Thêm endpoint có xác thực và giới hạn tần suất. Tái sử dụng ArticleService, ArticlePolicy, AdminUserService, UserPolicy và UserCvService. Model không được tự chọn endpoint ghi dữ liệu. Xác nhận Admin gắn với người thực hiện, đối tượng, thao tác, tham số, thời hạn và chỉ dùng một lần.
 4. **Frontend:** Tạo trang theo role. Hiển thị đề xuất Admin trước bước chấp nhận riêng. CV chỉ xem trước cho đến khi User đồng ý lưu; có nút xóa. Contributor mở được course vừa xuất bản.
 5. **Kiểm chứng:** Kiểm tra Guest/User/Contributor/Admin, quyền sở hữu, xác nhận giả mạo/hết hạn/dùng lại, hạ role giữa hai bước, ID video sai, prompt injection, CV xem trước không lưu, xác nhận/xóa, lỗi upstream và regression của route cũ.

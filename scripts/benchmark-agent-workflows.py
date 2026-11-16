@@ -131,8 +131,9 @@ def load_cases(path, iterations, parser):
         case["pdf_bytes"] = pdf
         topics.add(topic.strip())
         pdf_paths.add(str(Path(pdf_path).resolve()))
-    if len(topics) < 5 or len(pdf_paths) < 5:
-        parser.error("At least five distinct topics and five synthetic CV PDFs are required")
+    required_diversity = min(5, iterations)
+    if len(topics) < required_diversity or len(pdf_paths) < required_diversity:
+        parser.error(f"At least {required_diversity} distinct topics and synthetic CV PDFs are required")
     return cases
 
 
@@ -213,10 +214,23 @@ def main():
     parser.add_argument("--join-report", help="Join telemetry to a prior report without HTTP calls")
     parser.add_argument("--quality-reviewed", action="store_true",
                         help="Operator completed manual quality and security review")
+    parser.add_argument("--smoke", action="store_true",
+                        help="Send one course request to verify the isolated stack; not a benchmark")
+    parser.add_argument("--topic", help="Exact topic for --smoke")
+    parser.add_argument("--pilot", action="store_true",
+                        help="Allow 4-19 attempts for a pilot run; the benchmark gate cannot pass")
     args = parser.parse_args()
-    if args.iterations < 20:
+    if args.smoke:
+        if not args.execute:
+            parser.error("--smoke requires --execute")
+        if not args.topic or not 3 <= len(args.topic.strip()) <= 200:
+            parser.error("--smoke requires --topic of 3-200 characters")
+        args.iterations = 1
+    if args.pilot and not args.smoke and not 4 <= args.iterations < 20:
+        parser.error("--pilot requires --iterations between 4 and 19")
+    if args.iterations < 20 and not (args.smoke or args.pilot):
         parser.error("At least 20 attempts per workflow are required")
-    if args.interval_seconds < 21:
+    if args.interval_seconds < 21 and not args.smoke:
         parser.error("At least 21 seconds between rounds are required by route throttles")
     if args.join_report:
         if args.execute or not args.telemetry:
@@ -288,6 +302,16 @@ def main():
         parser.error("Could not verify Compose nginx port ownership; no requests sent")
     if published.returncode != 0 or published.stdout.strip() != "127.0.0.1:8080":
         parser.error("Compose nginx is not proven to bind only 127.0.0.1:8080; no requests sent")
+    if args.smoke:
+        status, payload, elapsed, trace_id = request(
+            base, "/api/ai/agents/courses", required["KH_CONTRIBUTOR_TOKEN"],
+            {"topic": args.topic.strip(), "max_videos": 20},
+        )
+        data = payload.get("data") if isinstance(payload, dict) else None
+        ok = status == 201 and isinstance(data, dict) and data.get("status") == "published"
+        print(json.dumps({"smoke": "pass" if ok else "fail", "status": status,
+                          "duration_ms": round(elapsed, 1), "request_id": trace_id}))
+        return 0 if ok else 1
     if credentials.get("target_initial_status") not in {"active", "inactive"}:
         parser.error("Fixture target status must be active or inactive")
     if not args.cases_file:
@@ -298,7 +322,7 @@ def main():
     target_status = credentials["target_initial_status"]
     for index, case in enumerate(cases):
         status, payload, elapsed, course_trace = request(base, "/api/ai/agents/courses", required["KH_CONTRIBUTOR_TOKEN"],
-                                           {"topic": case["topic"], "max_videos": 4})
+                                           {"topic": case["topic"], "max_videos": 20})
         course_data = payload.get("data") if isinstance(payload, dict) else None
         results["course"].append({"ok": status == 201 and isinstance(course_data, dict)
                                   and course_data.get("status") == "published",

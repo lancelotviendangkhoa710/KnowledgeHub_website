@@ -68,6 +68,16 @@ class AgentWorkflowTest extends TestCase
         $this->assertDatabaseCount('articles', 1);
     }
 
+    public function test_course_agent_accepts_twenty_videos_and_rejects_twenty_one(): void
+    {
+        Http::fake(['ai.example/v1/agents/course' => Http::response($this->courseDraft())]);
+        Sanctum::actingAs($this->createUserWithRole('contributor'));
+        $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 20])
+            ->assertCreated();
+        $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 21])
+            ->assertUnprocessable();
+    }
+
     public function test_course_agent_rejects_invented_video_id_without_writing(): void
     {
         Http::fake(['ai.example/v1/agents/course' => Http::response($this->courseDraft('not-a-valid-video-id'))]);

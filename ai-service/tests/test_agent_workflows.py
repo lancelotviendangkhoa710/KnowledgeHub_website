@@ -8,10 +8,11 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.agent_workflows import (
-    AdminCandidate, ComposedCourse, CvOutput, _admin_validate, _course_validate, _cv_validate,
-    _youtube_search, course_graph,
+    AdminCandidate, ComposedCourse, CourseInput, CvOutput, _admin_validate, _course_validate,
+    _cv_validate, _youtube_search, course_graph,
 )
 from app.main import app
 
@@ -71,6 +72,18 @@ class AgentEndpointsTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             _course_validate({"topic": "Python", "max_videos": 4,
                               "videos": videos, "composed": composed.model_dump()})
+
+    def test_course_limits_allow_twenty_videos(self):
+        self.assertEqual(CourseInput(topic="Python", max_videos=20).max_videos, 20)
+        with self.assertRaises(ValidationError):
+            CourseInput(topic="Python", max_videos=21)
+        lessons = [{"video_id": f"{index:011d}", "description": "Lesson",
+                    "learning_objective": "Practice"} for index in range(20)]
+        self.assertEqual(len(ComposedCourse(title="Learn Python", summary="A practical course",
+                                            lessons=lessons).lessons), 20)
+        with self.assertRaises(ValidationError):
+            ComposedCourse(title="Learn Python", summary="A practical course",
+                           lessons=lessons + lessons[:1])
 
     def test_course_uses_verified_title(self):
         videos = [{"video_id": "abcdefghijk", "title": "Verified one"},

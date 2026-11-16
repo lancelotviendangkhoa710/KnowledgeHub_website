@@ -63,6 +63,16 @@ Không in hoặc commit nội dung file. Đặt
 py scripts/benchmark-agent-workflows.py --execute --iterations 20 --cases-file <duong-dan-cases.json> --credentials-file <duong-dan-credentials.json> --output agent-benchmark-results.json
 ```
 
+Kiểm tra nhanh trước khi chạy đủ 20 vòng: `--smoke` gửi đúng một course (cần
+`--topic` có playlist công khai 2–20 video); `--pilot` cho phép 4–19 vòng.
+Pilot vẫn giữ khoảng cách 21 giây và **không thể đạt** `benchmark_gate_pass`
+vì cổng yêu cầu đủ 20 lượt.
+
+```powershell
+py scripts/benchmark-agent-workflows.py --execute --smoke --topic <chu-de> --credentials-file <duong-dan-credentials.json>
+py scripts/benchmark-agent-workflows.py --execute --pilot --iterations 4 --cases-file <cases-pilot.json> --credentials-file <duong-dan-credentials.json> --output agent-benchmark-pilot.json
+```
+
 Mỗi vòng cách nhau ít nhất 21 giây để không vượt giới hạn 3 yêu cầu/phút của
 route course và CV; 20 vòng mất tối thiểu khoảng 7 phút, chưa tính thời gian AI.
 

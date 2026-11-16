@@ -83,7 +83,7 @@ def _redact_contact(text: str) -> str:
 class CourseInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     topic: str = Field(min_length=3, max_length=200)
-    max_videos: int = Field(default=4, ge=2, le=6)
+    max_videos: int = Field(default=4, ge=2, le=20)
 
     @field_validator("topic")
     @classmethod
@@ -109,7 +109,7 @@ class Video(BaseModel):
 
 class YouTubeSearchInput(BaseModel):
     topic: str = Field(min_length=3, max_length=200)
-    max_videos: int = Field(ge=2, le=6)
+    max_videos: int = Field(ge=2, le=20)
 
 
 async def _youtube_search(topic: str, max_videos: int) -> dict:
@@ -194,7 +194,7 @@ class ComposedCourse(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(min_length=3, max_length=200)
     summary: str = Field(min_length=10, max_length=1000)
-    lessons: list[ComposedLesson] = Field(min_length=2, max_length=6)
+    lessons: list[ComposedLesson] = Field(min_length=2, max_length=20)
 
 
 class CourseLesson(ComposedLesson):
@@ -233,9 +233,10 @@ async def _course_retrieve(state: CourseState) -> dict:
 
 
 async def _course_compose(state: CourseState) -> dict:
+    max_tokens = max(2200, 300 * len(state["videos"]))
     result = await _complete_json(COURSE_INSTRUCTION,
                                   {"topic": state["topic"], "videos": state["videos"]},
-                                  ComposedCourse, 2200)
+                                  ComposedCourse, max_tokens)
     return {"composed": result.model_dump()}
 
 
