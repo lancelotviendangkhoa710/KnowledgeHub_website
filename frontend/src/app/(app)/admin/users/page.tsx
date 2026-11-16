@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccountUser, AdminUserFilters, adminUserClient, AssignableRole, errorMessage, UserStatus } from '@/lib/accountClient';
 import { getCurrentUser, subscribeCurrentUser } from '@/lib/auth';
+import { translateServerMessage } from '@/lib/serverMessages';
 import AdminTabs from '@/components/content/admin/AdminTabs';
 import styles from '@/components/content/admin/admin.module.css';
 import RoleConfirmForm from './RoleConfirmForm';
@@ -36,7 +37,7 @@ export default function AdminUsersPage() {
   const focusRoleOf = useRef<string | null>(null);
   useEffect(() => {
     if (roleChange || !focusRoleOf.current) return;
-    document.querySelector<HTMLElement>(`[data-role-for="${CSS.escape(focusRoleOf.current)}"]`)?.focus();
+    document.querySelector<HTMLElement>(`[data-role-for="${CSS.escape(focusRoleOf.current)}"] button`)?.focus();
     focusRoleOf.current = null;
   }, [roleChange]);
 
@@ -56,7 +57,7 @@ export default function AdminUsersPage() {
       setMeta(response.meta);
     } catch (e) {
       // Show API detail only when the server answered; a network failure has no Vietnamese text of its own.
-      if (requestId === latestRequest.current) setLoadError((e as { status?: number }).status ? errorMessage(e, '') : '');
+      if (requestId === latestRequest.current) setLoadError((e as { status?: number }).status ? translateServerMessage(errorMessage(e, '')) : '');
     } finally {
       if (requestId === latestRequest.current) setLoading(false);
     }
@@ -83,7 +84,7 @@ export default function AdminUsersPage() {
       // Reload with the current filters so the row, total and pages stay correct.
       setRefreshVersion((version) => version + 1);
     } catch (e) {
-      setActionError(errorMessage(e, 'Không đổi được trạng thái của tài khoản này.'));
+      setActionError(translateServerMessage(errorMessage(e, 'Không đổi được trạng thái của tài khoản này.')));
     } finally {
       setBusyId(null);
     }
@@ -98,7 +99,7 @@ export default function AdminUsersPage() {
       setPassword('');
       setRefreshVersion((version) => version + 1);
     } catch (e) {
-      setActionError(errorMessage(e, 'Không đổi được vai trò của tài khoản này.'));
+      setActionError(translateServerMessage(errorMessage(e, 'Không đổi được vai trò của tài khoản này.')));
     } finally {
       setBusyId(null);
     }

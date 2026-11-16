@@ -1,5 +1,6 @@
 import type { AccountUser, AssignableRole, UserStatus } from '@/lib/accountClient';
 import { ASSIGNABLE_ROLES } from '@/lib/accountClient';
+import Select from '@/components/ui/Select';
 import styles from '@/components/content/admin/admin.module.css';
 import { formatJoined, ROLE_LABEL, roleText, STATUS_LABEL, STATUS_TONE } from './usersText';
 
@@ -39,17 +40,18 @@ export default function UsersTable({ users, meId, locked, onRole, onStatus }: Pr
                   {readOnlyRole ? (
                     roleText(user.roles)
                   ) : (
-                    <select
-                      className={styles.sel}
-                      data-role-for={user.id}
-                      aria-label={`Đổi vai trò của ${user.name}`}
-                      value={user.roles.length === 1 ? user.roles[0] : ''}
-                      disabled={locked}
-                      onChange={(event) => onRole(user, event.target.value as AssignableRole)}
-                    >
-                      {user.roles.length !== 1 && <option value="" disabled>{roleText(user.roles) || 'Chưa có vai trò'}</option>}
-                      {ASSIGNABLE_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-                    </select>
+                    <div className={styles.cellSel} data-role-for={user.id}>
+                      <Select
+                        portal
+                        small
+                        ariaLabel={`Đổi vai trò của ${user.name}`}
+                        value={user.roles.length === 1 ? user.roles[0] : ''}
+                        placeholder={roleText(user.roles) || 'Chưa có vai trò'}
+                        disabled={locked}
+                        onChange={(value) => onRole(user, value as AssignableRole)}
+                        options={ASSIGNABLE_ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] }))}
+                      />
+                    </div>
                   )}
                 </td>
                 <td><span className={`${styles.st} ${styles[STATUS_TONE[user.status]]}`}>{STATUS_LABEL[user.status]}</span></td>
@@ -61,15 +63,17 @@ export default function UsersTable({ users, meId, locked, onRole, onStatus }: Pr
                     ) : user.status === 'pending' ? (
                       <button type="button" className={`${styles.btn} ${styles.sm}`} disabled={locked} onClick={() => onStatus(user, 'active')}>Kích hoạt</button>
                     ) : (
-                      <select
-                        className={styles.sel}
-                        aria-label={`Đổi trạng thái của ${user.name}`}
-                        value={user.status}
-                        disabled={locked}
-                        onChange={(event) => onStatus(user, event.target.value as Exclude<UserStatus, 'pending'>)}
-                      >
-                        {EDITABLE_STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-                      </select>
+                      <div className={styles.cellSel}>
+                        <Select
+                          portal
+                          small
+                          ariaLabel={`Đổi trạng thái của ${user.name}`}
+                          value={user.status}
+                          disabled={locked}
+                          onChange={(value) => onStatus(user, value as Exclude<UserStatus, 'pending'>)}
+                          options={EDITABLE_STATUSES.map((st) => ({ value: st, label: STATUS_LABEL[st] }))}
+                        />
+                      </div>
                     )}
                   </div>
                 </td>
