@@ -53,7 +53,12 @@ class CvAssessmentController extends Controller
 
     private function error(RuntimeException $exception, bool $afterConfirmation = false): JsonResponse
     {
-        $status = in_array($exception->getCode(), [502, 503, 504], true) ? $exception->getCode() : 503;
+        // A rejected assessment payload is an upstream failure here, not user input.
+        $status = match (true) {
+            in_array($exception->getCode(), [502, 503, 504], true) => $exception->getCode(),
+            $exception->getCode() === 422 => 502,
+            default => 503,
+        };
         $message = $afterConfirmation
             ? 'CV could not be saved. Start a new preview and try again.'
             : 'CV assessment is temporarily unavailable.';
