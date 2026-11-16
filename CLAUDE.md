@@ -16,7 +16,7 @@ Khi làm chức năng mới hoặc màn hình mới, không tự code. Phải c�
 - Chỉ dùng token trong `frontend/src/app/globals.css` (màu, khoảng cách, bo góc, font). Không viết mã màu hex hoặc rgb, không dùng style nội tuyến cho màu hay khoảng cách. Thiếu token thì thêm vào `globals.css` cho cả sáng và tối và nêu trong PR.
 - Dùng CSS module cho từng màn. Class của CSS module có mã băm, nên trong TSX phải viết `styles.tenClass`.
 - Mọi chữ hiển thị cho người dùng bằng tiếng Việt, kể cả placeholder, aria-label, thông báo lỗi và thông báo thành công. Chỉ giữ tiếng Anh cho tên riêng kỹ thuật.
-- Dùng lại thành phần có sẵn: `components/ui/Select` và `DatePicker`; `ConfirmDialog` nằm ở `components/content/admin/`. Phân trang chưa có thành phần dùng chung, tạm theo mẫu ở màn Đã lưu, không tự viết kiểu mới. Ngoại lệ: trong bảng có cuộn ngang thì dùng `<select>` gốc theo kiểu `.sel` của mockup, vì danh sách xổ của `Select` sẽ bị cắt.
+- Dùng lại thành phần có sẵn: `components/ui/Select` và `DatePicker`; `ConfirmDialog` nằm ở `components/content/admin/`. Phân trang chưa có thành phần dùng chung, tạm theo mẫu ở màn Đã lưu, không tự viết kiểu mới. Trong bảng có cuộn ngang, dùng Select với portal để danh sách không bị cắt.
 - Nút đã có chữ thì không thêm biểu tượng. Biểu tượng chỉ dùng cho nút không có chữ hoặc khi mang thông tin thật. Không dùng viền trái dày làm điểm nhấn, không nền gradient, không bóng đổ nhiều lớp.
 - Giữ nguyên logic và API khi chỉ đổi giao diện. Trang dài hơn khoảng 400 dòng thì tách thành thành phần nhỏ.
 - Mỗi màn phải chạy đúng ở 1360px và 390px, chế độ sáng và tối, không tràn ngang, có focus nhìn thấy, một h1, mọi ô nhập có nhãn.
