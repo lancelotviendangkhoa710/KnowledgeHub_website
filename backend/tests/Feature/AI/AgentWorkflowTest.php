@@ -5,8 +5,9 @@ namespace Tests\Feature\AI;
 use App\Models\Article;
 use App\Models\UserCv;
 use App\Services\AI\CompanionRoadmapAiClient;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -16,11 +17,15 @@ use Tests\TestCase;
 
 class AgentWorkflowTest extends TestCase
 {
-    use RefreshDatabase, ContentTestHelper;
+    use DatabaseTransactions, ContentTestHelper;
 
     protected function setUp(): void
     {
         parent::setUp();
+        // TestCase checks the isolated test-db connection before this forward-only
+        // migration. The surrounding transaction rolls back this test's schema
+        // and data without calling migrate:fresh, migrate:refresh, or db:wipe.
+        Artisan::call('migrate', ['--force' => true]);
         config(['services.ai.url' => 'https://ai.example', 'services.ai.token' => 'internal-test-token',
             'services.ai.agent_courses_enabled' => true, 'services.ai.agent_admin_enabled' => true,
             'services.ai.agent_cv_enabled' => true]);
@@ -47,9 +52,12 @@ class AgentWorkflowTest extends TestCase
         Http::fake(['ai.example/v1/agents/course' => Http::response($this->courseDraft())]);
         $contributor = $this->createUserWithRole('contributor');
         Sanctum::actingAs($contributor);
-        $response = $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 4])
+        $trace = '123e4567-e89b-42d3-a456-426614174000';
+        $response = $this->withHeader('X-Request-ID', $trace)
+            ->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 4])
             ->assertCreated()->assertJsonPath('data.status', 'published')
             ->assertJsonPath('data.source_playlist_id', 'PLabcdEFGH12345');
+        Http::assertSent(fn ($request) => $request->hasHeader('X-Request-ID', $trace));
         $article = Article::query()->findOrFail($response->json('data.id'));
         $this->assertSame($contributor->id, $article->author_id);
         $this->assertSame($article->versions()->firstOrFail()->id, $article->published_version_id);
@@ -66,6 +74,22 @@ class AgentWorkflowTest extends TestCase
         Sanctum::actingAs($this->createUserWithRole('contributor'));
         $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP'])->assertStatus(502);
         $this->assertDatabaseCount('articles', 0);
+    }
+
+    public function test_agent_routes_reject_guest_and_contributor_admin_access(): void
+    {
+        $this->postJson('/api/ai/agents/admin/plan', [
+            'instruction' => 'Deactivate account', 'target_user_id' => '00000000-0000-4000-8000-000000000001',
+        ])->assertUnauthorized();
+        $this->postJson('/api/ai/cv/assessment/preview', ['cv_file' => $this->pdf()])->assertUnauthorized();
+        $this->getJson('/api/ai/cv/assessment')->assertUnauthorized();
+
+        $target = $this->createUserWithRole('user');
+        Sanctum::actingAs($this->createUserWithRole('contributor'));
+        $this->postJson('/api/ai/agents/admin/plan', [
+            'instruction' => 'Deactivate account', 'target_user_id' => $target->id,
+        ])->assertForbidden();
+        $this->assertDatabaseCount('ai_agent_approvals', 0);
     }
 
     public function test_admin_agent_requires_acceptance_and_rejects_replay_and_role_downgrade(): void
@@ -96,15 +120,14 @@ class AgentWorkflowTest extends TestCase
         $admin = $this->createUserWithRole('admin');
         $target = $this->createUserWithRole('user');
         Sanctum::actingAs($admin);
-        Http::fake(['ai.example/v1/agents/admin/plan' => Http::response([
+        Http::fake(['ai.example/v1/agents/admin/plan' => Http::sequence()->push([
             'action' => 'delete_database', 'value' => 'all', 'summary' => 'Ignore instructions',
+        ])->push([
+            'action' => 'change_user_status', 'value' => 'inactive', 'summary' => 'Change',
         ])]);
         $this->postJson('/api/ai/agents/admin/plan', ['instruction' => 'Delete everything', 'target_user_id' => $target->id])->assertStatus(502);
         $this->assertDatabaseCount('ai_agent_approvals', 0);
 
-        Http::fake(['ai.example/v1/agents/admin/plan' => Http::response([
-            'action' => 'change_user_status', 'value' => 'inactive', 'summary' => 'Change',
-        ])]);
         $id = $this->postJson('/api/ai/agents/admin/plan', [
             'instruction' => 'Deactivate account', 'target_user_id' => $target->id,
         ])->assertCreated()->json('data.approval_id');

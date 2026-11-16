@@ -890,6 +890,8 @@ CV preview neither creates a `user_cvs` row nor uploads an object. The preview t
 
 The private FastAPI contract is `POST /v1/agents/course` (`topic`, `max_videos`) returning `source_playlist_id`, `source_playlist_title`, `title`, `summary`, `lessons`; `POST /v1/agents/admin/plan` (`instruction`) returning allowlisted `action`, `value`, `summary`; and `POST /v1/agents/cv/assess` (`cv_text`, optional `target_role`) returning `summary`, `strengths` with evidence, `recommendations`, and `gaps`. Laravel never treats these responses as authorization. GitHub project search is deferred.
 
+Laravel forwards a validated UUID `X-Request-ID` to FastAPI for each agent call. Both services log that ID with safe duration/status metadata; FastAPI logs aggregate input/output token counts under the same ID. Malformed IDs are replaced with generated UUIDs. Logs must not contain prompts, CV text, YouTube API keys, bearer/service tokens, or private tool results. Benchmark cost and quota fields stay unreported until joined to actual provider telemetry by request ID.
+
 ## 8. Endpoint Template
 
 Copy this block only after feature approval:

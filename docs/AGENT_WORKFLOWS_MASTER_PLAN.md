@@ -1,63 +1,61 @@
-# KnowledgeHub agent workflows: master plan
+# Kế hoạch triển khai AI Agent cho KnowledgeHub
 
-**Status:** Approved for implementation by the repository owner on 2026-11-15.
-**Decision:** `docs/decisions/2026-11-15-role-scoped-ai-agent-workflows.md`.
-**Branch:** `p3/agent-workflows` from `origin/dev`.
+**Trạng thái:** Chủ dự án đã phê duyệt ngày 15/11/2026.
+**ADR:** `docs/decisions/2026-11-15-role-scoped-ai-agent-workflows.md`.
+**Nhánh:** `p3/agent-workflows`, dựa trên `origin/dev`.
 
-## Outcome and boundaries
+## Mục tiêu và ranh giới
 
-Use LangChain and LangGraph inside the existing FastAPI AI service for three bounded workflows. Laravel authenticates the actor, enforces policy and ownership, validates all AI output, and performs every database write. The AI service receives only task data and an internal service token. It receives no user bearer token, administrator credential, or database credential. Existing chat, roadmap, content, and CV endpoints continue to work.
+Dùng LangChain và LangGraph trong FastAPI AI service hiện có cho ba workflow có giới hạn. Laravel xác thực người dùng, kiểm tra role và quyền sở hữu, kiểm tra đầu ra AI và thực hiện mọi thao tác ghi database. AI service chỉ nhận dữ liệu cần cho tác vụ và token nội bộ; không nhận bearer token của User, phiên Admin hoặc thông tin kết nối database. Các chức năng chat, roadmap, content và CV hiện có tiếp tục hoạt động.
 
-| Workflow | Actor | Result | Persistence gate |
+| Workflow | Vai trò | Kết quả | Điều kiện ghi dữ liệu |
 | --- | --- | --- | --- |
-| YouTube course | Contributor | One public YouTube playlist found by the agent becomes one KnowledgeHub course with agent-written lesson content, created as draft and published using the existing Content service | Authenticated create/publish policy and validated playlist/video IDs; one transaction |
-| Admin operations | Admin | A proposal limited to user role or account status, then the chosen operation | Explicit Admin acceptance of exact actor, target and arguments; recheck role, policy, target state, and step-up credential before execution |
-| CV assessment | Authenticated User, Contributor, or Admin acting on their own CV | Evidence-based assessment preview | Upload alone saves nothing; explicit confirmation saves CV and assessment; owner can delete both |
+| Khóa học từ YouTube | Contributor | Một playlist YouTube công khai do agent tìm được trở thành một course KnowledgeHub. Agent soạn bài học; Laravel tạo bản nháp rồi xuất bản bằng Content service. | Kiểm tra quyền tạo và xuất bản, playlist và toàn bộ video; ghi trong một transaction. |
+| Quản trị | Admin | Đề xuất thay đổi role hoặc trạng thái tài khoản, sau đó thực hiện thao tác đã chọn. | Admin chấp nhận riêng đúng thao tác, đối tượng và tham số; kiểm tra lại role, policy, trạng thái và mật khẩu khi cần. |
+| Đánh giá CV | User, Contributor hoặc Admin đối với CV của chính mình | Bản xem trước có dẫn chứng từ CV. | Tải lên không đồng nghĩa với lưu; xác nhận riêng mới lưu CV và đánh giá. Chủ sở hữu có thể xóa cả hai. |
 
-GitHub project search is deferred. The first release adds no database server, microservice, Redis, vector index, generic tool executor, or LangGraph checkpoint. The existing PostgreSQL database may receive only the reviewed additive migration for CV assessment, single-use Admin approvals, and hash-only CV confirmation claims. No automated test, reset, or destructive command runs against shared or cloud data.
+Tạm hoãn tìm project mã nguồn mở. Không thêm database server, microservice, Redis, vector index, bộ thực thi tool tổng quát hoặc LangGraph checkpoint. Chỉ thêm migration đã rà soát vào PostgreSQL hiện có để lưu đánh giá CV, xác nhận Admin dùng một lần và hash của token xác nhận CV. Không chạy test, reset hoặc lệnh phá hủy dữ liệu trên database dùng chung hay cloud.
 
-## Implementation sequence
+## Trình tự triển khai
 
-1. **Contract and feature flags.** Record the approved ADR and exact Laravel/FastAPI request/response contracts. Add separate flags for the three workflows, default off. Existing routes keep their behavior.
-2. **AI service.** Add pinned LangChain/LangGraph dependencies. Implement short StateGraphs with bounded inputs, output schemas, model timeouts, allowlisted actions, and source validation. The YouTube adapter checks public, embeddable videos before the course payload can leave the AI service. Treat CV text, video metadata, and natural-language instructions as untrusted input.
-3. **Laravel integration.** Add authenticated, rate-limited endpoints. Reuse existing ArticleService, ArticlePolicy, AdminUserService, UserPolicy, UserCvService, and internal AI client patterns. Never make a mutating tool directly callable by the model. Admin proposal acceptance is bound to one actor, one target, one action and arguments, expiry, and single-use semantics.
-4. **Frontend.** Add role-appropriate entry points. Show the exact Admin proposal before a separate accept action. CV assessment shows an ephemeral preview; saving uses an explicit confirmation and the User retains a delete control. Contributor can review generated course outcome and reach the published course.
-5. **Verification.** Test all four actors, ownership, forged/expired/replayed approvals, role downgrade between preview and execution, invalid video IDs, prompt injection in external metadata/CV text, CV preview without persistence, confirm and delete, upstream failures, and unchanged legacy endpoints. Run Laravel tests only through the disposable Compose `test-db` bootstrap.
-6. **Rollout.** Deploy behind disabled flags, configure private provider/YouTube secrets, run smoke tests with controlled accounts, then enable one workflow at a time. Rollback is flag-off; additive CV data and existing endpoints remain valid.
+1. **Hợp đồng API và feature flag:** Ghi ADR, request/response giữa Laravel và FastAPI. Ba cờ riêng mặc định tắt; route cũ giữ nguyên hành vi.
+2. **AI service:** Ghim phiên bản LangChain/LangGraph. Tạo StateGraph ngắn với giới hạn đầu vào, schema đầu ra, timeout, danh sách thao tác cho phép và xác thực nguồn. Chỉ nhận playlist công khai gồm 2–6 video, tất cả công khai và cho phép nhúng. Xem CV, metadata YouTube và chỉ dẫn tự nhiên là dữ liệu không đáng tin cậy.
+3. **Laravel:** Thêm endpoint có xác thực và giới hạn tần suất. Tái sử dụng ArticleService, ArticlePolicy, AdminUserService, UserPolicy và UserCvService. Model không được tự chọn endpoint ghi dữ liệu. Xác nhận Admin gắn với người thực hiện, đối tượng, thao tác, tham số, thời hạn và chỉ dùng một lần.
+4. **Frontend:** Tạo trang theo role. Hiển thị đề xuất Admin trước bước chấp nhận riêng. CV chỉ xem trước cho đến khi User đồng ý lưu; có nút xóa. Contributor mở được course vừa xuất bản.
+5. **Kiểm chứng:** Kiểm tra Guest/User/Contributor/Admin, quyền sở hữu, xác nhận giả mạo/hết hạn/dùng lại, hạ role giữa hai bước, ID video sai, prompt injection, CV xem trước không lưu, xác nhận/xóa, lỗi upstream và regression của route cũ.
+6. **Phát hành:** Triển khai khi cờ đang tắt, cấu hình secret riêng, smoke test bằng tài khoản kiểm soát rồi bật từng workflow. Rollback bằng tắt cờ, không drop bảng.
 
-## Work packages and dependencies
+## Gói công việc và phụ thuộc
 
-| Package | Deliverable | Depends on | Done when |
+| Gói | Sản phẩm bàn giao | Phụ thuộc | Hoàn thành khi |
 | --- | --- | --- | --- |
-| WP0: decision and contract | Approved ADR, `/api/ai/...` and internal `/v1/agents/...` contracts, privacy and role matrix | Owner approval | Contract matches Laravel, AI service, frontend and this plan |
-| WP1: agent runtime | Pinned dependencies; bounded course, CV and Admin graphs; YouTube verification; safe logs | WP0 | Python suite passes; invented IDs/actions and untrusted text cannot escape output schemas |
-| WP2: Laravel authority | New routes, policies/service reuse, one additive migration, approval/confirmation claims, cleanup | WP0–1 | Role/ownership tests pass; all writes are authorized and replay-safe |
-| WP3: frontend | Contributor, Admin and CV pages; explicit accept/consent/delete controls | WP2 contract | Production build passes and every new route has a clear role-appropriate entry point |
-| WP4: integration | Update branch against `origin/dev`, reconcile shared Studio page, run security/contract review | WP1–3 | Clean diff and guardrails; no unrelated files or secrets |
-| WP5: staging | Forward-only migration with recovery plan, private credentials, real provider/YouTube smoke tests, 20-attempt benchmark | WP4 | All acceptance gates pass before a flag is enabled |
+| WP0: quyết định và contract | ADR, API contract, ma trận quyền và riêng tư | Chủ dự án phê duyệt | Laravel, AI service, frontend và tài liệu khớp nhau. |
+| WP1: agent runtime | Dependency, ba graph, xác thực YouTube, log an toàn | WP0 | Test Python đạt; đầu ra bịa không vượt schema. |
+| WP2: Laravel | Route, policy/service, migration bổ sung, xác nhận dùng một lần, dọn dữ liệu hết hạn | WP0–1 | Test phân quyền và ownership đạt; mọi thao tác ghi chống dùng lại. |
+| WP3: frontend | Trang Contributor, Admin và CV; chấp nhận, đồng ý lưu và xóa | Contract WP2 | Build đạt; lối vào đúng role. |
+| WP4: tích hợp | Đồng bộ `origin/dev`, hòa giải Studio, rà soát bảo mật | WP1–3 | Diff sạch, guardrails đạt, không lộ secret trong file. |
+| WP5: staging | Migration tiến lên, phương án khôi phục, smoke test thật, benchmark | WP4 | Đạt mọi cổng nghiệm thu trước khi bật cờ. |
 
-The code for WP0–3 is present on `p3/agent-workflows` as of 2026-11-16. WP4 is complete: the branch is based on the latest `origin/dev`, the course link was moved into the rewritten Studio header, the frontend build passed, and repository guardrails passed. WP2's database-backed Feature tests remain unexecuted because they currently use `RefreshDatabase`; the Docker daemon was also unavailable during the no-reset test attempt. WP5 is pending: no YouTube API key is configured locally, feature flags default off, and no live DeepSeek/YouTube call or migration has been run.
+Tính đến 16/11/2026, code WP0–3 đã có trên `p3/agent-workflows`. WP4 đã hoàn thành: nhánh đồng bộ với `origin/dev`, liên kết course AI nằm trong Studio mới, frontend build và guardrails đạt. Feature test Laravel của WP2 đã chuyển sang migration tiến lên trong transaction và đạt 9 test/58 assertion trên `test-db` cô lập; sau test không còn bảng thử nghiệm. AI service đạt 53 test. WP5 có bộ đo kiểm và hướng dẫn; chủ dự án đã cấu hình YouTube API key và migration tiến lên từng chạy thành công trên `test-db` cô lập. Chưa có staging riêng hoặc benchmark thật; Docker daemon hiện tạm ngừng, cờ production vẫn tắt và chưa chạy migration trên dữ liệu dùng chung.
 
-### Safe test and migration order
+## Kiểm thử và migration an toàn
 
-1. Review the additive migration, backup/recovery procedure, and actual target connection. Never run it against shared data as a side effect of tests.
-2. Laravel Feature tests currently use `RefreshDatabase`, which issues a reset. Do not execute them under the owner's no-reset constraint. Convert the new suite to a forward-only schema setup plus transaction rollback on the disposable Compose `test-db`, verify the test bootstrap's connection guard, then run the focused suite. Do not alter or reset the shared database.
-3. Run Python unit tests, PHP syntax and route checks, frontend build, `git diff --check`, and repository guardrails. These checks require no database reset.
-4. Rotate any local credentials exposed in the earlier Compose inspection if its command transcript is accessible beyond the operator session. Configure new private secrets without copying values into repository files or logs.
-5. After integration passes, apply the reviewed forward migration in staging, test disabled flags first, then enable CV, Contributor course, and Admin operations separately. A failed gate means flags stay off; rollback turns the affected flag off without dropping tables.
+1. Rà soát migration bổ sung, phương án backup/khôi phục và kết nối đích. Test không được tự áp dụng migration lên database dùng chung.
+2. Không chạy Feature test đang dùng `RefreshDatabase` dưới giới hạn không reset. Chuyển suite mới sang thiết lập schema tiến lên và rollback bằng transaction trên Compose `test-db`; xác minh guard kết nối trong bootstrap trước khi chạy.
+3. Chạy Python unit test, kiểm tra cú pháp và route PHP, frontend build, `git diff --check` và guardrails; các bước này không cần reset database.
+4. Nếu bản ghi kiểm tra Compose trước đó có thể được người khác xem, xoay các credential cục bộ đã xuất hiện. Không chép secret vào repository hoặc log.
+5. Sau khi tích hợp đạt, chạy migration tiến lên đã rà soát ở staging. Kiểm tra lúc cờ tắt; sau đó bật riêng CV, course Contributor và thao tác Admin. Nếu một cổng không đạt, giữ cờ tắt; rollback bằng tắt cờ.
 
-### Benchmark record
+## Benchmark và tiêu chí nghiệm thu
 
-For each workflow, use 20 representative nonproduction requests and record p50/p95 end-to-end latency, success/error rate, model input/output tokens, provider cost, YouTube quota calls, and human review of factual accuracy. Include hostile CV text, hostile playlist metadata, invented tool/action output, and a mid-request role downgrade. Compare CV inference with an equivalent existing AI call only when input/output scope is comparable; the new course and Admin operations have no like-for-like baseline. Record this limitation explicitly.
+Mỗi workflow cần 20 yêu cầu đại diện ở môi trường không phải production. Ghi p50/p95 latency đầu cuối, tỷ lệ thành công/lỗi, token đầu vào/đầu ra, chi phí provider, quota YouTube và đánh giá thủ công độ chính xác. Bao gồm CV và metadata chứa prompt injection, thao tác/ID bịa và hạ role giữa chừng. Chỉ so sánh CV với lời gọi AI cũ nếu đầu vào/đầu ra tương đương; course và Admin mới không có baseline tương ứng.
 
-## Acceptance gates
+- **Phân quyền:** Không có ghi trái quyền, đọc dữ liệu người khác hoặc thay đổi Admin chưa được chấp nhận. Backend từ chối thao tác bịa; không có SQL, shell hay HTTP tool tùy ý.
+- **Course:** Mọi video thuộc đúng playlist nguồn đã xác thực, giữ đủ thứ tự; article và phiên bản xuất bản thuộc Contributor yêu cầu. Lỗi xuất bản không để lại course dở dang.
+- **CV:** Xem trước không tạo row `user_cvs` hoặc Storage object. Chỉ xác nhận của chủ sở hữu mới lưu; xóa loại bỏ CV và đánh giá.
+- **Độ tin cậy:** Lỗi provider, YouTube và Storage trả thông báo an toàn trong thời gian giới hạn. Xác nhận dùng lại không lặp thao tác. Luồng chat/roadmap/content cũ vẫn qua regression test.
+- **Đo lường:** Có báo cáo p50/p95, model calls, token, quota, tỷ lệ lỗi và chi phí mỗi lần thành công trước khi bật diện rộng.
 
-- Authorization: 0 unauthorized writes, cross-user reads, or unapproved Admin mutations in the regression suite. The backend rejects malformed/model-invented actions and cannot be induced to invoke arbitrary SQL, shell, or HTTP tools.
-- Course: every stored video ID belongs to the one verified source playlist; the published version and article belong to the requesting Contributor; a failed publish leaves no partial course.
-- CV: preview creates no `user_cvs` row or storage object; only owner confirmation stores assessment with the CV; deletion removes both and denies subsequent access.
-- Reliability: provider, YouTube, and Storage failures return bounded safe errors. Replayed approval cannot repeat a mutation. Existing AI chat/roadmap and content flows pass their regression tests.
-- Measurement: record p50/p95 latency, model calls, token usage, YouTube quota calls, error rate, and per-success cost for at least 20 representative attempts per workflow in a nonproduction environment. Compare shared AI operations against the prechange baseline using the same inputs; report feature-specific workflows separately rather than claiming an apples-to-apples speedup. No workflow is enabled broadly without the measurement report and the security gate above.
+## Sở hữu và rà soát
 
-## Ownership and review
-
-This implementation spans AI Companion, Content, Identity/Auth, and frontend. The repository owner authorized all scopes for this task. Keep changes in their domain files, use a new migration only, audit the full diff, and split review into small logical PRs before merge to `dev`. Production activation and migration execution require an operator-reviewed deployment and recovery procedure; implementation does not perform either against shared data.
+Công việc trải qua AI Companion, Content, Identity/Auth và frontend; chủ dự án đã cho phép toàn bộ phạm vi. Giữ thay đổi trong file đúng domain, chỉ thêm migration mới, rà soát diff và chia thành PR nhỏ trước khi merge vào `dev`. Bật production và chạy migration cần quy trình triển khai/khôi phục được người vận hành rà soát; công việc hiện tại không thực hiện các bước đó trên dữ liệu dùng chung.

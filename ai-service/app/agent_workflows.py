@@ -8,6 +8,7 @@ import os
 import re
 import time
 import uuid
+from contextvars import ContextVar
 from typing import Annotated, Literal, NotRequired, TypedDict
 
 import httpx
@@ -21,6 +22,7 @@ from openai import APIError, APITimeoutError, RateLimitError
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 logger = logging.getLogger("knowledgehub.ai.agents")
+current_request_id: ContextVar[str] = ContextVar("agent_request_id", default="-")
 # httpx INFO logs include the full YouTube request URL, including its API key.
 logging.getLogger("httpx").setLevel(logging.WARNING)
 router = APIRouter(prefix="/v1/agents")
@@ -67,8 +69,8 @@ async def _complete_json(instruction: str, evidence: dict, schema: type[BaseMode
         HumanMessage(content="Untrusted data JSON:\n" + json.dumps(evidence, ensure_ascii=False)),
     ])
     usage = reply.usage_metadata or {}
-    logger.info("agent_model_usage input_tokens=%s output_tokens=%s total_tokens=%s",
-                usage.get("input_tokens"), usage.get("output_tokens"), usage.get("total_tokens"))
+    logger.info("agent_model_usage request_id=%s input_tokens=%s output_tokens=%s total_tokens=%s",
+                current_request_id.get(), usage.get("input_tokens"), usage.get("output_tokens"), usage.get("total_tokens"))
     if not isinstance(reply.content, str):
         raise ValueError("Provider returned non-text content")
     return schema.model_validate_json(reply.content)
@@ -399,8 +401,12 @@ admin_builder.add_edge("validate", END)
 admin_graph = admin_builder.compile()
 
 
-async def _invoke(graph, payload: dict, workflow: str) -> dict:
-    request_id = str(uuid.uuid4())
+async def _invoke(graph, payload: dict, workflow: str, supplied_request_id: str | None = None) -> dict:
+    try:
+        request_id = str(uuid.UUID(supplied_request_id)) if supplied_request_id else str(uuid.uuid4())
+    except (ValueError, AttributeError):
+        request_id = str(uuid.uuid4())
+    request_context = current_request_id.set(request_id)
     started = time.monotonic()
     outcome = "failed"
     try:
@@ -442,21 +448,25 @@ async def _invoke(graph, payload: dict, workflow: str) -> dict:
     finally:
         logger.info("agent_workflow workflow=%s request_id=%s outcome=%s duration_ms=%d",
                     workflow, request_id, outcome, int((time.monotonic() - started) * 1000))
+        current_request_id.reset(request_context)
 
 
 @router.post("/course", response_model=CourseOutput)
-async def create_course(data: CourseInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None):
+async def create_course(data: CourseInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None,
+                        request_id: Annotated[str | None, Header(alias="X-Request-ID")] = None):
     _authorize(auth_header, youtube=True)
-    return await _invoke(course_graph, data.model_dump(), "course")
+    return await _invoke(course_graph, data.model_dump(), "course", request_id)
 
 
 @router.post("/cv/assess", response_model=CvOutput)
-async def assess_cv(data: CvInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None):
+async def assess_cv(data: CvInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None,
+                    request_id: Annotated[str | None, Header(alias="X-Request-ID")] = None):
     _authorize(auth_header)
-    return await _invoke(cv_graph, data.model_dump(), "cv_assess")
+    return await _invoke(cv_graph, data.model_dump(), "cv_assess", request_id)
 
 
 @router.post("/admin/plan", response_model=AdminOutput)
-async def plan_admin_action(data: AdminInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None):
+async def plan_admin_action(data: AdminInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None,
+                            request_id: Annotated[str | None, Header(alias="X-Request-ID")] = None):
     _authorize(auth_header)
-    return await _invoke(admin_graph, data.model_dump(), "admin_plan")
+    return await _invoke(admin_graph, data.model_dump(), "admin_plan", request_id)

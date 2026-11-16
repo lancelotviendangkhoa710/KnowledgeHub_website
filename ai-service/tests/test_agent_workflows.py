@@ -44,6 +44,22 @@ class AgentEndpointsTest(unittest.TestCase):
                     self.assertEqual(response.status_code, 503)
                     self.assertEqual(response.json()["detail"]["code"], "agent_disabled")
 
+    def test_request_id_is_correlated_and_invalid_header_is_replaced(self):
+        known_id = "123e4567-e89b-42d3-a456-426614174000"
+        result = {"result": {"action": "change_user_status", "value": "inactive",
+                             "summary": "Change user status to inactive"}}
+        with patch("app.agent_workflows.admin_graph.ainvoke", new_callable=AsyncMock, return_value=result):
+            with self.assertLogs("knowledgehub.ai.agents", level="INFO") as captured:
+                response = self.client.post("/v1/agents/admin/plan", json={"instruction": "Deactivate user"},
+                                            headers={"X-Service-Token": "test-service-token", "X-Request-ID": known_id})
+            self.assertEqual(response.status_code, 200)
+            self.assertTrue(any(f"request_id={known_id}" in line for line in captured.output))
+            with self.assertLogs("knowledgehub.ai.agents", level="INFO") as captured:
+                response = self.client.post("/v1/agents/admin/plan", json={"instruction": "Deactivate user"},
+                                            headers={"X-Service-Token": "test-service-token", "X-Request-ID": "invalid-id"})
+            self.assertEqual(response.status_code, 200)
+            self.assertFalse(any("request_id=invalid-id" in line for line in captured.output))
+
     def test_course_rejects_model_invented_video_id(self):
         videos = [{"video_id": "abcdefghijk", "title": "Trusted video"},
                   {"video_id": "lmnopqrstuv", "title": "Trusted video 2"}]
