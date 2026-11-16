@@ -1,0 +1,71 @@
+/* UX-02: màn Quản trị theo mockup (#s-quan-tri). Dùng chung cho Người dùng, Danh mục, Thẻ. Chỉ dùng token. */
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px 72px; }
+.head { padding: 40px 0 8px; }
+.head h1 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 800; }
+.head p { color: var(--ink-2); margin-top: 8px; max-width: 62ch; }
+.mu { color: var(--ink-2); }
+.lead { color: var(--ink-2); margin-top: 16px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 26px 0 6px; }
+.chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: var(--r-pill); background: var(--surface); border: 1px solid var(--line); font-weight: 500; font-size: 14px; color: var(--ink-2); }
+.chip:hover { border-color: var(--ink-3); color: var(--ink); }
+.chip[aria-current="page"] { background: var(--brand-soft); border-color: var(--brand); color: var(--brand); font-weight: 600; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: var(--r-pill); font: inherit; font-weight: 600; font-size: 14px; background: var(--btn); color: var(--btn-ink); border: 1px solid transparent; white-space: nowrap; cursor: pointer; }
+.btn:disabled { opacity: .55; cursor: default; }
+.ghost { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.ghost:hover:not(:disabled) { border-color: var(--ink-3); }
+.sm { padding: 7px 14px; font-size: 13px; }
+
+.sel { height: 40px; max-width: 100%; border: 1px solid var(--line); background-color: var(--surface); border-radius: 8px; padding: 0 38px 0 10px; font: inherit; font-size: 14px; color: var(--ink); }
+.sel:disabled { opacity: .55; cursor: not-allowed; }
+.sel:focus-visible { border-color: var(--brand); }
+
+.notice { margin-top: 16px; padding: 10px 14px; border-radius: 8px; font-size: 14px; background: var(--surface-2); border: 1px solid var(--danger); color: var(--danger); }
+
+.recover { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 20px; padding: 12px 16px; background: var(--brand-soft); border: 1px solid var(--brand); border-radius: var(--r-card); font-size: 14px; }
+.recover p { flex: 1; min-width: 240px; }
+.recover .sel { width: 200px; padding-right: 10px; }
+
+.tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 20px 0 14px; }
+.search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-pill); padding: 0 14px; height: 40px; flex: 1; min-width: 200px; max-width: 420px; }
+.search:focus-within { outline: 2px solid var(--brand); outline-offset: 1px; border-color: var(--brand); }
+.search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; color: var(--ink); outline: none; }
+.search svg { color: var(--ink-3); width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; flex: none; }
+
+.tableWrap { position: relative; overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
+.table caption { caption-side: top; }
+.table th { text-align: left; font-weight: 500; color: var(--ink-3); font-size: 13px; padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.table td { padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.table td .sel { height: 34px; font-size: 13px; }
+.who b { display: block; font-weight: 500; overflow-wrap: anywhere; }
+.who small { display: block; color: var(--ink-3); font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.acts { display: flex; gap: 6px; justify-content: flex-end; }
+
+.st { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 500; white-space: nowrap; }
+.st::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+.draft { background: var(--surface-2); color: var(--ink-2); }
+.bad { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+
+.pager { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 28px 0 0; }
+.pager button { min-width: 38px; min-height: 44px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; }
+.pager button:disabled { opacity: .45; cursor: default; }
+.pageText { padding: 0 10px; color: var(--ink-2); font-size: 14px; }
+
+.state { padding: 48px 24px; text-align: center; max-width: 480px; margin: 0 auto; }
+.state h3 { font-size: 20px; margin-bottom: 8px; }
+.state p { color: var(--ink-2); margin-bottom: 18px; }
+.loading { padding: 48px 0; color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  .search { max-width: none; flex-basis: 100%; }
+}
+@media (max-width: 640px) {
+  .wrap { padding: 0 16px 72px; }
+  .tools .sel { flex: 1 1 100%; }
+  .recover .sel { width: 100%; flex: none; }
+}
