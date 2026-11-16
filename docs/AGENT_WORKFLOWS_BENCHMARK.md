@@ -15,7 +15,8 @@ khi dùng `--execute`; mặc định chỉ dry run.
    cache. Đặt `CV_STORAGE_DRIVER=local` để PDF thử nằm trên private local
    disk, không đi tới Supabase Storage. Script kiểm tra lại các điều kiện đó
    trong container, đồng thời
-   xác nhận Compose Nginx đang công bố cổng 8080; nếu không chứng minh được
+   xác nhận Compose Nginx chỉ bind `127.0.0.1:8080` qua
+   `docker-compose.agent-local.yml`; nếu không chứng minh được
    cả hai thì không gửi request. Không dùng `docker compose config`
    không có `--quiet` vì lệnh đó có thể in secret.
 2. Dùng đúng database `test-db` hiện có. Chỉ áp dụng migration **tiến lên**

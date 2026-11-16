@@ -286,8 +286,8 @@ def main():
         )
     except (OSError, subprocess.TimeoutExpired):
         parser.error("Could not verify Compose nginx port ownership; no requests sent")
-    if published.returncode != 0 or not published.stdout.strip().endswith(":8080"):
-        parser.error("Compose nginx is not proven to own localhost:8080; no requests sent")
+    if published.returncode != 0 or published.stdout.strip() != "127.0.0.1:8080":
+        parser.error("Compose nginx is not proven to bind only 127.0.0.1:8080; no requests sent")
     if credentials.get("target_initial_status") not in {"active", "inactive"}:
         parser.error("Fixture target status must be active or inactive")
     if not args.cases_file:

@@ -1,6 +1,9 @@
 # Isolated local agent validation. Always combine with docker-compose.yml.
 # The app uses the existing disposable test-db and private local CV storage.
 services:
+  nginx:
+    ports: !override
+      - "127.0.0.1:8080:80"
   app:
     environment:
       DB_CONNECTION: pgsql
