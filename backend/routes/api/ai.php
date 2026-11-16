@@ -22,11 +22,13 @@ Route::post('/internal/ai/purge-deleted-users', RetentionPurgeController::class)
 
 Route::middleware('auth:sanctum')->group(function () {
     // Role-scoped agent workflows. Laravel validates every action and owns all writes.
-    Route::post('/ai/agents/courses', AgentCourseController::class)->middleware('throttle:3,1');
-    Route::post('/ai/agents/admin/plan', [AdminAgentController::class, 'plan'])->middleware('throttle:10,1');
-    Route::post('/ai/agents/admin/confirm', [AdminAgentController::class, 'confirm'])->middleware('throttle:10,1');
-    Route::post('/ai/cv/assessment/preview', [CvAssessmentController::class, 'preview'])->middleware('throttle:3,1');
-    Route::post('/ai/cv/assessment/confirm', [CvAssessmentController::class, 'confirm'])->middleware('throttle:5,1');
+    // Each route gets its own throttle prefix: the default limiter keys on the
+    // user id alone, so one shared counter would let a cheap route starve the rest.
+    Route::post('/ai/agents/courses', AgentCourseController::class)->middleware('throttle:3,1,agent-course');
+    Route::post('/ai/agents/admin/plan', [AdminAgentController::class, 'plan'])->middleware('throttle:10,1,agent-admin-plan');
+    Route::post('/ai/agents/admin/confirm', [AdminAgentController::class, 'confirm'])->middleware('throttle:10,1,agent-admin-confirm');
+    Route::post('/ai/cv/assessment/preview', [CvAssessmentController::class, 'preview'])->middleware('throttle:3,1,agent-cv-preview');
+    Route::post('/ai/cv/assessment/confirm', [CvAssessmentController::class, 'confirm'])->middleware('throttle:5,1,agent-cv-confirm');
     Route::get('/ai/cv/assessment', [CvAssessmentController::class, 'show']);
 
     // AI-05 Roadmap Assistant - TEAM_MEMBER_C
