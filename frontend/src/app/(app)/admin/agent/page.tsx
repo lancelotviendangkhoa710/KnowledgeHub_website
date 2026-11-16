@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { AccountUser, adminUserClient, errorMessage } from '@/lib/accountClient';
 import { agentWorkflowClient, AdminAgentProposal } from '@/lib/agentWorkflowClient';
@@ -21,6 +21,9 @@ export default function AdminAgentPage() {
   const [busy, setBusy] = useState<'search' | 'plan' | 'confirm' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Only the newest account listing may write results: the initial page load
+  // must never overwrite a search that finished later.
+  const listRequest = useRef(0);
 
   const allowed = user?.roles?.includes('admin') ?? false;
   const visibleUsers = usersOwnerId === user?.id ? users : [];
@@ -29,9 +32,12 @@ export default function AdminAgentPage() {
   useEffect(() => {
     const actorId = user?.id;
     if (!allowed || !actorId) return;
+    const requestId = ++listRequest.current;
     let active = true;
     void adminUserClient.list({ page: 1 }).then((response) => {
-      if (active) { setUsers(response.data); setUsersOwnerId(actorId); }
+      if (!active || requestId !== listRequest.current) return;
+      setUsers(response.data);
+      setUsersOwnerId(actorId);
     }).catch(() => { /* The search form can retry with a visible error. */ });
     return () => { active = false; };
   }, [allowed, user?.id]);
@@ -41,16 +47,18 @@ export default function AdminAgentPage() {
     if (!allowed || busy) return;
     setBusy('search');
     setError(null);
+    const requestId = ++listRequest.current;
     try {
       const response = await adminUserClient.list({ search: search.trim() || undefined, page: 1 });
+      if (requestId !== listRequest.current) return;
       setUsers(response.data);
       setUsersOwnerId(user!.id);
       setTargetUserId('');
       setProposal(null);
     } catch (caught) {
-      setError(errorMessage(caught, 'Không tìm được tài khoản.'));
+      if (requestId === listRequest.current) setError(errorMessage(caught, 'Không tìm được tài khoản.'));
     } finally {
-      setBusy(null);
+      if (requestId === listRequest.current) setBusy(null);
     }
   }
 
@@ -85,8 +93,12 @@ export default function AdminAgentPage() {
       setInstruction('');
     } catch (caught) {
       setError(errorMessage(caught, 'Không thực hiện được. Hãy tạo đề xuất mới nếu thông tin đã thay đổi hoặc hết hạn.'));
-      setProposal(null);
-      setPassword('');
+      // A rejected password can be retried against the same approval; only a
+      // consumed, expired or stale approval has to be thrown away.
+      if ((caught as { status?: number }).status !== 422) {
+        setProposal(null);
+        setPassword('');
+      }
     } finally {
       setBusy(null);
     }
