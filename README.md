@@ -31,14 +31,14 @@
 
 ## About
 
-KnowledgeHub is operated by an internal content team. Contributors create and publish courses; Users discover, enroll, and learn; Admins manage the platform. An AI learning companion helps learners plan and follow their path.
+KnowledgeHub is operated by an internal content team. Contributors create and publish courses; Users discover, enroll, and learn; Admins manage the platform. An AI learning companion helps Users plan and follow their path.
 
 ## Features
 
 - Course library with search, topic filters and course pages
 - Learning roadmaps, including roadmaps drafted by the AI companion
-- AI learning companion that remembers the learner's goals
-- Saved courses for each learner
+- AI learning companion that remembers a User's goals
+- Saved courses for each User
 - Studio for Contributors: course editor with local draft recovery, publishing, archiving and version history
 - Admin area for users, roles, categories and tags
 
