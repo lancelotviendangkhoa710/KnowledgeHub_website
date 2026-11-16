@@ -168,7 +168,10 @@ class AgentEndpointsTest(unittest.TestCase):
 
 class YouTubeVerificationTest(unittest.IsolatedAsyncioTestCase):
     async def test_playlist_with_private_or_unembeddable_video_is_rejected(self):
+        paths = []
+
         def handle(request: httpx.Request) -> httpx.Response:
+            paths.append(request.url.path)
             if request.url.path.endswith("/search"):
                 return httpx.Response(200, json={"items": [
                     {"id": {"playlistId": "PL_test"}},
@@ -204,8 +207,11 @@ class YouTubeVerificationTest(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ, {"YOUTUBE_API_KEY": "test-key"}), patch(
             "app.agent_workflows.httpx.AsyncClient", side_effect=fake_client
         ):
-            results = await _youtube_search("Python", 3)
+            results = await _youtube_search("Python", 4)
         self.assertEqual(results["videos"], [])
+        # Asking for every item forces the verification call, so the private and
+        # unembeddable entries are filtered rather than never inspected.
+        self.assertTrue(any(path.endswith("/videos") for path in paths))
 
     async def test_complete_public_playlist_keeps_source_order(self):
         def handle(request: httpx.Request) -> httpx.Response:
