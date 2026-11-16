@@ -56,7 +56,7 @@ async function getJson(path: string, fallbackMessage: string): Promise<unknown> 
   try {
     res = await sessionFetch(`${API_BASE}${path}`, { cache: 'no-store', headers: authHeaders() });
   } catch {
-    throw new VersionApiError('Cannot reach the KnowledgeHub API.', null);
+    throw new VersionApiError('Không kết nối được máy chủ KnowledgeHub.', null);
   }
 
   if (!res.ok) {
@@ -65,7 +65,7 @@ async function getJson(path: string, fallbackMessage: string): Promise<unknown> 
   }
 
   return res.json().catch(() => {
-    throw new VersionApiError('Unexpected response format received from server.', res.status);
+    throw new VersionApiError('Máy chủ trả về dữ liệu sai định dạng.', res.status);
   });
 }
 
@@ -74,11 +74,11 @@ async function getJson(path: string, fallbackMessage: string): Promise<unknown> 
  * (contentClient.fetchArticle collapses 401/403 into a plain Error).
  */
 export async function fetchArticleForHistory(idOrSlug: string): Promise<Article> {
-  const json = (await getJson(`/articles/${encodeURIComponent(idOrSlug)}`, 'Failed to load course')) as {
+  const json = (await getJson(`/articles/${encodeURIComponent(idOrSlug)}`, 'Không tải được khóa học')) as {
     data?: Article;
   } | null;
   if (!json?.data) {
-    throw new VersionApiError('Unexpected course response format received from server.', 200);
+    throw new VersionApiError('Máy chủ trả về khóa học sai định dạng.', 200);
   }
   return json.data;
 }
@@ -89,12 +89,12 @@ export async function fetchArticleForHistory(idOrSlug: string): Promise<Article>
  * @param articleId Article UUID (the versions route does not accept slugs).
  */
 export async function fetchArticleVersions(articleId: string): Promise<ArticleVersionEntry[]> {
-  const json = (await getJson(`/articles/${encodeURIComponent(articleId)}/versions`, 'Failed to load version history')) as {
+  const json = (await getJson(`/articles/${encodeURIComponent(articleId)}/versions`, 'Không tải được lịch sử phiên bản')) as {
     data?: unknown;
   } | null;
   const data = json?.data;
   if (!Array.isArray(data)) {
-    throw new VersionApiError('Unexpected version history response format received from server.', 200);
+    throw new VersionApiError('Máy chủ trả về lịch sử phiên bản sai định dạng.', 200);
   }
   return (data as ArticleVersionEntry[]).slice().sort((a, b) => b.version_no - a.version_no);
 }

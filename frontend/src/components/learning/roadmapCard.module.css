@@ -22,8 +22,8 @@
 .alert { color: var(--danger); font-size: 14px; margin: 0 0 12px; }
 .form { display: grid; gap: 12px; margin-bottom: 24px; }
 .field { display: grid; gap: 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
-.input, .select { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; }
-.select { width: auto; max-width: 100%; }
+.input { width: 100%; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; }
+.selectBox { min-width: 190px; max-width: 100%; }
 .formActions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .coverage { background: var(--surface-2); border-radius: var(--r-card); padding: 14px 16px; margin-bottom: 24px; font-size: 14px; }
