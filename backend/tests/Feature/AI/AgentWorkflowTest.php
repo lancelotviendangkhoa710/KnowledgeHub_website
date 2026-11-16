@@ -32,14 +32,20 @@ class AgentWorkflowTest extends TestCase
         Storage::fake('cv');
     }
 
-    private function courseDraft(string $videoId = 'aBcD1234_-x'): array
+    private function courseDraft(string $videoId = 'aBcD1234_-x', int $lessons = 2): array
     {
+        $items = [
+            ['video_id' => $videoId, 'title' => 'First lesson', 'description' => 'Intro', 'learning_objective' => 'Understand PHP'],
+            ['video_id' => 'zYxW9876_-a', 'title' => 'Second lesson', 'description' => 'Practice', 'learning_objective' => 'Build a project'],
+        ];
+        for ($index = 2; $index < $lessons; $index++) {
+            $items[] = ['video_id' => sprintf('vid%08d', $index), 'title' => 'Lesson '.($index + 1),
+                'description' => 'Practice', 'learning_objective' => 'Build a project'];
+        }
+
         return ['title' => 'PHP course', 'summary' => 'Learn PHP',
             'source_playlist_id' => 'PLabcdEFGH12345', 'source_playlist_title' => 'PHP playlist',
-            'lessons' => [
-                ['video_id' => $videoId, 'title' => 'First lesson', 'description' => 'Intro', 'learning_objective' => 'Understand PHP'],
-                ['video_id' => 'zYxW9876_-a', 'title' => 'Second lesson', 'description' => 'Practice', 'learning_objective' => 'Build a project'],
-            ]];
+            'lessons' => $items];
     }
 
     public function test_course_agent_requires_role_and_publishes_one_playlist_as_one_course(): void
@@ -70,10 +76,12 @@ class AgentWorkflowTest extends TestCase
 
     public function test_course_agent_accepts_twenty_videos_and_rejects_twenty_one(): void
     {
-        Http::fake(['ai.example/v1/agents/course' => Http::response($this->courseDraft())]);
+        Http::fake(['ai.example/v1/agents/course' => Http::response($this->courseDraft('aBcD1234_-x', 20))]);
         Sanctum::actingAs($this->createUserWithRole('contributor'));
-        $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 20])
-            ->assertCreated();
+        $response = $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 20])
+            ->assertCreated()->assertJsonCount(20, 'data.lessons');
+        $this->assertStringContainsString('@[youtube](vid00000019)',
+            Article::query()->findOrFail($response->json('data.id'))->publishedVersion->content);
         $this->postJson('/api/ai/agents/courses', ['topic' => 'PHP', 'max_videos' => 21])
             ->assertUnprocessable();
     }
@@ -121,7 +129,7 @@ class AgentWorkflowTest extends TestCase
         $this->postJson('/api/ai/agents/admin/confirm', ['approval_id' => $id, 'accepted' => false])->assertUnprocessable();
         $this->postJson('/api/ai/agents/admin/confirm', ['approval_id' => $id, 'accepted' => true])->assertOk();
         $this->assertSame('inactive', $target->fresh()->status);
-        $this->postJson('/api/ai/agents/admin/confirm', ['approval_id' => $id, 'accepted' => true])->assertUnprocessable();
+        $this->postJson('/api/ai/agents/admin/confirm', ['approval_id' => $id, 'accepted' => true])->assertStatus(409);
         $this->assertDatabaseCount('ai_agent_approvals', 1);
     }
 
@@ -142,7 +150,7 @@ class AgentWorkflowTest extends TestCase
             'instruction' => 'Deactivate account', 'target_user_id' => $target->id,
         ])->assertCreated()->json('data.approval_id');
         DB::table('users')->where('id', $target->id)->update(['status' => 'banned']);
-        $this->postJson('/api/ai/agents/admin/confirm', ['approval_id' => $id, 'accepted' => true])->assertUnprocessable();
+        $this->postJson('/api/ai/agents/admin/confirm', ['approval_id' => $id, 'accepted' => true])->assertStatus(409);
         $this->assertSame('banned', $target->fresh()->status);
     }
 
