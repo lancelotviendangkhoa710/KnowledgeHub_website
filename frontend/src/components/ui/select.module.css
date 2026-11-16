@@ -5,6 +5,7 @@
   background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; text-align: left; cursor: pointer;
 }
 .compact { height: 40px; font-size: 13px; padding: 0 12px; }
+.small { height: 34px; font-size: 13px; padding: 0 10px; }
 .root .trigger span { color: var(--ink); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .trigger svg { flex: none; color: var(--ink-3); }
 .trigger[aria-expanded="true"] { border-color: var(--brand); }
@@ -42,3 +43,7 @@
 }
 .list .option[aria-selected="true"] { color: var(--brand); font-weight: 600; }
 .check { flex: none; }
+
+/* Danh sách vẽ qua portal: cố định theo ô chọn, nằm trên header và hộp thoại thường. */
+.list.portal { position: fixed; right: auto; z-index: 1100; width: max-content; max-width: calc(100vw - 16px); }
+.list .optionOff { color: var(--ink-3); cursor: not-allowed; }
