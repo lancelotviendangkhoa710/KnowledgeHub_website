@@ -15,6 +15,6 @@ class PlanAdminAgentRequest extends FormRequest
     public function rules(): array
     {
         return ['instruction' => ['required', 'string', 'min:3', 'max:500'],
-            'target_user_id' => ['required', 'uuid', 'exists:users,id']];
+            'target_user_id' => ['required', 'uuid']];
     }
 }
