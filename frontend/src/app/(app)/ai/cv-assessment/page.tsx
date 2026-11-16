@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { agentWorkflowClient, CvAssessment, CvAssessmentPreview, StoredCvAssessment } from '@/lib/agentWorkflowClient';
 import { aiRoadmapClient } from '@/lib/aiRoadmapClient';
@@ -37,20 +37,30 @@ export default function CvAssessmentPage() {
   const [busy, setBusy] = useState<'preview' | 'save' | 'delete' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const visiblePreview = previewUserId === user?.id ? preview : null;
   const visibleSaved = savedUserId === user?.id ? saved : null;
+  // Any save or delete supersedes an older listing request, so a slow initial
+  // load can never bring back a CV the user just replaced or removed.
+  const loadRequest = useRef(0);
 
   useEffect(() => {
     if (!user || checking) return;
+    const requestId = ++loadRequest.current;
     let active = true;
+    setLoadFailed(false);
     void Promise.all([agentWorkflowClient.getCvAssessment(), aiRoadmapClient.getCv()]).then(([assessment, cv]) => {
-      if (active && assessment.data && cv.data) {
+      if (!active || requestId !== loadRequest.current) return;
+      if (assessment.data && cv.data) {
         setSaved({ assessment: assessment.data, cv: cv.data });
         setSavedUserId(user.id);
       }
-    }).catch(() => { /* Preview remains available even if loading an older assessment fails. */ });
+    }).catch(() => {
+      if (active && requestId === loadRequest.current) setLoadFailed(true);
+    });
     return () => { active = false; };
-  }, [user, checking]);
+  }, [user, checking, loadAttempt]);
 
   function selectFile(selected: File | null) {
     setPreview(null);
@@ -91,6 +101,7 @@ export default function CvAssessmentPage() {
     setError(null);
     try {
       const response = await agentWorkflowClient.confirmCv(file, visiblePreview.preview_token);
+      loadRequest.current += 1;
       setSaved(response.data);
       setSavedUserId(user.id);
       setPreview(null);
@@ -111,6 +122,7 @@ export default function CvAssessmentPage() {
     setError(null);
     try {
       await agentWorkflowClient.deleteCv();
+      loadRequest.current += 1;
       setSaved(null);
       setDeleteRequested(false);
       setNotice('Đã yêu cầu xóa CV và bản đánh giá đã lưu.');
@@ -137,6 +149,10 @@ export default function CvAssessmentPage() {
       </form>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {notice && <p className={styles.success} role="status">{notice}</p>}
+      {loadFailed && <div className={styles.card} role="alert">
+        <p>Không tải được CV và bản đánh giá đã lưu.</p>
+        <button className="btn btn-secondary" type="button" disabled={busy !== null} onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Thử lại</button>
+      </div>}
       {visiblePreview && <section className={styles.card} aria-label="Bản đánh giá chưa lưu">
         <p className={styles.hint}>Bản xem trước chưa được lưu. Hết hạn: {new Date(visiblePreview.expires_at).toLocaleString('vi-VN')}.</p>
         <Assessment data={visiblePreview.assessment} />
