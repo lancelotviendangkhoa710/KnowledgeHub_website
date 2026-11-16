@@ -51,7 +51,9 @@ return [
             // The isolated local benchmark may use private local storage;
             // production keeps the existing private S3-compatible default.
             'driver' => env('CV_STORAGE_DRIVER', 's3'),
-            'root' => storage_path('app/private/cv'),
+            // A local disk needs an absolute root; S3 treats `root` as an object
+            // key prefix, so it must stay empty there.
+            'root' => env('CV_STORAGE_DRIVER', 's3') === 'local' ? storage_path('app/private/cv') : '',
             'key' => env('CV_STORAGE_KEY'),
             'secret' => env('CV_STORAGE_SECRET'),
             'region' => env('CV_STORAGE_REGION'),
