@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use App\Exceptions\AI\AgentServiceException;
 use App\Models\AiAgentApproval;
 use App\Models\User;
 use App\Services\Auth\AdminUserService;
@@ -26,7 +27,7 @@ class AdminAgentService
             'change_user_status' => ['active', 'inactive', 'banned']];
         if (! is_string($action) || ! is_string($value)
             || ! isset($allowed[$action]) || ! in_array($value, $allowed[$action], true)) {
-            throw new RuntimeException('AI agent returned an unsupported action.', 502);
+            throw new AgentServiceException('AI agent returned an unsupported action.', 502);
         }
         $actor = User::query()->findOrFail($actor->id);
         $target = User::query()->findOrFail($target->id);
@@ -60,10 +61,10 @@ class AdminAgentService
             $approval = AiAgentApproval::query()->whereKey($input['approval_id'])
                 ->where('actor_id', $actor->id)->lockForUpdate()->firstOrFail();
             if ($approval->consumed_at !== null) {
-                throw ValidationException::withMessages(['approval_id' => ['This approval has already been used.']]);
+                throw ValidationException::withMessages(['approval_id' => ['This approval has already been used.']])->status(409);
             }
             if ($approval->expires_at->isPast()) {
-                throw ValidationException::withMessages(['approval_id' => ['This approval has expired.']]);
+                throw ValidationException::withMessages(['approval_id' => ['This approval has expired.']])->status(409);
             }
             $freshActor = User::query()->findOrFail($actor->id);
             $target = User::query()->findOrFail($approval->target_user_id);
@@ -71,7 +72,7 @@ class AdminAgentService
             $ability = $approval->action === 'change_user_role' ? 'updateRole' : 'updateStatus';
             Gate::forUser($freshActor)->authorize($ability, $target);
             if ($target->status !== $approval->target_status || $this->rolesHash($target) !== $approval->target_roles_hash) {
-                throw ValidationException::withMessages(['approval_id' => ['The target changed. Create a new proposal.']]);
+                throw ValidationException::withMessages(['approval_id' => ['The target changed. Create a new proposal.']])->status(409);
             }
             if ($approval->action === 'change_user_role' && in_array($approval->value, ['user', 'contributor', 'admin'], true)) {
                 $updated = $this->users->changeRole($freshActor, $target, $approval->value, $input['current_password'] ?? null);
