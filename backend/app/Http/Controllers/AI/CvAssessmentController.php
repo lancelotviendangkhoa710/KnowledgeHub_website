@@ -53,7 +53,7 @@ class CvAssessmentController extends Controller
 
     private function error(RuntimeException $exception, bool $afterConfirmation = false): JsonResponse
     {
-        // A rejected assessment payload is an upstream failure here, not user input.
+        // An invalid assessment payload is an upstream failure here, not user input.
         $status = match (true) {
             in_array($exception->getCode(), [502, 503, 504], true) => $exception->getCode(),
             $exception->getCode() === 422 => 502,

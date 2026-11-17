@@ -93,7 +93,7 @@ export default function AdminAgentPage() {
       setInstruction('');
     } catch (caught) {
       setError(errorMessage(caught, 'Không thực hiện được. Hãy tạo đề xuất mới nếu thông tin đã thay đổi hoặc hết hạn.'));
-      // A rejected password can be retried against the same approval; only a
+      // An invalid password can be retried against the same approval; only a
       // consumed, expired or stale approval has to be thrown away.
       if ((caught as { status?: number }).status !== 422) {
         setProposal(null);

@@ -36,7 +36,7 @@ class AgentAiClient
             $upstream = $response->status();
             $detail = $response->json('detail');
             $code = is_array($detail) && is_string($detail['code'] ?? null) ? $detail['code'] : null;
-            // A rejected source is the caller's input problem; anything else is
+            // A refused source is the caller's input problem; anything else is
             // an upstream outage. Keep both explicit instead of one 5xx blanket.
             $status = match (true) {
                 $upstream === 422 => 422,
