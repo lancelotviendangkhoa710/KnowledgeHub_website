@@ -35,9 +35,8 @@ export default function SiteFooter() {
           <b>Tài khoản</b>
           {!mounted ? (
             <>
-              {/* Giữ đủ chiều cao ba dòng, chưa hiện chữ cho tới khi biết trạng thái đăng nhập */}
+              {/* Giữ đủ chiều cao hai dòng, chưa hiện chữ cho tới khi biết trạng thái đăng nhập */}
               <Link href="/login" aria-hidden="true" tabIndex={-1} style={{ visibility: 'hidden' }}>Đăng nhập</Link>
-              <Link href="/bookmarks" aria-hidden="true" tabIndex={-1} style={{ visibility: 'hidden' }}>Đã lưu</Link>
               <Link href="/account" aria-hidden="true" tabIndex={-1} style={{ visibility: 'hidden' }}>Tài khoản</Link>
             </>
           ) : signedIn ? (
@@ -48,7 +47,6 @@ export default function SiteFooter() {
           ) : (
             <>
               <Link href="/login">Đăng nhập</Link>
-              <Link href="/bookmarks">Đã lưu</Link>
               <Link href="/account">Tài khoản</Link>
             </>
           )}
