@@ -119,7 +119,8 @@ Mỗi dòng ứng với một màn hình trong mockup (mở bằng đường d�
 | 8 | soan-khoa-hoc | `courses/create` (hơn 3000 dòng) | chia thành component nhỏ khi làm, xem mục 7 |
 | 9 | lich-su-phien-ban | `courses/[id]/versions` | xem mục 7 |
 | 10 | quan-tri | `admin/users`, `admin/categories`, `admin/tags` | giữ ba đường dẫn riêng, dùng chung một thanh tab ở đầu trang. Xem mục 7B |
-| 11 | dang-nhap, tai-khoan | đăng nhập, tài khoản | AUTH-07 đã gộp, giữ nguyên chức năng đăng nhập Google. Bảng hoạt động học tập trong tài khoản xem mục 7A |
+| 11 | dang-nhap, tai-khoan | đăng nhập, tài khoản | AUTH-07 đã gộp, giữ nguyên chức năng đăng nhập Google. Bảng hoạt động học tập trong tài khoản xem mục 7A. Đăng ký có xác thực email và CAPTCHA, xem mục 7C |
+| 12 | quen-mat-khau, dat-lai-mat-khau, xac-thuc-email, thu-email | `/forgot-password`, `/reset-password`, `/verify-email`, thư tự động | màn mới của luồng xác thực, xem mục 7C |
 
 ## 7. Hai màn soạn khóa học và lịch sử phiên bản
 
@@ -184,9 +185,30 @@ Thẻ:
 
 Trạng thái chung của mỗi phần: đang tải, không có dữ liệu, lỗi tải kèm nút Thử lại, chưa đăng nhập, không có quyền quản trị. Ô Xem thử trạng thái ở đầu mockup chỉ dùng cho mockup, không đưa vào dự án.
 
+## 7C. Xác thực: đăng ký có thư xác thực, quên mật khẩu, CAPTCHA
+
+Các màn này là chức năng mới, cần ADR và PR riêng ở phần backend trước khi code giao diện. Mockup có bốn màn mới (`quen-mat-khau`, `dat-lai-mat-khau`, `xac-thuc-email`, `thu-email`) và các trạng thái mới trong màn `dang-nhap`. Ô Xem thử trạng thái ở đầu mỗi màn chỉ dùng cho mockup, không đưa vào dự án.
+
+Quyết định đã chốt:
+- Người đăng ký bằng email và mật khẩu phải xác thực email. Xác thực xong, tài khoản tự chuyển từ Chờ duyệt sang Hoạt động, không còn bước quản trị viên duyệt. Quản trị viên vẫn đổi được trạng thái ở trang Quản trị.
+- Đăng ký bằng Google cho phép thêm tên miền gmail.com bên cạnh email trường.
+- Thư gửi bằng Brevo ở bản triển khai và Mailpit ở máy lập trình.
+- CAPTCHA dùng Cloudflare Turnstile.
+
+Các màn:
+- Đăng ký (`/register`): thêm ô CAPTCHA. Gửi xong thì chuyển sang trạng thái Kiểm tra hộp thư và chưa đăng nhập. Nút Gửi lại thư chờ 60 giây giữa hai lần bấm.
+- Đăng nhập (`/login`): thêm liên kết Quên mật khẩu cạnh nhãn mật khẩu. Tài khoản chưa xác thực email thấy thông báo kèm nút Gửi lại thư xác thực. CAPTCHA chỉ hiện khi máy chủ báo đã nhập sai nhiều lần. Thử quá nhiều lần thì khóa tạm và báo đợi 15 phút.
+- Quên mật khẩu (`/forgot-password`): ô email và CAPTCHA. Luôn hiện cùng một thông báo dù email có đăng ký hay không, để không lộ tài khoản nào tồn tại. Có nút Gửi lại thư chờ 60 giây.
+- Đặt lại mật khẩu (`/reset-password`): mở từ liên kết trong thư, có mật khẩu mới và nhập lại, ít nhất 8 ký tự. Gợi ý chỉ chuyển đỏ sau khi rời ô hoặc sau khi bấm Đổi mật khẩu. Thành công thì nói rõ các thiết bị khác đã bị đăng xuất. Liên kết hết hạn hoặc đã dùng thì có nút Yêu cầu liên kết mới.
+- Xác thực email (`/verify-email`): mở từ liên kết trong thư, có bốn trạng thái: đang xác thực, thành công, liên kết hết hạn (nhập email và CAPTCHA để nhận thư mới), đã xác thực trước đó. Thư mới cũng dùng thông báo không lộ tài khoản.
+
+CAPTCHA: ô Turnstile do Cloudflare vẽ, mockup chỉ đặt ô giữ chỗ nét đứt, giống cách làm với nút Google. Dùng chủ đề tự động theo giao diện sáng tối và ngôn ngữ tiếng Việt, rộng 300px, cao 65px. Nút gửi vẫn bấm được; nếu chưa có mã xác nhận thì hiện thông báo Chưa xác nhận CAPTCHA ở đầu biểu mẫu.
+
+Thư tự động (màn `thu-email`) có ba mẫu: xác thực email, đặt lại mật khẩu, tài khoản Google không có mật khẩu riêng. Liên kết trong thư có hiệu lực 60 phút và chỉ dùng một lần. Thư dùng màu cố định của chế độ sáng và kiểu dáng viết trực tiếp trong thẻ, vì Gmail và Outlook không đọc biến CSS. Đây là ngoại lệ duy nhất của quy tắc cấm mã màu cứng. Tên thương hiệu là chữ, không dùng ảnh logo, nút là liên kết có nền.
+
 ## 8. Trang chưa có mockup
 
-Áp dụng cho mọi trang chưa có trong mockup. Các trang người dùng, danh mục và thẻ đã có mockup (mục 7B); nếu còn trang quản trị khác (contributor, phân quyền) thì áp dụng mục này.
+Áp dụng cho mọi trang chưa có trong mockup. Các trang người dùng, danh mục, thẻ và xác thực đã có mockup (mục 7B và 7C); nếu còn trang quản trị khác (contributor, phân quyền) thì áp dụng mục này.
 
 - Chỉ dùng token và component đã làm ở các bước trước. Bảng, biểu mẫu, hộp thoại, nhãn trạng thái làm giống màn Studio và Quản trị trong mockup.
 - Không thêm kiểu mới, màu mới hay hiệu ứng mới.
