@@ -334,12 +334,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:780px}
 .bar b{display:block;height:100%;background:var(--brand);border-radius:4px}
 
 /* Trang chủ */
-.hero.home .wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:56px;align-items:center;padding-top:80px;padding-bottom:88px}
+.hero.home .wrap{display:block;padding-top:96px;padding-bottom:104px}
 .hero.home h1{font-size:clamp(40px,6vw,68px);margin-bottom:18px}
 .hero.home .lead{font-size:17px;color:rgba(255,255,255,.85);max-width:46ch;line-height:1.65}
 .hero.home .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
 .hero .btn.light{background:#fff;color:#101214}
 .hero .btn.line{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5)}
+.hero.home .ghost-word{left:0;right:0;overflow:hidden}.hero.home .gw-track{display:inline-flex;will-change:transform;animation:gwDrift 90s linear infinite}.hero.home .gw-track span{padding-right:.35em}@keyframes gwDrift{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 .prev{background:var(--surface);color:var(--ink);border-radius:var(--r-card);padding:22px 24px;box-shadow:0 12px 36px rgba(6,12,60,.35);position:relative;z-index:1}
 .prev h3{font-size:17px;font-weight:700}
 .prev .mu{font-size:13px;margin:2px 0 8px}
@@ -393,7 +394,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:14px;min-width:780px}
 @keyframes artDisc{from{transform:translateY(60px)}to{transform:none}}
 @keyframes artBar{from{transform:scaleX(0)}to{transform:none}}
 @media (max-width:1320px){.auth-art .hero-ring{display:none}}
-@media (max-width:860px){.auth-art{padding:32px}.auth-art .prev,.auth-art .hero-ring,.auth-art .spark{display:none}.auth-art .hero-disc{width:120px;height:120px;left:-40px;top:-50px}.auth-art .ghost-word{font-size:120px;top:60%}.auth-art .scatter i{font-size:calc(var(--s)*.45)}}
+@media (max-width:860px){.hero.home .wrap{padding-top:64px;padding-bottom:132px}.hero.home .hero-disc{width:200px;height:200px;right:-60px;bottom:-110px}.auth-art{padding:32px}.auth-art .prev,.auth-art .hero-ring,.auth-art .spark{display:none}.auth-art .hero-disc{width:120px;height:120px;left:-40px;top:-50px}.auth-art .ghost-word{font-size:120px;top:60%}.auth-art .scatter i{font-size:calc(var(--s)*.45)}}
 .auth-form{display:grid;place-items:center;padding:40px 24px}
 .auth-box{width:100%;max-width:380px}
 .auth-box h1{font-size:28px;font-weight:800;margin-bottom:6px}
@@ -624,6 +625,45 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
 .hm-tip b{font-weight:600}
 .hm-mock{max-width:900px;margin:0 auto;display:flex;justify-content:flex-end}
 @media (max-width:640px){.hm-h,.hm-stats,.hm-body,.hm-foot,.hm-day{padding-left:16px;padding-right:16px}.hm-stats{gap:20px}.hm-list li{grid-template-columns:40px 1fr}.hm-list .t{grid-column:2;justify-self:start}}
+/* Xác thực: đăng ký có thư xác thực, quên và đặt lại mật khẩu, xác thực email, ô CAPTCHA, thư tự động.
+   Mọi màn dùng chung khung .auth với màn đăng nhập. .auth-sel chỉ có trong mockup, không đưa vào dự án. */
+body[data-screen="quen-mat-khau"] .top .wrap,body[data-screen="dat-lai-mat-khau"] .top .wrap,body[data-screen="xac-thuc-email"] .top .wrap{max-width:none;padding:0 clamp(16px,4.5vw,64px)}
+.auth-form{align-content:center;row-gap:16px}
+.auth-sel{justify-self:center;width:100%;max-width:380px;min-width:0;white-space:nowrap}
+.auth-sel .sel{flex:1;min-width:0;max-width:100%;text-overflow:ellipsis}
+.sw .lnk{color:var(--brand);font-weight:600}
+.sw .lnk:hover{text-decoration:underline}
+.auth-box .ft{font-size:13px;color:var(--ink-3);margin-top:12px}
+.lab-row a{font-size:13px;color:var(--brand);font-weight:500}
+.lab-row a:hover{text-decoration:underline}
+.auth-alert{margin-bottom:16px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface);font-size:14px;color:var(--ink)}
+.auth-alert[hidden]{display:none}
+.auth-alert.err{border-color:var(--danger)}
+.auth-alert .act{margin-top:10px}
+.auth-box .auth-alert .btn{width:auto;padding:7px 14px;font-size:13px}
+.field.bad input{border-color:var(--danger)}
+.field.bad small{color:var(--danger)}
+.cap{margin:4px 0 16px}
+.cap[hidden]{display:none}
+.cap-slot{width:100%;max-width:300px;min-height:65px;border:1px dashed var(--ink-3);border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;color:var(--ink-3);padding:8px 12px}
+.auth-box .btn[disabled]{opacity:.5;cursor:not-allowed}
+.auth-box[hidden]{display:none}
+.auth-box .btn+.btn{margin-top:10px}
+/* Thư tự động */
+.mails{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;margin:24px 0 72px;align-items:start}
+.mail{border:1px solid var(--line);border-radius:var(--r-card);background:var(--surface);overflow:hidden}
+.mail-meta{padding:14px 16px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-2);display:grid;gap:4px}
+.mail-meta b{color:var(--ink);font-weight:500}
+.mail-body{background:#F3F5FA;padding:24px 16px}
+.mail-card{background:#FFFFFF;border:1px solid #DCE1EC;border-radius:10px;padding:28px 24px;font-family:Arial,Helvetica,sans-serif;color:#101214;font-size:14px;line-height:1.6}
+.mail-card .m-logo{font-family:'Plus Jakarta Sans',Arial,sans-serif;font-weight:800;font-size:18px;color:#2443E0;margin-bottom:20px}
+.mail-card p{margin:0 0 14px;color:#101214}
+.mail-card .m-btn{display:inline-block;background:#2443E0;color:#FFFFFF;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;text-decoration:none;margin:6px 0 18px}
+.mail-card .m-small{font-size:12px;color:#4A5162;margin:0 0 10px}
+.mail-card .m-url{overflow-wrap:anywhere}
+.mail-card .m-foot{border-top:1px solid #DCE1EC;margin-top:18px;padding-top:14px;font-size:12px;color:#737B8E}
+@media (max-width:980px){.mails{grid-template-columns:minmax(0,1fr)}}
+
 </style>
 </head>
 <body>
@@ -829,7 +869,7 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
 <!-- ============ TRANG CHỦ ============ -->
 <main class="screen" id="s-trang-chu">
   <section class="hero home">
-    <div class="ghost-word" aria-hidden="true">KNOWLEDGE</div>
+    <div class="ghost-word" aria-hidden="true"><span class="gw-track"><span>KNOWLEDGE</span><span>KNOWLEDGE</span></span></div>
     <div class="hero-disc" aria-hidden="true"></div>
     <div class="wrap">
       <div>
@@ -839,17 +879,6 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
           <a class="btn light" href="#khoa-hoc">Xem khóa học</a>
           <a class="btn line" href="#tro-ly">Tạo lộ trình bằng AI</a>
         </div>
-      </div>
-      <div class="prev" aria-label="Ví dụ một lộ trình">
-        <h3>Data Engineer, trình độ Intermediate</h3>
-        <p class="mu">Ví dụ minh họa, 3 trên 5 khóa đã xong</p>
-        <div class="bar" aria-hidden="true"><b style="width:60%"></b></div>
-        <ol class="steps">
-          <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Database, giao dịch và đồng thời</span></li>
-          <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Thiết kế pipeline ETL và ELT</span></li>
-          <li><span class="dot now"></span><span class="nm">Kiểm thử và quan sát pipeline<small>Đang học</small></span></li>
-          <li class="lock"><span class="dot"><svg class="i"><use href="#i-lock"/></svg></span><span class="nm">Hệ thống phân tán và độ tin cậy<small>Cần học xong khóa ở trên</small></span></li>
-        </ol>
       </div>
     </div>
   </section>
@@ -890,30 +919,165 @@ textarea.md{display:block;width:100%;min-height:440px;border:0;background:none;r
       <div class="art-in">
         <h2 data-m="1">KnowledgeHub</h2>
         <p data-m="2">Nền tảng học tập có chọn lọc, kèm trợ lý AI.</p>
-        <div class="prev" data-m="3">
-          <h3>Data Engineer, trình độ Intermediate</h3>
-          <p class="mu">Ví dụ minh họa, 3 trên 5 khóa đã xong</p>
-          <div class="bar"><b></b></div>
-          <ol class="steps">
-            <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Database, giao dịch và đồng thời</span></li>
-            <li><span class="dot done"><svg class="i"><use href="#i-check"/></svg></span><span class="nm">Thiết kế pipeline ETL và ELT</span></li>
-            <li><span class="dot now"></span><span class="nm">Kiểm thử và quan sát pipeline<small>Đang học</small></span></li>
-          </ol>
-        </div>
       </div>
     </aside>
     <div class="auth-form">
+      <label class="state-sel auth-sel">Xem thử trạng thái <select class="sel" id="authState" aria-label="Xem thử trạng thái của trang đăng nhập"><option value="login">Đăng nhập</option><option value="register">Đăng ký</option><option value="sent">Đã gửi thư xác thực</option><option value="unverified">Email chưa xác thực</option><option value="cap">Đăng nhập sai nhiều lần, cần CAPTCHA</option><option value="toomany">Thử quá nhiều lần</option><option value="wrong">Sai email hoặc mật khẩu</option></select></label>
       <form class="auth-box" id="authForm">
         <h1 id="authTitle">Đăng nhập</h1>
         <p id="authSub">Dùng email bạn đã đăng ký với KnowledgeHub.</p>
+        <div class="auth-alert err" id="authAlert" role="alert" hidden></div>
         <div class="field" id="nameField" hidden><label for="au-name">Họ và tên</label><input id="au-name" autocomplete="name" placeholder="Nguyễn Văn An"></div>
         <div class="field"><label for="au-mail">Email</label><input id="au-mail" type="email" autocomplete="email"></div>
-        <div class="field"><label for="au-pass">Mật khẩu</label><input id="au-pass" type="password" autocomplete="current-password"><small id="passHint" hidden>Ít nhất 8 ký tự.</small></div>
+        <div class="field"><div class="lab-row"><label for="au-pass">Mật khẩu</label><a href="#quen-mat-khau" id="forgotLink">Quên mật khẩu?</a></div><input id="au-pass" type="password" autocomplete="current-password"><small id="passHint" hidden>Ít nhất 8 ký tự.</small></div>
+        <div class="field" id="pass2Field" hidden><label for="au-pass2">Nhập lại mật khẩu</label><input id="au-pass2" type="password" autocomplete="new-password"></div>
+        <div class="cap" id="authCap" hidden><div class="cap-slot">Ô CAPTCHA của Cloudflare Turnstile, rộng 300px, cao 65px, tự theo giao diện sáng tối</div></div>
         <button class="btn" type="submit" id="authBtn">Đăng nhập</button>
         <div class="or">hoặc</div>
         <button class="gbtn" type="button" id="gBtn"><span class="g-slot" aria-hidden="true"></span><span class="g-txt">Đăng nhập bằng Google</span></button>
         <p class="sw"><span id="swText">Chưa có tài khoản?</span> <button type="button" id="swBtn">Đăng ký</button></p>
       </form>
+      <div class="auth-box" id="authSent" hidden>
+        <h1>Kiểm tra hộp thư</h1>
+        <p>Chúng tôi đã gửi thư xác thực tới <b id="sentMail">an@truong.edu.vn</b>. Bấm vào liên kết trong thư để kích hoạt tài khoản. Liên kết có hiệu lực trong 60 phút.</p>
+        <button class="btn" type="button" id="resendBtn" disabled>Gửi lại thư</button>
+        <p class="ft">Không thấy thư? Hãy kiểm tra mục thư rác. Bạn có thể gửi lại sau khi hết thời gian chờ.</p>
+        <p class="sw"><button type="button" id="sentBack">Quay lại đăng nhập</button></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ QUÊN MẬT KHẨU ============ -->
+<main class="screen" id="s-quen-mat-khau">
+  <div class="auth">
+    <aside class="auth-art" aria-hidden="true" data-art></aside>
+    <div class="auth-form">
+      <label class="state-sel auth-sel">Xem thử trạng thái <select class="sel" id="fgState" aria-label="Xem thử trạng thái của trang quên mật khẩu"><option value="form">Nhập email</option><option value="sent">Đã gửi thư</option><option value="cap">Chưa xác nhận CAPTCHA</option><option value="toomany">Thử quá nhiều lần</option></select></label>
+      <form class="auth-box" id="fgForm">
+        <h1>Quên mật khẩu</h1>
+        <p>Nhập email bạn đã đăng ký. Chúng tôi sẽ gửi liên kết để đặt lại mật khẩu.</p>
+        <div class="auth-alert err" id="fgAlert" role="alert" hidden></div>
+        <div class="field"><label for="fg-mail">Email</label><input id="fg-mail" type="email" autocomplete="email"></div>
+        <div class="cap"><div class="cap-slot">Ô CAPTCHA của Cloudflare Turnstile, rộng 300px, cao 65px, tự theo giao diện sáng tối</div></div>
+        <button class="btn" type="submit" id="fgBtn">Gửi liên kết đặt lại</button>
+        <p class="sw"><a href="#dang-nhap" class="lnk">Quay lại đăng nhập</a></p>
+      </form>
+      <div class="auth-box" id="fgSent" hidden>
+        <h1>Kiểm tra hộp thư</h1>
+        <p>Nếu <b id="fgSentMail">an@truong.edu.vn</b> đã đăng ký, bạn sẽ nhận được thư hướng dẫn đặt lại mật khẩu trong vài phút. Liên kết có hiệu lực trong 60 phút và chỉ dùng được một lần.</p>
+        <button class="btn" type="button" id="fgResend" disabled>Gửi lại thư</button>
+        <p class="ft">Không thấy thư? Hãy kiểm tra mục thư rác.</p>
+        <p class="sw"><a href="#dang-nhap" class="lnk">Quay lại đăng nhập</a></p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ ĐẶT LẠI MẬT KHẨU ============ -->
+<main class="screen" id="s-dat-lai-mat-khau">
+  <div class="auth">
+    <aside class="auth-art" aria-hidden="true" data-art></aside>
+    <div class="auth-form">
+      <label class="state-sel auth-sel">Xem thử trạng thái <select class="sel" id="rsState" aria-label="Xem thử trạng thái của trang đặt lại mật khẩu"><option value="form">Nhập mật khẩu mới</option><option value="mismatch">Hai mật khẩu chưa khớp</option><option value="weak">Mật khẩu quá ngắn</option><option value="done">Đã đổi mật khẩu</option><option value="expired">Liên kết hết hạn</option></select></label>
+      <form class="auth-box" id="rsForm">
+        <h1>Đặt lại mật khẩu</h1>
+        <p>Nhập mật khẩu mới cho <b>an@truong.edu.vn</b>.</p>
+        <div class="field" id="rsF1"><label for="rs-p1">Mật khẩu mới</label><input id="rs-p1" type="password" autocomplete="new-password"><small id="rsH1">Ít nhất 8 ký tự.</small></div>
+        <div class="field" id="rsF2"><label for="rs-p2">Nhập lại mật khẩu mới</label><input id="rs-p2" type="password" autocomplete="new-password"><small id="rsH2" hidden>Hai mật khẩu chưa khớp.</small></div>
+        <button class="btn" type="submit">Đổi mật khẩu</button>
+      </form>
+      <div class="auth-box" id="rsDone" hidden>
+        <h1>Đã đổi mật khẩu</h1>
+        <p>Bạn có thể đăng nhập bằng mật khẩu mới. Các thiết bị khác đang đăng nhập tài khoản này đã được đăng xuất.</p>
+        <a class="btn" href="#dang-nhap">Đăng nhập</a>
+      </div>
+      <div class="auth-box" id="rsExpired" hidden>
+        <h1>Liên kết không còn hiệu lực</h1>
+        <p>Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được dùng. Hãy yêu cầu một liên kết mới.</p>
+        <a class="btn" href="#quen-mat-khau">Yêu cầu liên kết mới</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ XÁC THỰC EMAIL ============ -->
+<main class="screen" id="s-xac-thuc-email">
+  <div class="auth">
+    <aside class="auth-art" aria-hidden="true" data-art></aside>
+    <div class="auth-form">
+      <label class="state-sel auth-sel">Xem thử trạng thái <select class="sel" id="vfState" aria-label="Xem thử trạng thái của trang xác thực email"><option value="checking">Đang xác thực</option><option value="ok">Xác thực thành công</option><option value="expired">Liên kết hết hạn</option><option value="already">Đã xác thực trước đó</option><option value="resent">Đã gửi thư mới</option></select></label>
+      <div class="auth-box" id="vfChecking" role="status">
+        <h1>Đang xác thực email</h1>
+        <p>Vui lòng đợi trong giây lát.</p>
+      </div>
+      <div class="auth-box" id="vfOk" hidden>
+        <h1>Email đã được xác thực</h1>
+        <p>Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập ngay.</p>
+        <a class="btn" href="#dang-nhap">Đăng nhập</a>
+      </div>
+      <form class="auth-box" id="vfExpired" hidden>
+        <h1>Liên kết xác thực không còn hiệu lực</h1>
+        <p>Liên kết đã hết hạn hoặc không đúng. Nhập email để nhận thư xác thực mới.</p>
+        <div class="field"><label for="vf-mail">Email</label><input id="vf-mail" type="email" autocomplete="email"></div>
+        <div class="cap"><div class="cap-slot">Ô CAPTCHA của Cloudflare Turnstile, rộng 300px, cao 65px, tự theo giao diện sáng tối</div></div>
+        <button class="btn" type="submit">Gửi thư xác thực mới</button>
+        <p class="sw"><a href="#dang-nhap" class="lnk">Quay lại đăng nhập</a></p>
+      </form>
+      <div class="auth-box" id="vfAlready" hidden>
+        <h1>Email đã được xác thực trước đó</h1>
+        <p>Bạn không cần làm gì thêm. Hãy đăng nhập để tiếp tục.</p>
+        <a class="btn" href="#dang-nhap">Đăng nhập</a>
+      </div>
+      <div class="auth-box" id="vfResent" hidden>
+        <h1>Đã gửi thư mới</h1>
+        <p>Nếu <b>an@truong.edu.vn</b> chưa được xác thực, bạn sẽ nhận được thư xác thực mới trong vài phút. Liên kết có hiệu lực trong 60 phút.</p>
+        <a class="btn ghost" href="#dang-nhap">Quay lại đăng nhập</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ THƯ TỰ ĐỘNG ============ -->
+<main class="screen" id="s-thu-email">
+  <div class="wrap">
+    <div class="ph"><h1>Thư tự động</h1><p>Ba mẫu thư hệ thống gửi qua Laravel. Dùng bảng màu cố định của chế độ sáng và kiểu dáng viết trực tiếp trong thẻ, vì Gmail và Outlook không đọc biến CSS. Nút là liên kết có nền, tên thương hiệu là chữ thay cho ảnh logo.</p></div>
+    <div class="mails">
+      <article class="mail">
+        <div class="mail-meta"><span><b>Từ:</b> KnowledgeHub</span><span><b>Tiêu đề:</b> Xác thực email để bắt đầu dùng KnowledgeHub</span></div>
+        <div class="mail-body"><div class="mail-card">
+          <div class="m-logo">KnowledgeHub</div>
+          <p>Chào An,</p>
+          <p>Cảm ơn bạn đã đăng ký KnowledgeHub. Hãy xác thực email để kích hoạt tài khoản.</p>
+          <a class="m-btn" href="#xac-thuc-email">Xác thực email</a>
+          <p class="m-small">Liên kết có hiệu lực trong 60 phút. Nếu nút không hoạt động, hãy sao chép địa chỉ này vào trình duyệt: <span class="m-url">https://knowledgehub.example/verify-email?id=...</span></p>
+          <p class="m-small">Nếu bạn không tạo tài khoản, hãy bỏ qua thư này.</p>
+          <div class="m-foot">KnowledgeHub, nền tảng học tập có chọn lọc.</div>
+        </div></div>
+      </article>
+      <article class="mail">
+        <div class="mail-meta"><span><b>Từ:</b> KnowledgeHub</span><span><b>Tiêu đề:</b> Đặt lại mật khẩu KnowledgeHub</span></div>
+        <div class="mail-body"><div class="mail-card">
+          <div class="m-logo">KnowledgeHub</div>
+          <p>Chào An,</p>
+          <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản này.</p>
+          <a class="m-btn" href="#dat-lai-mat-khau">Đặt lại mật khẩu</a>
+          <p class="m-small">Liên kết có hiệu lực trong 60 phút và chỉ dùng được một lần. Nếu nút không hoạt động, hãy sao chép địa chỉ này vào trình duyệt: <span class="m-url">https://knowledgehub.example/reset-password?token=...</span></p>
+          <p class="m-small">Nếu bạn không yêu cầu, hãy bỏ qua thư này. Mật khẩu của bạn sẽ không thay đổi.</p>
+          <div class="m-foot">KnowledgeHub, nền tảng học tập có chọn lọc.</div>
+        </div></div>
+      </article>
+      <article class="mail">
+        <div class="mail-meta"><span><b>Từ:</b> KnowledgeHub</span><span><b>Tiêu đề:</b> Tài khoản KnowledgeHub của bạn đăng nhập bằng Google</span></div>
+        <div class="mail-body"><div class="mail-card">
+          <div class="m-logo">KnowledgeHub</div>
+          <p>Chào An,</p>
+          <p>Có yêu cầu đặt lại mật khẩu cho email này. Tài khoản của bạn được tạo bằng Google nên không có mật khẩu riêng. Hãy dùng nút Đăng nhập bằng Google ở trang đăng nhập.</p>
+          <a class="m-btn" href="#dang-nhap">Đến trang đăng nhập</a>
+          <p class="m-small">Nếu bạn không gửi yêu cầu này, hãy bỏ qua thư. Tài khoản của bạn vẫn an toàn.</p>
+          <div class="m-foot">KnowledgeHub, nền tảng học tập có chọn lọc.</div>
+        </div></div>
+      </article>
     </div>
   </div>
 </main>
@@ -1462,7 +1626,7 @@ var first=true;
 function route(){
   var h=(location.hash||'').slice(1), anchor=null;
   if(/^h[1-4]$/.test(h)){anchor=h;h='bai-hoc'}
-  if(['trang-chu','khoa-hoc','bai-hoc','tro-ly','dang-nhap','lo-trinh','lo-trinh-cua-toi','da-luu','tai-khoan','studio','quan-tri','soan-khoa-hoc','lich-su-phien-ban'].indexOf(h)<0) h='trang-chu';
+  if(['trang-chu','khoa-hoc','bai-hoc','tro-ly','dang-nhap','lo-trinh','lo-trinh-cua-toi','da-luu','tai-khoan','studio','quan-tri','soan-khoa-hoc','lich-su-phien-ban','quen-mat-khau','dat-lai-mat-khau','xac-thuc-email','thu-email'].indexOf(h)<0) h='trang-chu';
   document.body.dataset.screen=h;
   $$('.screen').forEach(function(s){s.classList.toggle('on',s.id==='s-'+h)});
   $$('.nav a').forEach(function(a){var key=({'bai-hoc':'khoa-hoc','lich-su-phien-ban':'khoa-hoc','lo-trinh-cua-toi':'lo-trinh','soan-khoa-hoc':'studio'})[h]||h;var on=a.dataset.nav===key;if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});
@@ -1472,7 +1636,7 @@ function route(){
       var sc='#s-'+h+' ';
       G.from(sc+'.ghost-word',{x:80,opacity:0,duration:1.1,ease:'power3.out'});
       G.from(sc+'.hero-disc',{y:120,duration:.9,ease:'power3.out'});
-      G.from(sc+'.hero-kicker,'+sc+'.hero h1,'+sc+'.search,'+sc+'.hero-tags,'+sc+'.lead,'+sc+'.cta,'+sc+'.prev',{y:22,opacity:0,duration:.6,stagger:.08,ease:'power2.out',clearProps:'all'});
+      G.from(sc+'.hero-kicker,'+sc+'.hero h1,'+sc+'.search,'+sc+'.hero-tags,'+sc+'.lead,'+sc+'.cta',{y:22,opacity:0,duration:.6,stagger:.08,ease:'power2.out',clearProps:'all'});
     } else if(!anchor) G.from('#s-'+h,{opacity:0,duration:.25,clearProps:'all'});
   }
   first=false; onScroll();
@@ -1544,20 +1708,78 @@ $('#rmFilters').addEventListener('click',function(e){var b=e.target.closest('.ch
 rmDraw();
 $('#goLesson').addEventListener('click',function(){location.hash='bai-hoc'});
 
-/* Đăng nhập và đăng ký */
+/* Đăng nhập, đăng ký và các trạng thái xác thực (chỉ mockup) */
 var reg=false;
 function authMode(){
   $('#authTitle').textContent=reg?'Tạo tài khoản':'Đăng nhập';
   $('#authSub').textContent=reg?'Chỉ mất một phút. Bạn có thể đăng ký bằng email trường.':'Dùng email bạn đã đăng ký với KnowledgeHub.';
-  $('#nameField').hidden=!reg;$('#passHint').hidden=!reg;
+  $('#nameField').hidden=!reg;$('#passHint').hidden=!reg;$('#pass2Field').hidden=!reg;$('#forgotLink').hidden=reg;
   $('#authBtn').textContent=reg?'Tạo tài khoản':'Đăng nhập';
   $('#swText').textContent=reg?'Đã có tài khoản?':'Chưa có tài khoản?';
   $('#swBtn').textContent=reg?'Đăng nhập':'Đăng ký';
   $('#au-pass').setAttribute('autocomplete',reg?'new-password':'current-password');
+  $('#authCap').hidden=!reg;
 }
-$('#swBtn').addEventListener('click',function(){reg=!reg;authMode()});
-$('#authForm').addEventListener('submit',function(e){e.preventDefault();toast('Đây là mockup nên chưa đăng nhập thật')});
+function countdown(btn,label,secs){
+  clearInterval(btn._t);var n=secs;btn.disabled=true;btn.textContent=label+' (còn '+n+' giây)';
+  btn._t=setInterval(function(){n--;if(n<=0){clearInterval(btn._t);btn.disabled=false;btn.textContent=label}else btn.textContent=label+' (còn '+n+' giây)'},1000);
+}
+function authState(v){
+  var sent=v==='sent';
+  $('#authForm').hidden=sent;$('#authSent').hidden=!sent;
+  var a=$('#authAlert');a.hidden=true;a.innerHTML='';a.classList.toggle('err',v!=='unverified');
+  $('#authBtn').disabled=false;
+  if(v==='login'||v==='wrong'||v==='unverified'||v==='cap'||v==='toomany'){reg=false;authMode()}
+  if(v==='register'){reg=true;authMode()}
+  if(v==='wrong'){a.hidden=false;a.textContent='Email hoặc mật khẩu không đúng.'}
+  if(v==='unverified'){a.hidden=false;a.innerHTML='Email này chưa được xác thực. Hãy mở thư xác thực để kích hoạt tài khoản.<div class="act"><button type="button" class="btn ghost sm" id="authResend">Gửi lại thư xác thực</button></div>'}
+  if(v==='cap'){a.hidden=false;a.textContent='Bạn đã nhập sai nhiều lần. Hãy xác nhận CAPTCHA để tiếp tục.';$('#authCap').hidden=false}
+  if(v==='toomany'){a.hidden=false;a.textContent='Bạn thử quá nhiều lần. Hãy đợi 15 phút rồi thử lại.';$('#authBtn').disabled=true}
+  if(sent)countdown($('#resendBtn'),'Gửi lại thư',60);
+  $('#authState').value=v;
+}
+$('#swBtn').addEventListener('click',function(){authState(reg?'login':'register')});
+$('#authForm').addEventListener('submit',function(e){e.preventDefault();if(reg){$('#sentMail').textContent=$('#au-mail').value||'an@truong.edu.vn';authState('sent')}else toast('Đây là mockup nên chưa đăng nhập thật')});
+$('#authState').addEventListener('change',function(){authState(this.value)});
+$('#authForm').addEventListener('click',function(e){if(e.target.id==='authResend')toast('Đã gửi lại thư xác thực')});
+$('#resendBtn').addEventListener('click',function(){toast('Đã gửi lại thư xác thực');countdown(this,'Gửi lại thư',60)});
+$('#sentBack').addEventListener('click',function(){authState('login')});
 $('#gBtn').addEventListener('click',function(){toast('Đăng nhập Google sẽ nối ở bước code')});
+
+/* Quên mật khẩu */
+function fgState(v){
+  var sent=v==='sent';$('#fgForm').hidden=sent;$('#fgSent').hidden=!sent;
+  var a=$('#fgAlert');a.hidden=true;$('#fgBtn').disabled=false;
+  if(v==='cap'){a.hidden=false;a.textContent='Chưa xác nhận CAPTCHA. Hãy hoàn tất ô xác nhận rồi thử lại.'}
+  if(v==='toomany'){a.hidden=false;a.textContent='Bạn thử quá nhiều lần. Hãy đợi 15 phút rồi thử lại.';$('#fgBtn').disabled=true}
+  if(sent)countdown($('#fgResend'),'Gửi lại thư',60);
+  $('#fgState').value=v;
+}
+$('#fgState').addEventListener('change',function(){fgState(this.value)});
+$('#fgForm').addEventListener('submit',function(e){e.preventDefault();$('#fgSentMail').textContent=$('#fg-mail').value||'an@truong.edu.vn';fgState('sent')});
+$('#fgResend').addEventListener('click',function(){toast('Đã gửi lại thư');countdown(this,'Gửi lại thư',60)});
+
+/* Đặt lại mật khẩu */
+function rsState(v){
+  var form=['form','mismatch','weak'].indexOf(v)>=0;
+  $('#rsForm').hidden=!form;$('#rsDone').hidden=v!=='done';$('#rsExpired').hidden=v!=='expired';
+  $('#rsF1').classList.toggle('bad',v==='weak');$('#rsF2').classList.toggle('bad',v==='mismatch');
+  $('#rsH2').hidden=v!=='mismatch';
+  $('#rsState').value=v;
+}
+$('#rsState').addEventListener('change',function(){rsState(this.value)});
+$('#rsForm').addEventListener('submit',function(e){e.preventDefault();var a=$('#rs-p1').value,b=$('#rs-p2').value;if(a.length<8)rsState('weak');else if(a!==b)rsState('mismatch');else rsState('done')});
+
+/* Xác thực email */
+function vfState(v){
+  ['checking','ok','expired','already','resent'].forEach(function(k){var el=$('#vf'+k.charAt(0).toUpperCase()+k.slice(1));el.hidden=k!==v});
+  $('#vfState').value=v;
+}
+$('#vfState').addEventListener('change',function(){vfState(this.value)});
+$('#vfExpired').addEventListener('submit',function(e){e.preventDefault();vfState('resent')});
+
+/* Ảnh nền của các trang xác thực lấy lại từ màn đăng nhập */
+$$('[data-art]').forEach(function(a){a.innerHTML=$('#s-dang-nhap .auth-art').innerHTML});
 
 /* Tài khoản, Studio, Quản trị */
 $$('form[data-save]').forEach(function(f){f.addEventListener('submit',function(e){e.preventDefault();toast('Đã lưu thay đổi')})});
