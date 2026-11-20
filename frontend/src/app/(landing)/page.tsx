@@ -18,13 +18,6 @@ const roles = Array.from(new Set(roadmapTemplates.map((t) => t.role))).map((role
   levels: roadmapTemplates.filter((t) => t.role === role),
 }));
 
-const CheckIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 5 5 9-10" /></svg>
-);
-const LockIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-);
-
 export default function HomePage() {
   return (
     <>
@@ -41,17 +34,6 @@ export default function HomePage() {
               <Link className={`${s.btn} ${s.btnLight}`} href="/courses">Xem khóa học</Link>
               <Link className={`${s.btn} ${s.btnLine}`} href="/ai/companion">Tạo lộ trình bằng AI</Link>
             </div>
-          </div>
-          <div className={s.prev} aria-label="Ví dụ một lộ trình" data-motion="item">
-            <h3>Data Engineer, trình độ Intermediate</h3>
-            <p className={s.prevNote}>Ví dụ minh họa, 3 trên 5 khóa đã xong</p>
-            <div className={s.bar} aria-hidden="true"><b style={{ width: '60%' }} /></div>
-            <ol className={s.steps}>
-              <li><span className={`${s.dot} ${s.done}`}><CheckIcon /></span><span className={s.nm}>Database, giao dịch và đồng thời</span></li>
-              <li><span className={`${s.dot} ${s.done}`}><CheckIcon /></span><span className={s.nm}>Thiết kế pipeline ETL và ELT</span></li>
-              <li><span className={`${s.dot} ${s.now}`} /><span className={s.nm}>Kiểm thử và quan sát pipeline<small>Đang học</small></span></li>
-              <li className={s.lock}><span className={s.dot}><LockIcon /></span><span className={s.nm}>Hệ thống phân tán và độ tin cậy<small>Cần học xong khóa ở trên</small></span></li>
-            </ol>
           </div>
         </div>
       </HeroMotion>
