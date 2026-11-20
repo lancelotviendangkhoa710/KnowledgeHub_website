@@ -2,6 +2,7 @@ import Link from 'next/link';
 import HeroMotion from '@/components/landing/HeroMotion';
 import HomeLatestCourses from '@/components/landing/HomeLatestCourses';
 import { LogoMark } from '@/components/layout/Logo';
+import GhostWord from '@/components/ui/GhostWord';
 import s from '@/components/landing/home.module.css';
 import { roadmapTemplates } from '@/data/roadmapTemplates';
 
@@ -22,7 +23,7 @@ export default function HomePage() {
   return (
     <>
       <HeroMotion className={s.hero}>
-        <div className={s.ghost} aria-hidden="true" data-motion="ghost">KNOWLEDGE</div>
+        <GhostWord data-motion="ghost" />
         <div className={s.disc} aria-hidden="true" data-motion="disc" />
         <div className={s.heroInner}>
           <div>

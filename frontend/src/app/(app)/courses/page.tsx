@@ -18,6 +18,7 @@ import { getAccessToken } from '@/lib/authToken';
 import { accountClient } from '@/lib/accountClient';
 import { api } from '@/lib/api';
 import { popularTagNames } from '@/lib/courseDisplay';
+import GhostWord from '@/components/ui/GhostWord';
 import s from './courses.module.css';
 
 /** Page size requested from `GET /api/v1/articles` (matches the backend default). */
@@ -363,7 +364,7 @@ function CoursesCatalog() {
   return (
     <div>
       <section className={s.hero}>
-        <div className={s.ghost} aria-hidden="true">KNOWLEDGE</div>
+        <GhostWord />
         <div className={s.disc} aria-hidden="true" />
         <div className={s.heroInner}>
           <p className={s.kicker}>Thư viện khóa học</p>
