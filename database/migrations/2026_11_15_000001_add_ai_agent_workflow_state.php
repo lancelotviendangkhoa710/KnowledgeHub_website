@@ -49,8 +49,8 @@ return new class extends Migration {
 
     public function down(): void
     {
-        // Destructive and irreversible: stored CV assessments and pending agent
-        // approvals are dropped with their tables. Roll back only on disposable data.
+        // Reverts only the workflow schema: stored assessments and pending approval/
+        // confirmation state are lost permanently, while CV PDF objects remain in storage.
         Schema::dropIfExists('ai_cv_confirmations');
         Schema::dropIfExists('ai_agent_approvals');
         Schema::table('user_cvs', function (Blueprint $table): void {
