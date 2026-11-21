@@ -23,7 +23,7 @@ class AIChatService
      */
     public function reply(array $messages, array $memory = []): array
     {
-        $url = (string) config('services.ai.url', '');
+        $url = AiServiceUrl::configured();
         $token = (string) config('services.ai.token', '');
         if ($url === '' || $token === '') {
             throw new RuntimeException('AI Companion is temporarily unavailable.', 503);

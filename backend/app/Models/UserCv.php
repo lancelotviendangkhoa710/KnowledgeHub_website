@@ -10,6 +10,6 @@ class UserCv extends Model
     use HasUuids;
 
     protected $guarded = [];
-    protected $hidden = ['object_key', 'extracted_text'];
-    protected $casts = ['consented_at' => 'datetime'];
+    protected $hidden = ['object_key', 'extracted_text', 'assessment'];
+    protected $casts = ['consented_at' => 'datetime', 'assessment' => 'array'];
 }

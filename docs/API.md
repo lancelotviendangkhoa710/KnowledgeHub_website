@@ -869,6 +869,31 @@ CV responses never include extracted text, object keys, Storage URLs, or credent
 
 The implementation tests must cover guest rejection; owner-only behavior for User, Contributor and Admin; cross-user denial including Admin; metadata without extracted text/object key; required consent and PDF validation; upload and download; replacement; delete; simulated Storage/database partial failures and cleanup retry; account deletion blocked on storage failure; and confirmation that the existing preview remains non-persistent. Never run tests against shared Supabase.
 
+### APPROVED — Role-scoped agent workflows
+
+The following additive contracts implement `docs/decisions/2026-11-15-role-scoped-ai-agent-workflows.md`. All browser routes require `auth:sanctum` and use the existing `{status, message, data}` envelope. Set each workflow's feature flag before use; a disabled workflow returns a safe `503`. Laravel is the only authority for roles, ownership, content publication, CV persistence, and administrator changes. The internal FastAPI routes are private to Laravel and use `X-Service-Token`; browsers must never call them directly.
+
+| Method | Path | Actor and request | Success `data` | Main errors |
+|---|---|---|---|---|
+| POST | `/api/ai/agents/courses` | Contributor only; JSON `{topic: string (3–200), max_videos?: 2–20, category_id?: UUID}` | `{id, slug, status:"published", title, source_playlist_id, source_playlist_title, lessons:[{video_id,title,description,learning_objective}]}` | 401 guest; 403 User/Admin; 422 input or unusable source; 502/503/504 upstream or disabled |
+| POST | `/api/ai/agents/admin/plan` | Admin; JSON `{instruction:string (3–500), target_user_id:UUID}` | `{approval_id, action, value, summary, target_user_id, target_name, expires_at}` | 401/403; 404 target; 422 unsupported or ambiguous action; 502/503/504 |
+| POST | `/api/ai/agents/admin/confirm` | Admin; JSON `{approval_id:UUID, accepted:true, current_password?:string}` | `{id,status,roles}` for the affected user | 401/403; 404/409 missing, expired, replayed, or stale approval; 422 invalid step-up credential or payload |
+| POST | `/api/ai/cv/assessment/preview` | Authenticated owner; multipart `cv_file` (PDF, max 2 MiB), optional `target_role` (max 120) | `{assessment:{summary,strengths:[{skill,evidence}],recommendations,gaps},preview_token,expires_at}` | 401; 422 invalid PDF; 502/503 upstream or disabled |
+| POST | `/api/ai/cv/assessment/confirm` | Same authenticated owner; multipart `cv_file` (same PDF), `preview_token` | `{cv:{id,filename,size_bytes,consented_at,created_at},assessment}` | 401; 409/422 invalid, expired, mismatched, or replayed preview; 503 Storage unavailable |
+| GET | `/api/ai/cv/assessment` | Authenticated owner | saved assessment or `null` | 401 |
+
+Each agent route has its own throttle counter, keyed per authenticated user: course 3/min, Admin plan 10/min, Admin confirm 10/min, CV preview 3/min, CV confirm 5/min. A shared counter would let one workflow starve the others. Exceeding a limit returns `429` with the standard envelope.
+
+Course generation finds one public YouTube playlist with 2–20 videos and creates one KnowledgeHub course from its complete ordered list. Every video must be public and embeddable; otherwise that source is rejected. The AI service returns only a bounded structured candidate and source playlist ID/title. Laravel revalidates IDs and content, creates a draft owned by the Contributor, and publishes it through existing Content policy/service in one transaction. Admin cannot invoke this auto-publish agent route because Admin agent actions require a separate acceptance step; existing manual Content routes remain available. It does not create a YouTube playlist or upload YouTube media.
+
+Admin plan is a **proposal**, not execution. The initial allowlist contains `change_user_role` (`user`, `contributor`, `admin`) and `change_user_status` (only status values accepted by the existing User service). Every agent Admin operation, including a read-only proposal, requires an explicit Admin request; each mutation requires a separate `accepted:true` response. The approval binds actor, target, action, value, target state, and expiry; it is single use. Laravel rechecks the actor's live Admin role and target policy at confirmation. Existing password step-up for granting or revoking Admin still applies. No model-selected route, SQL, shell, or arbitrary HTTP tool is accepted.
+
+CV preview neither creates a `user_cvs` row nor uploads an object. The preview token is bound to actor, assessment, PDF digest, and expiry. Confirm requires the same PDF again and explicit user action; an atomic one-time claim id rejects concurrent or later replay. A failed confirmation consumes the claim, so the User must generate a new preview before retrying. Only then are CV and assessment saved together. The existing owner-only `DELETE /api/ai/cv` removes the CV and its assessment. Responses never expose extracted CV text, private Storage keys, provider credentials, or raw prompts.
+
+The private FastAPI contract is `POST /v1/agents/course` (`topic`, `max_videos`) returning `source_playlist_id`, `source_playlist_title`, `title`, `summary`, `lessons`; `POST /v1/agents/admin/plan` (`instruction`) returning allowlisted `action`, `value`, `summary`; and `POST /v1/agents/cv/assess` (`cv_text`, optional `target_role`) returning `summary`, `strengths` with evidence, `recommendations`, and `gaps`. Laravel never treats these responses as authorization. GitHub project search is deferred.
+
+Laravel forwards a validated UUID `X-Request-ID` to FastAPI for each agent call. Both services log that ID with safe duration/status metadata; FastAPI logs aggregate input/output token counts under the same ID. Malformed IDs are replaced with generated UUIDs. Logs must not contain prompts, CV text, YouTube API keys, bearer/service tokens, or private tool results. Benchmark cost and quota fields stay unreported until joined to actual provider telemetry by request ID.
+
 ## 8. Endpoint Template
 
 Copy this block only after feature approval:

@@ -16,10 +16,12 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 from pypdf import PdfReader
 
 from .resources import search_resources
+from .agent_workflows import router as agent_router
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("knowledgehub.ai")
 app = FastAPI(title="KnowledgeHub AI service", docs_url=None, redoc_url=None)
+app.include_router(agent_router)
 
 
 def _parse_cv_worker(content: bytes, output) -> None:

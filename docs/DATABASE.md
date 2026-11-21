@@ -58,6 +58,8 @@ KnowledgeHub is a **curated learning platform**, not a social or user-generated-
 > A full Course → Section → Material hierarchy will be designed in a future migration.
 > Until then, `articles` maps conceptually to "course learning material".
 
+For the approved Contributor playlist agent, one verified public YouTube playlist is published as one `articles` row with one `article_versions` content snapshot. This is the current course page representation; no separate playlist, section, or video table is added by that workflow.
+
 | Table | Responsibility |
 |-------|---------------|
 | `categories` | Hierarchical taxonomy via self-referencing parent_id. |
@@ -78,12 +80,22 @@ KnowledgeHub is a **curated learning platform**, not a social or user-generated-
 | `conversations` | Chat session per user. |
 | `messages` | Individual turns. Not one JSON blob. |
 | `user_memories` | Cross-session AI memory. Separate from history and articles. |
+| `ai_agent_approvals` | Short-lived, single-use Admin agent proposals; Laravel enforces actor and target policy. |
+| `ai_cv_confirmations` | Hash-only, single-use claims for explicitly confirmed CV assessment previews. |
 
 ### CV persistence (CV-02)
 
 `user_cvs` stores metadata and extracted text for one explicitly saved best CV per user. The PDF binary remains in a private Supabase Storage bucket. Columns: UUID v4 `id`; UUID `user_id` FK to `users.id` with explicit `ON DELETE CASCADE`; opaque unique `object_key`; safe `filename`; `size_bytes`; nullable `extracted_text` (up to 12,000 characters while active); `consented_at`; `status` VARCHAR constrained to `active` or `pending_delete`; `created_at` and `updated_at` timestamptz. A check also caps extracted text at 12,000 characters and requires it to be null for pending deletion. A partial unique index on `user_id WHERE status = 'active'` permits one active CV while retaining cleanup tombstones. RLS is enabled and browser Data API access is not granted. Application access is through owner-scoped Laravel only.
 
 When replacement or deletion begins, clear extracted text and mark the old row `pending_delete` before attempting external cleanup. Never return or retrieve pending rows. Keep a pending row/key until object removal is verified; retry failed cleanup with the hourly `ai:cleanup-pending-cvs` task. Account soft deletion must first remove active and pending CV objects; on failure, fail the account deletion request without soft-deleting the user. Hard deletion of a user cascades metadata as a final database safeguard, but is not the CV cleanup mechanism. Provider backups may retain copies for their configured retention window.
+
+The agent CV assessment adds nullable `assessment` JSONB to `user_cvs`. The PDF and assessment remain absent during preview. Explicit confirmation stores both together for the authenticated owner. The assessment is cleared when an active CV is replaced or marked for deletion; a check requires `assessment IS NULL` for `pending_delete` rows. The existing owner-scoped CV delete path deletes the assessment as well.
+
+### Admin agent acceptance
+
+`ai_agent_approvals` is a Laravel-owned table for short-lived proposals. Each UUID row binds `actor_id` and `target_user_id` to `users.id` with explicit `ON DELETE CASCADE`; `action` and `value` have allowlist `CHECK` constraints; `summary` is review text; `target_status` and `target_roles_hash` capture the target state; `expires_at` and nullable `consumed_at` control validity; timestamps use timestamptz. Indexes support actor/expiry and target lookup. RLS is enabled, with no browser Data API access. Laravel must recheck current Admin role, target policy and state, and mark a proposal consumed atomically before executing its allowed operation. No raw natural-language instruction or model-selected endpoint is stored as authority.
+
+`ai_cv_confirmations` has a UUID primary key, `user_id` FK with `ON DELETE CASCADE`, unique SHA-256 `token_hash`, `expires_at`, and timestamptz timestamps. Claiming a preview token is atomic and single use; the table stores no PDF, extracted text, assessment, or token. RLS is enabled with no browser Data API access. The daily `ai:purge-agent-workflow-state` job removes expired claim rows after one day and expired Admin approval metadata after 90 days using bounded predicates.
 
 ### D – Learning Roadmap
 | Table | Responsibility |
@@ -173,6 +185,10 @@ link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
 | Unique | messages | (conversation_id, client_message_id) | Durable idempotency, user rows only (M1) |
 | Composite | user_memories | (user_id, status) | Active memories |
 | Unique partial | user_cvs | user_id WHERE status = active | One active CV per user; pending deletion rows retained |
+| Composite | ai_agent_approvals | (actor_id, expires_at) | Review valid proposals by actor |
+| FK index | ai_agent_approvals | target_user_id | Target lookup and cleanup |
+| Unique | ai_cv_confirmations | token_hash | One confirmation per preview token |
+| FK/expiry indexes | ai_cv_confirmations | user_id, expires_at | Ownership and bounded retention cleanup |
 | FK index | learning_roadmaps | user_id | User roadmaps |
 | Unique | roadmap_items | (roadmap_id, position) | Ordered positions |
 | FK indexes | subscriptions | user_id, plan_id | Subscription queries |
@@ -205,6 +221,8 @@ link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
 | payments.currency | regex [A-Z]{3} |
 | webhook_events.status | pending, processed, failed, ignored |
 | user_cvs.status | active, pending_delete |
+| user_cvs.assessment | NULL while status = pending_delete |
+| ai_agent_approvals.action/value | change_user_role with user/contributor/admin; change_user_status with active/inactive/banned |
 
 ---
 
@@ -244,6 +262,7 @@ Planned: full-text search, pgvector, article analytics, notifications, audit log
 | 14 | 2026-11-08-000001 | Add `messages.sequence` + `messages.client_message_id` (M1 ordering/idempotency) |
 | 15 | 2026-11-13-000001 | Add AI roadmap origin, generation key, evidence and item details (pending shared DB rollout) |
 | 16 | CV-02 migration | Add owner-scoped `user_cvs` metadata, RLS and active-CV partial unique index |
+| 17 | 2026-11-15-000001 | Add `user_cvs.assessment`, `ai_agent_approvals`, and `ai_cv_confirmations` for bounded agent workflows |
 
 > `article_reviews` table exists in migration 000006 (old model). It will be dropped in a future
 > migration once the team approves the schema cleanup task. Until then it is dormant — no application

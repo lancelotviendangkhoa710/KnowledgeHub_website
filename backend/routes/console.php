@@ -14,3 +14,6 @@ Schedule::command('ai:purge-deleted-users')->dailyAt('03:00');
 
 // Retry CV storage cleanup when a prior request could not finish.
 Schedule::command('ai:cleanup-pending-cvs')->hourly();
+
+// Bound the metadata retained for single-use agent confirmations.
+Schedule::command('ai:purge-agent-workflow-state')->dailyAt('03:30');

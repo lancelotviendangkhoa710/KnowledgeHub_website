@@ -13,7 +13,7 @@ class CompanionRoadmapAiClient
 {
     public function extractPdf(UploadedFile $file): string
     {
-        $url = (string) config('services.ai.url', '');
+        $url = AiServiceUrl::configured();
         $token = (string) config('services.ai.token', '');
         if ($url === '' || $token === '') {
             throw new RuntimeException('CV analysis is temporarily unavailable.', 503);
@@ -56,7 +56,7 @@ class CompanionRoadmapAiClient
 
     public function post(string $path, array $payload): array
     {
-        $url = (string) config('services.ai.url', '');
+        $url = AiServiceUrl::configured();
         $token = (string) config('services.ai.token', '');
         if ($url === '' || $token === '') {
             throw new RuntimeException('Roadmap generation is temporarily unavailable.', 503);
