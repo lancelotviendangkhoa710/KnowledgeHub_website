@@ -5,10 +5,26 @@ import authStyles from '@/components/auth/authForm.module.css';
 import styles from '@/components/account/account.module.css';
 import ProfileCard from '@/components/account/ProfileCard';
 import { useAccountUser } from '@/components/account/useAccountUser';
+import FeaturedRoadmaps from '@/components/profile/FeaturedRoadmaps';
+import RoadmapsTab from '@/components/profile/RoadmapsTab';
+import Tabs, { useTabParam } from '@/components/profile/Tabs';
+import { useMyRoadmaps } from '@/components/profile/useMyRoadmaps';
+import p from '@/components/profile/profile.module.css';
 
-/** PRF-02: trang hồ sơ hai cột. Đổi tên, mật khẩu, xóa tài khoản nằm ở /account/settings. */
+const TAB_IDS = ['overview', 'roadmaps'] as const;
+type ProfileTab = (typeof TAB_IDS)[number];
+
+/** PRF-02, RMR-04, RMR-05: trang hồ sơ hai cột. Đổi tên, mật khẩu, xóa tài khoản nằm ở /account/settings. */
 export default function AccountPage() {
   const { user, loadError } = useAccountUser();
+  const { roadmaps, loading, error, reload } = useMyRoadmaps(user?.id ?? null);
+  const [tab, setTab] = useTabParam<ProfileTab>(TAB_IDS, 'overview');
+
+  // Nút "Xem tất cả" nằm trong panel sắp bị ẩn: chuyển focus sang tab Lộ trình để người dùng bàn phím không mất vị trí.
+  function showAllRoadmaps() {
+    setTab('roadmaps');
+    requestAnimationFrame(() => document.getElementById('profile-tab-roadmaps')?.focus());
+  }
 
   if (!user) {
     return (
@@ -28,10 +44,24 @@ export default function AccountPage() {
         <ProfileCard user={user} />
         <div className={styles.main}>
           {loadError && <p className={styles.notice} role="alert">{loadError}</p>}
-          {/* Giai đoạn 2–3: lộ trình nổi bật, bảng hoạt động học tập và lịch sử hoạt động. */}
-          <section className={styles.placeholder} aria-label="Hoạt động học tập">
-            Lộ trình nổi bật và hoạt động học tập của bạn sẽ hiển thị ở đây.
-          </section>
+          <div>
+            <Tabs<ProfileTab>
+              label="Nội dung hồ sơ"
+              idPrefix="profile"
+              value={tab}
+              onChange={setTab}
+              tabs={[
+                { id: 'overview', label: 'Tổng quan' },
+                { id: 'roadmaps', label: 'Lộ trình', count: loading || error ? undefined : roadmaps.length },
+              ]}
+            />
+            <div role="tabpanel" id="profile-panel-overview" aria-labelledby="profile-tab-overview" tabIndex={0} hidden={tab !== 'overview'} className={p.panel}>
+              <FeaturedRoadmaps roadmaps={roadmaps} loading={loading} error={error} onRetry={() => void reload()} onShowAll={showAllRoadmaps} />
+            </div>
+            <div role="tabpanel" id="profile-panel-roadmaps" aria-labelledby="profile-tab-roadmaps" tabIndex={0} hidden={tab !== 'roadmaps'} className={p.panel}>
+              <RoadmapsTab roadmaps={roadmaps} loading={loading} error={error} onRetry={() => void reload()} />
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -1,0 +1,77 @@
+import type { LearningRoadmap, RoadmapStatus, RoadmapTopic } from '@/types/learning';
+
+export type TopicTone = 'sys' | 'prog' | 'data' | 'career' | 'other';
+
+function normalize(text: string) {
+  return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+}
+
+/**
+ * Màu chủ đề theo tài liệu bàn giao (mục 3): Hệ thống, Lập trình, Dữ liệu, Nghề nghiệp.
+ * Khác với ảnh bìa khóa học, chủ đề lạ dùng màu trung tính thay vì chia theo hash.
+ */
+export function topicTone(topic: Pick<RoadmapTopic, 'category_slug' | 'name'>): TopicTone {
+  const key = normalize(`${topic.name} ${topic.category_slug}`);
+  if (/system|he thong|distributed|architect/.test(key)) return 'sys';
+  if (/data|du lieu/.test(key)) return 'data';
+  if (/career|soft|nghe nghiep|ky nang/.test(key)) return 'career';
+  if (/program|coding|software|lap trinh|code/.test(key)) return 'prog';
+  return 'other';
+}
+
+export const STATUS_LABELS: Record<RoadmapStatus, string> = {
+  active: 'Đang học',
+  paused: 'Tạm dừng',
+  completed: 'Hoàn thành',
+  archived: 'Lưu trữ',
+};
+
+export function itemsCount(roadmap: LearningRoadmap): number {
+  return roadmap.items_count ?? roadmap.items.length;
+}
+
+export function completedCount(roadmap: LearningRoadmap): number {
+  return roadmap.completed_count ?? roadmap.items.filter((item) => item.status === 'completed').length;
+}
+
+export function progressPercent(roadmap: LearningRoadmap): number {
+  const total = itemsCount(roadmap);
+  return total ? Math.round((completedCount(roadmap) / total) * 100) : 0;
+}
+
+export function lastActivity(roadmap: LearningRoadmap): string {
+  return roadmap.last_activity_at ?? roadmap.updated_at;
+}
+
+const rtf = typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl ? new Intl.RelativeTimeFormat('vi', { numeric: 'auto' }) : null;
+
+/** "3 ngày trước", "hôm qua", "2 tháng trước"… */
+export function relativeTime(value: string | null | undefined, now = Date.now()): string {
+  if (!value) return '';
+  const time = Date.parse(value);
+  if (Number.isNaN(time)) return '';
+  const seconds = Math.round((time - now) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 60) return 'vừa xong';
+  const table: [number, number, Intl.RelativeTimeFormatUnit][] = [
+    [3600, 60, 'minute'], [86400, 3600, 'hour'], [86400 * 30, 86400, 'day'], [86400 * 365, 86400 * 30, 'month'], [Infinity, 86400 * 365, 'year'],
+  ];
+  const [, divisor, unit] = table.find(([limit]) => abs < limit) ?? table[table.length - 1];
+  const amount = Math.round(seconds / divisor);
+  // Intl trả "Hôm qua"; chữ này luôn đứng giữa câu ("Cập nhật hôm qua") nên viết thường.
+  return rtf ? rtf.format(amount, unit).toLocaleLowerCase('vi') : new Date(time).toLocaleDateString('vi-VN');
+}
+
+/** Ngày giờ đầy đủ theo giờ Việt Nam, dùng cho title/tooltip. */
+export function fullDateTime(value: string | null | undefined): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+/** Ngày theo giờ Việt Nam dạng YYYY-MM-DD (khóa nhóm theo ngày). */
+export function vnDateKey(value: string | number | Date): string {
+  const time = value instanceof Date ? value.getTime() : typeof value === 'number' ? value : Date.parse(value);
+  return new Date(time + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}

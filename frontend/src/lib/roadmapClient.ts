@@ -3,6 +3,7 @@ import { LearningResponse, LearningRoadmap, RoadmapItem } from '@/types/learning
 
 export const roadmapClient = {
   list: (mine = false) => api.get<LearningResponse<LearningRoadmap[]>>(`/learning/roadmaps${mine ? '?mine=1' : ''}`),
+  get: (id: string) => api.get<LearningResponse<LearningRoadmap>>(`/learning/roadmaps/${encodeURIComponent(id)}`),
   create: (data: Pick<LearningRoadmap, 'title' | 'goal'>) =>
     api.post<LearningResponse<LearningRoadmap>>('/learning/roadmaps', data),
   update: (id: string, data: Partial<Pick<LearningRoadmap, 'title' | 'goal' | 'status'>>) =>

@@ -7,12 +7,16 @@ use App\Http\Requests\Learning\StoreRoadmapRequest;
 use App\Http\Requests\Learning\UpdateRoadmapRequest;
 use App\Models\LearningRoadmap;
 use App\Services\Learning\RoadmapService;
+use App\Services\Learning\RoadmapSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RoadmapController extends Controller
 {
-    public function __construct(private readonly RoadmapService $roadmaps) {}
+    public function __construct(
+        private readonly RoadmapService $roadmaps,
+        private readonly RoadmapSummaryService $summaries,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -20,10 +24,12 @@ class RoadmapController extends Controller
             'mine' => ['sometimes', 'boolean'],
             'origin' => ['sometimes', 'in:legacy,ai'],
         ]);
+        $roadmaps = $this->roadmaps->list($request->user(), (bool) ($filters['mine'] ?? false), $filters['origin'] ?? null);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Roadmaps retrieved successfully.',
-            'data' => $this->roadmaps->list($request->user(), (bool) ($filters['mine'] ?? false), $filters['origin'] ?? null),
+            'data' => $this->summaries->summarize($roadmaps),
         ]);
     }
 
@@ -48,7 +54,7 @@ class RoadmapController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Roadmap retrieved successfully.',
-            'data' => $model,
+            'data' => $this->summaries->summarize(collect([$model]))[0],
         ]);
     }
 
