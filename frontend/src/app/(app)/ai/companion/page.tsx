@@ -11,6 +11,7 @@ import DatePicker from '@/components/ui/DatePicker';
 import Select from '@/components/ui/Select';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
+import { aiRoadmapClient } from '@/lib/aiRoadmapClient';
 import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
 import styles from './companion.module.css';
 
@@ -32,6 +33,7 @@ type FailedSend = {
   conversationId: string;
   content: string;
   clientMessageId: string;
+  mode: 'chat' | 'cv';
 };
 
 const memoryTypeLabels: Record<MemoryType, string> = {
@@ -142,6 +144,9 @@ export default function AICompanionPage() {
   const [retryNotice, setRetryNotice] = useState<string | null>(null);
   const [failedSend, setFailedSend] = useState<FailedSend | null>(null);
   const [roadmapMode, setRoadmapMode] = useState(false);
+  const [notebookMode, setNotebookMode] = useState(false);
+  const [notebookStatus, setNotebookStatus] = useState<{ cv: { filename: string } | null; index: { status: string } | null } | null>(null);
+  const [notebookBusy, setNotebookBusy] = useState(false);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -568,9 +573,10 @@ export default function AICompanionPage() {
     conversationId: string,
     content: string,
     clientMessageId: string,
+    mode: 'chat' | 'cv',
   ): Promise<SendAttempt> {
     try {
-      const response = await aiCompanionClient.sendMessage(conversationId, content, clientMessageId);
+      const response = await aiCompanionClient.sendMessage(conversationId, content, clientMessageId, mode);
       return { kind: 'ok', result: response.data };
     } catch (caught) {
       const apiError = toApiError(caught);
@@ -621,7 +627,7 @@ export default function AICompanionPage() {
 
   async function submitMessage(
     rawContent: string,
-    options: { conversationId?: string; clientMessageId?: string } = {},
+    options: { conversationId?: string; clientMessageId?: string; mode?: 'chat' | 'cv' } = {},
   ): Promise<void> {
     const content = rawContent.trim();
     if (!content || sendingRef.current || creatingRef.current || chatDisabled) return;
@@ -637,6 +643,7 @@ export default function AICompanionPage() {
     setFailedSend(null);
 
     let conversationId = options.conversationId ?? activeIdRef.current;
+    const mode = options.mode ?? (notebookMode ? 'cv' : 'chat');
     let optimisticId: string | null = null;
 
     try {
@@ -661,14 +668,14 @@ export default function AICompanionPage() {
         setMessages((current) => [...current, optimistic]);
       }
 
-      let outcome = await attemptSend(conversationId, content, clientMessageId);
+      let outcome = await attemptSend(conversationId, content, clientMessageId, mode);
       if (outcome.kind === 'unavailable') {
         setRetryNotice(ASSISTANT_STARTING_MESSAGE);
         if (mountedRef.current) {
           await waitForRetry();
         }
         if (!mountedRef.current) return;
-        outcome = await attemptSend(conversationId, content, clientMessageId);
+        outcome = await attemptSend(conversationId, content, clientMessageId, mode);
       }
 
       if (outcome.kind === 'ok') {
@@ -699,7 +706,7 @@ export default function AICompanionPage() {
       }
 
       if (outcome.kind === 'unavailable') {
-        setFailedSend({ conversationId, content, clientMessageId });
+        setFailedSend({ conversationId, content, clientMessageId, mode });
         setRetryNotice(ASSISTANT_STARTING_MESSAGE);
         setDraft((current) => current || content);
         return;
@@ -736,9 +743,21 @@ export default function AICompanionPage() {
   function retryFailedSend(): void {
     if (!failedSend || sendingRef.current || creatingRef.current) return;
     if (failedSend.conversationId !== activeIdRef.current) return;
-    const { conversationId, content, clientMessageId } = failedSend;
+    const { conversationId, content, clientMessageId, mode } = failedSend;
     setFailedSend(null);
-    void submitMessage(content, { conversationId, clientMessageId });
+    void submitMessage(content, { conversationId, clientMessageId, mode });
+  }
+
+  async function refreshNotebook(): Promise<void> {
+    try { setNotebookStatus((await aiCompanionClient.getNotebookStatus()).data); }
+    catch { setNotebookStatus(null); }
+  }
+
+  async function uploadNotebook(file: File): Promise<void> {
+    setNotebookBusy(true); setError(null);
+    try { await aiRoadmapClient.saveCv(file); await refreshNotebook(); }
+    catch { setError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.'); }
+    finally { setNotebookBusy(false); }
   }
 
   function fillComposer(prompt: string): void {
@@ -824,7 +843,7 @@ export default function AICompanionPage() {
   const canSend = !composerDisabled && draft.trim().length > 0;
   const composerPlaceholder = chatDisabled
     ? 'Trò chuyện với AI chưa được bật.'
-    : 'Hỏi về bài học hoặc lộ trình';
+    : notebookMode ? 'Hỏi Notebook về tài liệu PDF của bạn' : 'Hỏi về bài học hoặc lộ trình';
   const showRetryAction = Boolean(failedSend && failedSend.conversationId === activeId);
   const lastAssistantId = [...messages].reverse().find((message) => message.role !== 'user')?.id ?? null;
   const openRoadmapForm = () => {
@@ -971,6 +990,9 @@ export default function AICompanionPage() {
               </small>
             </div>
             <div className={styles.acts}>
+              <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => { const next = !notebookMode; setNotebookMode(next); if (next) void refreshNotebook(); }} aria-pressed={notebookMode}>
+                <Icon size={15}><path d="M4 5h16v14H4zM8 9h8M8 13h5" /></Icon>Notebook
+              </button>
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
@@ -1032,6 +1054,12 @@ export default function AICompanionPage() {
               )}
             </div>
           )}
+
+          {notebookMode && <div className={styles.notebookBar} role="status">
+            <div><strong>Notebook mode</strong><span>{notebookStatus?.cv ? `${notebookStatus.cv.filename} · index ${notebookStatus.index?.status ?? 'pending'}` : 'Chưa có PDF nguồn'}</span></div>
+            <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void refreshNotebook()} disabled={notebookBusy}>Làm mới</button>
+            <label className={`${styles.btn} ${styles.btnSm}`}><input className={styles.srOnly} type="file" accept="application/pdf,.pdf" disabled={notebookBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadNotebook(file); }} />{notebookBusy ? 'Đang tải…' : 'Tải PDF'}</label>
+          </div>}
 
           <div ref={roadmapPaneRef} className={styles.roadmapPane} style={{ display: roadmapMode ? 'block' : 'none' }}>
             <RoadmapForm onBack={() => setRoadmapMode(false)} />

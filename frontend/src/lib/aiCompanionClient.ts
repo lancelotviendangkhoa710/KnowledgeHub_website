@@ -48,6 +48,10 @@ async function requestWithStatus<T>(request: Promise<T>): Promise<T> {
 }
 
 export const aiCompanionClient = {
+  getNotebookStatus: () => api.get<ApiEnvelope<{
+    cv: { filename: string } | null;
+    index: { status: 'pending' | 'ready' | 'failed'; embedding_model: string; embedding_revision: string; embedding_dimensions: number } | null;
+  }>>('/ai/cv/rag-status'),
   listConversations: (page = 1) =>
     requestWithStatus(api.get<PaginatedEnvelope<AIConversation>>(`/ai/conversations?page=${page}`)),
 
@@ -67,9 +71,10 @@ export const aiCompanionClient = {
     return requestWithStatus(api.get<MessagePageEnvelope>(`${messagesPath(conversationId)}?${params.toString()}`));
   },
 
-  sendMessage: (conversationId: string, content: string, clientMessageId?: string) =>
+  sendMessage: (conversationId: string, content: string, clientMessageId?: string, mode: 'chat' | 'cv' = 'chat') =>
     requestWithStatus(api.post<ApiEnvelope<SendMessageResult>>(messagesPath(conversationId), {
       content,
+      mode,
       ...(clientMessageId ? { client_message_id: clientMessageId } : {}),
     })),
 

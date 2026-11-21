@@ -246,3 +246,4 @@
   .list, .mem { transition: none; }
   .dots i, .spinner, .spinnerSmall { animation-duration: 2s; }
 }
+.notebookBar{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin:.75rem 1rem;padding:.75rem 1rem;border:1px solid #cfe2d6;border-radius:12px;background:#f2faf5}.notebookBar div{display:flex;flex-direction:column;gap:.2rem}.notebookBar strong{font-size:.8rem;color:#185f3c}.notebookBar span{font-size:.72rem;color:#60736a}.notebookBar input{display:none}
