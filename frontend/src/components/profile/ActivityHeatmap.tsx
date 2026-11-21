@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { activityClient } from '@/lib/activityClient';
-import { addDays, daysBetween, level, longDate, mondayIndex, rangeFor, shortDate, streaks, todayKey, yearsSince } from './heatmapDates';
+import { addDays, daysBetween, level, longDate, mondayIndex, rangeFor, shortDate, todayKey, yearsSince } from './heatmapDates';
 import s from './heatmap.module.css';
 
 type Props = {
@@ -73,7 +73,6 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
   const counts = useMemo(() => (load.status === 'ready' ? load.counts : new Map<string, number>()), [load]);
   const total = days.reduce((sum, key) => sum + (counts.get(key) ?? 0), 0);
   const activeDays = days.filter((key) => (counts.get(key) ?? 0) > 0).length;
-  const streak = streaks(days, counts, today);
 
   // Mới nhất nằm bên phải: trên điện thoại cuộn tới tuần gần nhất (năm trước thì về đầu năm).
   // Chỉ cuộn khi bảng đang hiện (panel ẩn không có bố cục để cuộn), và một lần cho mỗi khoảng đã tải,
@@ -144,8 +143,6 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
           {loading ? <p className={s.muted} role="status">Đang tải hoạt động…</p> : load.status === 'error' ? null : (
             <>
               <div className={s.key}><b>{activeDays}</b>ngày đã học trong {range.label}</div>
-              {range.rolling && <div><b>{streak.current}</b>chuỗi ngày hiện tại</div>}
-              <div><b>{streak.longest}</b>chuỗi ngày dài nhất</div>
             </>
           )}
         </div>

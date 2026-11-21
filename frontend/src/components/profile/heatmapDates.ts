@@ -59,30 +59,6 @@ export function level(count: number): 0 | 1 | 2 | 3 | 4 {
   return 4;
 }
 
-/**
- * Chuỗi hiện tại tính lùi từ hôm nay (hôm nay chưa học thì bắt đầu từ hôm qua, như mockup);
- * chuỗi dài nhất tính trong các ngày đã cho.
- */
-export function streaks(days: string[], counts: Map<string, number>, today: string): { current: number; longest: number } {
-  let longest = 0;
-  let run = 0;
-  days.forEach((key) => {
-    if ((counts.get(key) ?? 0) > 0) {
-      run += 1;
-      longest = Math.max(longest, run);
-    } else {
-      run = 0;
-    }
-  });
-  let current = 0;
-  let cursor = (counts.get(today) ?? 0) > 0 ? today : addDays(today, -1);
-  while ((counts.get(cursor) ?? 0) > 0) {
-    current += 1;
-    cursor = addDays(cursor, -1);
-  }
-  return { current, longest };
-}
-
 const WEEKDAYS = ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'];
 
 /** "19/11/2026". */
