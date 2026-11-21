@@ -43,7 +43,10 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
   const [attempt, setAttempt] = useState(0);
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const [tip, setTip] = useState<{ text: string; count: number; x: number; y: number } | null>(null);
-  const cache = useRef(new Map<string, Map<string, number>>());
+  // Mỗi khoảng ngày chỉ gọi API một lần: `pending` gộp các lần gọi trùng, `resolved` cho phép đọc ngay khi đã có.
+  const pending = useRef(new Map<string, Promise<Map<string, number>>>());
+  const resolved = useRef(new Map<string, Map<string, number>>());
+  const [allTime, setAllTime] = useState<number | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
 
@@ -51,24 +54,48 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
   const days = useMemo(() => daysBetween(range.from, range.to), [range]);
   const lead = mondayIndex(range.from);
 
-  useEffect(() => { cache.current.clear(); }, [userId]);
+  useEffect(() => { pending.current.clear(); resolved.current.clear(); }, [userId]);
+
+  const fetchRange = useCallback((from: string, to: string): Promise<Map<string, number>> => {
+    const key = `${from}:${to}`;
+    let request = pending.current.get(key);
+    if (!request) {
+      request = activityClient.daily(from, to).then((result) => {
+        const counts = new Map(result.data.map((day) => [day.date, day.count]));
+        resolved.current.set(key, counts);
+        return counts;
+      });
+      request.catch(() => pending.current.delete(key)); // lỗi thì lần sau gọi lại
+      pending.current.set(key, request);
+    }
+    return request;
+  }, []);
 
   useEffect(() => {
     let active = true;
-    const key = `${range.from}:${range.to}`;
-    const hit = cache.current.get(key);
+    const hit = resolved.current.get(`${range.from}:${range.to}`);
     if (hit) {
       setLoad({ status: 'ready', counts: hit });
       return;
     }
     setLoad({ status: 'loading' });
-    activityClient.daily(range.from, range.to).then((result) => {
-      const counts = new Map(result.data.map((day) => [day.date, day.count]));
-      cache.current.set(key, counts);
-      if (active) setLoad({ status: 'ready', counts });
-    }).catch(() => { if (active) setLoad({ status: 'error' }); });
+    fetchRange(range.from, range.to)
+      .then((counts) => { if (active) setLoad({ status: 'ready', counts }); })
+      .catch(() => { if (active) setLoad({ status: 'error' }); });
     return () => { active = false; };
-  }, [range, attempt, userId]);
+  }, [range, attempt, userId, fetchRange]);
+
+  // Tổng từ trước đến nay: API giới hạn 366 ngày mỗi lần nên cộng từng năm, từ năm tham gia tới nay.
+  useEffect(() => {
+    let active = true;
+    setAllTime(null);
+    Promise.all(years.map((value) => { const r = rangeFor(value, today); return fetchRange(r.from, r.to); }))
+      .then((maps) => {
+        if (active) setAllTime(maps.reduce((sum, map) => sum + [...map.values()].reduce((a, b) => a + b, 0), 0));
+      })
+      .catch(() => { if (active) setAllTime(null); });
+    return () => { active = false; };
+  }, [years, today, attempt, userId, fetchRange]);
 
   const counts = useMemo(() => (load.status === 'ready' ? load.counts : new Map<string, number>()), [load]);
   const total = days.reduce((sum, key) => sum + (counts.get(key) ?? 0), 0);
@@ -134,7 +161,7 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
       {/* Như GitHub: con số chính nằm ngay trên tiêu đề, đổi theo năm đang chọn. */}
       <div className={s.title}>
         <h2 id="hm-title" aria-live="polite">
-          {load.status === 'ready' ? <><b>{total}</b> hoạt động học tập trong {range.label}</> : 'Hoạt động học tập'}
+          {allTime !== null ? <><b>{allTime}</b> hoạt động học tập từ trước đến nay</> : 'Hoạt động học tập'}
         </h2>
       </div>
 
