@@ -23,7 +23,18 @@ const MODES: RangeMode[] = ['rolling', 'this-year', 'last-year'];
  * Cột là tuần, hàng đầu là Thứ hai. Đi giữa các ô bằng mũi tên; bấm ô để lọc Lịch sử hoạt động theo ngày đó.
  */
 export default function ActivityHeatmap({ userId, selected, onSelect, visible = true }: Props) {
-  const [today] = useState(() => todayKey());
+  const [today, setToday] = useState(() => todayKey());
+
+  // Trang mở qua nửa đêm giờ Việt Nam: đổi "hôm nay" đúng mốc, và kiểm tra lại khi quay về tab.
+  useEffect(() => {
+    const refresh = () => setToday((current) => (todayKey() === current ? current : todayKey()));
+    const now = Date.now();
+    const vnMidnight = Date.parse(`${todayKey(now)}T00:00:00+07:00`) + 86400000;
+    const timer = window.setTimeout(refresh, Math.max(1000, vnMidnight - now + 1000));
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
+  }, [today]);
   const [mode, setMode] = useState<RangeMode>('rolling');
   const [load, setLoad] = useState<Load>({ status: 'loading' });
   const [attempt, setAttempt] = useState(0);
