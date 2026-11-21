@@ -167,6 +167,11 @@
 }
 .sugg button:hover, .suggAction:hover { border-color: var(--brand); color: var(--brand); }
 .sugg .suggAction { color: var(--brand); border-color: var(--brand); text-decoration: none; }
+.modeToggle { display: inline-flex; margin-bottom: 10px; padding: 3px; border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--surface); }
+.modeToggle button { border: 0; border-radius: var(--r-pill); padding: 6px 12px; background: transparent; color: var(--ink-2); font: inherit; font-size: 13px; cursor: pointer; }
+.modeToggle button:hover { color: var(--ink); }
+.modeToggle button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.modeToggleActive { background: var(--hero) !important; color: #fff !important; }
 .box {
   display: flex; align-items: flex-end; gap: 8px; background: var(--surface);
   border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 16px;

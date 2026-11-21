@@ -760,6 +760,11 @@ export default function AICompanionPage() {
     finally { setNotebookBusy(false); }
   }
 
+  function selectNotebookMode(nextNotebookMode: boolean): void {
+    setNotebookMode(nextNotebookMode);
+    if (nextNotebookMode) void refreshNotebook();
+  }
+
   function fillComposer(prompt: string): void {
     setDraft(prompt);
     setError(null);
@@ -990,9 +995,6 @@ export default function AICompanionPage() {
               </small>
             </div>
             <div className={styles.acts}>
-              <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => { const next = !notebookMode; setNotebookMode(next); if (next) void refreshNotebook(); }} aria-pressed={notebookMode}>
-                <Icon size={15}><path d="M4 5h16v14H4zM8 9h8M8 13h5" /></Icon>Notebook
-              </button>
               <button
                 type="button"
                 className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
@@ -1146,6 +1148,24 @@ export default function AICompanionPage() {
                   ))}
                   <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
                   <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
+                </div>
+                <div className={styles.modeToggle} role="group" aria-label="Chế độ trò chuyện">
+                  <button
+                    type="button"
+                    className={!notebookMode ? styles.modeToggleActive : undefined}
+                    aria-pressed={!notebookMode}
+                    onClick={() => selectNotebookMode(false)}
+                  >
+                    Trò chuyện
+                  </button>
+                  <button
+                    type="button"
+                    className={notebookMode ? styles.modeToggleActive : undefined}
+                    aria-pressed={notebookMode}
+                    onClick={() => selectNotebookMode(true)}
+                  >
+                    Notebook
+                  </button>
                 </div>
                 <form className={styles.box} onSubmit={handleSend}>
                   <label className={styles.srOnly} htmlFor="ai-companion-message">Tin nhắn</label>
