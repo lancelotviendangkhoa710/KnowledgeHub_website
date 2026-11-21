@@ -137,7 +137,6 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
         <h2 id="hm-title" aria-live="polite">
           {load.status === 'ready' ? <><b>{total}</b> hoạt động học tập trong {range.label}</> : 'Hoạt động học tập'}
         </h2>
-        <p>Mỗi bước lộ trình bạn hoàn thành được tính 1 hoạt động vào ngày đó, theo giờ Việt Nam.</p>
       </div>
 
       <div className={s.hm}>
