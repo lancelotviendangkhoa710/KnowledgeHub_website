@@ -117,6 +117,7 @@ export default function AuthActions() {
             <small title={user.email}>{user.email}</small>
           </div>
           <Link role="menuitem" href="/account" onClick={() => setOpen(false)}>Tài khoản</Link>
+          <Link role="menuitem" href="/account/settings" onClick={() => setOpen(false)}>Cài đặt</Link>
           {user.roles.includes('admin') && (
             <Link role="menuitem" href="/admin/users" onClick={() => setOpen(false)}>Quản trị</Link>
           )}
