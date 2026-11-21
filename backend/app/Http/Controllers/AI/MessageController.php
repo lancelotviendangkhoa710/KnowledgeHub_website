@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Services\AI\MessageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use RuntimeException;
 
@@ -57,6 +58,13 @@ class MessageController extends Controller
         try {
             $result = $this->messages->send($user, $conversationModel, $request->validated());
         } catch (RuntimeException $exception) {
+            Log::warning('ai.message_send_failed', [
+                'status' => (int) $exception->getCode(),
+                'mode' => (string) $request->input('mode', 'chat'),
+                'exception' => $exception::class,
+                'reason' => $exception->getMessage(),
+            ]);
+
             return $this->errorResponse($exception);
         }
 
