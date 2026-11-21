@@ -1,17 +1,57 @@
-# KnowledgeHub
+<div align="center">
 
-Curated learning platform with AI Learning Companion.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-knowledgehub-ngang-toi.svg">
+  <img src="docs/ui-redesign/logo/logo-knowledgehub-ngang-sang.svg" alt="KnowledgeHub" width="300">
+</picture>
 
-KnowledgeHub is operated by an internal content team. Contributors create and publish courses; Users discover, enroll, and learn; Admins manage the platform.
+**Curated learning platform with an AI learning companion.**
+
+[Quick Start](#quick-start) · [Documentation](#documentation) · [Project Structure](#project-structure) · [Contributing](#contributing)
+
+<img src="https://img.shields.io/badge/Next.js-14-23272F?style=flat-square&labelColor=2443E0" alt="Next.js 14">
+<img src="https://img.shields.io/badge/Laravel-11-23272F?style=flat-square&labelColor=2443E0" alt="Laravel 11">
+<img src="https://img.shields.io/badge/PostgreSQL-Supabase-23272F?style=flat-square&labelColor=2443E0" alt="PostgreSQL (Supabase)">
+<img src="https://img.shields.io/badge/Docker-Compose-23272F?style=flat-square&labelColor=2443E0" alt="Docker Compose">
+
+<br><br>
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshot-home-dark.png"><img src="docs/assets/screenshot-home.png" alt="KnowledgeHub home page with the hero, a sample learning roadmap and the latest courses" width="880"></picture>
+
+<br>
+
+<table>
+  <tr>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshot-courses-dark.png"><img src="docs/assets/screenshot-courses.png" alt="Course library with search, topic filters and course cards" width="430"></picture></td>
+    <td><picture><source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshot-lesson-dark.png"><img src="docs/assets/screenshot-lesson.png" alt="Course page with table of contents, video and related courses" width="430"></picture></td>
+  </tr>
+</table>
+
+</div>
+
+## About
+
+KnowledgeHub is operated by an internal content team. Contributors create and publish courses; Users discover, enroll, and learn; Admins manage the platform. An AI learning companion helps Users plan and follow their path.
+
+## Features
+
+- Course library with search, topic filters and course pages
+- Learning roadmaps, including roadmaps drafted by the AI companion
+- AI learning companion that remembers a User's goals
+- Saved courses for each User
+- Studio for Contributors: course editor with local draft recovery, publishing, archiving and version history
+- Admin area for users, roles, categories and tags
 
 ## Stack
 
-- **Frontend**: Next.js / React
-- **Backend**: Laravel 11 REST API
-- **Database**: Supabase PostgreSQL (shared development); disposable Docker PostgreSQL (tests)
-- **AI Service**: Python + FastAPI (future)
-- **File Storage**: Amazon S3 (future)
-- **Dev Environment**: Docker Compose
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js / React |
+| Backend | Laravel 11 REST API |
+| Database | Supabase PostgreSQL (shared development); disposable Docker PostgreSQL (tests) |
+| AI Service | Python + FastAPI (future) |
+| File Storage | Amazon S3 (future) |
+| Dev Environment | Docker Compose |
 
 ## Quick Start
 
@@ -21,26 +61,41 @@ data: do not run migrations, seeders, resets, or automated tests against it.
 
 ## Documentation
 
-### For Developers
-- [`docs/PROJECT-ARCHITECTURE.md`](docs/PROJECT-ARCHITECTURE.md) — Concise project architecture and implementation status
-- [`docs/DEV_CHEATSHEET.md`](docs/DEV_CHEATSHEET.md) - Current development setup guide
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) â€“ System architecture, components, domain boundaries
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — Deployment guide and production checklist
-- [`docs/DATABASE.md`](docs/DATABASE.md) â€“ Schema design, constraints, deletion policies
-- [`docs/ERD.md`](docs/ERD.md) â€“ Entity-relationship diagrams by domain
-- [`docs/API.md`](docs/API.md) â€“ API contract reference (contract-first boundary)
+**For developers**
 
-### For AI Agents
-- [`AGENTS.md`](AGENTS.md) â€“ Global AI agent constitution (start here)
-- [`backend/AGENTS.md`](backend/AGENTS.md) â€“ Backend-specific agent rules
-- [`skills/`](skills/) â€“ Specialized skills for database and data engineering tasks
+| Document | Description |
+|---|---|
+| [`docs/PROJECT-ARCHITECTURE.md`](docs/PROJECT-ARCHITECTURE.md) | Concise project architecture and implementation status |
+| [`docs/DEV_CHEATSHEET.md`](docs/DEV_CHEATSHEET.md) | Current development setup guide |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture, components, domain boundaries |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Deployment guide and production checklist |
+| [`docs/DATABASE.md`](docs/DATABASE.md) | Schema design, constraints, deletion policies |
+| [`docs/ERD.md`](docs/ERD.md) | Entity-relationship diagrams by domain |
+| [`docs/API.md`](docs/API.md) | API contract reference (contract-first boundary) |
 
-### For Team Collaboration
-- [`docs/team/OWNERSHIP.md`](docs/team/OWNERSHIP.md) â€“ Domain ownership with allowed/forbidden paths
-- [`docs/team/WORKFLOW.md`](docs/team/WORKFLOW.md) â€“ Git workflow, PR rules, hotspot inventory
-- [`docs/team/FEATURES.md`](docs/team/FEATURES.md) â€“ Feature registry by domain
-- [`docs/team/TASK_TEMPLATE.md`](docs/team/TASK_TEMPLATE.md) â€“ Task template for AI agents
-- [`docs/decisions/`](docs/decisions/) â€“ Architecture decision records (ADRs)
+**For AI agents**
+
+| Document | Description |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Global AI agent constitution (start here) |
+| [`backend/AGENTS.md`](backend/AGENTS.md) | Backend-specific agent rules |
+| [`skills/`](skills/) | Specialized skills for database and data engineering tasks |
+
+**For team collaboration**
+
+| Document | Description |
+|---|---|
+| [`docs/team/OWNERSHIP.md`](docs/team/OWNERSHIP.md) | Domain ownership with allowed and forbidden paths |
+| [`docs/team/WORKFLOW.md`](docs/team/WORKFLOW.md) | Git workflow, PR rules, hotspot inventory |
+| [`docs/team/FEATURES.md`](docs/team/FEATURES.md) | Feature registry by domain |
+| [`docs/team/TASK_TEMPLATE.md`](docs/team/TASK_TEMPLATE.md) | Task template for AI agents |
+| [`docs/decisions/`](docs/decisions/) | Architecture decision records (ADRs) |
+
+## Design
+
+The interface follows the mockup in [`docs/ui-redesign/mockup/index.html`](docs/ui-redesign/mockup/index.html), in light and dark mode. Headings use Plus Jakarta Sans and body text uses Roboto. The palette is cobalt `#2443E0`, hero blue `#1F3ACF`, accent yellow `#FFD84A` and ink `#101214`; the full set of tokens lives in [`frontend/src/app/globals.css`](frontend/src/app/globals.css).
+
+Handoff notes: [`TAI-LIEU-BAN-GIAO-GIAO-DIEN.md`](docs/ui-redesign/TAI-LIEU-BAN-GIAO-GIAO-DIEN.md) (Vietnamese). UI rules for contributors: [`CLAUDE.md`](CLAUDE.md).
 
 ## Development
 
@@ -59,36 +114,31 @@ The `test-db` service is disposable and is not the shared development database.
 
 ```
 knowledgehub/
-â”œâ”€â”€ AGENTS.md             # Global AI agent constitution
-â”œâ”€â”€ backend/              # Laravel 11 REST API
-â”‚   â””â”€â”€ AGENTS.md         # Backend-specific agent rules
-â”œâ”€â”€ database/             # Database files (mounted into container)
-â”‚   â”œâ”€â”€ migrations/       # Schema migrations
-â”‚   â”œâ”€â”€ seeders/          # Development data
-â”‚   â””â”€â”€ factories/        # Model factories
-â”œâ”€â”€ docs/                 # Technical documentation
-â”‚   â”œâ”€â”€ ARCHITECTURE.md   # System architecture (implemented + planned)
-â”‚   â”œâ”€â”€ API.md            # API contract reference
-â”‚   â”œâ”€â”€ DATABASE.md       # Schema reference
-â”‚   â”œâ”€â”€ ERD.md            # Entity relationships
-â”‚   â”œâ”€â”€ SETUP.md          # Setup guide
-â”‚   â”œâ”€â”€ validation_tests.sql
-â”‚   â”œâ”€â”€ decisions/        # Architecture decision records (ADRs)
-â”‚   â””â”€â”€ team/             # Team collaboration docs
-â”‚       â”œâ”€â”€ OWNERSHIP.md  # Domain ownership and allowed paths
-â”‚       â”œâ”€â”€ WORKFLOW.md   # Git workflow and hotspot inventory
-â”‚       â”œâ”€â”€ FEATURES.md   # Feature registry by domain
-â”‚       â””â”€â”€ TASK_TEMPLATE.md  # AI agent task template
-â”œâ”€â”€ skills/               # AI agent skills for DB/data work
-â”‚   â”œâ”€â”€ database-design/
-â”‚   â”œâ”€â”€ postgresql-sql/
-â”‚   â”œâ”€â”€ data-pipelines/
-â”‚   â””â”€â”€ data-quality-testing/
-â”œâ”€â”€ scripts/              # Helper scripts for agent workflow
-â”‚   â”œâ”€â”€ agent-start-task.ps1
-â”‚   â”œâ”€â”€ agent-finish-task.ps1
-â”‚   â””â”€â”€ create-pr.ps1
-â””â”€â”€ docker/               # Container configuration
+├── AGENTS.md             # Global AI agent constitution
+├── backend/              # Laravel 11 REST API
+│   └── AGENTS.md         # Backend-specific agent rules
+├── frontend/             # Next.js application
+├── ai-service/           # Python AI service
+├── database/             # Database files (mounted into container)
+│   ├── migrations/       # Schema migrations
+│   ├── seeders/          # Development data
+│   └── manual/           # Manual SQL scripts
+├── docs/                 # Technical documentation
+│   ├── ARCHITECTURE.md   # System architecture (implemented + planned)
+│   ├── API.md            # API contract reference
+│   ├── DATABASE.md       # Schema reference
+│   ├── ERD.md            # Entity relationships
+│   ├── SETUP.md          # Setup guide
+│   ├── validation_tests.sql
+│   ├── decisions/        # Architecture decision records (ADRs)
+│   ├── team/             # Team collaboration docs
+│   └── ui-redesign/      # Interface mockup, logo and handoff notes
+├── skills/               # AI agent skills for DB/data work
+├── scripts/              # Helper scripts for agent workflow
+│   ├── agent-start-task.ps1
+│   ├── agent-finish-task.ps1
+│   └── create-pr.ps1
+└── docker/               # Container configuration
 ```
 
 ## Contributing
@@ -103,4 +153,3 @@ knowledgehub/
 ## License
 
 TBD
-

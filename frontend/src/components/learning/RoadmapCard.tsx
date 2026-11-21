@@ -5,6 +5,7 @@ import { FormEvent, useState } from 'react';
 import { learningProgressClient } from '@/lib/learningProgressClient';
 import { roadmapClient } from '@/lib/roadmapClient';
 import { getCurrentUser } from '@/lib/auth';
+import Select from '@/components/ui/Select';
 import { LearningRoadmap, RoadmapItem, RoadmapItemStatus, RoadmapStatus } from '@/types/learning';
 import s from './roadmapCard.module.css';
 
@@ -193,9 +194,18 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
             <form onSubmit={saveRoadmap} className={s.form}>
               <label className={s.field}>Tên lộ trình<input className={s.input} aria-label="Sửa tên lộ trình" required maxLength={255} value={title} onChange={(event) => setTitle(event.target.value)} /></label>
               <label className={s.field}>Mục tiêu học tập<textarea className={s.input} aria-label="Sửa mục tiêu học tập" required value={goal} onChange={(event) => setGoal(event.target.value)} rows={2} /></label>
-              <label className={s.field}>Trạng thái<select className={s.select} aria-label="Trạng thái lộ trình" value={status} onChange={(event) => setStatus(event.target.value as RoadmapStatus)}>
-                {roadmapStatuses.map((option) => <option key={option} value={option}>{statusLabels[option]}</option>)}
-              </select></label>
+              <div className={s.field}>
+                <span>Trạng thái</span>
+                <Select
+                  portal
+                  compact
+                  className={s.selectBox}
+                  ariaLabel="Trạng thái lộ trình"
+                  value={status}
+                  onChange={(value) => setStatus(value as RoadmapStatus)}
+                  options={roadmapStatuses.map((option) => ({ value: option, label: statusLabels[option] }))}
+                />
+              </div>
               <div className={s.formActions}>
                 <button className={s.btn} disabled={busy !== null}>Lưu lộ trình</button>
                 <button type="button" className={`${s.btn} ${s.btnGhost}`} onClick={() => setEditing(false)} disabled={busy !== null}>Hủy</button>
@@ -257,10 +267,17 @@ export default function RoadmapCard({ roadmap, onChange, onDelete, deleting }: P
                       </a>
                     ))}
                     <div className={s.row}>
-                      <label htmlFor={`progress-${item.id}`}>Tiến độ</label>
-                      <select className={s.select} id={`progress-${item.id}`} aria-label={`Tiến độ của ${item.title}`} value={item.status} disabled={busy !== null} onChange={(event) => void changeProgress(item, event.target.value as RoadmapItemStatus)}>
-                        {progressOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                      </select>
+                      <span>Tiến độ</span>
+                      <Select
+                        portal
+                        compact
+                        className={s.selectBox}
+                        ariaLabel={`Tiến độ của ${item.title}`}
+                        value={item.status}
+                        disabled={busy !== null}
+                        onChange={(value) => void changeProgress(item, value as RoadmapItemStatus)}
+                        options={progressOptions.map((option) => ({ value: option.value, label: option.label }))}
+                      />
                       {!isAiRoadmap && <button type="button" className={`${s.btn} ${s.btnGhost} ${s.btnSm}`} disabled={busy !== null} onClick={() => startEditingItem(item)}>Sửa bước</button>}
                       {!isAiRoadmap && <button type="button" className={`${s.btn} ${s.btnGhost} ${s.btnSm}`} disabled={busy !== null} onClick={() => void removeItem(item)}>Xóa bước</button>}
                     </div>

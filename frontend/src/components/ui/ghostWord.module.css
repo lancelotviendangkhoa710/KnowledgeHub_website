@@ -1,0 +1,10 @@
+/* Khung giữ nguyên vị trí, cỡ chữ, màu và độ mờ cũ; thêm right: 0 và overflow: hidden để dải chữ trôi không tràn ra ngoài. */
+.ghost { position: absolute; left: -2vw; right: 0; top: 50%; transform: translateY(-52%); overflow: hidden; font-family: var(--display); font-weight: 800; font-size: clamp(150px, 25vw, 360px); letter-spacing: -.04em; line-height: 1; color: rgba(255, 255, 255, .055); white-space: nowrap; pointer-events: none; user-select: none; }
+/* Hai bản chữ, mỗi bản có khoảng đệm bên phải; trôi đúng một nửa dải (dài bằng một bản chữ) rồi lặp lại nên chỗ nối không thấy. */
+.track { display: inline-flex; will-change: transform; animation: drift 90s linear infinite; }
+.track span { padding-right: .35em; }
+/* Từ -50% về 0: chữ trôi từ trái sang phải. */
+@keyframes drift { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .track { animation: none; }
+}

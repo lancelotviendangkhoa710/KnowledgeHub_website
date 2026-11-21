@@ -99,7 +99,7 @@ export const tagAdminClient = {
     do {
       const response = await api.get<TagPage>(`/v1/tags?per_page=${PAGE_SIZE}&page=${page}`);
       if (!response || !Array.isArray(response.data)) {
-        throw { message: 'Unexpected tags response format received from server.' };
+        throw { message: 'Máy chủ trả về danh sách thẻ sai định dạng.' };
       }
       all.push(...response.data);
       lastPage = Number(response.last_page) || 1;

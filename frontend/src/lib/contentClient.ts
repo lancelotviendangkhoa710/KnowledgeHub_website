@@ -27,15 +27,15 @@ function buildApiUrl(path: string): string {
 }
 
 /** User-facing message used when the API cannot be reached at all (network/CORS/DNS failure). */
-export const API_UNREACHABLE_MESSAGE = 'Cannot reach the KnowledgeHub API.';
+export const API_UNREACHABLE_MESSAGE = 'Không kết nối được máy chủ KnowledgeHub.';
 
 /** Used for writes (POST/PUT/PATCH/DELETE): the request may or may not have been applied server-side. */
 export const API_UNREACHABLE_WRITE_MESSAGE =
-  'Could not reach the KnowledgeHub API. The result is unknown — refresh to check.';
+  'Không kết nối được máy chủ KnowledgeHub. Chưa rõ thay đổi đã được lưu hay chưa, hãy tải lại để kiểm tra.';
 
 /** Shown while GET requests are being retried (Render free tier cold start can take up to ~1 min). */
 export const SERVER_WAKING_MESSAGE =
-  'Waking up the KnowledgeHub server… this can take up to a minute (free hosting).';
+  'Đang đánh thức máy chủ KnowledgeHub… việc này có thể mất tới một phút (hosting miễn phí).';
 
 /** HTTP statuses that a sleeping / starting backend returns transiently. */
 const RETRYABLE_STATUSES = new Set([500, 502, 503, 504]);
@@ -151,7 +151,7 @@ async function apiFetch(input: string, init?: RequestInit, options?: ApiReadOpti
         throw new Error(API_UNREACHABLE_MESSAGE);
       }
       throw new Error(
-        `The KnowledgeHub server is not responding (HTTP ${res.status}). Please try again in a minute.`
+        `Máy chủ KnowledgeHub không phản hồi (HTTP ${res.status}). Vui lòng thử lại sau một phút.`
       );
     }
 
@@ -228,7 +228,7 @@ async function requestArticlesJson(url: string, options?: ApiReadOptions): Promi
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to fetch articles from API (HTTP ${res.status}).`);
+    throw new Error(errorJson.message || `Không tải được danh sách khóa học (HTTP ${res.status}).`);
   }
 
   return res.json();
@@ -246,7 +246,7 @@ async function requestArticlesJson(url: string, options?: ApiReadOptions): Promi
 export async function fetchArticles(params?: FetchArticlesParams, options?: ApiReadOptions): Promise<Article[]> {
   const list = extractList<Article>(await requestArticlesJson(buildArticlesUrl(params), options));
   if (list === null) {
-    throw new Error('Unexpected response format received from server.');
+    throw new Error('Máy chủ trả về dữ liệu sai định dạng.');
   }
   return list;
 }
@@ -310,7 +310,7 @@ export async function fetchArticlesPage(
   const json = await requestArticlesJson(buildArticlesUrl(params, extra), options);
   const items = extractList<Article>(json);
   if (items === null) {
-    throw new Error('Unexpected response format received from server.');
+    throw new Error('Máy chủ trả về dữ liệu sai định dạng.');
   }
 
   // Tolerate a bare array or missing fields by describing the response as a single page.
@@ -360,12 +360,12 @@ export async function fetchArticle(identifier: string, options?: ApiReadOptions)
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to load course (HTTP ${res.status}).`);
+    throw new Error(errorJson.message || `Không tải được khóa học (HTTP ${res.status}).`);
   }
 
   const json: { data?: Article } | null = await res.json();
   if (!json?.data) {
-    throw new Error('Unexpected course response format received from server.');
+    throw new Error('Máy chủ trả về khóa học sai định dạng.');
   }
   return json.data;
 }
@@ -385,12 +385,12 @@ export async function fetchCategories(options?: ApiReadOptions): Promise<Categor
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to load categories (HTTP ${res.status}).`);
+    throw new Error(errorJson.message || `Không tải được danh mục (HTTP ${res.status}).`);
   }
 
   const list = extractList<Category>(await res.json());
   if (list === null) {
-    throw new Error('Unexpected categories response format received from server.');
+    throw new Error('Máy chủ trả về danh mục sai định dạng.');
   }
   return list;
 }
@@ -410,12 +410,12 @@ export async function fetchTags(options?: ApiReadOptions): Promise<Tag[]> {
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to load tags (HTTP ${res.status}).`);
+    throw new Error(errorJson.message || `Không tải được danh sách thẻ (HTTP ${res.status}).`);
   }
 
   const list = extractList<Tag>(await res.json());
   if (list === null) {
-    throw new Error('Unexpected tags response format received from server.');
+    throw new Error('Máy chủ trả về danh sách thẻ sai định dạng.');
   }
   return list;
 }
@@ -451,12 +451,12 @@ export async function fetchMyArticles(status?: string, options?: ApiReadOptions)
 
   if (!res.ok) {
     const errorJson: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(errorJson.message || `Failed to load courses (HTTP ${res.status}).`);
+    throw new Error(errorJson.message || `Không tải được danh sách khóa học (HTTP ${res.status}).`);
   }
 
   const list = extractList<Article>(await res.json());
   if (list === null) {
-    throw new Error('Unexpected response format received from server.');
+    throw new Error('Máy chủ trả về dữ liệu sai định dạng.');
   }
   return list;
 }
@@ -484,12 +484,12 @@ export async function publishArticle(articleId: string, versionId?: string): Pro
 
   if (!res.ok) {
     const err: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(err.message || 'Failed to publish course.');
+    throw new Error(err.message || 'Không xuất bản được khóa học.');
   }
 
   const json: { data?: Article; message?: string } = await res.json();
   if (!json?.data) {
-    throw new Error(json?.message || 'Publish operation completed but course data was missing from server response.');
+    throw new Error(json?.message || 'Đã xuất bản nhưng máy chủ không trả về dữ liệu khóa học.');
   }
   return json.data;
 }
@@ -515,12 +515,12 @@ export async function archiveArticle(articleId: string): Promise<Article> {
 
   if (!res.ok) {
     const err: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(err.message || 'Failed to archive course.');
+    throw new Error(err.message || 'Không lưu trữ được khóa học.');
   }
 
   const json: { data?: Article; message?: string } = await res.json();
   if (!json?.data) {
-    throw new Error(json?.message || 'Archive operation completed but course data was missing from server response.');
+    throw new Error(json?.message || 'Đã lưu trữ nhưng máy chủ không trả về dữ liệu khóa học.');
   }
   return json.data;
 }
@@ -544,6 +544,6 @@ export async function deleteArticle(articleId: string): Promise<void> {
 
   if (!res.ok) {
     const err: { message?: string } = await res.json().catch(() => ({}));
-    throw new Error(err.message || 'Failed to delete course.');
+    throw new Error(err.message || 'Không xóa được khóa học.');
   }
 }

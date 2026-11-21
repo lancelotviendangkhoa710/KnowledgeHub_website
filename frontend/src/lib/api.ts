@@ -71,7 +71,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     response = await sessionFetch(`${BASE_URL}${normalizedPath}`, options);
   } catch {
     throw {
-      message: 'Unable to reach the KnowledgeHub API. Check that the API service is running.',
+      message: 'Không kết nối được máy chủ KnowledgeHub. Kiểm tra kết nối mạng rồi thử lại.',
     };
   }
   if (!response.ok) {

@@ -10,12 +10,13 @@ import { getCurrentUser, restoreSession, subscribeCurrentUser, AuthUser } from '
 
 const STUDIO_PATH = /^\/courses\/(manage|create|agent-create|[^/]+\/versions)/;
 
-const NAV = [
+// `auth: true` = chỉ hiện khi đã đăng nhập (user có trong kho `auth`; lúc đang khôi phục phiên thì chưa hiện).
+const NAV: { href: string; label: string; auth?: boolean; active: (p: string) => boolean }[] = [
   { href: '/courses', label: 'Khóa học', active: (p: string) => p.startsWith('/courses') && !STUDIO_PATH.test(p) },
   { href: '/learning/roadmaps', label: 'Lộ trình', active: (p: string) => p.startsWith('/learning') },
   { href: '/ai/companion', label: 'Trợ lý AI', active: (p: string) => p === '/ai' || p.startsWith('/ai/companion') },
   { href: '/ai/cv-assessment', label: 'Đánh giá CV', active: (p: string) => p.startsWith('/ai/cv-assessment') },
-  { href: '/bookmarks', label: 'Đã lưu', active: (p: string) => p.startsWith('/bookmarks') },
+  { href: '/bookmarks', label: 'Đã lưu', active: (p: string) => p.startsWith('/bookmarks'), auth: true },
 ];
 
 /**
@@ -39,7 +40,7 @@ export default function SiteHeader() {
     <div className="kh-wrap kh-top__inner">
       <Logo />
       <nav className="kh-nav" aria-label="Điều hướng chính">
-        {NAV.map((item) => (
+        {NAV.filter((item) => !item.auth || user).map((item) => (
           <Link key={item.href} href={item.href} aria-current={item.active(pathname) ? 'page' : undefined}>
             {item.label}
           </Link>
