@@ -38,6 +38,14 @@ export default function ActivityHistory({ userId, date, onClearDate }: Props) {
 
   async function fetchPage(next: number, replace: boolean) {
     const mine = ++ticket.current; // a filter change while loading makes older answers stale
+    if (replace) {
+      // Rows and paging belong to one (user, date) filter: drop them before loading another,
+      // so a failed load never shows old rows under the new label or appends to them.
+      setEntries([]);
+      setPage(1);
+      setLastPage(1);
+      setTotal(0);
+    }
     setStatus(replace ? 'loading' : 'more');
     try {
       const result = await activityClient.recent(next, date ?? undefined);
