@@ -31,7 +31,8 @@ export function useAccountUser(onFresh?: (user: AccountUser, info: FreshUserInfo
     setRefreshing(true);
     setLoadError(null);
     accountClient.me().then((response) => {
-      if (!active) return;
+      // Signed out or switched account while /me was in flight: this answer is stale.
+      if (!active || getAccessToken() !== tokenAtRequest) return;
       const fresh = response.data.user;
       // Read the cached user before setCurrentUser overwrites it.
       const cached = getCurrentUser();
