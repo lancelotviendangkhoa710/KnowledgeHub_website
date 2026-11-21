@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Learning\ActivityController;
 use App\Http\Controllers\Learning\RoadmapItemController;
 use App\Http\Controllers\Learning\RoadmapItemPrerequisiteController;
 use App\Http\Controllers\Learning\RoadmapController;
@@ -24,6 +25,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/learning/roadmap-items/{item}/progress', [RoadmapProgressController::class, 'show'])->whereUuid('item');
     Route::patch('/learning/roadmap-items/{item}/progress', [RoadmapProgressController::class, 'update'])->whereUuid('item');
+
+    // PRF-06, PRF-07: the caller's own activity for the profile heatmap and history.
+    Route::get('/learning/activity', [ActivityController::class, 'daily']);
+    Route::get('/learning/activity/recent', [ActivityController::class, 'recent']);
 
     Route::post('/learning/roadmap-items/{item}/prerequisites', [RoadmapItemPrerequisiteController::class, 'store'])
         ->whereUuid('item');
