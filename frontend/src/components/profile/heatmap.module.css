@@ -32,8 +32,10 @@
 .cell:disabled { cursor: progress; }
 .blank { visibility: hidden; }
 .today { outline: 2px solid var(--mark); outline-offset: 1px; }
+/* Ô đã chọn: viền liền. Ô đang focus: viền nét đứt màu thương hiệu; vừa chọn vừa focus thì thêm vòng trong. */
 .cell[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 1px; }
-.cell:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.cell:focus-visible { outline: 2px dashed var(--brand); outline-offset: 2px; }
+.cell[aria-pressed="true"]:focus-visible { outline: 2px dashed var(--brand); outline-offset: 2px; box-shadow: 0 0 0 1px var(--ink); }
 .cell:hover:not(:disabled) { filter: brightness(1.12); }
 
 .foot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; align-items: center; padding: 0 24px 18px; font-size: 12px; color: var(--ink-3); }
