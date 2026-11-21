@@ -53,7 +53,28 @@ Nút "Continue with Google" cần OAuth client riêng, không có thì nút báo
 4. `docker compose up -d --force-recreate app nginx`, rồi mở http://localhost:3000/login.
 
 Chỉ dùng http://localhost:3000 cho cả đăng nhập và duyệt web (cookie không chia sẻ giữa các địa chỉ khác nhau).
-Email Google chưa có tài khoản sẽ tạo tài khoản `active`, nhưng chỉ với tên miền được phép: biến `GOOGLE_ALLOWED_DOMAINS` (mặc định chỉ `*.edu,*.edu.vn`; muốn thử bằng Gmail thì đặt `GOOGLE_ALLOWED_DOMAINS=gmail.com,*.edu,*.edu.vn`; `*.edu` khớp mọi tên miền kết thúc bằng `.edu`; để trống = không giới hạn). Chỉ chấp nhận email mà Google bảo chứng: Gmail, hoặc email Google Workspace có tên miền trùng tên miền Workspace của tài khoản (biến `GOOGLE_REQUIRE_AUTHORITATIVE_EMAIL`, mặc định bật). Tài khoản Google cá nhân đăng ký bằng email khác (ví dụ email trường không dùng Workspace) bị từ chối. Giới hạn tài khoản mới: `GOOGLE_MAX_NEW_ACCOUNTS_PER_IP` (mặc định 3 mỗi IP mỗi ngày, chỉ có tác dụng khi API thấy IP thật của khách, xem ADR) và `GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR` (mặc định 30 tài khoản mới mỗi giờ cho cả hệ thống). Admin xem tài khoản mới ở trang Users (mới nhất lên đầu, lọc theo ngày tham gia) và khóa được tài khoản đáng ngờ. Tài khoản đã có và `active` thì không bị giới hạn tên miền; tài khoản `pending`, `inactive`, `banned` bị từ chối.
+Email Google chưa có tài khoản sẽ tạo tài khoản `active`, nhưng chỉ với tên miền được phép: biến `GOOGLE_ALLOWED_DOMAINS` (mặc định chỉ `*.edu,*.edu.vn`; bản triển khai mặc định có thêm `gmail.com`, ở máy lập trình muốn thử bằng Gmail thì đặt `GOOGLE_ALLOWED_DOMAINS=gmail.com,*.edu,*.edu.vn`; `*.edu` khớp mọi tên miền kết thúc bằng `.edu`; để trống = không giới hạn). Chỉ chấp nhận email mà Google bảo chứng: Gmail, hoặc email Google Workspace có tên miền trùng tên miền Workspace của tài khoản (biến `GOOGLE_REQUIRE_AUTHORITATIVE_EMAIL`, mặc định bật). Tài khoản Google cá nhân đăng ký bằng email khác (ví dụ email trường không dùng Workspace) bị từ chối. Giới hạn tài khoản mới: `GOOGLE_MAX_NEW_ACCOUNTS_PER_IP` (mặc định 3 mỗi IP mỗi ngày, chỉ có tác dụng khi API thấy IP thật của khách, xem ADR) và `GOOGLE_MAX_NEW_ACCOUNTS_PER_HOUR` (mặc định 30 tài khoản mới mỗi giờ cho cả hệ thống). Admin xem tài khoản mới ở trang Users (mới nhất lên đầu, lọc theo ngày tham gia) và khóa được tài khoản đáng ngờ. Tài khoản đã có và `active` thì không bị giới hạn tên miền; tài khoản `pending`, `inactive`, `banned` bị từ chối.
+
+## Thư xác thực, quên mật khẩu và CAPTCHA (máy lập trình)
+
+Xem ADR `docs/decisions/2026-11-21-email-verification-and-password-reset.md` và `2026-11-21-captcha-turnstile.md`.
+
+**Thư với Mailpit.** Mailpit nhận mọi thư gửi đi và không gửi ra ngoài. Lưu ý: `docker-compose.yml` hiện **chưa có dịch vụ Mailpit**, nên cần chạy riêng một container trong cùng mạng của Compose (tên mạng thường là `<tên-thư-mục>_knowledgehub`, xem bằng `docker network ls`):
+
+```powershell
+docker run -d --name mailpit --network <tên-mạng> -p 8025:8025 axllent/mailpit
+```
+
+`backend/.env` giữ `MAIL_HOST=mailpit`, `MAIL_PORT=1025` (cổng SMTP mặc định của Mailpit, chỉ dùng trong mạng Docker). Mở hộp thư tại http://localhost:8025 (cổng web mặc định của Mailpit). Nếu nhóm thêm Mailpit vào `docker-compose.yml` thì dùng đúng cổng ở đó.
+
+**CAPTCHA với khóa thử công khai của Cloudflare** (luôn cho qua, không dùng ở bản triển khai):
+
+- `backend/.env`: `TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA`
+- `frontend/.env.local`: `NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA`
+
+Sau khi đổi `backend/.env`, tạo lại container: `docker compose up -d --force-recreate app nginx`; đổi `frontend/.env.local` thì `docker compose restart frontend`. Đặt `FRONTEND_URL=http://localhost:3000` để liên kết trong thư mở đúng trang.
+
+Cấu hình cho Vercel và Render xem `docs/DEPLOYMENT.md`.
 
 ## Kiểm tra và xử lý lỗi
 

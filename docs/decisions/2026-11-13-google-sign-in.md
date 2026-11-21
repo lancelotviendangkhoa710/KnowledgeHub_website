@@ -49,6 +49,16 @@ Users can only sign in with email and password, and a new account stays `pending
 - Callback failures (denied consent, expired state, Google outage) all land on `/login?error=google_failed`; they are not logged in detail.
 - The Google Cloud OAuth client must list the exact redirect URI per environment.
 
+## Update 2026-11-21: deployment on Vercel and Gmail
+
+Status of this update: Proposed (the rest of this ADR is unchanged).
+
+- **`gmail.com` is in the default `GOOGLE_ALLOWED_DOMAINS` of the hosted deployment** (`gmail.com,*.edu,*.edu.vn`; the code default stays school-only). Reason: the product is open to learners, most of whom have a personal Gmail rather than a school Workspace address, and a Gmail address is authoritative (decision 3), so the recycled-mailbox risk does not apply. Anti-spam controls of decision 5 still apply.
+- **One public host on Vercel.** Vercel forwards `/api/*` to the Render API (`BACKEND_INTERNAL_URL`), so the browser sees one origin and the session cookie stays first-party. `GOOGLE_REDIRECT_URI` points at the **Vercel** host (`https://<vercel-host>/api/auth/google/callback`), not at Render, and the same URI is registered in Google Cloud. The Vercel host is added to `SANCTUM_STATEFUL_DOMAINS`.
+- **Risks added:** the OAuth consent screen must be **In production**, otherwise only listed test users can sign in. File sessions on Render are lost when the service is deployed again, so signed-in users must sign in again. The proxy hides real client IPs, so the per-IP limit stays inactive there (as already noted in decision 5); the hourly brake still works.
+- The email flows added next to Google sign-in carry two more deployment risks, described in `2026-11-21-email-verification-and-password-reset.md`: Render's free tier blocks SMTP ports 25/465/587 (Brevo uses 2525), and a `gmail.com` sender is rewritten by Brevo so mail may land in Spam.
+- Configuration steps are in `docs/DEPLOYMENT.md`.
+
 ## Alternatives Considered
 
 1. **Add a `google_id` column now.** Stricter, but a schema change the Auth owner wanted to avoid; deferred as the upgrade path above.
