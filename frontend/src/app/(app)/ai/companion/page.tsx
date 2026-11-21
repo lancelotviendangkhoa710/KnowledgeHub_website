@@ -147,6 +147,9 @@ export default function AICompanionPage() {
   const [notebookMode, setNotebookMode] = useState(false);
   const [notebookStatus, setNotebookStatus] = useState<{ cv: { filename: string } | null; index: { status: string } | null } | null>(null);
   const [notebookBusy, setNotebookBusy] = useState(false);
+  const [notebookSourcesOpen, setNotebookSourcesOpen] = useState(false);
+  const [notebookFile, setNotebookFile] = useState<File | null>(null);
+  const [notebookError, setNotebookError] = useState<string | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -180,6 +183,12 @@ export default function AICompanionPage() {
   const memoryToggleRef = useRef<HTMLButtonElement | null>(null);
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!notebookMode || notebookBusy || notebookStatus?.index?.status !== 'pending') return;
+    const timer = window.setInterval(() => { void refreshNotebook(); }, 2500);
+    return () => window.clearInterval(timer);
+  }, [notebookBusy, notebookMode, notebookStatus?.index?.status]);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -739,21 +748,41 @@ export default function AICompanionPage() {
     void submitMessage(content, { conversationId, clientMessageId, mode });
   }
 
-  async function refreshNotebook(): Promise<void> {
-    try { setNotebookStatus((await aiCompanionClient.getNotebookStatus()).data); }
-    catch { setNotebookStatus(null); }
+  async function refreshNotebook(): Promise<{ cv: { filename: string } | null; index: { status: string } | null } | null> {
+    try {
+      const status = (await aiCompanionClient.getNotebookStatus()).data;
+      if (!mountedRef.current) return null;
+      setNotebookStatus(status);
+      if (status.index?.status !== 'failed') setNotebookError(null);
+      return status;
+    } catch {
+      if (mountedRef.current) setNotebookError('Không kiểm tra được trạng thái tài liệu. Vui lòng thử lại.');
+      return null;
+    }
   }
 
   async function uploadNotebook(file: File): Promise<void> {
-    setNotebookBusy(true); setError(null);
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setNotebookError('Chỉ hỗ trợ tệp PDF.');
+      return;
+    }
+    setNotebookFile(file);
+    setNotebookStatus({ cv: { filename: file.name }, index: { status: 'pending' } });
+    setNotebookBusy(true); setNotebookError(null);
     try { await aiRoadmapClient.saveCv(file); await refreshNotebook(); }
-    catch { setError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.'); }
+    catch { setNotebookError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.'); }
     finally { setNotebookBusy(false); }
   }
 
   function selectNotebookMode(nextNotebookMode: boolean): void {
     setNotebookMode(nextNotebookMode);
-    if (nextNotebookMode) void refreshNotebook();
+    if (!nextNotebookMode) {
+      setNotebookSourcesOpen(false);
+      return;
+    }
+    void refreshNotebook().then((status) => {
+      if (!status?.cv) setNotebookSourcesOpen(true);
+    });
   }
 
   function fillComposer(prompt: string): void {
@@ -841,7 +870,13 @@ export default function AICompanionPage() {
     ? 'Trò chuyện với AI chưa được bật.'
     : notebookMode ? 'Hỏi Notebook về tài liệu PDF của bạn' : 'Hỏi về bài học hoặc lộ trình';
   const showRetryAction = Boolean(failedSend && failedSend.conversationId === activeId);
-  const lastAssistantId = [...messages].reverse().find((message) => message.role !== 'user')?.id ?? null;
+  const notebookIndexStatus = notebookStatus?.index?.status;
+  const notebookLoading = notebookBusy || notebookIndexStatus === 'pending';
+  const notebookFailed = Boolean(notebookError) || notebookIndexStatus === 'failed';
+  const notebookStateLabel = notebookLoading
+    ? (notebookBusy ? 'Đang tải lên...' : 'Đang xử lý & lưu...')
+    : notebookFailed ? 'Không thể lưu tài liệu'
+      : 'Đã lưu / Sẵn sàng';
   const openRoadmapForm = () => {
     roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null;
     setRoadmapMode(true);
@@ -1048,12 +1083,6 @@ export default function AICompanionPage() {
             </div>
           )}
 
-          {notebookMode && <div className={styles.notebookBar} role="status">
-            <div><strong>Notebook mode</strong><span>{notebookStatus?.cv ? `${notebookStatus.cv.filename} · index ${notebookStatus.index?.status ?? 'pending'}` : 'Chưa có PDF nguồn'}</span></div>
-            <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void refreshNotebook()} disabled={notebookBusy}>Làm mới</button>
-            <label className={`${styles.btn} ${styles.btnSm}`}><input className={styles.srOnly} type="file" accept="application/pdf,.pdf" disabled={notebookBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadNotebook(file); }} />{notebookBusy ? 'Đang tải…' : 'Tải PDF'}</label>
-          </div>}
-
           <div ref={roadmapPaneRef} className={styles.roadmapPane} style={{ display: roadmapMode ? 'block' : 'none' }}>
             <RoadmapForm onBack={() => setRoadmapMode(false)} />
           </div>
@@ -1105,17 +1134,6 @@ export default function AICompanionPage() {
                         <span className={styles.botAv} aria-hidden="true"><LogoMark size={22} /></span>
                         <div className={styles.botTxt}>
                           <AssistantMarkdown content={message.content} />
-                          {message.id === lastAssistantId && (
-                            <div className={styles.offer}>
-                              <p>
-                                <b>Biến câu trả lời này thành lộ trình</b>
-                                Lộ trình sẽ có từng bước, khóa học cần học trước và theo dõi tiến độ.
-                              </p>
-                              <button type="button" className={`${styles.btn} ${styles.btnSm}`} onClick={openRoadmapForm}>
-                                Tạo lộ trình bằng AI
-                              </button>
-                            </div>
-                          )}
                         </div>
                       </div>
                     );
@@ -1137,8 +1155,10 @@ export default function AICompanionPage() {
                   {STARTER_PROMPTS.map((suggestion) => (
                     <button key={suggestion} type="button" onClick={() => fillComposer(suggestion)}>{suggestion}</button>
                   ))}
-                  <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
-                  <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
+                  {!notebookMode && <>
+                    <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
+                    <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
+                  </>}
                 </div>
                 <div className={styles.modeToggle} role="group" aria-label="Chế độ trò chuyện">
                   <button
@@ -1158,6 +1178,13 @@ export default function AICompanionPage() {
                     Notebook
                   </button>
                 </div>
+                {notebookMode && notebookStatus?.cv && (
+                  <button type="button" className={styles.sourceChip} onClick={() => setNotebookSourcesOpen(true)} aria-haspopup="dialog">
+                    <Icon size={15}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
+                    <span>{notebookStatus.cv.filename}</span>
+                    {notebookLoading ? <i className={styles.spinnerSmall} aria-label={notebookStateLabel} /> : notebookFailed ? <b aria-label="Lỗi">!</b> : <b aria-label="Đã lưu">✓</b>}
+                  </button>
+                )}
                 <form className={styles.box} onSubmit={handleSend}>
                   <label className={styles.srOnly} htmlFor="ai-companion-message">Tin nhắn</label>
                   <textarea
@@ -1188,6 +1215,57 @@ export default function AICompanionPage() {
             </div>
           </>}
         </section>
+
+        {notebookSourcesOpen && (
+          <div className={styles.sourceModalBackdrop} role="presentation" onMouseDown={() => setNotebookSourcesOpen(false)}>
+            <section className={styles.sourceModal} role="dialog" aria-modal="true" aria-labelledby="notebook-sources-title" onMouseDown={(event) => event.stopPropagation()}>
+              <div className={styles.sourceModalHead}>
+                <div><p>Nguồn</p><h2 id="notebook-sources-title">Tài liệu Notebook</h2></div>
+                <button type="button" className={styles.iconButton} onClick={() => setNotebookSourcesOpen(false)} aria-label="Đóng quản lý nguồn">
+                  <Icon size={18}><path d="M18 6 6 18M6 6l12 12" /></Icon>
+                </button>
+              </div>
+
+              {notebookStatus?.cv && (
+                <div className={styles.sourceItem} role="status">
+                  <Icon size={18}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
+                  <span>{notebookStatus.cv.filename}</span>
+                  {notebookLoading ? <><i className={styles.spinnerSmall} aria-hidden="true" /><small>{notebookStateLabel}</small></> : notebookFailed ? <><b className={styles.sourceWarn} aria-hidden="true">!</b><small>{notebookStateLabel}</small></> : <><b className={styles.sourceReady} aria-hidden="true">✓</b><small>{notebookStateLabel}</small></>}
+                </div>
+              )}
+
+              {notebookError && <p className={styles.sourceError} role="alert">{notebookError}</p>}
+              {notebookFailed && notebookFile && (
+                <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void uploadNotebook(notebookFile)} disabled={notebookBusy}>Thử lại</button>
+              )}
+
+              <label
+                className={styles.sourceDropzone}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const file = event.dataTransfer.files[0];
+                  if (file) void uploadNotebook(file);
+                }}
+              >
+                <input
+                  className={styles.srOnly}
+                  type="file"
+                  accept="application/pdf,.pdf"
+                  disabled={notebookBusy}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (file) void uploadNotebook(file);
+                  }}
+                />
+                <strong>+ Thêm nguồn / Tải tệp PDF lên</strong>
+                <span>Kéo và thả tệp PDF vào đây hoặc bấm để chọn tệp.</span>
+              </label>
+              <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void refreshNotebook()} disabled={notebookBusy}>Làm mới</button>
+            </section>
+          </div>
+        )}
 
         <aside
           id="memory-panel"
