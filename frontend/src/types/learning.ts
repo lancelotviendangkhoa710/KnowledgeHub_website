@@ -53,8 +53,19 @@ export interface RoadmapItem {
   position: number;
   status: RoadmapItemStatus;
   ai_details?: RoadmapItemAiDetails | null;
+  /** RMR-01: thời điểm hoàn thành (chỉ có ở GET danh sách/chi tiết). */
+  completed_at?: string | null;
+  /** RMR-01: tên khóa học đã xuất bản được liên kết, nếu có. */
+  article_title?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** RMR-01: chủ đề (danh mục gốc) của các bước trong một lộ trình. */
+export interface RoadmapTopic {
+  category_slug: string;
+  name: string;
+  count: number;
 }
 
 export interface LearningRoadmap {
@@ -69,6 +80,11 @@ export interface LearningRoadmap {
   created_at: string;
   updated_at: string;
   items: RoadmapItem[];
+  /** RMR-01: chỉ có ở GET danh sách/chi tiết; các phản hồi ghi không trả về. */
+  items_count?: number;
+  completed_count?: number;
+  topics?: RoadmapTopic[];
+  last_activity_at?: string | null;
 }
 
 export interface LearningResponse<T> {

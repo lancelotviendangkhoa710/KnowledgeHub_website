@@ -36,7 +36,6 @@
 .shortcuts { display: flex; flex-direction: column; gap: 8px; }
 .shortcuts > * { width: 100%; }
 .main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
-.placeholder { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--r-card); padding: 32px 24px; color: var(--ink-2); font-size: 14px; text-align: center; }
 .notice { padding: 10px 14px; border-radius: 8px; font-size: 14px; background: var(--surface); border: 1px solid var(--danger); color: var(--danger); }
 
 @media (max-width: 900px) {

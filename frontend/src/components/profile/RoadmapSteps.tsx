@@ -1,0 +1,58 @@
+import Link from 'next/link';
+import type { LearningRoadmap, RoadmapItem, RoadmapItemStatus } from '@/types/learning';
+import { fullDateTime, relativeTime } from './roadmapMeta';
+import s from './roadmapDetail.module.css';
+
+const ITEM_LABELS: Record<RoadmapItemStatus, string> = {
+  pending: 'Chưa bắt đầu',
+  in_progress: 'Đang học',
+  completed: 'Đã xong',
+  skipped: 'Đã bỏ qua',
+};
+
+/** Đường dẫn khóa học của một bước: ưu tiên link AI đã kiểm tra còn xuất bản. */
+export function lessonLink(item: RoadmapItem): { href: string; title: string } | null {
+  const course = item.ai_details?.course;
+  if (course?.url) return { href: course.url, title: course.title || 'Mở khóa học' };
+  if (item.article_id && (item.article_title || !item.ai_details)) {
+    return { href: `/courses/${encodeURIComponent(item.article_id)}`, title: item.article_title || 'Mở khóa học' };
+  }
+  return null;
+}
+
+function StatusIcon({ status }: { status: RoadmapItemStatus }) {
+  return (
+    <span className={`${s.icon} ${s[`i_${status}`]}`} aria-hidden="true">
+      {status === 'completed' && <svg viewBox="0 0 24 24"><path d="m5 12 5 5 9-10" /></svg>}
+      {status === 'skipped' && <svg viewBox="0 0 24 24"><path d="M6 12h12" /></svg>}
+    </span>
+  );
+}
+
+/** RMR-06, tab "Các bước": danh sách như danh sách tệp của repo. */
+export default function RoadmapSteps({ roadmap }: { roadmap: LearningRoadmap }) {
+  const items = [...roadmap.items].sort((a, b) => a.position - b.position);
+  if (items.length === 0) return <p className={s.empty}>Lộ trình này chưa có bước nào.</p>;
+
+  return (
+    <ol className={s.files}>
+      {items.map((item) => {
+        const lesson = lessonLink(item);
+        return (
+          <li key={item.id} className={s.file}>
+            <StatusIcon status={item.status} />
+            <div className={s.fileMain}>
+              <span className={s.fileTitle}><span className={s.sr}>{ITEM_LABELS[item.status]}: </span>{item.title}</span>
+              {lesson && <Link className={s.fileLink} href={lesson.href}>{lesson.title}</Link>}
+            </div>
+            <span className={s.fileWhen}>
+              {item.status === 'completed' && item.completed_at
+                ? <time dateTime={item.completed_at} title={fullDateTime(item.completed_at)}>Hoàn thành {relativeTime(item.completed_at)}</time>
+                : ITEM_LABELS[item.status]}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
