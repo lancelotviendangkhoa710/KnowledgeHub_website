@@ -39,8 +39,10 @@ export default function AccountSettingsPage() {
   const [section, setSection] = useState<SectionId>('ho-so');
   const userId = user?.id ?? null;
 
+  // A draft belongs to one account: when the account changes, drop it and start from that account's name.
   useEffect(() => {
-    if (user && !nameTouched.current) setName(user.name);
+    nameTouched.current = false;
+    setName(user?.name ?? '');
     // Only when the signed-in account changes, not on every profile edit.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
