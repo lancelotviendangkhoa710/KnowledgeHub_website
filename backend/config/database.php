@@ -98,7 +98,10 @@ return [
             // Optional for long-lived workers: reuse the PDO connection instead
             // of paying TLS + auth to Supabase on every request. Off by default.
             'options' => array_filter([
-                PDO::ATTR_PERSISTENT => (bool) env('DB_PERSISTENT', false),
+                PDO::ATTR_PERSISTENT => filter_var(env('DB_PERSISTENT', false), FILTER_VALIDATE_BOOLEAN),
+                // Supabase transaction pooling (6543) cannot preserve server-side
+                // prepared statements across pooled backend connections.
+                PDO::ATTR_EMULATE_PREPARES => (string) env('DB_PORT', '5432') === '6543',
             ], static fn ($value): bool => $value !== false),
         ],
 
