@@ -45,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // CV-02 owner-scoped saved CV.
     Route::get('/ai/cv', [UserCvController::class, 'show']);
+    Route::get('/ai/cv/rag-status', [UserCvController::class, 'ragStatus']);
     Route::post('/ai/cv', [UserCvController::class, 'store']);
     Route::get('/ai/cv/download', [UserCvController::class, 'download']);
     Route::delete('/ai/cv', [UserCvController::class, 'destroy']);

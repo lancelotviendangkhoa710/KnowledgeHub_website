@@ -15,7 +15,9 @@ function Add-Failure([string]$Message) {
 }
 
 function Test-AllowedLegacyPath([string]$Path) {
-    return $Path -like 'docs/*' -or
+    return $Path -eq 'AGENTS.md' -or
+        $Path -eq 'backend/AGENTS.md' -or
+        $Path -like 'docs/*' -or
         $Path -eq '.coderabbit.yaml' -or
         $Path -eq 'improtant_task.md' -or
         $Path -eq 'docs/TEAM_WORKFLOW.md' -or

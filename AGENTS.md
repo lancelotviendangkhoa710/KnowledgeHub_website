@@ -1,403 +1,134 @@
 ﻿# AGENTS.md — KnowledgeHub AI Agent Constitution
 
-**Version**: 2.0 | **Date**: 2026-10-06
-**Audience**: All AI coding agents (Cline, Cursor, Copilot, etc.)
-**Scope**: Global — applies to every agent in this repository
+**Version**: 3.0 | **Date**: 2026-11-21
+**Scope**: Global — applies to all AI coding agents in this repository.
+Child files (`backend/AGENTS.md`) specialize these rules; on conflict, **this file wins**.
 
-Child files (`backend/AGENTS.md`) specialize these rules.
-When child rules conflict with this file, **this file wins**.
+*Priority: Correctness > Speed. Diagnose before editing. Minimal diff. Never guess past 2 failed fixes.*
 
 ---
 
-## 1. Project Identity
+## 1. Project Identity & Stack
 
-KnowledgeHub is a **curated learning platform** with an AI Learning Companion. Operated by an internal content team. Contributors create and publish courses; Users learn; Admins manage the platform.
-
+KnowledgeHub is a **curated learning platform** with an AI Learning Companion, operated by an internal content team.
 **NOT** a social platform. **NOT** a UGC platform. **NO** community moderation.
 
----
-
-## 2. Technology Stack
-
 | Layer | Technology | Status |
-|---|---|---|
-| Backend API | Laravel 11 REST API | ✅ Active |
-| Database | PostgreSQL 16 / Supabase PostgreSQL | ✅ Active |
-| Frontend | Next.js / React | Scaffolded (`frontend/`) |
-| Dev Environment | Docker Compose | ✅ Active |
-| AI Service | Python + FastAPI | ⏳ Planned (separate service) |
-| File Storage | Amazon S3 | ⏳ Planned |
+| --- | --- | --- |
+| Backend API | Laravel 11 REST API | Active |
+| Database | PostgreSQL 16 / Supabase PostgreSQL | Active |
+| Frontend | Next.js / React (`frontend/`) | Active / Scaffolded |
+| AI Service | Python + FastAPI (`ai-service/`) | Active (separate service) |
+| Dev Environment | Docker Compose | Active |
+| File Storage | Amazon S3 | Planned |
 
-Do NOT introduce technology not in this list without an approved ADR.
+Do NOT introduce technologies outside this list without an approved ADR.
 
----
-
-## 3. Source-of-Truth Hierarchy
-
-```
-1. Approved ADRs  (docs/decisions/)
-2. Implemented code
-3. Database schema / migrations
-4. API contracts  (docs/API.md)
-5. Domain docs  (docs/DATABASE.md, docs/ERD.md)
-6. This file  (AGENTS.md)
-7. Task-specific instructions
-8. AI suggestions  → LOWEST — never treated as approved architecture
-```
-
-Contradiction between approved architecture and implementation → report using `ARCHITECTURE_CONFLICT` format (§14). Do NOT silently redesign.
+**Source of Truth (highest to lowest):**
+`Approved ADRs (docs/decisions/)` > `Implemented code` > `Migrations` > `docs/API.md` > `docs/DATABASE.md & ERD.md` > `AGENTS.md` > `Task spec` > `AI suggestions (never authoritative)`.
 
 ---
 
-## 4. Business Invariants (Locked)
+## 2. Locked Business Invariants
 
-### Roles — exactly 3
+- **Roles (exact 3 DB values):** `admin` (full control), `contributor` (internal team; Admin-assigned only, no auto-upgrade), `user` (default learner). Guest = unauthenticated, no DB role.
+  - **Banned role names:** `reviewer`, `learner`, `moderator`, `editor`, `author`, `teacher`, `instructor`.
+- **Publishing Workflow:** `draft` (Contributor creates) → `published` (Contributor/Admin sets `published_version_id`) → `archived` (Contributor own / Admin all).
+  - **Banned statuses / steps:** `submitted`, `rejected`, `pending_review`, `approved`, `moderated`; no review step.
+- **Dormant table:** `article_reviews` exists in DB from an old model. No application code may reference it.
 
-| Role | DB value | Description |
-|---|---|---|
-| Admin | `admin` | Full platform control |
-| Contributor | `contributor` | Internal team; assigned by Admin only |
-| User | `user` | Learner; default role on registration |
-
-Guest = unauthenticated, no DB role.
-**No** `reviewer`, `learner`, `moderator`, `editor`, `author`, `teacher`, `instructor`.
-User does NOT auto-upgrade to Contributor. Admin grants explicitly.
-
-### Publishing Workflow
-
-```
-Contributor creates → status=draft
-Contributor (or Admin) publishes → status=published (published_version_id set)
-Admin archives → status=archived
-```
-
-No `submitted`, `rejected`, `pending_review`, `approved`, `moderated`. No review step.
-
-### RBAC (enforced in Laravel Policy/Gate)
-
-| Capability | Guest | User | Contributor | Admin |
-|---|:---:|:---:|:---:|:---:|
+| Capability (Laravel Policy/Gate) | Guest | User | Contributor | Admin |
+| --- | :---: | :---: | :---: | :---: |
 | View published content | ✅ | ✅ | ✅ | ✅ |
 | Register / Login | ✅ | — | — | — |
-| Enroll, track progress | ❌ | ✅ | ✅ | ✅ |
-| Bookmark, AI Companion, Roadmap | ❌ | ✅ | ✅ | ✅ |
-| Subscribe to plan | ❌ | ✅ | ✅ | ✅ |
-| Create / edit own courses | ❌ | ❌ | ✅ | ✅ |
-| Publish / archive own content | ❌ | ❌ | ✅ own | ✅ |
-| Manage all courses platform-wide | ❌ | ❌ | ❌ | ✅ |
-| Manage users, roles, plans | ❌ | ❌ | ❌ | ✅ |
+| Enroll, Progress, Bookmark, AI Companion, Roadmap, Subscribe | ❌ | ✅ | ✅ | ✅ |
+| Create / edit / publish / archive **own** courses | ❌ | ❌ | ✅ | ✅ |
+| Manage all courses, users, roles, plans | ❌ | ❌ | ❌ | ✅ |
 
 ---
 
-## 5. Database Conventions (Non-Negotiable)
+## 3. Security & Database Safety (Non-Negotiable)
 
-| Convention | Rule |
-|---|---|
-| Primary keys | UUID v4 — every table |
-| Timestamps | `timestampTz` everywhere |
-| Foreign keys | Explicit FK + explicit cascade rule on every relation |
-| Enumerations | `VARCHAR` + `CHECK` — never native PG ENUM |
-| Monetary | `NUMERIC(12,2)` |
-| Currency | `CHAR(3)` ISO 4217 + regex `[A-Z]{3}` |
-| Flexible data | `JSONB` only where genuinely variable |
-| File binary | S3 only — PG stores metadata only |
-| Soft delete | `users` + content tables — `deleted_at` column |
-| Secrets | Never stored — no plaintext passwords, API keys, card numbers |
+- **Secrets & Queries:** Never commit `.env`, credentials, API keys, tokens, or private keys. Never store plaintext passwords or card numbers. Always use parameter binding. Never run `UPDATE`/`DELETE` without `WHERE` in production. Never disable DB constraints.
+- **Disposable Test DB Guard:** Read `docs/AGENT_RUNBOOK.md` before runtime, testing, or deployment tasks. **NEVER** run automated tests, `migrate:fresh`, `migrate:refresh`, `db:wipe`, `db:seed`, or destructive/reset commands against shared or cloud databases. PHPUnit MUST use only the disposable Compose `test-db`. Verify the active connection before running; never bypass the test bootstrap or DB guard. A unit-test label does not imply read-only.
+- **Schema Conventions (when touching DB):** UUID v4 PKs everywhere · `timestampTz` everywhere · explicit FKs + cascade rules · `VARCHAR` + `CHECK` (never native PG ENUM) · `NUMERIC(12,2)` monetary · `CHAR(3)` ISO 4217 `[A-Z]{3}` currency · `JSONB` only for genuinely variable data · S3 for binaries (PG stores metadata only) · soft delete (`deleted_at`) on `users` and content tables.
+- **Known Active Inconsistencies (do NOT auto-fix without team-approved migration):**
+  1. `articles_status_check` in `2026_01_01_000005_create_articles_tables.php` still allows legacy `submitted`, `rejected`.
+  2. Migration `000002` comment references the old 4-role model.
+  3. `docs/DATABASE.md` & `docs/ERD.md` prose vs dormant `article_reviews` in migration `000006`.
 
 ---
 
-## 6. Active Database Tables (25)
+## 4. Context & Token Discipline (Targeted Read)
 
-| Domain | Tables |
-|---|---|
-| A – Identity | `users`, `roles`, `user_roles` |
-| B – Content | `categories`, `articles`, `article_versions`, `tags`, `article_tags`, `bookmarks`, `article_attachments` |
-| C – AI Companion | `conversations`, `messages`, `user_memories` |
-| D – Learning | `learning_roadmaps`, `roadmap_items`, `learning_progress`, `roadmap_item_prerequisites` |
-| E – Payment | `plans`, `subscriptions`, `payments`, `webhook_events` |
-
-`article_reviews` exists in DB (dormant, old model). No application code may reference it. Pending drop migration — requires team approval.
+- **Read Broadly (allowed), Fetch Narrowly (default):** Read ONLY files directly relevant to the task (`@file` refs, target module, and its tests).
+- **On-Demand Docs:** Do NOT bulk-read `docs/decisions/`, `docs/API.md`, `docs/DATABASE.md`, `docs/ERD.md`, or `docs/team/context-packs/` unless the task modifies architecture, API contracts, DB schema, or enters an unfamiliar domain.
+- **Minimal Diff:** Implement the smallest coherent change for the task. No unrelated refactoring, whole-file reformatting, or unrequested dependency upgrades.
+- **Session Handoff:** Before ending a long session (or when requested), output a `<=15-line` summary: goal, exact modified paths, verified test commands/results, remaining blocker, and next concrete step.
 
 ---
 
-## 7. Development Sequence (Approved)
+## 5. Execution, Debugging & Anti-Loop Protocol
 
-1. Core platform — auth, users, roles
-2. Course / content — categories, articles/courses, versions, attachments
-3. AI Companion — conversations, messages, memories
-4. RAG + long-term memory
-5. AI roadmap generation
-6. Premium / subscription
+### Standard Flow
 
----
+1. **Scope & Plan:** Confirm authorized domain (`docs/team/OWNERSHIP.md`), allowed write paths, and cross-domain/API/DB impact before editing.
+2. **Implement:** Write minimal code matching existing codebase conventions.
+3. **Validate:** Execute relevant tests against `test-db` (auth, all 4 RBAC actors, edge cases). Never claim tests passed unless actually executed.
+4. **Diff Audit:** Run `git status`, `git diff --stat`, and `git diff` to verify zero out-of-scope edits or secrets. Before PR creation, run:
+   `./scripts/test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId`
 
-## 8. Ownership Model
+### Debugging Protocol (Mandatory for Bugs & Failed Tests)
 
-| Domain | Owner | Risk |
-|---|---|---|
-| Identity / Auth | TEAM_MEMBER_A | High |
-| Content | TEAM_MEMBER_B | Medium |
-| Learning / Engagement | TEAM_MEMBER_C | Medium |
-| AI Companion | TBD | High |
-| Payment | TBD | High |
-| Infrastructure | Shared | Very High |
-| Architecture | Team approval | Very High |
+1. **Reproduce:** Run or write a minimal failing test/command proving the bug exists.
+2. **Diagnose:** Trace execution and report exact root cause (`file:line` + log/evidence) BEFORE editing code. Pause for user confirmation on complex fixes.
+3. **Minimal Fix:** Fix the root cause only. **BANNED:** hardcoding outputs, swallowing exceptions (`catch {}`), disabling checks/tests, or masking symptoms.
+4. **Verify:** Re-run the reproduction test plus related suite on `test-db`.
 
-Full path-level ownership: `docs/team/OWNERSHIP.md`.
+### Circuit Breaker (2-Strike Rule)
 
----
+If **2 consecutive fix attempts** fail to resolve the same error or introduce regressions:
 
-## 9. Read Broadly, Write Narrowly
-
-```
-READ / SEARCH:  entire repository — always allowed
-WRITE:          only files within the task's authorized domain
-```
+- **STOP immediately.** Do not attempt a 3rd blind patch.
+- Revert failed experimental edits if needed.
+- Output `STATUS: DEBUG_BLOCKED` with: (1) exact error/log, (2) what the 2 attempts tested and why they failed, and (3) 2 distinct root-cause hypotheses for human review.
 
 ---
 
-## 10. Protected / Shared Areas
+## 6. Boundaries, Protected Files & Stop Conditions
 
-Require explicit coordination before modification:
+- **Write Scope:** Modify ONLY files within the task's authorized domain. Do not duplicate logic to bypass ownership boundaries.
+- **Protected / Shared Files (explicit coordination required; smallest change only):**
+  `AGENTS.md` · `backend/AGENTS.md` · `docs/{DATABASE,ERD,ARCHITECTURE,API}.md` · `docs/decisions/` · `docs/team/OWNERSHIP.md` · `docker-compose.yml` · `docker/` · `.github/workflows/` · `.coderabbit.yaml` · `database/seeders/DatabaseSeeder.php` · `backend/.env.example`
+- **Migrations:** Add **new** migration files only; never edit another agent's existing migration. After an approved schema change, update `docs/DATABASE.md`, `docs/ERD.md`, and run `docs/validation_tests.sql`.
 
-```
-AGENTS.md  /  backend/AGENTS.md
-docs/DATABASE.md  /  docs/ERD.md  /  docs/ARCHITECTURE.md  /  docs/API.md
-docs/decisions/  /  docs/team/OWNERSHIP.md
-docker-compose.yml  /  docker/  /  .github/workflows/  /  .coderabbit.yaml
-database/seeders/DatabaseSeeder.php  /  backend/.env.example
-```
+**STOP immediately and report (do not improvise) if any apply:**
 
-`database/migrations/`: each agent adds **new** files only; never edit another agent's existing migration.
-
-For all shared files: read freely, write only when the task explicitly requires it, make the smallest possible change, do not reformat unrelated sections.
-
----
-
-## 11. Integration Hotspots
-
-| File | Why Shared | Who May Edit |
-|---|---|---|
-| `database/migrations/` | All schema changes land here | Feature owner adds new files; never edit others' |
-| `docker-compose.yml` | Shared infrastructure config | Infra owner (p3); others request changes |
-| `.github/workflows/` | CI/CD pipeline | Team approval required |
-| `docs/DATABASE.md` | Schema reference for all | After approved schema change only |
-| `docs/ERD.md` | ER diagrams for all | After approved schema change only |
-| `database/seeders/DatabaseSeeder.php` | Root seeder orchestration | Infra owner (p3) |
+1. Architecture change, ADR conflict, or new infrastructure/major dependency required.
+2. Cross-domain change, ownership violation, or unauthorized protected-file edit.
+3. Breaking API contract change or destructive DB operation (`DROP`, unscoped `DELETE`).
+4. Ambiguous business rule or requirement unsatisfiable in current architecture.
+5. **2-Strike Rule triggered** during debugging.
 
 ---
 
-## 12. Cross-Domain Change Protocol
+## 7. Git Workflow & Reporting
 
-When a cross-domain change is required, STOP immediately and report:
-
-```
-BLOCKED — CROSS-DOMAIN CHANGE REQUIRED
-
-Task:     <task ID and name>
-Owner:    <TEAM_MEMBER_X>
-Domain:   <affected domain>
-Files:    <paths requiring modification>
-Why:      <reason the change is needed>
-Proposal: <minimal proposed change>
-Risk:     <risk if implemented>
-Waiting:  <decision needed from team>
-
-DO NOT IMPLEMENT THE BLOCKED CHANGE AUTOMATICALLY.
-```
-
-Do not work around ownership boundaries by duplicating logic.
+- **Branches:** `main` ← `dev` ← `p1/<task>` (Auth) | `p2/<task>` (Content) | `p3/<task>` (Learning/Infra). One branch = one small task. Never commit directly to `main` or `dev`.
+- **Conflict Resolution:** Merge commits pulling `dev` into a task branch MUST use an approved task prefix (e.g., `p3: merge dev conflict resolution for <task>`), never `merge:`. Re-run guardrails against refreshed `origin/dev` before pushing.
+- **Reporting Formats** (use only when completing a task, blocked, or reporting a conflict):
+  - `STATUS: COMPLETE` — Task, Owner, Files changed, DB/API impact, Tests executed + result, Scope audit (`PASS`), Notes.
+  - `STATUS: BLOCKED` — Task, Blocker, Domain/Owner, Files, Why, Minimal proposal, Decision needed (`DO NOT IMPLEMENT AUTOMATICALLY`).
+  - `STATUS: DEBUG_BLOCKED` — Error/log, 2 failed attempts & findings, 2 root-cause hypotheses.
+  - `ARCHITECTURE_CONFLICT` — Conflict, Affected files, Approved ADR, Current impl, Action (request resolution).
 
 ---
 
-## 13. Agent Task Execution Protocol
+## 8. On-Demand References
 
-**PHASE 1 — ORIENT**
-Read: root AGENTS.md → local AGENTS.md → task spec → ADRs → API docs → DB docs.
-Inspect: `git status`, current branch, related existing code.
-Apply the matching domain context pack in `docs/team/context-packs/` before planning.
+Read these only when the current task requires them:
 
-**PHASE 2 — SCOPE**
-Identify: owner, domain, allowed write paths, forbidden paths, dependencies, shared files touched, API impact, DB impact.
-
-**PHASE 3 — PLAN**
-Internal implementation plan. Identify cross-domain dependencies. Do NOT implement architecture changes silently.
-
-**PHASE 4 — IMPLEMENT**
-Modify only authorized files. Use existing patterns and conventions. No unrelated refactoring. No unnecessary dependencies.
-
-**PHASE 5 — VALIDATE**
-Run tests. Check API contract consistency. Check DB constraints/cascades/soft deletes. Check authorization (all 4 actors). Test edge cases.
-
-**PHASE 6 — DIFF AUDIT**
-```
-git status
-git diff --stat
-git diff
-```
-Every modified file must be in the task's allowed paths. No secrets added. No unrelated refactoring. No protected files changed without authorization.
-Run `./scripts/test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId` before PR creation.
-
-**PHASE 7 — REPORT**
-Summarize: files changed, behavior implemented, tests run, DB changes, API changes, shared-file changes, remaining risks.
-
----
-
-## 14. Stop Conditions
-
-STOP and report (do not improvise) when encountering:
-
-1. Architecture change required
-2. Cross-domain database change required
-3. Protected file modification without explicit authorization
-4. Breaking API contract change
-5. Ownership boundary violation
-6. Destructive database operation (DROP, DELETE without WHERE)
-7. New infrastructure or major dependency required
-8. Contradiction between ADR and implementation
-9. Ambiguous business rule
-10. Requirement unsatisfiable within current architecture
-11. Need to modify another team member's domain
-
----
-
-## 15. AI Output Formats
-
-**Task Complete:**
-```
-STATUS: COMPLETE
-TASK: <id+name>         OWNER: <TEAM_MEMBER_X>
-FILES CHANGED:          <list of paths>
-DATABASE:               <none | migration added: path>
-API:                    <none | changed: method+path>
-TESTS:                  <tests run and result>
-SCOPE AUDIT:            PASS
-OUT-OF-SCOPE:           None
-ARCHITECTURE CHANGED:   None
-NOTES:                  <important details>
-```
-
-**Task Blocked:**
-```
-STATUS: BLOCKED
-TASK: <task>            BLOCKER: <exact reason>
-DOMAIN: <domain>        OWNER: <owner>
-FILES: <paths>
-WHY: <why this cannot be safely completed>
-PROPOSAL: <minimal proposed change>
-DECISION NEEDED: <what team must decide>
-DO NOT IMPLEMENT THE BLOCKED CHANGE AUTOMATICALLY.
-```
-
-**Architecture Conflict:**
-```
-ARCHITECTURE_CONFLICT
-Conflict:          <description>
-Affected files:    <paths>
-Approved decision: <ADR reference>
-Current impl:      <description>
-Action: Request team resolution. Do NOT silently redesign.
-```
-
----
-
-## 16. Git Workflow
-
-```
-main  ▲  production; merge from dev only
- └── dev  ▲  integration target for all PRs
-      ├── p1/<task>   TEAM_MEMBER_A (Identity/Auth)
-      ├── p2/<task>   TEAM_MEMBER_B (Content)
-      └── p3/<task>   TEAM_MEMBER_C (Learning/Infra)
-```
-
-One branch = one coherent task. Small branches. Small PRs. Never work on `main` or `dev` directly.
-
-When resolving a conflict by merging `dev` into a task branch, the merge commit
-must still use an approved task prefix (for example,
-`p3: merge dev conflict resolution for <task>`), never `merge:`. Run the
-guardrail against the refreshed `origin/dev` before pushing.
-
-```powershell
-.\scripts\agent-start-task.ps1 -Branch "p1/auth-login"
-.\scripts\create-pr.ps1 -Title "p1: implement login endpoint"
-.\scripts\agent-finish-task.ps1
-```
-
-PR must: do one logical thing · task ID in title · small diff · include tests · no debug code · no `.env` committed.
-
----
-
-## 17. Security Rules
-
-Never: commit `.env`, credentials, API keys, tokens, private keys. Never store plaintext passwords or card numbers in DB. Always use parameter binding. Never `UPDATE`/`DELETE` without `WHERE` in production. Never disable constraints.
-
----
-
-## 18. No Unrelated Refactoring
-
-**Minimal diff is a safety feature.** Implement the smallest coherent change for the task only. Do not rewrite routing, rename unrelated code, format the whole codebase, or upgrade unrelated packages.
-
----
-
-## 19. Documentation Rules
-
-**Before schema change**: read `docs/DATABASE.md`, `docs/ERD.md`, all migrations, relevant ADRs.
-
-**After approved schema change**: update `docs/DATABASE.md`, update `docs/ERD.md`, run `docs/validation_tests.sql`.
-
-**For architecture changes**: create ADR in `docs/decisions/` (format in `docs/decisions/README.md`). Do not implement without team approval.
-
----
-
-## 20. Known Documentation Inconsistencies
-
-Do NOT auto-fix application code. Flag for team review. Each requires a team-approved migration.
-
-| # | Issue | Type | Location |
-|---|---|---|---|
-| 1 | `RoleSeeder` seeded legacy roles; it now seeds `user`, `contributor`, `admin` (matches the approved model) | RESOLVED | `database/seeders/RoleSeeder.php` |
-| 2 | `articles_status_check` allows `submitted`, `rejected` — approved: `draft`, `published`, `archived` only | IMPLEMENTATION ISSUE | `database/migrations/2026_01_01_000005_create_articles_tables.php` |
-| 3 | Migration 000002 comment references old 4-role model | DOCUMENTATION ISSUE | `database/migrations/2026_01_01_000002_create_roles_tables.php` |
-| 4 | Approved architecture ADR says Next.js/React is active; scaffolded in `frontend/` | RESOLVED | `frontend/` |
-| 5 | Database/ERD prose says `article_reviews` was removed conceptually; migration still creates it and ADR correctly calls it dormant | DOCUMENTATION ISSUE | `docs/DATABASE.md`, `docs/ERD.md`, `database/migrations/2026_01_01_000006_create_article_relations_tables.php` |
-
----
-
-## 21. Testing, Skill System, Key Documents
-
-**Testing** — do not claim tests passed unless actually executed:
-- Authentication: valid login, invalid credentials, unauthorized, token behavior
-- Authorization: guest / user / contributor / admin
-- Content: draft / published / archived; ownership rules
-- Database: constraints, FKs, cascades, soft deletes; `EXPLAIN ANALYZE` where relevant
-
-**Skills**: `skills/database-design` · `skills/postgresql-sql` · `skills/data-pipelines` · `skills/data-quality-testing` · `skills/api-contract-design` · `skills/domain-driven-boundary`
-*Skill Requirement*: Agents must run `scripts/ensure-skills.ps1` before starting work. If any required skill is missing on the machine, the agent must create its directory and `skill.md` definition immediately.
-
-**Key documents**: `docs/ARCHITECTURE.md` · `docs/API.md` · `docs/DATABASE.md` · `docs/ERD.md` · `docs/decisions/` · `docs/team/OWNERSHIP.md` · `docs/team/WORKFLOW.md` · `docs/team/FEATURES.md` · `docs/team/TASK_TEMPLATE.md` · `backend/AGENTS.md`
-
----
-
-## 22. Development Environment
-
-```powershell
-docker compose up -d
-```
-
-See `docs/DEV_CHEATSHEET.md` for setup and read-only database checks, and
-`docs/AGENT_RUNBOOK.md` for tests against the disposable database.
-
----
-
-*Priority: Correctness > Speed. Read before writing. Test thoroughly. Minimal diff.*
-
-## Runtime, testing and deployment
-
-Read `docs/AGENT_RUNBOOK.md` before runtime, testing, or deployment tasks.
-
-Never run automated tests, `migrate:fresh`, `migrate:refresh`, `db:wipe`,
-`db:seed`, or other destructive/reset commands against shared or cloud data.
-PHPUnit must use only the disposable Compose `test-db` database. Verify the
-actual connection before running tests; never bypass the test bootstrap or
-database guard. A unit-test label does not imply a test is read-only.
+- **Runtime & Tests:** `docs/AGENT_RUNBOOK.md` · `docs/DEV_CHEATSHEET.md` (`docker compose up -d`, PowerShell task/PR scripts)
+- **Architecture & Contracts:** `docs/ARCHITECTURE.md` · `docs/API.md` · `docs/DATABASE.md` · `docs/ERD.md` · `docs/decisions/`
+- **Team & Workflow:** `docs/team/OWNERSHIP.md` · `docs/team/WORKFLOW.md` · `docs/team/FEATURES.md` · `docs/team/TASK_TEMPLATE.md` · `docs/team/context-packs/`
+- **Local Skills:** `skills/` (install/verify once per machine via `scripts/ensure-skills.ps1`, not per session)

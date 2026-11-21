@@ -8,6 +8,7 @@ use App\Models\Conversation;
 use App\Services\AI\MessageService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use RuntimeException;
 
@@ -57,6 +58,13 @@ class MessageController extends Controller
         try {
             $result = $this->messages->send($user, $conversationModel, $request->validated());
         } catch (RuntimeException $exception) {
+            Log::warning('ai.message_send_failed', [
+                'status' => (int) $exception->getCode(),
+                'mode' => (string) $request->input('mode', 'chat'),
+                'exception' => $exception::class,
+                'reason' => $exception->getMessage(),
+            ]);
+
             return $this->errorResponse($exception);
         }
 
@@ -82,7 +90,7 @@ class MessageController extends Controller
     private function errorResponse(RuntimeException $exception): JsonResponse
     {
         $code = (int) $exception->getCode();
-        $status = in_array($code, [502, 503, 504], true) ? $code : 502;
+        $status = in_array($code, [409, 502, 503, 504], true) ? $code : 502;
         $payload = ['status' => 'error', 'message' => $exception->getMessage()];
         if ($status === 503 && $exception->getMessage() === MessageService::CHAT_DISABLED_MESSAGE) {
             $payload['code'] = 'chat_disabled';

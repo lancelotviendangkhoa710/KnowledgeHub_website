@@ -82,6 +82,21 @@ VALUES (gen_random_uuid(), 'Bad', 0.00, 'us', 'monthly', 'active', now(), now())
 -- Expected: ERROR: new row violates check constraint "messages_role_check"
 
 -- ============================================================
+-- 11. CV-RAG schema: invalid index state and duplicate chunk position rejected
+-- ============================================================
+-- INSERT INTO user_cv_indexes (id, user_cv_id, status, embedding_model, embedding_revision, embedding_dimensions, content_hash, created_at, updated_at)
+-- VALUES (gen_random_uuid(), :cv_id, 'invalid', 'intfloat/multilingual-e5-small', :revision, 384, repeat('a', 64), now(), now());
+-- Expected: ERROR: user_cv_indexes_status_check
+-- INSERT INTO user_cv_chunks (id, user_cv_index_id, position, page, content_hash, content, embedding, created_at)
+-- VALUES (gen_random_uuid(), :index_id, 0, 1, repeat('a',64), 'evidence', '[0,0,0]'::extensions.vector, now());
+-- Expected for a 3-d vector: ERROR: expected 384 dimensions
+
+-- Inspect RLS and direct browser-role grants; both tables must have RLS and no anon/authenticated privileges.
+SELECT c.relname, c.relrowsecurity, has_table_privilege('anon', c.oid, 'select') AS anon_select,
+       has_table_privilege('authenticated', c.oid, 'select') AS authenticated_select
+FROM pg_class c WHERE c.relname IN ('user_cv_indexes', 'user_cv_chunks');
+
+-- ============================================================
 -- Schema inspection queries
 -- ============================================================
 \dt                     -- list all tables

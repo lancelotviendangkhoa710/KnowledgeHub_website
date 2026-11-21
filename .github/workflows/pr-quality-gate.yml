@@ -66,7 +66,7 @@ jobs:
             # Bỏ qua dòng trống
             [ -z "$msg" ] && continue
             # Phải bắt đầu bằng p1:, p2:, p3:, docs:, fix:, chore:
-            if [[ ! "$msg" =~ ^(p1|p2|p3|docs|fix|chore|hotfix|release): ]]; then
+            if [[ ! "$msg" =~ ^(p1|p2|p3)(:|/)|(docs|fix|chore|hotfix|release|revert): ]]; then
               echo "❌ Commit không đúng format: '$msg'"
               echo "   Cần: 'p1: mô tả' hoặc 'p2: mô tả' hoặc 'docs: mô tả'"
               FAIL=1

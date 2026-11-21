@@ -9,6 +9,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
@@ -35,6 +36,32 @@ class MessageSendTest extends TestCase
         $this->assertDatabaseCount('messages', 0);
         $this->assertNull($conversation->fresh()->title);
         Http::assertNothingSent();
+    }
+
+    public function test_cv_mode_503_is_logged_without_message_content(): void
+    {
+        $this->configureAi(['services.ai.cv_rag_enabled' => false]);
+        Log::spy();
+        $user = $this->createUser();
+        Sanctum::actingAs($user);
+        $conversation = $this->createConversation($user);
+
+        $this->postJson($this->messagesUrl($conversation), [
+            'content' => 'private notebook question',
+            'mode' => 'cv',
+        ])->assertStatus(503)
+            ->assertJsonPath('message', 'CV RAG is not enabled yet.');
+
+        Log::shouldHaveReceived('warning')->once()->with(
+            'ai.message_send_failed',
+            \Mockery::on(static fn (array $context): bool => $context === [
+                'status' => 503,
+                'mode' => 'cv',
+                'exception' => \RuntimeException::class,
+                'reason' => 'CV RAG is not enabled yet.',
+            ]),
+        );
+        $this->assertDatabaseCount('messages', 0);
     }
 
     public function test_successful_reply_persists_the_pair_and_sets_the_title(): void
