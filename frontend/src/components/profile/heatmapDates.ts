@@ -3,7 +3,7 @@ import { vnDateKey } from './roadmapMeta';
 /** Ngày dạng 'YYYY-MM-DD' theo lịch Việt Nam; tính toán bằng mốc UTC để không lệch theo múi giờ máy. */
 const DAY = 86400000;
 
-/** Năm đang xem. Năm hiện tại hiển thị 12 tháng gần nhất (như GitHub), năm cũ hiển thị trọn năm. */
+/** Năm đang xem. Năm hiện tại hiển thị từ đầu năm tới hôm nay, năm cũ hiển thị trọn năm. */
 export type HeatmapYear = number;
 
 export function keyToUtc(key: string): number {
@@ -28,8 +28,9 @@ export function todayKey(now = Date.now()): string {
   return vnDateKey(now);
 }
 
+/** Năm hiện tại: từ 1/1 tới hôm nay; năm cũ: trọn năm. `rolling` = đang xem năm hiện tại. */
 export function rangeFor(year: HeatmapYear, today: string): { from: string; to: string; label: string; rolling: boolean } {
-  if (year >= Number(today.slice(0, 4))) return { from: addDays(today, -364), to: today, label: '12 tháng qua', rolling: true };
+  if (year >= Number(today.slice(0, 4))) return { from: `${today.slice(0, 4)}-01-01`, to: today, label: `năm ${today.slice(0, 4)}`, rolling: true };
   return { from: `${year}-01-01`, to: `${year}-12-31`, label: `năm ${year}`, rolling: false };
 }
 

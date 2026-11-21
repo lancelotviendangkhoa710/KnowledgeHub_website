@@ -21,7 +21,7 @@ type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready'; cou
 /**
  * PRF-08: bảng "Hoạt động học tập" theo mockup #tai-khoan, vẽ bằng HTML và CSS thuần.
  * Cột là tuần, hàng đầu là Thứ hai. Đi giữa các ô bằng mũi tên; bấm ô để lọc Lịch sử hoạt động theo ngày đó.
- * Danh sách năm bên phải như GitHub: năm hiện tại xem 12 tháng gần nhất, năm cũ xem trọn năm.
+ * Danh sách năm bên phải như GitHub: năm hiện tại xem từ đầu năm tới hôm nay, năm cũ xem trọn năm.
  */
 export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, visible = true }: Props) {
   const [today, setToday] = useState(() => todayKey());
@@ -211,7 +211,7 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
             key={value}
             type="button"
             aria-pressed={year === value}
-            title={value === currentYear ? '12 tháng gần nhất' : `Cả năm ${value}`}
+            title={value === currentYear ? `Từ đầu năm ${value} tới hôm nay` : `Cả năm ${value}`}
             onClick={() => { setYear(value); setFocusKey(null); }}
           >
             {value}
