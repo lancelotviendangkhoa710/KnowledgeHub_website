@@ -132,19 +132,19 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
 
   return (
     <section className={s.wrap} aria-labelledby="hm-title">
-      <div className={s.hm}>
-        <div className={s.head}>
-          <div>
-            <h2 id="hm-title">Hoạt động học tập</h2>
-            <p>Mỗi bước lộ trình bạn hoàn thành được tính 1 hoạt động vào ngày đó, theo giờ Việt Nam.</p>
-          </div>
-        </div>
+      {/* Như GitHub: con số chính nằm ngay trên tiêu đề, đổi theo năm đang chọn. */}
+      <div className={s.title}>
+        <h2 id="hm-title" aria-live="polite">
+          {load.status === 'ready' ? <><b>{total}</b> hoạt động học tập trong {range.label}</> : 'Hoạt động học tập'}
+        </h2>
+        <p>Mỗi bước lộ trình bạn hoàn thành được tính 1 hoạt động vào ngày đó, theo giờ Việt Nam.</p>
+      </div>
 
-        <div className={s.stats} aria-live="polite">
+      <div className={s.hm}>
+        <div className={s.stats}>
           {loading ? <p className={s.muted} role="status">Đang tải hoạt động…</p> : load.status === 'error' ? null : (
             <>
-              <div><b>{total}</b>hoạt động trong {range.label}</div>
-              <div><b>{activeDays}</b>ngày có học</div>
+              <div className={s.key}><b>{activeDays} ngày</b>đã học trong {range.label}</div>
               {range.rolling && <div><b>{streak.current} ngày</b>chuỗi hiện tại</div>}
               <div><b>{streak.longest} ngày</b>chuỗi dài nhất</div>
             </>

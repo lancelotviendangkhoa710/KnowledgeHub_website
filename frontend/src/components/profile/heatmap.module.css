@@ -2,6 +2,10 @@
 /* Thẻ heatmap bên trái, danh sách năm dọc bên phải (như GitHub). */
 .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 16px; align-items: start; }
 .hm { --hm-cell: 10px; --hm-gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); min-width: 0; }
+.title { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 4px; }
+.title h2 { font-size: 18px; font-weight: 600; color: var(--ink); }
+.title h2 b { font-weight: 800; }
+.title p { color: var(--ink-3); font-size: 13px; }
 .years { display: flex; flex-direction: column; gap: 4px; }
 .years button { min-height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: none; font: inherit; font-size: 14px; color: var(--ink-2); text-align: left; cursor: pointer; }
 .years button:hover { background: var(--surface-2); color: var(--ink); }
@@ -17,6 +21,7 @@
 .stats div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--ink-3); }
 .stats b { font-family: var(--display); font-size: 20px; color: var(--ink); font-weight: 700; letter-spacing: -.01em; }
 .muted { color: var(--ink-3); font-size: 13px; }
+.stats .key b { color: var(--brand); }
 
 .body { padding: 14px 24px 0; display: flex; gap: 8px; }
 .body[aria-busy="true"] .grid { opacity: .55; }
@@ -55,6 +60,7 @@
 
 @media (max-width: 760px) {
   .wrap { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .title { order: -2; }
   .years { order: -1; flex-direction: row; overflow-x: auto; }
   .years button { border-radius: var(--r-pill); white-space: nowrap; }
 }
