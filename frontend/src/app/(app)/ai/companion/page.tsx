@@ -210,11 +210,6 @@ export default function AICompanionPage() {
       return;
     }
     void loadConversations();
-    // Như mockup: trên máy tính cột ghi nhớ mở sẵn.
-    if (!window.matchMedia(MOBILE_QUERY).matches) {
-      setMemoryOpen(true);
-      void loadMemories();
-    }
     // Ẩn chân trang ở màn này (quy tắc body[data-screen] trong globals.css).
     document.body.dataset.screen = 'tro-ly';
     return () => {
@@ -268,8 +263,7 @@ export default function AICompanionPage() {
   }, [draft]);
 
   useEffect(() => {
-    // Trên máy tính ghi nhớ là một cột cố định nên chỉ khóa cuộn khi bảng trượt ra trên điện thoại.
-    const overlayOpen = sidebarOpen || (memoryOpen && window.matchMedia(MOBILE_QUERY).matches);
+    const overlayOpen = sidebarOpen || memoryOpen;
     if (!overlayOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -293,15 +287,12 @@ export default function AICompanionPage() {
   }, [memoryOpen, sidebarOpen]);
 
   useEffect(() => {
-    if (memoryOpen && window.matchMedia(MOBILE_QUERY).matches) {
-      memoryCloseRef.current?.focus();
-    }
+    if (memoryOpen) memoryCloseRef.current?.focus();
   }, [memoryOpen]);
 
-  // Bảng ghi nhớ trên điện thoại là drawer: giữ focus trong bảng, vô hiệu hóa phần phía sau, đóng thì trả focus về nút "Ghi nhớ".
-  // Cột ghi nhớ trên máy tính không bị giới hạn.
+  // Bảng ghi nhớ là drawer: giữ focus trong bảng, vô hiệu hóa phần phía sau, đóng thì trả focus về nút "Ghi nhớ".
   useEffect(() => {
-    if (!memoryOpen || !window.matchMedia(MOBILE_QUERY).matches) return;
+    if (!memoryOpen) return;
     const behind = Array.from(aiRef.current?.querySelectorAll<HTMLElement>(':scope > aside:not(#memory-panel), :scope > section') ?? []);
     const toggle = memoryToggleRef.current;
     behind.forEach((element) => element.setAttribute('inert', ''));
@@ -863,7 +854,7 @@ export default function AICompanionPage() {
 
   return (
     <div className={styles.page}>
-      <div ref={aiRef} className={`${styles.ai} ${memoryOpen ? '' : styles.noMem}`}>
+      <div ref={aiRef} className={styles.ai}>
         {(sidebarOpen || memoryOpen) && (
           <div
             className={`${styles.overlay} ${sidebarOpen ? '' : styles.overlayMem}`}
@@ -881,7 +872,7 @@ export default function AICompanionPage() {
             <h2>Trợ lý AI</h2>
             <button
               type="button"
-              className={`${styles.iconButton} ${styles.mobileOnly}`}
+              className={styles.iconButton}
               onClick={() => setSidebarOpen(false)}
               aria-label="Đóng danh sách cuộc trò chuyện"
             >
@@ -978,7 +969,7 @@ export default function AICompanionPage() {
           <div className={styles.chatHead}>
             <button
               type="button"
-              className={`${styles.iconButton} ${styles.mobileOnly}`}
+              className={styles.iconButton}
               onClick={() => setSidebarOpen((current) => !current)}
               aria-label="Mở danh sách cuộc trò chuyện"
               aria-expanded={sidebarOpen}
@@ -1198,11 +1189,15 @@ export default function AICompanionPage() {
           </>}
         </section>
 
-        {memoryOpen && (
-          <aside id="memory-panel" className={styles.mem} aria-label="Ghi nhớ">
+        <aside
+          id="memory-panel"
+          className={`${styles.mem} ${memoryOpen ? styles.memOpen : ''}`}
+          aria-label="Ghi nhớ"
+          aria-hidden={!memoryOpen}
+        >
             <div className={styles.memHead}>
               <h2><Icon size={18}><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" /></Icon>Ghi nhớ</h2>
-              <button type="button" ref={memoryCloseRef} className={`${styles.iconButton} ${styles.mobileOnly}`} onClick={() => setMemoryOpen(false)} aria-label="Đóng bảng ghi nhớ">
+              <button type="button" ref={memoryCloseRef} className={styles.iconButton} onClick={() => setMemoryOpen(false)} aria-label="Đóng bảng ghi nhớ">
                 <Icon size={16}><path d="M18 6 6 18M6 6l12 12" /></Icon>
               </button>
             </div>
@@ -1268,8 +1263,7 @@ export default function AICompanionPage() {
                 {savingMemory ? 'Đang lưu...' : 'Thêm'}
               </button>
             </form>
-          </aside>
-        )}
+        </aside>
       </div>
     </div>
   );
