@@ -82,7 +82,7 @@ class MessageController extends Controller
     private function errorResponse(RuntimeException $exception): JsonResponse
     {
         $code = (int) $exception->getCode();
-        $status = in_array($code, [502, 503, 504], true) ? $code : 502;
+        $status = in_array($code, [409, 502, 503, 504], true) ? $code : 502;
         $payload = ['status' => 'error', 'message' => $exception->getMessage()];
         if ($status === 503 && $exception->getMessage() === MessageService::CHAT_DISABLED_MESSAGE) {
             $payload['code'] = 'chat_disabled';

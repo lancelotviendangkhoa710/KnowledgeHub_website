@@ -173,6 +173,18 @@ erDiagram
 
 A partial unique index enforces at most one `active` row per `user_id`; pending cleanup rows remain until Storage deletion is verified. RLS is enabled and browser Data API access is not granted. Laravel owns application reads and writes. PDF bytes live only in the private Supabase Storage bucket.
 
+### CV-RAG indexes
+
+```mermaid
+erDiagram
+    user_cvs ||--o| user_cv_indexes : "has derived index"
+    user_cv_indexes ||--o{ user_cv_chunks : "contains"
+    user_cv_indexes { uuid id PK uuid user_cv_id FK string status "pending|ready|failed" string embedding_model string embedding_revision smallint embedding_dimensions string content_hash timestamptz indexed_at }
+    user_cv_chunks { uuid id PK uuid user_cv_index_id FK int position "zero-based" smallint page "one-based" string content_hash string content vector embedding }
+```
+
+Chunks and their embeddings cascade with the saved CV; RLS and revoked browser-role privileges keep them Laravel-only.
+
 ### Admin agent approvals
 
 ```mermaid

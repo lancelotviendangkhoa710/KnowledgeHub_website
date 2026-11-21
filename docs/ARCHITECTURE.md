@@ -41,6 +41,8 @@ The Docker configuration and database schema are tracked. Laravel application so
 [S3] <-- binary file storage (PG stores metadata only)
 ```
 
+For AI-DEMO-01B, Laravel remains the authorization/database boundary: it selects the owner CV and performs exact `pgvector` retrieval. The FastAPI service receives only bounded text, query, or Laravel-selected chunks through `X-Service-Token`; it has no database credentials. Local `intfloat/multilingual-e5-small` embeddings feed `extensions.vector(384)` storage, while only up to three retrieved chunks are sent to DeepSeek.
+
 Next.js frontend scaffold exists in `frontend/`. Application logic not yet implemented.
 
 ---

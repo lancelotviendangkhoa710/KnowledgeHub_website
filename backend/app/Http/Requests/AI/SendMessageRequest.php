@@ -18,6 +18,7 @@ class SendMessageRequest extends FormRequest
         return [
             'content' => ['required', 'string', 'min:1', 'max:8000', 'not_regex:/^\s*$/'],
             'client_message_id' => ['nullable', 'uuid'],
+            'mode' => ['sometimes', 'string', 'in:chat,cv'],
         ];
     }
 }

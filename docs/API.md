@@ -817,6 +817,7 @@ tokens; configure an API key with available balance before enabling production t
 | POST | `/api/ai/conversations/{uuid}/messages` | `content` 1–8000, `client_message_id?` UUID | 201, `data {user_message, assistant_message}` | 401, 404, 422, 429 (20/min/user), 503 `chat_disabled`/provider unavailable, 502, 504 |
 
 - Sync V1, no streaming. The pair is persisted in one transaction **only after** the AI call succeeds; provider failures leave no partial rows.
+- `mode` is optional and defaults to `chat`. `mode=cv` is separately feature-gated and uses only the authenticated actor's active CV with a `ready` matching-model index. No active CV or ready index returns `409`; cross-owner conversations remain `404`. Assistant metadata stores only application-generated CV citation fields (`cv_id`, CV version hash, page, bounded excerpt, chunk id, embedding model/revision, similarity), never an embedding or provider prompt.
 - Context sent to the AI service: last ≤19 messages (oldest first) + active explicit memories (≤10). Message/memory content is treated as untrusted data; logs never include content.
 - Idempotency: M1 (`2026_11_08_000001`) adds `messages.client_message_id` + unique
   `(conversation_id, client_message_id)` for user messages; retries replay the stored pair. The

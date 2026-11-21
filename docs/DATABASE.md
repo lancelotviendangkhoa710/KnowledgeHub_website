@@ -91,6 +91,10 @@ When replacement or deletion begins, clear extracted text and mark the old row `
 
 The agent CV assessment adds nullable `assessment` JSONB to `user_cvs`. The PDF and assessment remain absent during preview. Explicit confirmation stores both together for the authenticated owner. The assessment is cleared when an active CV is replaced or marked for deletion; a check requires `assessment IS NULL` for `pending_delete` rows. The existing owner-scoped CV delete path deletes the assessment as well.
 
+### CV-RAG embeddings (AI-DEMO-01B)
+
+`user_cv_indexes` is one-to-one with `user_cvs` (`ON DELETE CASCADE`) and records `pending`, `ready`, or `failed` indexing state, embedding model/revision, 384 dimensions, content hash, and indexed timestamp. `user_cv_chunks` belongs to an index (`ON DELETE CASCADE`) and stores zero-based position, one-based source page, bounded text/hash and `extensions.vector(384)` embedding; `(user_cv_index_id, position)` is unique. Both tables have FK/ready lookup indexes, RLS enabled, and revoked `anon`/`authenticated` privileges; Laravel is the only data authority. Exact `<=>` cosine retrieval requires the active owner CV and ready matching model/revision, returns at most three rows, and never reads pending-delete/stale data.
+
 ### Admin agent acceptance
 
 `ai_agent_approvals` is a Laravel-owned table for short-lived proposals. Each UUID row binds `actor_id` and `target_user_id` to `users.id` with explicit `ON DELETE CASCADE`; `action` and `value` have allowlist `CHECK` constraints; `summary` is review text; `target_status` and `target_roles_hash` capture the target state; `expires_at` and nullable `consumed_at` control validity; timestamps use timestamptz. Indexes support actor/expiry and target lookup. RLS is enabled, with no browser Data API access. Laravel must recheck current Admin role, target policy and state, and mark a proposal consumed atomically before executing its allowed operation. No raw natural-language instruction or model-selected endpoint is stored as authority.

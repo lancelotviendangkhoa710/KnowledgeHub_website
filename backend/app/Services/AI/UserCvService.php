@@ -7,6 +7,7 @@ use App\Models\UserCv;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -15,7 +16,10 @@ class UserCvService
 {
     public const STAGING_GRACE_MINUTES = 5;
 
-    public function __construct(private readonly CompanionRoadmapAiClient $extractor) {}
+    public function __construct(
+        private readonly CompanionRoadmapAiClient $extractor,
+        private readonly CvRagService $cvRag,
+    ) {}
 
     public function current(User $user): ?UserCv
     {
@@ -84,6 +88,15 @@ class UserCvService
             }
         } catch (Throwable $exception) {
             throw new RuntimeException('CV storage or cleanup is temporarily unavailable. Please retry.', 503, $exception);
+        }
+        $this->cvRag->prepare($saved);
+        if ((bool) config('services.ai.cv_rag_enabled', false)) {
+            try {
+                $this->cvRag->index($saved);
+            } catch (RuntimeException) {
+                // The CV remains safely saved; its failed index is never retrievable and the retry command repairs it.
+                Log::warning('ai.cv_rag_index_failed', ['category' => 'indexing']);
+            }
         }
         return $saved;
     }

@@ -28,6 +28,7 @@ class MessageService
     public function __construct(
         private readonly AIChatService $chat,
         private readonly UserMemoryService $memories,
+        private readonly CvRagService $cvRag,
     ) {}
 
     /**
@@ -113,6 +114,7 @@ class MessageService
             return $replay;
         }
 
+        $mode = $data['mode'] ?? 'chat';
         $messages = $this->conversationContext($conversation);
         $messages[] = ['role' => 'user', 'content' => $content];
         // Memory is owner-scoped and active-only; capped to the AI service contract limits.
@@ -121,7 +123,9 @@ class MessageService
             static fn (string $entry): string => mb_substr($entry, 0, 500),
             $this->memories->activeForPrompt($user, $memoryLimit),
         );
-        $reply = $this->chat->reply($messages, $memory);
+        $reply = $mode === 'cv'
+            ? $this->cvRag->answer($user, $content, $messages)
+            : $this->chat->reply($messages, $memory);
 
         // No partial rows: both messages are written only after the AI call succeeded.
         $m1 = $this->supportsM1();
