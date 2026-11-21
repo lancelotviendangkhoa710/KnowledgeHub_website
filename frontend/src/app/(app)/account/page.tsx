@@ -66,7 +66,7 @@ export default function AccountPage() {
             />
             <div role="tabpanel" id="profile-panel-overview" aria-labelledby="profile-tab-overview" tabIndex={0} hidden={tab !== 'overview'} className={p.panel}>
               <FeaturedRoadmaps roadmaps={roadmaps} loading={loading} error={error} onRetry={() => void reload()} onShowAll={showAllRoadmaps} />
-              <ActivityHeatmap userId={user.id} selected={activityDate} onSelect={setActivityDate} />
+              <ActivityHeatmap userId={user.id} selected={activityDate} onSelect={setActivityDate} visible={tab === 'overview'} />
               <ActivityHistory userId={user.id} date={activityDate} onClearDate={() => setActivityDate(null)} />
             </div>
             <div role="tabpanel" id="profile-panel-roadmaps" aria-labelledby="profile-tab-roadmaps" tabIndex={0} hidden={tab !== 'roadmaps'} className={p.panel}>

@@ -10,6 +10,8 @@ type Props = {
   userId: string;
   selected: string | null;
   onSelect: (date: string | null) => void;
+  /** Tab chứa bảng đang hiện; dùng để cuộn tới tuần mới nhất khi bảng hiện lần đầu. */
+  visible?: boolean;
 };
 
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready'; counts: Map<string, number> };
@@ -20,7 +22,7 @@ const MODES: RangeMode[] = ['rolling', 'this-year', 'last-year'];
  * PRF-08: bảng "Hoạt động học tập" theo mockup #tai-khoan, vẽ bằng HTML và CSS thuần.
  * Cột là tuần, hàng đầu là Thứ hai. Đi giữa các ô bằng mũi tên; bấm ô để lọc Lịch sử hoạt động theo ngày đó.
  */
-export default function ActivityHeatmap({ userId, selected, onSelect }: Props) {
+export default function ActivityHeatmap({ userId, selected, onSelect, visible = true }: Props) {
   const [today] = useState(() => todayKey());
   const [mode, setMode] = useState<RangeMode>('rolling');
   const [load, setLoad] = useState<Load>({ status: 'loading' });
@@ -61,10 +63,16 @@ export default function ActivityHeatmap({ userId, selected, onSelect }: Props) {
   const streak = streaks(days, counts, today);
 
   // Mới nhất nằm bên phải: trên điện thoại cuộn tới tuần gần nhất (năm trước thì về đầu năm).
+  // Chỉ cuộn khi bảng đang hiện (panel ẩn không có bố cục để cuộn), và một lần cho mỗi khoảng đã tải,
+  // nên quay lại tab vẫn giữ vị trí người dùng đã cuộn.
+  const positioned = useRef<string | null>(null);
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollLeft = mode === 'last-year' ? 0 : el.scrollWidth;
-  }, [mode, load.status]);
+    const key = `${mode}:${load.status}`;
+    if (!el || !visible || positioned.current === key || el.clientWidth === 0) return;
+    el.scrollLeft = mode === 'last-year' ? 0 : el.scrollWidth;
+    positioned.current = key;
+  }, [mode, load.status, visible]);
 
   // Ô nhận Tab: ô đang chọn trong khoảng, nếu không thì ngày cuối của khoảng.
   const tabKey = focusKey && days.includes(focusKey) ? focusKey : selected && days.includes(selected) ? selected : days[days.length - 1];
