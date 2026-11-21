@@ -5,6 +5,7 @@ namespace App\Http\Controllers\AI;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AI\StoreUserCvRequest;
 use App\Models\UserCv;
+use App\Models\UserCvIndex;
 use App\Services\AI\UserCvService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,27 @@ class UserCvController extends Controller
     {
         $cv = $this->cvs->current($request->user());
         return response()->json(['status' => 'success', 'message' => 'CV retrieved.', 'data' => $cv ? $this->metadata($cv) : null]);
+    }
+
+    public function ragStatus(Request $request): JsonResponse
+    {
+        $cv = $this->cvs->current($request->user());
+        $index = $cv === null ? null : UserCvIndex::query()->where('user_cv_id', $cv->id)->first();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'CV RAG status retrieved.',
+            'data' => [
+                'cv' => $cv ? $this->metadata($cv) : null,
+                'index' => $index ? [
+                    'status' => $index->status,
+                    'embedding_model' => $index->embedding_model,
+                    'embedding_revision' => $index->embedding_revision,
+                    'embedding_dimensions' => $index->embedding_dimensions,
+                    'indexed_at' => $index->indexed_at?->toISOString(),
+                ] : null,
+            ],
+        ]);
     }
 
     public function store(StoreUserCvRequest $request): JsonResponse

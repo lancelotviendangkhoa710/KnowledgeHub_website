@@ -60,6 +60,28 @@ class UserCvTest extends TestCase
         $this->assertDatabaseCount('user_cvs', 0);
     }
 
+    public function test_rag_status_is_owner_scoped_and_exposes_no_private_cv_data(): void
+    {
+        $this->getJson('/api/ai/cv/rag-status')->assertUnauthorized();
+        $owner = $this->user();
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/ai/cv', ['cv_file' => $this->pdf(), 'consent' => '1'])->assertCreated();
+
+        $this->getJson('/api/ai/cv/rag-status')
+            ->assertOk()
+            ->assertJsonPath('data.cv.filename', 'cv.pdf')
+            ->assertJsonPath('data.index.status', 'pending')
+            ->assertJsonPath('data.index.embedding_model', \App\Services\AI\CvRagService::MODEL)
+            ->assertJsonMissingPath('data.cv.extracted_text')
+            ->assertJsonMissingPath('data.index.embedding');
+
+        Sanctum::actingAs($this->user());
+        $this->getJson('/api/ai/cv/rag-status')
+            ->assertOk()
+            ->assertJsonPath('data.cv', null)
+            ->assertJsonPath('data.index', null);
+    }
+
     public function test_roles_cannot_manage_another_users_cv(): void
     {
         $owner = $this->user();

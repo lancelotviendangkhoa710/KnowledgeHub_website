@@ -862,11 +862,14 @@ The authenticated CV endpoints are owner-only for User, Contributor, and Admin. 
 | Method | Path | Request | Success | Main errors |
 |---|---|---|---|---|
 | GET | `/api/ai/cv` | — | 200, success envelope with CV metadata; `data:null` when none | 401 |
+| GET | `/api/ai/cv/rag-status` | — | 200, `data {cv,index}` where index contains only status/model/revision/dimensions/indexed_at | 401 |
 | POST | `/api/ai/cv` | multipart `cv_file` (PDF), `consent=1` | 201, `{status:success, message, data:{id, filename, size_bytes, consented_at, created_at}}`; replacement uses the same operation | 401, 422 invalid/unsupported/encrypted/textless/oversized PDF or missing consent, 503 cleanup incomplete |
 | GET | `/api/ai/cv/download` | — | 200 PDF attachment served through Laravel | 401, 404 no active CV, 503 Storage unavailable |
 | DELETE | `/api/ai/cv` | — | 200 success envelope with `data:null` after cleanup | 401, 503 cleanup incomplete |
 
 CV responses never include extracted text, object keys, Storage URLs, or credentials. `cv_file` is limited to the approved 2 MiB PDF policy. Replacement stages a new opaque object key and removes/invalidates the previous CV; pending cleanup data is unavailable for retrieval. Failed cleanup returns a safe error and is retried by the hourly `ai:cleanup-pending-cvs` task; the host must run Laravel `schedule:run`. DELETE is idempotent and returns 200 when no active CV exists. Account deletion must complete CV source cleanup before reporting success; if object removal cannot be verified, return a safe error and leave the account undeleted. This integration is owned by Auth and must be covered by an Auth feature test.
+
+The RAG status endpoint is owner-scoped through Sanctum and returns `cv:null,index:null` when the owner has no active CV. It never returns extracted text, chunks, embeddings, similarity results, prompts, or Storage details.
 
 The implementation tests must cover guest rejection; owner-only behavior for User, Contributor and Admin; cross-user denial including Admin; metadata without extracted text/object key; required consent and PDF validation; upload and download; replacement; delete; simulated Storage/database partial failures and cleanup retry; account deletion blocked on storage failure; and confirmation that the existing preview remains non-persistent. Never run tests against shared Supabase.
 
