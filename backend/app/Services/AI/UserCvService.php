@@ -54,12 +54,14 @@ class UserCvService
             return UserCv::create([
                 'user_id' => $user->id,
                 'object_key' => 'cvs/'.Str::uuid().'.pdf',
-                'filename' => 'cv.pdf',
+                'filename' => $file->getClientOriginalName() ?: 'document.pdf',
                 'size_bytes' => $file->getSize(),
                 'consented_at' => now(),
                 'status' => 'pending_delete',
                 'extracted_text' => null,
                 'assessment' => null,
+                'title' => null,
+                'summary' => null,
             ]);
         });
         try {
@@ -89,16 +91,20 @@ class UserCvService
         } catch (Throwable $exception) {
             throw new RuntimeException('CV storage or cleanup is temporarily unavailable. Please retry.', 503, $exception);
         }
-        $this->cvRag->prepare($saved);
-        if ((bool) config('services.ai.cv_rag_enabled', false)) {
-            try {
-                $this->cvRag->index($saved);
-            } catch (RuntimeException) {
-                // The CV remains safely saved; its failed index is never retrievable and the retry command repairs it.
-                Log::warning('ai.cv_rag_index_failed', ['category' => 'indexing']);
-            }
+        try {
+            $this->cvRag->index($saved);
+            $this->cvRag->summarize($saved);
+        } catch (RuntimeException) {
+            // The file remains safely stored, while the persisted index state tells the client that processing failed.
+            DB::transaction(function () use ($saved): void {
+                $index = UserCvIndex::query()->where('user_cv_id', $saved->id)->lockForUpdate()->first();
+                if ($index !== null) {
+                    $index->chunks()->delete();
+                    $index->update(['status' => 'failed', 'indexed_at' => null]);
+                }
+            });
         }
-        return $saved;
+        return $saved->fresh();
     }
 
     public function markAllPendingForUser(User $user): void
@@ -106,7 +112,7 @@ class UserCvService
         DB::transaction(function () use ($user): void {
             $this->lockOwner($user);
             UserCv::query()->where('user_id', $user->id)->where('status', 'active')
-                ->update(['status' => 'pending_delete', 'extracted_text' => null, 'assessment' => null, 'updated_at' => now()]);
+                ->update(['status' => 'pending_delete', 'extracted_text' => null, 'assessment' => null, 'title' => null, 'summary' => null, 'updated_at' => now()]);
         });
     }
 

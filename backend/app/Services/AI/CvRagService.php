@@ -27,7 +27,7 @@ class CvRagService
             return;
         }
         UserCvIndex::query()->updateOrCreate(['user_cv_id' => $cv->id], [
-            'status' => 'pending',
+            'status' => 'processing',
             'embedding_model' => self::MODEL,
             'embedding_revision' => self::REVISION,
             'embedding_dimensions' => self::DIMENSIONS,
@@ -42,7 +42,7 @@ class CvRagService
         $hash = hash('sha256', $cv->extracted_text);
         $this->prepare($cv);
         $index = UserCvIndex::query()->where('user_cv_id', $cv->id)->firstOrFail();
-        $index->update(['status' => 'pending', 'content_hash' => $hash, 'indexed_at' => null]);
+        $index->update(['status' => 'processing', 'content_hash' => $hash, 'indexed_at' => null]);
         try {
             $payload = $this->post('/v1/cv-rag/index', ['pages' => $this->pages($cv->extracted_text)]);
             if (($payload['model'] ?? null) !== self::MODEL || ($payload['revision'] ?? null) !== self::REVISION
@@ -67,6 +67,20 @@ class CvRagService
             Log::warning('ai.cv_rag_index_failed', ['category' => 'indexing']);
             throw new RuntimeException('CV indexing is temporarily unavailable.', 503, $exception);
         }
+    }
+
+    public function summarize(UserCv $cv): void
+    {
+        if (! is_string($cv->extracted_text) || trim($cv->extracted_text) === '') {
+            throw new RuntimeException('Notebook source text is invalid.', 422);
+        }
+        $payload = $this->post('/v1/cv-rag/summarize', ['text' => $cv->extracted_text]);
+        $title = is_string($payload['title'] ?? null) ? trim($payload['title']) : '';
+        $summary = is_string($payload['summary'] ?? null) ? trim($payload['summary']) : '';
+        if ($title === '' || mb_strlen($title) > 255 || $summary === '' || mb_strlen($summary) > 5000) {
+            throw new RuntimeException('Notebook summary is invalid.', 502);
+        }
+        $cv->update(['title' => $title, 'summary' => $summary]);
     }
 
     /** @return array{content:string,meta:array<string,mixed>} */

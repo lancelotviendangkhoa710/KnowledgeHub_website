@@ -17,7 +17,7 @@ class RetryUserCvIndexes extends Command
         $failed = false;
         UserCv::query()->where('status', 'active')->orderBy('id')->each(function (UserCv $cv) use ($rag, &$failed): void {
             $index = UserCvIndex::query()->where('user_cv_id', $cv->id)->first();
-            if ($index === null || in_array($index->status, ['pending', 'failed'], true)) {
+            if ($index === null || in_array($index->status, ['pending', 'processing', 'failed'], true)) {
                 try { $rag->index($cv); } catch (\RuntimeException) { $failed = true; }
             }
         });

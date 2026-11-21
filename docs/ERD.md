@@ -160,6 +160,8 @@ erDiagram
         uuid id PK
         uuid user_id FK "ON DELETE CASCADE"
         string object_key "unique opaque private Storage key"
+        string title "nullable Notebook title"
+        text summary "nullable Notebook summary"
         string filename
         bigint size_bytes
         text extracted_text "nullable; cleared on pending_delete"
@@ -179,7 +181,7 @@ A partial unique index enforces at most one `active` row per `user_id`; pending 
 erDiagram
     user_cvs ||--o| user_cv_indexes : "has derived index"
     user_cv_indexes ||--o{ user_cv_chunks : "contains"
-    user_cv_indexes { uuid id PK uuid user_cv_id FK string status "pending|ready|failed" string embedding_model string embedding_revision smallint embedding_dimensions string content_hash timestamptz indexed_at }
+    user_cv_indexes { uuid id PK uuid user_cv_id FK string status "pending|processing|ready|failed" string embedding_model string embedding_revision smallint embedding_dimensions string content_hash timestamptz indexed_at }
     user_cv_chunks { uuid id PK uuid user_cv_index_id FK int position "zero-based" smallint page "one-based" string content_hash string content vector embedding }
 ```
 

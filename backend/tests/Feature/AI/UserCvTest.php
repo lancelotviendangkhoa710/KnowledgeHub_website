@@ -5,8 +5,10 @@ namespace Tests\Feature\AI;
 use App\Models\User;
 use App\Models\UserCv;
 use App\Services\AI\CompanionRoadmapAiClient;
+use App\Services\AI\CvRagService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
@@ -21,6 +23,18 @@ class UserCvTest extends TestCase
         parent::setUp();
         Storage::fake('cv');
         $this->mock(CompanionRoadmapAiClient::class)->shouldReceive('extractPdf')->andReturn('private extracted text');
+        config()->set('services.ai.url', 'http://ai-service:8000');
+        config()->set('services.ai.token', 'test-token');
+        $embedding = array_fill(0, 384, 0.1);
+        Http::fake([
+            'http://ai-service:8000/v1/cv-rag/index' => Http::response([
+                'model' => CvRagService::MODEL, 'revision' => CvRagService::REVISION, 'dimensions' => 384,
+                'chunks' => [['position' => 0, 'page' => 1, 'content' => 'private extracted text', 'embedding' => $embedding]],
+            ]),
+            'http://ai-service:8000/v1/cv-rag/summarize' => Http::response([
+                'title' => 'Tóm tắt tài liệu', 'summary' => 'Đây là nội dung chính của tài liệu đã tải lên.',
+            ]),
+        ]);
     }
 
     private function user(): User
@@ -40,7 +54,12 @@ class UserCvTest extends TestCase
         Sanctum::actingAs($owner);
         $this->postJson('/api/ai/cv', ['cv_file' => $this->pdf()])->assertUnprocessable();
         $first = $this->postJson('/api/ai/cv', ['cv_file' => $this->pdf(), 'consent' => '1'])
-            ->assertCreated()->assertJsonMissing(['extracted_text' => 'private extracted text']);
+            ->assertCreated()->assertJsonPath('data.filename', 'resume.pdf')
+            ->assertJsonPath('data.status', 'ready')->assertJsonPath('data.chunk_count', 1)
+            ->assertJsonPath('data.title', 'Tóm tắt tài liệu')
+            ->assertJsonPath('data.summary', 'Đây là nội dung chính của tài liệu đã tải lên.')
+            ->assertJsonStructure(['data' => ['uploaded_at', 'updated_at']])
+            ->assertJsonMissing(['extracted_text' => 'private extracted text']);
         $this->assertArrayNotHasKey('object_key', $first->json('data'));
         $old = UserCv::query()->where('user_id', $owner->id)->firstOrFail();
         Storage::disk('cv')->assertExists($old->object_key);
@@ -69,8 +88,11 @@ class UserCvTest extends TestCase
 
         $this->getJson('/api/ai/cv/rag-status')
             ->assertOk()
-            ->assertJsonPath('data.cv.filename', 'cv.pdf')
-            ->assertJsonPath('data.index.status', 'pending')
+            ->assertJsonPath('data.cv.filename', 'resume.pdf')
+            ->assertJsonPath('data.cv.status', 'ready')
+            ->assertJsonPath('data.cv.chunk_count', 1)
+            ->assertJsonPath('data.index.status', 'ready')
+            ->assertJsonPath('data.index.chunk_count', 1)
             ->assertJsonPath('data.index.embedding_model', \App\Services\AI\CvRagService::MODEL)
             ->assertJsonMissingPath('data.cv.extracted_text')
             ->assertJsonMissingPath('data.index.embedding');

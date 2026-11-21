@@ -862,8 +862,8 @@ The authenticated CV endpoints are owner-only for User, Contributor, and Admin. 
 | Method | Path | Request | Success | Main errors |
 |---|---|---|---|---|
 | GET | `/api/ai/cv` | — | 200, success envelope with CV metadata; `data:null` when none | 401 |
-| GET | `/api/ai/cv/rag-status` | — | 200, `data {cv,index}` where index contains only status/model/revision/dimensions/indexed_at | 401 |
-| POST | `/api/ai/cv` | multipart `cv_file` (PDF), `consent=1` | 201, `{status:success, message, data:{id, filename, size_bytes, consented_at, created_at}}`; replacement uses the same operation | 401, 422 invalid/unsupported/encrypted/textless/oversized PDF or missing consent, 503 cleanup incomplete |
+| GET | `/api/ai/cv/rag-status` | — | 200, `data {cv,index}`; both expose document index `status` and `chunk_count`, while `cv` also includes `filename`, `uploaded_at`, `updated_at`, persisted `title`, and `summary` | 401 |
+| POST | `/api/ai/cv` | multipart `cv_file` (PDF), `consent=1` | 201 after synchronous extraction, chunking, embedding, and summary; `data:{id,filename,size_bytes,consented_at,uploaded_at,updated_at,title,summary,status,chunk_count,created_at}`. `status` is `ready` or `failed`; replacement uses the same operation | 401, 422 invalid/unsupported/encrypted/textless/oversized PDF or missing consent, 503 cleanup incomplete |
 | GET | `/api/ai/cv/download` | — | 200 PDF attachment served through Laravel | 401, 404 no active CV, 503 Storage unavailable |
 | DELETE | `/api/ai/cv` | — | 200 success envelope with `data:null` after cleanup | 401, 503 cleanup incomplete |
 
