@@ -144,9 +144,9 @@ export default function ActivityHeatmap({ userId, joinedAt, selected, onSelect, 
         <div className={s.stats}>
           {loading ? <p className={s.muted} role="status">Đang tải hoạt động…</p> : load.status === 'error' ? null : (
             <>
-              <div className={s.key}><b>{activeDays} ngày</b>đã học trong {range.label}</div>
-              {range.rolling && <div><b>{streak.current} ngày</b>chuỗi hiện tại</div>}
-              <div><b>{streak.longest} ngày</b>chuỗi dài nhất</div>
+              <div className={s.key}><b>{activeDays}</b>ngày đã học trong {range.label}</div>
+              {range.rolling && <div><b>{streak.current}</b>chuỗi ngày hiện tại</div>}
+              <div><b>{streak.longest}</b>chuỗi ngày dài nhất</div>
             </>
           )}
         </div>
