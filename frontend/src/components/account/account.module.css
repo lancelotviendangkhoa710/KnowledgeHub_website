@@ -1,0 +1,55 @@
+/* PRF-01, PRF-02: trang hồ sơ (/account) và trang cài đặt (/account/settings). Chỉ dùng token trong globals.css. */
+.page { max-width: 1200px; margin: 0 auto; padding: 24px 24px 72px; }
+.head { padding: 16px 0 20px; }
+.head h1 { font-size: clamp(28px, 3.4vw, 40px); font-weight: 800; }
+.head p { color: var(--ink-2); margin-top: 8px; max-width: 62ch; }
+
+/* Cài đặt: sidebar trái, nội dung phải. */
+.settings { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 32px; align-items: start; }
+.side { position: sticky; top: calc(var(--head) + 16px); }
+.sideList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.sideList a { display: flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--ink-2); white-space: nowrap; }
+.sideList a:hover { background: var(--surface-2); color: var(--ink); }
+.sideList a[aria-current="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+.sideList a.dangerLink { color: var(--danger); }
+.sideList a.dangerLink[aria-current="true"] { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.sideSep { height: 1px; background: var(--line); margin: 8px 0; }
+.sideList a:focus-visible, .back:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.content { display: flex; flex-direction: column; gap: 20px; max-width: 720px; min-width: 0; }
+.content > .dangerZone { border-color: var(--danger); }
+.back { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: var(--brand); font-weight: 500; margin-bottom: 8px; }
+.back:hover { text-decoration: underline; }
+
+/* Hồ sơ: thẻ thông tin trái, khối nội dung phải. */
+.profile { display: grid; grid-template-columns: 296px minmax(0, 1fr); gap: 32px; align-items: start; padding-top: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-card); padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+.avatar { width: 96px; height: 96px; border-radius: 50%; background: var(--mark); color: var(--mark-ink); display: grid; place-items: center; font-weight: 800; font-size: 40px; font-family: var(--display); flex: none; }
+.ident h1 { font-size: 24px; font-weight: 800; overflow-wrap: anywhere; line-height: 1.25; }
+.ident p { color: var(--ink-3); font-size: 14px; overflow-wrap: anywhere; margin-top: 2px; }
+.meta { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.meta li { display: flex; gap: 8px; align-items: baseline; }
+.meta dt, .meta .k { color: var(--ink-3); min-width: 92px; flex: none; }
+.role { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; background: var(--brand-soft); color: var(--brand); }
+.cardSection { border-top: 1px solid var(--line); padding-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.cardSection h2 { font-size: 15px; font-weight: 700; }
+.cardSection p { color: var(--ink-2); font-size: 13px; }
+.shortcuts { display: flex; flex-direction: column; gap: 8px; }
+.shortcuts > * { width: 100%; }
+.main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.notice { padding: 10px 14px; border-radius: 8px; font-size: 14px; background: var(--surface); border: 1px solid var(--danger); color: var(--danger); }
+
+@media (max-width: 900px) {
+  .profile { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+  .card { flex-direction: column; }
+  .avatar { width: 72px; height: 72px; font-size: 30px; }
+}
+@media (max-width: 760px) {
+  .settings { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .side { position: static; overflow-x: auto; margin: 0 -16px; padding: 0 16px 4px; border-bottom: 1px solid var(--line); }
+  .sideList { flex-direction: row; gap: 4px; width: max-content; }
+  .sideList a { border-radius: var(--r-pill); }
+  .sideSep { display: none; }
+}
+@media (max-width: 640px) {
+  .page { padding: 16px 16px 72px; }
+}
