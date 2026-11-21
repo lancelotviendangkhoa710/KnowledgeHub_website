@@ -29,6 +29,12 @@ export default function AccountPage() {
   // Bộ lọc ngày thuộc về tài khoản đang xem; đổi tài khoản thì bỏ.
   useEffect(() => { setActivityDate(null); }, [userId]);
 
+  // Nút "Xem tất cả" nằm trong panel sắp bị ẩn: chuyển focus sang tab Lộ trình để người dùng bàn phím không mất vị trí.
+  function showAllRoadmaps() {
+    setTab('roadmaps');
+    requestAnimationFrame(() => document.getElementById('profile-tab-roadmaps')?.focus());
+  }
+
   if (!user) {
     return (
       <div className={authStyles.acct}>
@@ -59,7 +65,7 @@ export default function AccountPage() {
               ]}
             />
             <div role="tabpanel" id="profile-panel-overview" aria-labelledby="profile-tab-overview" tabIndex={0} hidden={tab !== 'overview'} className={p.panel}>
-              <FeaturedRoadmaps roadmaps={roadmaps} loading={loading} error={error} onRetry={() => void reload()} onShowAll={() => setTab('roadmaps')} />
+              <FeaturedRoadmaps roadmaps={roadmaps} loading={loading} error={error} onRetry={() => void reload()} onShowAll={showAllRoadmaps} />
               <ActivityHeatmap userId={user.id} selected={activityDate} onSelect={setActivityDate} />
               <ActivityHistory userId={user.id} date={activityDate} onClearDate={() => setActivityDate(null)} />
             </div>

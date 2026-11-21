@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import styles from '@/components/auth/authForm.module.css';
 import { accountClient, errorMessage } from '@/lib/accountClient';
 import { setCurrentUser } from '@/lib/auth';
-import { setAccessToken } from '@/lib/authToken';
+import { getAccessToken, setAccessToken } from '@/lib/authToken';
 import NoticeLine, { type Notice } from './NoticeLine';
 
 /** Vùng xóa tài khoản (chuyển nguyên từ trang /account cũ): hỏi mật khẩu rồi mới xóa. */
@@ -20,8 +20,11 @@ export default function DeleteAccountSection({ className }: { className?: string
     event.preventDefault();
     setDeleting(true);
     setNotice(null);
+    const sessionAtRequest = getAccessToken();
     try {
       await accountClient.deleteAccount(password);
+      // Another account signed in while the request was pending: leave that session alone.
+      if (getAccessToken() !== sessionAtRequest) return;
       // The server already revoked every token, so clear local state directly.
       setAccessToken(null);
       setCurrentUser(null);

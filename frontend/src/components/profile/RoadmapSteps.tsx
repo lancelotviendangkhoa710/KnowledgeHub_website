@@ -14,7 +14,8 @@ const ITEM_LABELS: Record<RoadmapItemStatus, string> = {
 export function lessonLink(item: RoadmapItem): { href: string; title: string } | null {
   const course = item.ai_details?.course;
   if (course?.url) return { href: course.url, title: course.title || 'Mở khóa học' };
-  if (item.article_id && (item.article_title || !item.ai_details)) {
+  // `article_title` chỉ có khi khóa học đang xuất bản; không có thì không tạo link (tránh trang lỗi).
+  if (item.article_id && item.article_title) {
     return { href: `/courses/${encodeURIComponent(item.article_id)}`, title: item.article_title || 'Mở khóa học' };
   }
   return null;

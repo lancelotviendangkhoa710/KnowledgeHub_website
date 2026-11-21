@@ -7,6 +7,7 @@ import authStyles from '@/components/auth/authForm.module.css';
 import RoadmapDetailView from '@/components/profile/RoadmapDetailView';
 import p from '@/components/profile/profile.module.css';
 import s from '@/components/profile/roadmapDetail.module.css';
+import { subscribeCurrentUser } from '@/lib/auth';
 import { getAccessToken } from '@/lib/authToken';
 import { roadmapClient } from '@/lib/roadmapClient';
 import type { LearningRoadmap } from '@/types/learning';
@@ -25,17 +26,28 @@ export default function RoadmapDetailPage() {
   const [state, setState] = useState<State>({ kind: 'loading' });
   const [attempt, setAttempt] = useState(0);
 
+  // Đăng xuất hoặc đổi tài khoản (cùng tab qua kho auth, tab khác qua sự kiện storage): tải lại theo phiên mới.
+  useEffect(() => {
+    const onSessionChange = () => setAttempt((value) => value + 1);
+    const unsubscribe = subscribeCurrentUser(onSessionChange);
+    const onStorage = (event: StorageEvent) => { if (event.key === null || event.key === 'kh_signed_in') onSessionChange(); };
+    window.addEventListener('storage', onStorage);
+    return () => { unsubscribe(); window.removeEventListener('storage', onStorage); };
+  }, []);
+
   useEffect(() => {
     let active = true;
-    if (!getAccessToken()) {
+    const session = getAccessToken();
+    if (!session) {
       setState({ kind: 'signed-out' });
       return;
     }
+    // Bỏ dữ liệu của phiên trước ngay, không đợi yêu cầu mới trả về.
     setState({ kind: 'loading' });
     roadmapClient.get(id).then((result) => {
-      if (active) setState({ kind: 'ready', roadmap: result.data });
+      if (active && getAccessToken() === session) setState({ kind: 'ready', roadmap: result.data });
     }).catch((error: { status?: number }) => {
-      if (!active) return;
+      if (!active || getAccessToken() !== session) return;
       if (error?.status === 401) setState({ kind: 'signed-out' });
       else if (error?.status === 404 || error?.status === 403) setState({ kind: 'not-found' });
       else setState({ kind: 'error' });
