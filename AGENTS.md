@@ -313,6 +313,11 @@ main  ▲  production; merge from dev only
 
 One branch = one coherent task. Small branches. Small PRs. Never work on `main` or `dev` directly.
 
+When resolving a conflict by merging `dev` into a task branch, the merge commit
+must still use an approved task prefix (for example,
+`p3: merge dev conflict resolution for <task>`), never `merge:`. Run the
+guardrail against the refreshed `origin/dev` before pushing.
+
 ```powershell
 .\scripts\agent-start-task.ps1 -Branch "p1/auth-login"
 .\scripts\create-pr.ps1 -Title "p1: implement login endpoint"

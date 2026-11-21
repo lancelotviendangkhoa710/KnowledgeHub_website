@@ -18,6 +18,15 @@ git add <files-cụ-thể>
 git commit -m "p1: mô tả ngắn"
 git push origin p1/AUTH-01-login
 
+# ── Resolve conflict với dev ──
+git fetch origin dev
+git merge origin/dev
+# Resolve file conflict, sau đó:
+git add <files-da-resolve>
+git commit -m "p1: merge dev conflict resolution for AUTH-01-login"
+.\scripts\test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId
+git push origin p1/AUTH-01-login
+
 # ── Trước khi tạo PR ──
 docker compose exec app php artisan test tests/Feature/Auth/
 .\scripts\test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId
@@ -67,6 +76,10 @@ chore: <mô tả>  ← bảo trì
 7. ✅ Guardrails:       chạy trước mỗi PR
 8. ✅ Review:           không tự merge PR của mình
 ```
+
+Khi merge `dev` để resolve conflict, vẫn dùng prefix hợp lệ của task, ví dụ
+`p1: merge dev conflict resolution for AUTH-01-login`; không dùng `merge:` vì
+CI sẽ từ chối commit đó.
 
 ---
 
