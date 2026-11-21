@@ -70,6 +70,27 @@ hotfix: <desc>  critical fix
 
 Not acceptable: `fix`, `update`, `wip`, `changes`.
 
+### Resolving a conflict with `dev`
+
+Before resolving a PR conflict, fetch the current base branch and merge it into
+your task branch. Keep the required behavior from both sides, then use the
+normal task prefix for the merge commit; `merge:` is not an approved prefix and
+will fail both commit-convention CI and the guardrail. For example:
+
+```powershell
+git fetch origin dev
+git merge origin/dev
+# Resolve only the conflicting files, then validate the combined behavior.
+git add <resolved-files>
+git commit -m "p3: merge dev conflict resolution for <task>"
+.\scripts\test-guardrails.ps1 -BaseRef origin/dev -RequireTaskId
+git push origin <task-branch>
+```
+
+Do not use `--force` for an ordinary merge commit. If an already-pushed commit
+message itself must be corrected, use `--force-with-lease` only after checking
+the remote branch has not advanced unexpectedly.
+
 ---
 
 ## 5. Contract-First Development
@@ -89,6 +110,7 @@ When backend is ready: replace only the approved mock with the real endpoint.
 - [ ] Small diff, includes tests
 - [ ] CI passes (branch naming + commit convention + Laravel tests)
 - [ ] `./scripts/test-guardrails.ps1` passes
+- [ ] Any conflict-resolution merge commit uses an approved prefix (`p1:`, `p2:`, `p3:`, `docs:`, `fix:`, `chore:`, `hotfix:`, or `release:`)
 - [ ] No `dd()`, `var_dump()`, `console.log()`, `.env` committed
 - [ ] States: domain, DB changes, API changes, shared files touched
 - [ ] CodeRabbit reviewed (CI blocks merge until done)
