@@ -198,34 +198,48 @@
 .mem {
   position: absolute; inset-block: 0; right: 0; z-index: 31;
   width: min(320px, 88vw); box-sizing: border-box;
-  border-left: 1px solid var(--line); background: var(--surface); padding: 18px;
+  border-left: 1px solid #454545; background: #1d1d1d; color: #f5f5f5; padding: 20px;
   display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto;
   transform: translateX(100%); visibility: hidden;
   transition: transform .2s ease, visibility 0s linear .2s;
 }
 .memOpen { transform: none; visibility: visible; transition-delay: 0s; }
-.memHead { display: flex; align-items: center; justify-content: space-between; }
-.memHead h2 { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 16px; font-weight: 700; }
-.mem p { margin: 0; font-size: 13px; color: var(--ink-2); }
-.memError { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-radius: 8px; background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); font-size: 13px; }
-.memEmpty { color: var(--ink-2); }
-.memList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.memItem { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; background: var(--bg); font-size: 14px; }
-.memItem > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.memType, .memExpiry { display: block; font-size: 12px; color: var(--ink-3); }
-.memDel { flex: none; padding: 2px; border: 0; background: none; color: var(--ink-3); cursor: pointer; border-radius: 4px; }
-.memDel:hover { color: var(--danger); }
-.memForm { display: grid; gap: 8px; margin-top: auto; }
+.memHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #3c3c3c; }
+.memHead p { margin: 0 0 3px; color: #b9b9b9; font-size: 12px; }
+.memHead h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: #fff; font-size: 19px; font-weight: 700; }
+.mem .iconButton { color: #d8d8d8; }
+.mem .iconButton:hover:not(:disabled) { background: #2b2b2b; color: #fff; }
+.memIntro { margin: 0; color: #c4c4c4; font-size: 13px; line-height: 1.55; }
+.memError { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border: 1px solid #7d4141; border-radius: 10px; background: #342020; color: #ffb4b4; font-size: 13px; }
+.memError .btnGhost { border-color: #9b6262; color: #fff; }
+.memLoading { display: flex; align-items: center; gap: 10px; padding: 14px; border: 1px solid #3c3c3c; border-radius: 10px; color: #d2d2d2; font-size: 13px; }
+.memLoading .spinner { border-color: #444; border-top-color: #f5f5f5; }
+.memEmpty { display: grid; gap: 5px; padding: 18px 14px; border: 1px dashed #575757; border-radius: 10px; background: #222; text-align: center; }
+.memEmpty strong { color: #f5f5f5; font-size: 14px; }
+.memEmpty p { margin: 0; color: #b9b9b9; font-size: 13px; line-height: 1.5; }
+.memList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.memItem { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid #3c3c3c; border-radius: 10px; background: #272727; font-size: 14px; }
+.memItemBody { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.memItemBody p { margin: 7px 0; color: #f2f2f2; line-height: 1.45; }
+.memType { display: inline-flex; padding: 3px 7px; border-radius: var(--r-pill); background: #363636; color: #e0e0e0; font-size: 11px; font-weight: 600; }
+.memExpiry { display: block; color: #aaa; font-size: 12px; }
+.memDel { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; background: transparent; color: #b9b9b9; cursor: pointer; border-radius: 7px; }
+.memDel:hover { border-color: #814848; background: #342020; color: #ffb4b4; }
+.memForm { display: grid; gap: 10px; margin-top: auto; padding-top: 16px; border-top: 1px solid #3c3c3c; }
+.memForm > strong { color: #f5f5f5; font-size: 14px; }
 .memForm textarea, .memForm select, .memForm input {
-  width: 100%; min-width: 0; border: 1px solid var(--line); background-color: var(--bg); color: var(--ink);
+  width: 100%; min-width: 0; border: 1px solid #4a4a4a; background-color: #242424; color: #f5f5f5;
   border-radius: 8px; padding: 9px 12px; font: inherit; font-size: 13px;
 }
 .memForm textarea, .memForm input { box-sizing: border-box; height: 40px; min-height: 40px; }
 .memForm textarea { resize: vertical; }
+.memForm textarea::placeholder { color: #aaa; }
 
 .memRow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: start; }
-.memRow label, .memField { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); min-width: 0; }
-.memForm .btn { justify-self: start; }
+.memRow label, .memField { display: grid; gap: 5px; font-size: 12px; color: #c4c4c4; min-width: 0; }
+.memSelect > button, .memDate > div > button { border-color: #4a4a4a; background: #242424; color: #f5f5f5; }
+.memSelect > button span, .memDate > div > button span, .memSelect > button svg, .memDate > div > button svg { color: #d6d6d6; }
+.memForm .btn { justify-self: start; background: #f5f5f5; color: #1d1d1d; }
 
 .overlay { position: absolute; inset: 0; z-index: 30; background: color-mix(in srgb, var(--ink) 45%, transparent); }
 

@@ -1274,12 +1274,12 @@ export default function AICompanionPage() {
           aria-hidden={!memoryOpen}
         >
             <div className={styles.memHead}>
-              <h2><Icon size={18}><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" /></Icon>Ghi nhớ</h2>
+              <div><p>Nguồn ngữ cảnh</p><h2><Icon size={18}><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" /></Icon>Ghi nhớ</h2></div>
               <button type="button" ref={memoryCloseRef} className={styles.iconButton} onClick={() => setMemoryOpen(false)} aria-label="Đóng bảng ghi nhớ">
                 <Icon size={16}><path d="M18 6 6 18M6 6l12 12" /></Icon>
               </button>
             </div>
-            <p>Những điều trợ lý nhớ về bạn để trả lời sát hơn. Chỉ các ghi nhớ bạn tự thêm mới được lưu, bạn xóa được bất cứ lúc nào.</p>
+            <p className={styles.memIntro}>Những điều trợ lý nhớ về bạn để trả lời sát hơn. Chỉ các ghi nhớ bạn tự thêm mới được lưu, bạn xóa được bất cứ lúc nào.</p>
 
             {memoryError && (
               <div className={styles.memError} role="alert">
@@ -1293,21 +1293,24 @@ export default function AICompanionPage() {
             )}
 
             {memoryLoading ? (
-              <div className={styles.threadLoading} role="status">
+              <div className={styles.memLoading} role="status">
                 <span className={styles.spinner} aria-hidden="true" />
                 <span>Đang tải ghi nhớ...</span>
               </div>
             ) : memories.length === 0 ? (
-              <p className={styles.memEmpty}>Chưa có ghi nhớ nào. Thêm một sở thích, thông tin hoặc mục tiêu bên dưới.</p>
+              <div className={styles.memEmpty}>
+                <strong>Chưa có ghi nhớ</strong>
+                <p>Thêm một sở thích, thông tin hoặc mục tiêu bên dưới.</p>
+              </div>
             ) : (
               <ul className={styles.memList}>
                 {memories.map((memory) => (
                   <li key={memory.id} className={styles.memItem}>
-                    <span>
+                    <div className={styles.memItemBody}>
                       <small className={styles.memType}>{memoryTypeLabels[memory.memory_type]}</small>
-                      {memory.content}
+                      <p>{memory.content}</p>
                       {memory.expires_at && <small className={styles.memExpiry}>Hết hạn {formatExpiryDate(memory.expires_at)}</small>}
-                    </span>
+                    </div>
                     <button type="button" className={styles.memDel} onClick={() => void removeMemory(memory)} aria-label={`Xóa ghi nhớ: ${memory.content.slice(0, 60)}`}>
                       <Icon size={15}><path d="M18 6 6 18M6 6l12 12" /></Icon>
                     </button>
@@ -1317,6 +1320,7 @@ export default function AICompanionPage() {
             )}
 
             <form className={styles.memForm} onSubmit={(event) => void addMemory(event)}>
+              <strong>Thêm ghi nhớ</strong>
               <label className={styles.srOnly} htmlFor="memory-content">Thêm điều cần nhớ</label>
               <textarea
                 id="memory-content"
@@ -1330,15 +1334,15 @@ export default function AICompanionPage() {
               <div className={styles.memRow}>
                 <div className={styles.memField}>
                   Loại
-                  <Select compact ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
+                  <Select className={styles.memSelect} compact ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
                 </div>
                 <div className={styles.memField}>
                   Hết hạn (tùy chọn)
-                  <DatePicker ariaLabel="Ngày hết hạn" value={memoryExpires} onChange={setMemoryExpires} />
+                  <div className={styles.memDate}><DatePicker ariaLabel="Ngày hết hạn" value={memoryExpires} onChange={setMemoryExpires} /></div>
                 </div>
               </div>
               <button type="submit" className={`${styles.btn} ${styles.btnSm}`} disabled={savingMemory || !memoryContent.trim()}>
-                {savingMemory ? 'Đang lưu...' : 'Thêm'}
+                {savingMemory ? 'Đang lưu...' : 'Thêm ghi nhớ'}
               </button>
             </form>
         </aside>
