@@ -3,7 +3,8 @@ import { vnDateKey } from './roadmapMeta';
 /** Ngày dạng 'YYYY-MM-DD' theo lịch Việt Nam; tính toán bằng mốc UTC để không lệch theo múi giờ máy. */
 const DAY = 86400000;
 
-export type RangeMode = 'rolling' | 'this-year' | 'last-year';
+/** Năm đang xem. Năm hiện tại hiển thị 12 tháng gần nhất (như GitHub), năm cũ hiển thị trọn năm. */
+export type HeatmapYear = number;
 
 export function keyToUtc(key: string): number {
   const [y, m, d] = key.split('-').map(Number);
@@ -27,11 +28,19 @@ export function todayKey(now = Date.now()): string {
   return vnDateKey(now);
 }
 
-export function rangeFor(mode: RangeMode, today: string): { from: string; to: string; label: string } {
-  const year = Number(today.slice(0, 4));
-  if (mode === 'rolling') return { from: addDays(today, -364), to: today, label: '12 tháng qua' };
-  if (mode === 'this-year') return { from: `${year}-01-01`, to: today, label: `năm ${year}` };
-  return { from: `${year - 1}-01-01`, to: `${year - 1}-12-31`, label: `năm ${year - 1}` };
+export function rangeFor(year: HeatmapYear, today: string): { from: string; to: string; label: string; rolling: boolean } {
+  if (year >= Number(today.slice(0, 4))) return { from: addDays(today, -364), to: today, label: '12 tháng qua', rolling: true };
+  return { from: `${year}-01-01`, to: `${year}-12-31`, label: `năm ${year}`, rolling: false };
+}
+
+/** Các năm có thể xem, mới nhất trước: từ năm tham gia tới năm nay (không rõ năm tham gia thì 2 năm gần nhất). */
+export function yearsSince(joinedAt: string | null | undefined, today: string): number[] {
+  const current = Number(today.slice(0, 4));
+  const joined = joinedAt ? Number(vnDateKey(joinedAt).slice(0, 4)) : current - 1;
+  const first = Number.isFinite(joined) ? Math.min(joined, current) : current - 1;
+  const years: number[] = [];
+  for (let y = current; y >= first; y--) years.push(y);
+  return years;
 }
 
 export function daysBetween(from: string, to: string): string[] {
