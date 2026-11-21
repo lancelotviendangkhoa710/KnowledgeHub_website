@@ -24,6 +24,15 @@ class RoadmapPolicy
         return true;
     }
 
+    /**
+     * PRF-06/07: any signed-in user may read their own learning activity. The service always
+     * scopes the query to the caller, so this never grants access to another account's activity.
+     */
+    public function viewOwnActivity(User $user): bool
+    {
+        return true;
+    }
+
     public function update(User $user, LearningRoadmap $roadmap): bool
     {
         return $this->view($user, $roadmap);

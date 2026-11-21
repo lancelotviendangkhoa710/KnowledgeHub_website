@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Learning;
 
+use App\Models\LearningRoadmap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Validator;
@@ -13,7 +14,7 @@ class ActivityRangeRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->can('viewOwnActivity', LearningRoadmap::class) ?? false;
     }
 
     public function rules(): array
