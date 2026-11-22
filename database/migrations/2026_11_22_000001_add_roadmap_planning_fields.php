@@ -49,8 +49,12 @@ return new class extends Migration
                 UPDATE learning_roadmaps
                 SET duration_weeks = (coverage->'profile'->>'weeks')::int
                 WHERE coverage IS NOT NULL
-                  AND coverage->'profile'->>'weeks' ~ '^[0-9]{1,3}$'
-                  AND (coverage->'profile'->>'weeks')::int BETWEEN 1 AND 104
+                  -- PostgreSQL does not guarantee AND evaluation order: the cast only runs inside CASE after the format check.
+                  AND CASE
+                        WHEN coverage->'profile'->>'weeks' ~ '^[0-9]{1,3}$'
+                        THEN (coverage->'profile'->>'weeks')::int BETWEEN 1 AND 104
+                        ELSE false
+                      END
                 SQL);
         }
     }
