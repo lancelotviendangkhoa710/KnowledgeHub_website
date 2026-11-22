@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { LearningRoadmap, RoadmapItem, RoadmapItemStatus } from '@/types/learning';
-import { fullDateTime, relativeTime } from './roadmapMeta';
+import { fullDateTime, importanceTier, relativeTime } from './roadmapMeta';
 import s from './roadmapDetail.module.css';
 
 const ITEM_LABELS: Record<RoadmapItemStatus, string> = {
@@ -45,6 +45,17 @@ export default function RoadmapSteps({ roadmap }: { roadmap: LearningRoadmap }) 
             <div className={s.fileMain}>
               <span className={s.fileTitle}><span className={s.sr}>{ITEM_LABELS[item.status]}: </span>{item.title}</span>
               {lesson && <Link className={s.fileLink} href={lesson.href}>{lesson.title}</Link>}
+              {item.note && <p className={s.fileNote}>{item.note}</p>}
+              {(item.importance != null || item.study_hours != null) && (
+                <span className={s.fileFacts}>
+                  {item.importance != null && (
+                    <span className={`${s.tier} ${s[`tier_${importanceTier(item.importance).tone}`]}`}>
+                      {item.importance}/100 · {importanceTier(item.importance).label}
+                    </span>
+                  )}
+                  {item.study_hours != null && <span>{item.study_hours} giờ</span>}
+                </span>
+              )}
             </div>
             <span className={s.fileWhen}>
               {item.status === 'completed' && item.completed_at

@@ -56,3 +56,12 @@
   .file { grid-template-columns: 20px minmax(0, 1fr); }
   .fileWhen { grid-column: 2; white-space: normal; }
 }
+
+/* LRN-FE-03: trình độ, giờ học, mức độ quan trọng, chú thích */
+.levelBadge { border-color: var(--line); color: var(--ink-2); background: transparent; }
+.fileNote { margin: 4px 0 0; padding: 6px 10px; border-left: 3px solid var(--line); background: var(--bg); border-radius: 0 6px 6px 0; color: var(--ink-2); font-size: 13px; white-space: pre-line; overflow-wrap: anywhere; }
+.fileFacts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; color: var(--ink-3); font-size: 13px; }
+.tier { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: var(--r-pill); }
+.tier_hi { background: var(--brand-soft); color: var(--brand); }
+.tier_md { background: var(--surface-2); color: var(--ink-2); }
+.tier_lo { border: 1px solid var(--line); color: var(--ink-3); }

@@ -10,10 +10,23 @@ const ROLES = Array.from(new Set(roadmapTemplates.map((t) => t.role)));
 /** Lọc lộ trình mẫu theo nghề (chỉ ở phía trình duyệt) và hiện từng mẫu; các giai đoạn mở ra bằng "Xem lộ trình". */
 export default function TemplateGrid() {
   const [role, setRole] = useState<string>('all');
-  const shown = roadmapTemplates.filter((t) => role === 'all' || t.role === role);
+  const [query, setQuery] = useState('');
+  const term = query.trim().toLowerCase();
+  const shown = roadmapTemplates
+    .filter((t) => role === 'all' || t.role === role)
+    .filter((t) => !term || [t.role, t.level, ...t.stages.map((stage) => stage.title)].join(' ').toLowerCase().includes(term));
 
   return (
     <>
+      <div className={styles.search}>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Tìm lộ trình theo nghề, cấp độ hoặc tên khóa học…"
+          aria-label="Tìm lộ trình mẫu"
+        />
+      </div>
       <div className={styles.filters} role="group" aria-label="Lọc theo nghề">
         {['all', ...ROLES].map((r) => (
           <button key={r} type="button" className={styles.chip} aria-pressed={role === r} onClick={() => setRole(r)}>
@@ -21,6 +34,7 @@ export default function TemplateGrid() {
           </button>
         ))}
       </div>
+      {shown.length === 0 && <p className={styles.empty}>Không tìm thấy lộ trình mẫu nào khớp với “{query.trim()}”.</p>}
       <div className={styles.grid}>
         {shown.map((template) => (
           <article className={styles.card} key={template.id}>
@@ -41,6 +55,9 @@ export default function TemplateGrid() {
                 ))}
               </ol>
             </details>
+            <Link className={styles.useTemplate} href={`/learning/my-roadmaps/new?template=${encodeURIComponent(template.id)}`}>
+              Dùng mẫu này
+            </Link>
           </article>
         ))}
       </div>

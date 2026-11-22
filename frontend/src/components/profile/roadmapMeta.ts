@@ -1,4 +1,4 @@
-import type { LearningRoadmap, RoadmapStatus, RoadmapTopic } from '@/types/learning';
+import type { LearningRoadmap, RoadmapLevel, RoadmapStatus, RoadmapTopic } from '@/types/learning';
 
 export type TopicTone = 'sys' | 'prog' | 'data' | 'career' | 'other';
 
@@ -38,6 +38,20 @@ export function topicTone(topic: Pick<RoadmapTopic, 'category_slug' | 'name'>): 
   if (/career|soft|nghe nghiep|ky nang/.test(key)) return 'career';
   if (/program|coding|software|lap trinh|code/.test(key)) return 'prog';
   return 'other';
+}
+
+/** LRN-FE: nhãn trình độ (learning_roadmaps.level). */
+export const LEVEL_LABELS: Record<RoadmapLevel, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+};
+
+/** LRN-FE: mức độ quan trọng 0–100 chia 3 bậc. Màu dùng một tông brand đậm dần, không dùng màu trạng thái. */
+export function importanceTier(value: number): { tone: 'hi' | 'md' | 'lo'; label: string } {
+  if (value >= 80) return { tone: 'hi', label: 'Bắt buộc' };
+  if (value >= 50) return { tone: 'md', label: 'Nên học' };
+  return { tone: 'lo', label: 'Tùy chọn' };
 }
 
 export const STATUS_LABELS: Record<RoadmapStatus, string> = {

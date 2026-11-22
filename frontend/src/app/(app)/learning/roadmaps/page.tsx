@@ -15,7 +15,8 @@ export default function RoadmapTemplatesPage({ searchParams }: { searchParams?: 
             <p>Các lộ trình tham khảo theo nghề và trình độ. Bạn có thể nhờ trợ lý AI chỉnh lại theo mục tiêu và thời gian của mình.</p>
           </div>
           <div className={styles.btns}>
-            <Link href="/ai/companion" className={styles.btn}>Tạo lộ trình bằng AI</Link>
+            <Link href="/learning/my-roadmaps/new" className={styles.btn}>＋ Tạo lộ trình</Link>
+            <Link href="/ai/companion" className={`${styles.btn} ${styles.btnGhost}`}>Tạo bằng AI</Link>
             <Link href="/learning/my-roadmaps" className={`${styles.btn} ${styles.btnGhost}`}>Lộ trình của tôi</Link>
           </div>
         </div>
