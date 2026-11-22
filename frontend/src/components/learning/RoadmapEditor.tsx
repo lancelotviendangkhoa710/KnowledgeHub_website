@@ -24,6 +24,7 @@ type Step = {
   show: { hours: boolean; importance: boolean; note: boolean };
 };
 
+const FIELD_LABELS = { hours: 'Thời gian học', importance: 'Mức độ quan trọng', note: 'Chú thích' } as const;
 let keySeed = 0;
 const nextKey = () => `step-${++keySeed}`;
 
@@ -39,7 +40,7 @@ function toCourse(article: Article): Course {
 function blankStep(partial: Partial<Step> = {}): Step {
   return {
     key: nextKey(), articleId: null, title: '', description: '', hours: '', importance: null, note: '',
-    // Giờ học và mức độ quan trọng luôn hiện trên một hàng; chỉ chú thích là bật/tắt.
+    // Mặc định bật giờ học và mức độ quan trọng; người dùng tự bật/tắt từng chi tiết bằng các nút bên dưới bước.
     show: { hours: true, importance: true, note: false }, ...partial,
   };
 }
@@ -53,7 +54,7 @@ function fromRoadmap(roadmap: LearningRoadmap): Step[] {
     hours: item.study_hours == null ? '' : String(item.study_hours),
     importance: item.importance ?? null,
     note: item.note ?? '',
-    show: { hours: true, importance: true, note: Boolean(item.note) },
+    show: { hours: item.study_hours != null, importance: item.importance != null, note: Boolean(item.note) },
   }));
 }
 
@@ -285,33 +286,45 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
                         <button type="button" className={s.btnSm} onClick={() => setPicker({ open: true, forKey: step.key })} disabled={courses === null}>{step.articleId ? 'Đổi' : 'Gắn khóa học'}</button>
                         {step.articleId && <button type="button" className={s.btnSm} onClick={() => patch(step.key, { articleId: null })}>Gỡ</button>}
                       </div>
-                      <div className={s.meta}>
-                        <div className={s.metaItem}>
-                          <label htmlFor={`${step.key}-hours`}>Thời gian học</label>
-                          <span className={s.unit}>
-                            <input id={`${step.key}-hours`} type="number" min={0.5} max={999} step={0.5} placeholder="–" value={step.hours} onChange={(event) => patch(step.key, { hours: event.target.value })} />
-                            giờ
-                          </span>
+                      {(step.show.hours || step.show.importance) && (
+                        <div className={s.meta}>
+                          {step.show.hours && (
+                            <div className={s.metaItem}>
+                              <label htmlFor={`${step.key}-hours`}>Thời gian học</label>
+                              <span className={s.unit}>
+                                <input id={`${step.key}-hours`} type="number" min={0.5} max={999} step={0.5} placeholder="–" value={step.hours} onChange={(event) => patch(step.key, { hours: event.target.value })} />
+                                giờ
+                              </span>
+                            </div>
+                          )}
+                          {step.show.importance && (
+                            <div className={s.metaItem} data-empty={step.importance == null || undefined}>
+                              <label htmlFor={`${step.key}-imp`}>Mức độ quan trọng</label>
+                              <input className={s.range} type="range" min={0} max={100} step={5} value={step.importance ?? 0} onChange={(event) => patch(step.key, { importance: Number(event.target.value) })} aria-label={`Kéo để chỉnh mức độ quan trọng của bước ${index + 1}`} />
+                              <span className={s.unit}>
+                                <input id={`${step.key}-imp`} type="number" min={0} max={100} placeholder="–" value={step.importance ?? ''} onChange={(event) => patch(step.key, { importance: event.target.value === '' ? null : Math.max(0, Math.min(100, Number(event.target.value) || 0)) })} />
+                                /100
+                              </span>
+                              <span className={`${s.tier} ${step.importance == null ? s.tierNone : s[`tier_${tier.tone}`]}`}>{step.importance == null ? 'Chưa đặt' : tier.label}</span>
+                            </div>
+                          )}
                         </div>
-                        <div className={`${s.metaItem} ${s.metaGrow}`} data-empty={step.importance == null || undefined}>
-                          <label htmlFor={`${step.key}-imp`}>Mức độ quan trọng</label>
-                          <input type="range" min={0} max={100} step={5} value={step.importance ?? 0} onChange={(event) => patch(step.key, { importance: Number(event.target.value) })} aria-label={`Kéo để chỉnh mức độ quan trọng của bước ${index + 1}`} />
-                          <span className={s.unit}>
-                            <input id={`${step.key}-imp`} type="number" min={0} max={100} placeholder="–" value={step.importance ?? ''} onChange={(event) => patch(step.key, { importance: event.target.value === '' ? null : Math.max(0, Math.min(100, Number(event.target.value) || 0)) })} />
-                            /100
-                          </span>
-                          {step.importance != null && <span className={`${s.tier} ${s[`tier_${tier.tone}`]}`}>{tier.label}</span>}
-                        </div>
-                      </div>
-                      {step.show.note ? (
+                      )}
+                      {step.show.note && (
                         <div className={s.noteBox}>
                           <label htmlFor={`${step.key}-note`} className={s.srOnly}>Chú thích của bước {index + 1}</label>
                           <textarea id={`${step.key}-note`} value={step.note} maxLength={1000} rows={2} onChange={(event) => patch(step.key, { note: event.target.value })} placeholder="Chú thích riêng cho bước này" />
-                          <button type="button" className={s.x} onClick={() => toggleField(step.key, 'note', false)} aria-label={`Bỏ chú thích của bước ${index + 1}`}>×</button>
                         </div>
-                      ) : (
-                        <button type="button" className={s.linkBtn} onClick={() => toggleField(step.key, 'note', true)}>＋ Thêm chú thích</button>
                       )}
+                      <div className={s.toggles} role="group" aria-label={`Chi tiết hiển thị cho bước ${index + 1}`}>
+                        <span className={s.togglesLabel} aria-hidden="true">Chi tiết</span>
+                        {(['hours', 'importance', 'note'] as const).map((field) => (
+                          <button key={field} type="button" className={s.toggle} aria-pressed={step.show[field]} onClick={() => toggleField(step.key, field, !step.show[field])}>
+                            <svg viewBox="0 0 16 16" aria-hidden="true">{step.show[field] ? <path d="M3.5 8.5 6.5 11.5 12.5 4.5" /> : <path d="M8 3.5v9M3.5 8h9" />}</svg>
+                            {FIELD_LABELS[field]}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </li>
                 );

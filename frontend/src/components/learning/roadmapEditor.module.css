@@ -127,3 +127,35 @@
 .stepHead input:hover { background: var(--surface-2); }
 .pickList button:hover .used { border-color: var(--ink-3); }
 @media (prefers-reduced-motion: reduce) { .step, .course, .meta, .card, .btnSm, .btnDashed, .btnGhost, .btnPrimary, .icon, .x, .pickList button { transition: none; } }
+
+/* v3: kích thước cố định để thanh kéo dài bằng nhau ở mọi bước, dù bật/tắt chi tiết nào */
+.meta { gap: 10px 32px; }
+.metaItem { flex: none; }
+.metaItem > label { min-width: 0; }
+.range { width: 200px; flex: none; accent-color: var(--brand); margin: 0; }
+.metaItem[data-empty] .range { opacity: 0.45; }
+.meta .tier { width: 84px; flex: none; text-align: center; padding: 3px 0; }
+.tierNone { border: 1px dashed var(--line); color: var(--ink-3); background: transparent; font-weight: 600; }
+.meta .unit input { width: 64px; }
+.meta .unit { width: auto; }
+
+/* Nút bật/tắt chi tiết: dạng nhãn như label của GitHub, aria-pressed thể hiện trạng thái */
+.toggles { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.togglesLabel { font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 2px; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line); background: transparent; color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
+.toggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.toggle:hover { border-color: var(--ink-3); color: var(--ink); background: var(--surface); }
+.toggle[aria-pressed="true"] { background: var(--brand-soft); border-color: color-mix(in srgb, var(--brand) 45%, transparent); color: var(--brand); }
+.toggle[aria-pressed="true"]:hover { border-color: var(--brand); }
+.toggle:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .toggle { transition: none; } }
+@media (max-width: 640px) { .range { width: 140px; } .meta { gap: 10px 16px; } }
+.meta { gap: 10px 24px; }
+.range { width: 180px; }
+.range { width: 150px; }
+.meta .tier { width: 80px; }
+/* Giữ cột cố định: tắt "Thời gian học" thì thanh kéo vẫn đứng đúng chỗ, không nhảy sang trái */
+.meta { display: grid; grid-template-columns: 178px max-content; align-items: center; }
+.meta > .metaItem:first-child:not([data-empty]):not(:has(.range)) { grid-column: 1; }
+.meta > .metaItem:has(.range) { grid-column: 2; }
+@media (max-width: 760px) { .meta { grid-template-columns: minmax(0, 1fr); } .meta > .metaItem:has(.range) { grid-column: 1; } }
