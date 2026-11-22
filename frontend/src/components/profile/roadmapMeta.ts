@@ -10,7 +10,28 @@ function normalize(text: string) {
  * Màu chủ đề theo tài liệu bàn giao (mục 3): Hệ thống, Lập trình, Dữ liệu, Nghề nghiệp.
  * Khác với ảnh bìa khóa học, chủ đề lạ dùng màu trung tính thay vì chia theo hash.
  */
+/**
+ * LRN-DATA-02: danh mục đang có trên KnowledgeHub gán thẳng vào 4 chủ đề, để Python, JavaScript,
+ * PHP, Machine Learning, Statistics, API Design không còn rơi vào "Khác". Danh mục mới chưa có
+ * trong bảng vẫn đi qua quy tắc theo từ khóa bên dưới.
+ */
+const TONE_BY_CATEGORY: Record<string, TopicTone> = {
+  'system-design': 'sys',
+  'api-design': 'prog',
+  programming: 'prog',
+  python: 'prog',
+  javascript: 'prog',
+  php: 'prog',
+  databases: 'data',
+  'data-science': 'data',
+  statistics: 'data',
+  'machine-learning': 'data',
+  'career-soft-skills': 'career',
+};
+
 export function topicTone(topic: Pick<RoadmapTopic, 'category_slug' | 'name'>): TopicTone {
+  const known = TONE_BY_CATEGORY[topic.category_slug];
+  if (known) return known;
   const key = normalize(`${topic.name} ${topic.category_slug}`);
   if (/system|he thong|distributed|architect/.test(key)) return 'sys';
   if (/data|du lieu/.test(key)) return 'data';

@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { roadmapTemplates } from '@/data/roadmapTemplates';
 import styles from './templates.module.css';
@@ -25,16 +26,16 @@ export default function TemplateGrid() {
           <article className={styles.card} key={template.id}>
             <div className={styles.pills}>
               <span className={styles.pill}>{template.level}</span>
-              <span className={styles.pill}>{template.duration.replace('weeks', 'tuần')}</span>
+              <span className={styles.pill}>{template.duration}</span>
             </div>
             <h3>{template.role}</h3>
-            <p>Lộ trình tham khảo cho {template.role} trình độ {template.level}. Chỉnh theo mục tiêu của bạn với trợ lý AI.</p>
+            <p>{template.summary}</p>
             <details>
               <summary>Xem lộ trình</summary>
               <ol>
                 {template.stages.map((stage) => (
-                  <li key={stage.title}>
-                    <strong>{stage.title}</strong>
+                  <li key={stage.courseSlug}>
+                    <Link href={`/courses/${encodeURIComponent(stage.courseSlug)}`}><strong>{stage.title}</strong></Link>
                     <span>{stage.description}</span>
                   </li>
                 ))}
