@@ -69,7 +69,8 @@ export const roadmapTemplates: Template[] = tracks.flatMap((track) => LEVELS.map
     level,
     // Không có số tuần thật cho mẫu; hiển thị số khóa học thay vì một khoảng thời gian tự đặt.
     duration: `${stages.length} khóa học`,
-    summary: `Lộ trình ${track.role} cấp độ ${level}, gồm ${stages.length} khóa học đang có trên KnowledgeHub.`,
+    // Mô tả ngắn từ khóa đầu đến khóa cuối; danh sách đầy đủ ở trang chi tiết mẫu.
+    summary: `Từ ${stages[0].title} đến ${stages[stages.length - 1].title}.`,
     stages,
   };
 }));
