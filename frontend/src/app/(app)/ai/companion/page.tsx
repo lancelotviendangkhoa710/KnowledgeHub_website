@@ -12,6 +12,7 @@ import Select from '@/components/ui/Select';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
 import { aiRoadmapClient } from '@/lib/aiRoadmapClient';
+import type { NotebookDocument, NotebookQueryResult } from '@/lib/aiRoadmapClient';
 import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
 import styles from './companion.module.css';
 
@@ -145,10 +146,12 @@ export default function AICompanionPage() {
   const [failedSend, setFailedSend] = useState<FailedSend | null>(null);
   const [roadmapMode, setRoadmapMode] = useState(false);
   const [notebookMode, setNotebookMode] = useState(false);
-  const [notebookStatus, setNotebookStatus] = useState<{ cv: { filename: string } | null; index: { status: string } | null } | null>(null);
+  const [notebookDocuments, setNotebookDocuments] = useState<NotebookDocument[]>([]);
+  const [selectedNotebookDocumentIds, setSelectedNotebookDocumentIds] = useState<string[]>([]);
+  const [notebookAnswer, setNotebookAnswer] = useState<(NotebookQueryResult & { question: string }) | null>(null);
+  const [notebookFiles, setNotebookFiles] = useState<Record<string, File>>({});
   const [notebookBusy, setNotebookBusy] = useState(false);
   const [notebookSourcesOpen, setNotebookSourcesOpen] = useState(false);
-  const [notebookFile, setNotebookFile] = useState<File | null>(null);
   const [notebookError, setNotebookError] = useState<string | null>(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -184,12 +187,7 @@ export default function AICompanionPage() {
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notebookRequestVersionRef = useRef(0);
-
-  useEffect(() => {
-    if (!notebookMode || notebookBusy || !['pending', 'processing'].includes(notebookStatus?.index?.status ?? '')) return;
-    const timer = window.setInterval(() => { void refreshNotebook(); }, 2500);
-    return () => window.clearInterval(timer);
-  }, [notebookBusy, notebookMode, notebookStatus?.index?.status]);
+  const notebookSelectionInitializedRef = useRef(false);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -637,6 +635,29 @@ export default function AICompanionPage() {
       return;
     }
 
+    if (notebookMode) {
+      if (selectedNotebookDocumentIds.length === 0) {
+        setError('Chọn ít nhất một tài liệu sẵn sàng trước khi hỏi.');
+        return;
+      }
+      sendingRef.current = true;
+      setSending(true);
+      setError(null);
+      try {
+        const response = await aiRoadmapClient.queryNotebook(content, selectedNotebookDocumentIds);
+        if (mountedRef.current) {
+          setNotebookAnswer({ question: content, ...response.data });
+          setDraft('');
+        }
+      } catch (caught) {
+        handleApiError(caught, 'Không thể hỏi Notebook. Vui lòng thử lại.');
+      } finally {
+        sendingRef.current = false;
+        if (mountedRef.current) setSending(false);
+      }
+      return;
+    }
+
     sendingRef.current = true;
     setSending(true);
     setError(null);
@@ -644,7 +665,7 @@ export default function AICompanionPage() {
     setFailedSend(null);
 
     let conversationId = options.conversationId ?? activeIdRef.current;
-    const mode = options.mode ?? (notebookMode ? 'cv' : 'chat');
+    const mode = options.mode ?? 'chat';
     let optimisticId: string | null = null;
 
     try {
@@ -749,36 +770,87 @@ export default function AICompanionPage() {
     void submitMessage(content, { conversationId, clientMessageId, mode });
   }
 
-  async function refreshNotebook(): Promise<{ cv: { filename: string } | null; index: { status: string } | null } | null> {
+  async function refreshNotebook(): Promise<NotebookDocument[] | null> {
     const requestVersion = notebookRequestVersionRef.current;
     try {
-      const status = (await aiCompanionClient.getNotebookStatus()).data;
+      const documents = (await aiRoadmapClient.listNotebookDocuments()).data;
       if (!mountedRef.current || requestVersion !== notebookRequestVersionRef.current) return null;
-      setNotebookStatus(status);
-      if (status.index?.status !== 'failed') setNotebookError(null);
-      return status;
+      setNotebookDocuments(documents);
+      setSelectedNotebookDocumentIds((current) => {
+        const readyIds = documents.filter((document) => document.status === 'ready').map((document) => document.id);
+        if (!notebookSelectionInitializedRef.current) {
+          notebookSelectionInitializedRef.current = true;
+          return readyIds;
+        }
+        return current.filter((id) => readyIds.includes(id));
+      });
+      setNotebookError(null);
+      return documents;
     } catch {
       if (mountedRef.current && requestVersion === notebookRequestVersionRef.current) setNotebookError('Không kiểm tra được trạng thái tài liệu. Vui lòng thử lại.');
       return null;
     }
   }
 
-  async function uploadNotebook(file: File): Promise<void> {
-    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+  async function uploadNotebook(files: File[]): Promise<void> {
+    const validFiles = files.filter((file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+    if (validFiles.length === 0) {
       setNotebookError('Chỉ hỗ trợ tệp PDF.');
       return;
     }
     notebookRequestVersionRef.current += 1;
-    setNotebookFile(file);
-    setNotebookStatus({ cv: { filename: file.name }, index: { status: 'processing' } });
+    const temporary = validFiles.map((file, index) => ({
+      id: `upload-${Date.now()}-${index}`,
+      original_filename: file.name,
+      size_bytes: file.size,
+      status: 'processing' as const,
+      error_message: null,
+      title: null,
+      summary: null,
+      chunk_count: 0,
+      created_at: null,
+      updated_at: null,
+    }));
+    setNotebookDocuments((current) => [...temporary, ...current]);
     setNotebookBusy(true); setNotebookError(null);
-    try { await aiRoadmapClient.saveCv(file); await refreshNotebook(); }
-    catch {
-      notebookRequestVersionRef.current += 1;
-      setNotebookStatus({ cv: { filename: file.name }, index: { status: 'failed' } });
+    try {
+      const response = await aiRoadmapClient.uploadNotebookDocuments(validFiles);
+      setNotebookFiles((current) => ({ ...current, ...Object.fromEntries(response.data.map((document, index) => [document.id, validFiles[index]])) }));
+      setNotebookDocuments((current) => [...response.data, ...current.filter((document) => !temporary.some((item) => item.id === document.id))]);
+      setSelectedNotebookDocumentIds((current) => [...new Set([...current, ...response.data.filter((document) => document.status === 'ready').map((document) => document.id)])]);
+      notebookSelectionInitializedRef.current = true;
+    } catch {
+      setNotebookDocuments((current) => current.map((document) => temporary.some((item) => item.id === document.id)
+        ? { ...document, status: 'failed', error_message: 'Không thể tải lên tài liệu.' }
+        : document));
       setNotebookError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.');
     }
     finally { setNotebookBusy(false); }
+  }
+
+  async function deleteNotebookDocument(document: NotebookDocument): Promise<void> {
+    setNotebookError(null);
+    if (document.id.startsWith('upload-')) {
+      setNotebookDocuments((current) => current.filter((item) => item.id !== document.id));
+      return;
+    }
+    try {
+      await aiRoadmapClient.deleteNotebookDocument(document.id);
+      setNotebookDocuments((current) => current.filter((item) => item.id !== document.id));
+      setSelectedNotebookDocumentIds((current) => current.filter((id) => id !== document.id));
+    } catch (caught) {
+      handleApiError(caught, 'Không thể xóa tài liệu. Vui lòng thử lại.');
+    }
+  }
+
+  async function retryNotebookDocument(document: NotebookDocument): Promise<void> {
+    const file = notebookFiles[document.id];
+    if (!file) {
+      setNotebookError('Không còn tệp cục bộ để thử lại. Hãy chọn lại PDF.');
+      return;
+    }
+    await deleteNotebookDocument(document);
+    await uploadNotebook([file]);
   }
 
   function selectNotebookMode(nextNotebookMode: boolean): void {
@@ -787,8 +859,8 @@ export default function AICompanionPage() {
       setNotebookSourcesOpen(false);
       return;
     }
-    void refreshNotebook().then((status) => {
-      if (!status?.cv) setNotebookSourcesOpen(true);
+    void refreshNotebook().then((documents) => {
+      if (!documents?.length) setNotebookSourcesOpen(true);
     });
   }
 
@@ -877,13 +949,11 @@ export default function AICompanionPage() {
     ? 'Trò chuyện với AI chưa được bật.'
     : notebookMode ? 'Hỏi Notebook về tài liệu PDF của bạn' : 'Hỏi về bài học hoặc lộ trình';
   const showRetryAction = Boolean(failedSend && failedSend.conversationId === activeId);
-  const notebookIndexStatus = notebookStatus?.index?.status;
-  const notebookLoading = notebookBusy || notebookIndexStatus === 'pending';
-  const notebookFailed = Boolean(notebookError) || notebookIndexStatus === 'failed';
-  const notebookStateLabel = notebookLoading
-    ? (notebookBusy ? 'Đang tải lên...' : 'Đang xử lý & lưu...')
-    : notebookFailed ? 'Không thể lưu tài liệu'
-      : 'Đã lưu / Sẵn sàng';
+  const readyNotebookDocuments = notebookDocuments.filter((document) => document.status === 'ready');
+  const overviewDocument = readyNotebookDocuments[0] ?? null;
+  const selectedChunkCount = readyNotebookDocuments
+    .filter((document) => selectedNotebookDocumentIds.includes(document.id))
+    .reduce((total, document) => total + document.chunk_count, 0);
   const openRoadmapForm = () => {
     roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null;
     setRoadmapMode(true);
@@ -1104,6 +1174,28 @@ export default function AICompanionPage() {
               tabIndex={0}
             >
               <div className={styles.threadIn}>
+                {notebookMode ? <>
+                  {overviewDocument ? (
+                    <section className={styles.notebookOverview} aria-label="Tổng quan Notebook">
+                      <p>Tổng quan</p>
+                      <h2>{overviewDocument.title || overviewDocument.original_filename}</h2>
+                      <small>{readyNotebookDocuments.length} nguồn · {selectedChunkCount} đoạn đã chọn</small>
+                      <div>{overviewDocument.summary || 'Tài liệu đã sẵn sàng để hỏi đáp.'}</div>
+                    </section>
+                  ) : (
+                    <div className={styles.emptyThread}>
+                      <h2>Thêm nguồn cho Notebook</h2>
+                      <p>Mở Nguồn để tải một hoặc nhiều tệp PDF, rồi chọn tài liệu dùng khi hỏi.</p>
+                    </div>
+                  )}
+                  {notebookAnswer && (
+                    <section className={styles.notebookAnswer} aria-label="Câu trả lời Notebook">
+                      <div className={styles.me}>{notebookAnswer.question}</div>
+                      <div className={styles.botTxt}><AssistantMarkdown content={notebookAnswer.answer} /></div>
+                      {notebookAnswer.citations.length > 0 && <div className={styles.citations}><strong>Nguồn</strong>{notebookAnswer.citations.map((citation, index) => <span key={`${citation.document_id}-${citation.page}-${index}`}>{citation.filename} · trang {citation.page}</span>)}</div>}
+                    </section>
+                  )}
+                </> : <>
                 {active && hasMore && (
                   <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm} ${styles.loadEarlier}`} onClick={() => void loadMessages(active.id, nextBeforeId)} disabled={loadingMessages}>
                     {loadingMessages ? 'Đang tải...' : 'Tải tin nhắn cũ hơn'}
@@ -1146,6 +1238,7 @@ export default function AICompanionPage() {
                     );
                   })
                 )}
+                </>}
 
                 {sending && (
                   <div className={styles.bot} role="status" aria-label="Trợ lý đang trả lời">
@@ -1158,15 +1251,13 @@ export default function AICompanionPage() {
 
             <div className={styles.compose}>
               <div className={styles.composeIn}>
-                <div className={styles.sugg} role="group" aria-label="Gợi ý câu hỏi">
+                {!notebookMode && <div className={styles.sugg} role="group" aria-label="Gợi ý câu hỏi">
                   {STARTER_PROMPTS.map((suggestion) => (
                     <button key={suggestion} type="button" onClick={() => fillComposer(suggestion)}>{suggestion}</button>
                   ))}
-                  {!notebookMode && <>
-                    <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
-                    <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
-                  </>}
-                </div>
+                  <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
+                  <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
+                </div>}
                 <div className={styles.modeToggle} role="group" aria-label="Chế độ trò chuyện">
                   <button
                     type="button"
@@ -1185,11 +1276,11 @@ export default function AICompanionPage() {
                     Notebook
                   </button>
                 </div>
-                {notebookMode && notebookStatus?.cv && (
+                {notebookMode && (
                   <button type="button" className={styles.sourceChip} onClick={() => setNotebookSourcesOpen(true)} aria-haspopup="dialog">
                     <Icon size={15}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
-                    <span>{notebookStatus.cv.filename}</span>
-                    {notebookLoading ? <i className={styles.spinnerSmall} aria-label={notebookStateLabel} /> : notebookFailed ? <b aria-label="Lỗi">!</b> : <b aria-label="Đã lưu">✓</b>}
+                    <span>{notebookDocuments.length ? `${notebookDocuments.length} nguồn` : 'Thêm nguồn'}</span>
+                    {notebookBusy ? <i className={styles.spinnerSmall} aria-label="Đang tải lên" /> : <b aria-label="Mở nguồn">+</b>}
                   </button>
                 )}
                 <form className={styles.box} onSubmit={handleSend}>
@@ -1233,41 +1324,47 @@ export default function AICompanionPage() {
                 </button>
               </div>
 
-              {notebookStatus?.cv && (
-                <div className={styles.sourceItem} role="status">
-                  <Icon size={18}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
-                  <span>{notebookStatus.cv.filename}</span>
-                  {notebookLoading ? <><i className={styles.spinnerSmall} aria-hidden="true" /><small>{notebookStateLabel}</small></> : notebookFailed ? <><b className={styles.sourceWarn} aria-hidden="true">!</b><small>{notebookStateLabel}</small></> : <><b className={styles.sourceReady} aria-hidden="true">✓</b><small>{notebookStateLabel}</small></>}
-                </div>
-              )}
-
+              <div className={styles.sourceList}>
+                {notebookDocuments.map((document) => (
+                  <div key={document.id} className={styles.sourceItem}>
+                    <input
+                      type="checkbox"
+                      checked={selectedNotebookDocumentIds.includes(document.id)}
+                      disabled={document.status !== 'ready'}
+                      onChange={() => setSelectedNotebookDocumentIds((current) => current.includes(document.id) ? current.filter((id) => id !== document.id) : [...current, document.id])}
+                      aria-label={`Dùng ${document.original_filename} khi hỏi`}
+                    />
+                    <Icon size={18}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
+                    <span>{document.original_filename}</span>
+                    {document.status === 'processing' ? <><i className={styles.spinnerSmall} aria-label="Đang xử lý" /><small>Đang xử lý</small></> : document.status === 'failed' ? <><b className={styles.sourceWarn} aria-label="Lỗi">!</b><small>{document.error_message || 'Không thể xử lý'}</small></> : <><b className={styles.sourceReady} aria-label="Sẵn sàng">✓</b><small>{document.chunk_count} đoạn</small></>}
+                    <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void deleteNotebookDocument(document)}>Xóa</button>
+                    {document.status === 'failed' && <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void retryNotebookDocument(document)}>Thử lại</button>}
+                  </div>
+                ))}
+              </div>
               {notebookError && <p className={styles.sourceError} role="alert">{notebookError}</p>}
-              {notebookFailed && notebookFile && (
-                <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void uploadNotebook(notebookFile)} disabled={notebookBusy}>Thử lại</button>
-              )}
 
               <label
                 className={styles.sourceDropzone}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();
-                  const file = event.dataTransfer.files[0];
-                  if (file) void uploadNotebook(file);
+                  void uploadNotebook(Array.from(event.dataTransfer.files));
                 }}
               >
                 <input
                   className={styles.srOnly}
                   type="file"
                   accept="application/pdf,.pdf"
-                  disabled={notebookBusy}
+                  multiple
                   onChange={(event) => {
-                    const file = event.target.files?.[0];
+                    const files = Array.from(event.target.files ?? []);
                     event.target.value = '';
-                    if (file) void uploadNotebook(file);
+                    if (files.length) void uploadNotebook(files);
                   }}
                 />
-                <strong>+ Thêm nguồn / Tải tệp PDF lên</strong>
-                <span>Kéo và thả tệp PDF vào đây hoặc bấm để chọn tệp.</span>
+                <strong>+ Thêm nguồn / Tải các tệp PDF lên</strong>
+                <span>Kéo và thả nhiều tệp PDF vào đây hoặc bấm để chọn.</span>
               </label>
               <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void refreshNotebook()} disabled={notebookBusy}>Làm mới</button>
             </section>

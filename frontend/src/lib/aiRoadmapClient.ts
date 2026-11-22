@@ -65,6 +65,26 @@ export interface StoredCvMetadata {
 
 type CvEnvelope = { status: 'success'; data: StoredCvMetadata | null; message?: string };
 
+export interface NotebookDocument {
+  id: string;
+  original_filename: string;
+  size_bytes: number;
+  status: 'processing' | 'ready' | 'failed';
+  error_message: string | null;
+  title: string | null;
+  summary: string | null;
+  chunk_count: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface NotebookQueryResult {
+  answer: string;
+  citations: Array<{ document_id: string; filename: string; page: number }>;
+}
+
+type NotebookEnvelope<T> = { status: 'success'; data: T };
+
 const apiBase = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
 
 function confirmationPayload(previewToken: string): Record<string, string> {
@@ -88,6 +108,16 @@ export const aiRoadmapClient = {
     }
     return response.blob();
   },
+  listNotebookDocuments: () => api.get<NotebookEnvelope<NotebookDocument[]>>('/ai/notebook/documents'),
+  getNotebookDocument: (id: string) => api.get<NotebookEnvelope<NotebookDocument>>(`/ai/notebook/documents/${encodeURIComponent(id)}`),
+  uploadNotebookDocuments: (files: File[]) => {
+    const form = new FormData();
+    files.forEach((file) => form.append('documents[]', file));
+    return api.post<NotebookEnvelope<NotebookDocument[]>>('/ai/notebook/documents', form);
+  },
+  deleteNotebookDocument: (id: string) => api.delete<NotebookEnvelope<null>>(`/ai/notebook/documents/${encodeURIComponent(id)}`),
+  queryNotebook: (question: string, documentIds: string[]) =>
+    api.post<NotebookEnvelope<NotebookQueryResult>>('/ai/notebook/query', { question, document_ids: documentIds }),
   previewForm: (form: FormData) =>
     api.post<{ status: 'success'; data: Extract<CompanionPreviewResult, { state: 'ready' }> }>('/ai/roadmaps/form-preview', form),
   confirmForm: (previewToken: string) =>
