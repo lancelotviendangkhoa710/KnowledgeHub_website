@@ -161,3 +161,10 @@
 @media (max-width: 760px) { .meta { grid-template-columns: minmax(0, 1fr); } .meta > .metaItem:has(.range) { grid-column: 1; } }
 /* Nút, nhãn bật/tắt không bị bôi chữ khi bấm nhanh */
 .toggle, .toggles, .btnSm, .btnDashed, .btnGhost, .btnPrimary, .icon, .x, .tier, .num { user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+
+/* Màn nhỏ: hàng mức độ quan trọng xuống dòng, thanh kéo co giãn; đặt sau các khai báo chiều rộng cố định ở trên */
+@media (max-width: 760px) {
+  .meta .metaItem { flex: 1 1 auto; flex-wrap: wrap; row-gap: 8px; }
+  .meta .metaItem > label { flex-basis: 100%; }
+  .meta .metaItem .range { flex: 1 1 120px; width: auto; min-width: 0; }
+}

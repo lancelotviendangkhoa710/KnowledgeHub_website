@@ -69,10 +69,34 @@ const canTouch = (a: number, b: number) => ADJACENT_OK[a - 1][b - 1] === '1';
 
 /**
  * Gán màu cho các chủ đề của MỘT thanh, theo thứ tự hiển thị: ưu tiên màu gốc của danh mục; nếu màu đó
- * đã dùng trong thanh hoặc khó phân biệt với đoạn đứng ngay trước thì lấy ô màu khác. Kết quả: trong
- * một thanh không có 2 đoạn cùng màu và 2 đoạn kề nhau luôn phân biệt được.
+ * đã dùng trong thanh hoặc khó phân biệt với đoạn đứng ngay trước thì lấy ô màu khác. Tìm có quay lui
+ * (backtracking) để không bỏ điều kiện "kề nhau phân biệt được" khi vẫn còn cách gán hợp lệ; chỉ khi
+ * không có cách nào (vd. quá 8 chủ đề) mới dùng cách gán tham lam bên dưới.
  */
 export function assignTopicSlots(topics: Pick<RoadmapTopic, 'category_slug'>[]): Map<string, number> {
+  const slots: number[] = [];
+  const taken = new Set<number>();
+  const search = (index: number): boolean => {
+    if (index === topics.length) return true;
+    const base = topicSlot(topics[index]);
+    const previous = index > 0 ? slots[index - 1] : null;
+    for (let step = 0; step < TOPIC_SLOTS; step += 1) {
+      const candidate = ((base - 1 + step) % TOPIC_SLOTS) + 1;
+      if (taken.has(candidate) || (previous !== null && !canTouch(previous, candidate))) continue;
+      slots[index] = candidate;
+      taken.add(candidate);
+      if (search(index + 1)) return true;
+      taken.delete(candidate);
+    }
+    return false;
+  };
+  if (topics.length <= TOPIC_SLOTS && search(0)) {
+    return new Map(topics.map((topic, index) => [topic.category_slug, slots[index]]));
+  }
+  return greedyTopicSlots(topics);
+}
+
+function greedyTopicSlots(topics: Pick<RoadmapTopic, 'category_slug'>[]): Map<string, number> {
   const used = new Set<number>();
   const result = new Map<string, number>();
   let previous: number | null = null;
@@ -102,10 +126,14 @@ export function topicTone(topic: Pick<RoadmapTopic, 'category_slug' | 'name'>): 
 
 /** LRN-FE: nhãn trình độ (learning_roadmaps.level). */
 export const LEVEL_LABELS: Record<RoadmapLevel, string> = {
-  beginner: 'Beginner',
-  intermediate: 'Intermediate',
-  advanced: 'Advanced',
+  beginner: 'Cơ bản',
+  intermediate: 'Trung cấp',
+  advanced: 'Nâng cao',
 };
+
+/** Tổng giờ học: cộng số thực có thể ra 0.30000000000000004, nên làm tròn 1 chữ số như cột decimal(5,1). */
+const HOURS_FORMAT = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 });
+export const formatHours = (hours: number) => HOURS_FORMAT.format(hours);
 
 /** LRN-FE: mức độ quan trọng 0–100 chia 3 bậc. Màu dùng một tông brand đậm dần, không dùng màu trạng thái. */
 export function importanceTier(value: number): { tone: 'hi' | 'md' | 'lo'; label: string } {

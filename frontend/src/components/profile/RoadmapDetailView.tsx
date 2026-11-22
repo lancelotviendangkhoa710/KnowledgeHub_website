@@ -6,7 +6,7 @@ import RoadmapActivity from './RoadmapActivity';
 import RoadmapSteps from './RoadmapSteps';
 import Tabs, { useTabParam } from './Tabs';
 import TopicBar from './TopicBar';
-import { completedCount, fullDateTime, itemsCount, lastActivity, LEVEL_LABELS, progressPercent, relativeTime, STATUS_LABELS } from './roadmapMeta';
+import { completedCount, fullDateTime, itemsCount, lastActivity, formatHours, LEVEL_LABELS, progressPercent, relativeTime, STATUS_LABELS } from './roadmapMeta';
 import p from './profile.module.css';
 import s from './roadmapDetail.module.css';
 
@@ -37,7 +37,7 @@ export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadma
         <p className={s.meta}>
           <span>{completedCount(roadmap)}/{itemsCount(roadmap)} bước · {progressPercent(roadmap)}%</span>
           {roadmap.duration_weeks ? <span>Dự kiến {roadmap.duration_weeks} tuần</span> : null}
-          {totalHours > 0 && <span>{totalHours} giờ học</span>}
+          {totalHours > 0 && <span>{formatHours(totalHours)} giờ học</span>}
           {updated && <span title={fullDateTime(updated)}>Cập nhật {relativeTime(updated)}</span>}
           <span>Tạo ngày {new Date(roadmap.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })}</span>
         </p>

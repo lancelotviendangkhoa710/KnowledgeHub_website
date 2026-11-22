@@ -3,12 +3,12 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { importanceTier, LEVEL_LABELS } from '@/components/profile/roadmapMeta';
+import { formatHours, importanceTier, LEVEL_LABELS } from '@/components/profile/roadmapMeta';
 import { fetchArticlesPage } from '@/lib/contentClient';
 import { roadmapClient, RoadmapItemWrite } from '@/lib/roadmapClient';
 import { roadmapTemplates, TEMPLATE_LEVEL_TO_ROADMAP_LEVEL } from '@/data/roadmapTemplates';
 import type { Article } from '@/types/content';
-import type { LearningRoadmap, RoadmapLevel } from '@/types/learning';
+import type { LearningRoadmap, RoadmapItem, RoadmapLevel } from '@/types/learning';
 import s from './roadmapEditor.module.css';
 
 type Course = { id: string; slug: string; title: string; category: string };
@@ -71,7 +71,7 @@ function validate(title: string, goal: string, weeks: string, steps: Step[]): st
       const hours = Number(step.hours);
       if (!(hours > 0 && hours <= 999) || !/^\d+(\.\d)?$/.test(step.hours)) return `${at}: thời gian học từ 0,5 đến 999 giờ, tối đa 1 chữ số thập phân.`;
     }
-    if (step.show.importance && step.importance != null && !(step.importance >= 0 && step.importance <= 100)) return `${at}: mức độ quan trọng từ 0 đến 100.`;
+    if (step.show.importance && step.importance != null && !(Number.isInteger(step.importance) && step.importance >= 0 && step.importance <= 100)) return `${at}: mức độ quan trọng là số nguyên từ 0 đến 100.`;
     if (step.show.note && step.note.length > 1000) return `${at}: chú thích tối đa 1000 ký tự.`;
   }
   return null;
@@ -107,6 +107,10 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
   const [saving, setSaving] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const appliedTemplate = useRef<string | null>(null);
+  // Id lộ trình đã tạo trên server: giữ qua các lần lưu lỗi để lần sau sửa tiếp, không tạo lộ trình thứ hai.
+  const savedRoadmapId = useRef<string | null>(roadmap?.id ?? null);
+  // Bước mới đã tạo thành công (key → id): lần thử lại sẽ cập nhật thay vì tạo lại.
+  const createdIds = useRef(new Map<string, string>());
 
   useEffect(() => {
     let active = true;
@@ -125,14 +129,15 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
     const chosen = roadmapTemplates.find((entry) => entry.id === template);
     if (!chosen) return;
     appliedTemplate.current = template;
-    setTitle(`${chosen.role} — ${chosen.level}`);
-    setGoal(chosen.summary);
-    setLevel(TEMPLATE_LEVEL_TO_ROADMAP_LEVEL[chosen.level]);
-    setSteps(chosen.stages.map((stage) => blankStep({
+    // Chỉ điền các trường còn trống: người dùng có thể đã gõ trong lúc danh sách khóa học đang tải.
+    setTitle((current) => (current.trim() ? current : `${chosen.role} — ${chosen.level}`));
+    setGoal((current) => (current.trim() ? current : chosen.summary));
+    setLevel((current) => current || TEMPLATE_LEVEL_TO_ROADMAP_LEVEL[chosen.level]);
+    setSteps((current) => (current.length > 0 ? current : chosen.stages.map((stage) => blankStep({
       articleId: bySlug.get(stage.courseSlug)?.id ?? null,
       title: stage.title,
       description: stage.description,
-    })));
+    }))));
   }, [editing, courses, template, bySlug]);
 
   useEffect(() => {
@@ -188,33 +193,60 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
       level: level || null,
       duration_weeks: weeks ? Number(weeks) : null,
     };
-    let roadmapId = roadmap?.id ?? null;
     try {
-      if (!roadmap) {
+      let roadmapId = savedRoadmapId.current;
+      if (!roadmapId) {
         const created = await roadmapClient.create({ ...fields, source_template: template || null });
         roadmapId = created.data.id;
-        for (const [index, step] of steps.entries()) await roadmapClient.createItem(created.data.id, itemPayload(step, index + 1));
+        savedRoadmapId.current = roadmapId;
       } else {
-        await roadmapClient.update(roadmap.id, fields);
-        const kept = new Set(steps.map((step) => step.id).filter(Boolean));
-        for (const item of roadmap.items) if (!kept.has(item.id)) await roadmapClient.removeItem(roadmap.id, item.id);
-        // (roadmap_id, position) là duy nhất: đẩy các bước giữ lại ra vùng tạm trước khi xếp lại thứ tự.
-        const existing = steps.filter((step) => step.id);
-        for (const [index, step] of existing.entries()) await roadmapClient.updateItem(roadmap.id, step.id as string, { position: 1000 + index });
-        for (const [index, step] of steps.entries()) {
-          if (step.id) await roadmapClient.updateItem(roadmap.id, step.id, itemPayload(step, index + 1));
-          else await roadmapClient.createItem(roadmap.id, itemPayload(step, index + 1));
-        }
+        await roadmapClient.update(roadmapId, fields);
       }
-      router.push(`/learning/my-roadmaps/${encodeURIComponent(roadmapId as string)}`);
+      await syncItems(roadmapId);
+      router.push(`/learning/my-roadmaps/${encodeURIComponent(roadmapId)}`);
     } catch (caught) {
       const status = (caught as { status?: number }).status;
       setSaving(false);
-      if (status === 401) { setError('Phiên đăng nhập đã hết. Hãy đăng nhập lại rồi lưu.'); return; }
-      setError(roadmapId && !roadmap
-        ? 'Đã tạo lộ trình nhưng chưa lưu đủ các bước. Mở lộ trình để kiểm tra rồi sửa lại.'
+      const partial = Boolean(savedRoadmapId.current) && !roadmap;
+      if (status === 401) {
+        setError('Phiên đăng nhập đã hết. Đăng nhập lại ở tab khác rồi bấm Lưu: nội dung trên trang này vẫn được giữ.');
+        return;
+      }
+      setError(partial
+        ? 'Đã tạo lộ trình nhưng chưa lưu đủ các bước. Bấm Lưu để thử lại, các bước đã lưu sẽ không bị tạo trùng.'
         : 'Không lưu được lộ trình. Kiểm tra các trường rồi thử lại.');
-      if (roadmapId && !roadmap) router.push(`/learning/my-roadmaps/${encodeURIComponent(roadmapId)}/edit`);
+    }
+  }
+
+  /**
+   * Đưa danh sách bước trên server về đúng `steps`. Đọc lại server trước mỗi lần lưu, nên một lần lưu
+   * hỏng giữa chừng không làm lệch các lần sau (vị trí, bước đã tạo, bước đã xóa).
+   */
+  async function syncItems(roadmapId: string) {
+    const server: RoadmapItem[] = (await roadmapClient.get(roadmapId)).data.items ?? [];
+    const onServer = new Set(server.map((item) => item.id));
+    const ids = steps.map((step) => {
+      const id = step.id ?? createdIds.current.get(step.key);
+      return id && onServer.has(id) ? id : null;
+    });
+    const kept = new Set(ids.filter((id): id is string => id !== null));
+    for (const item of server) if (!kept.has(item.id)) await roadmapClient.removeItem(roadmapId, item.id);
+
+    // (roadmap_id, position) là duy nhất: đẩy các bước giữ lại ra vùng tạm phía trên mọi vị trí đang dùng
+    // và mọi vị trí đích (backend giới hạn position ≤ 65535), rồi mới xếp lại 1..n.
+    const remaining = server.filter((item) => kept.has(item.id));
+    const base = Math.max(steps.length, ...remaining.map((item) => item.position)) + 1;
+    if (base + remaining.length > 65535) throw new Error('position range exhausted');
+    for (const [offset, item] of remaining.entries()) await roadmapClient.updateItem(roadmapId, item.id, { position: base + offset });
+
+    for (const [index, step] of steps.entries()) {
+      const id = ids[index];
+      if (id) {
+        await roadmapClient.updateItem(roadmapId, id, itemPayload(step, index + 1));
+      } else {
+        const created = await roadmapClient.createItem(roadmapId, itemPayload(step, index + 1));
+        createdIds.current.set(step.key, created.data.id);
+      }
     }
   }
 
@@ -302,7 +334,7 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
                               <label htmlFor={`${step.key}-imp`}>Mức độ quan trọng</label>
                               <input className={s.range} type="range" min={0} max={100} step={5} value={step.importance ?? 0} onChange={(event) => patch(step.key, { importance: Number(event.target.value) })} aria-label={`Kéo để chỉnh mức độ quan trọng của bước ${index + 1}`} />
                               <span className={s.unit}>
-                                <input id={`${step.key}-imp`} type="number" min={0} max={100} placeholder="–" value={step.importance ?? ''} onChange={(event) => patch(step.key, { importance: event.target.value === '' ? null : Math.max(0, Math.min(100, Number(event.target.value) || 0)) })} />
+                                <input id={`${step.key}-imp`} type="number" min={0} max={100} placeholder="–" value={step.importance ?? ''} step={1} onChange={(event) => patch(step.key, { importance: event.target.value === '' ? null : Math.max(0, Math.min(100, Number(event.target.value) || 0)) })} />
                                 /100
                               </span>
                               <span className={`${s.tier} ${step.importance == null ? s.tierNone : s[`tier_${tier.tone}`]}`}>{step.importance == null ? 'Chưa đặt' : tier.label}</span>
@@ -349,7 +381,7 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
             <dl className={s.stats}>
               <div><dt>Số bước</dt><dd>{steps.length}</dd></div>
               <div><dt>Khóa học đã gắn</dt><dd>{steps.filter((step) => step.articleId).length}</dd></div>
-              <div><dt>Tổng thời gian học</dt><dd>{totalHours ? `${totalHours} giờ` : 'Chưa đặt'}</dd></div>
+              <div><dt>Tổng thời gian học</dt><dd>{totalHours ? `${formatHours(totalHours)} giờ` : 'Chưa đặt'}</dd></div>
               <div><dt>Bước bắt buộc (≥ 80)</dt><dd>{required}</dd></div>
             </dl>
           </div>
