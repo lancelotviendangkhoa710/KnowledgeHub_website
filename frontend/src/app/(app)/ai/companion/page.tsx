@@ -183,9 +183,10 @@ export default function AICompanionPage() {
   const memoryToggleRef = useRef<HTMLButtonElement | null>(null);
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const notebookRequestVersionRef = useRef(0);
 
   useEffect(() => {
-    if (!notebookMode || notebookBusy || notebookStatus?.index?.status !== 'pending') return;
+    if (!notebookMode || notebookBusy || !['pending', 'processing'].includes(notebookStatus?.index?.status ?? '')) return;
     const timer = window.setInterval(() => { void refreshNotebook(); }, 2500);
     return () => window.clearInterval(timer);
   }, [notebookBusy, notebookMode, notebookStatus?.index?.status]);
@@ -749,14 +750,15 @@ export default function AICompanionPage() {
   }
 
   async function refreshNotebook(): Promise<{ cv: { filename: string } | null; index: { status: string } | null } | null> {
+    const requestVersion = notebookRequestVersionRef.current;
     try {
       const status = (await aiCompanionClient.getNotebookStatus()).data;
-      if (!mountedRef.current) return null;
+      if (!mountedRef.current || requestVersion !== notebookRequestVersionRef.current) return null;
       setNotebookStatus(status);
       if (status.index?.status !== 'failed') setNotebookError(null);
       return status;
     } catch {
-      if (mountedRef.current) setNotebookError('Không kiểm tra được trạng thái tài liệu. Vui lòng thử lại.');
+      if (mountedRef.current && requestVersion === notebookRequestVersionRef.current) setNotebookError('Không kiểm tra được trạng thái tài liệu. Vui lòng thử lại.');
       return null;
     }
   }
@@ -766,11 +768,16 @@ export default function AICompanionPage() {
       setNotebookError('Chỉ hỗ trợ tệp PDF.');
       return;
     }
+    notebookRequestVersionRef.current += 1;
     setNotebookFile(file);
-    setNotebookStatus({ cv: { filename: file.name }, index: { status: 'pending' } });
+    setNotebookStatus({ cv: { filename: file.name }, index: { status: 'processing' } });
     setNotebookBusy(true); setNotebookError(null);
     try { await aiRoadmapClient.saveCv(file); await refreshNotebook(); }
-    catch { setNotebookError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.'); }
+    catch {
+      notebookRequestVersionRef.current += 1;
+      setNotebookStatus({ cv: { filename: file.name }, index: { status: 'failed' } });
+      setNotebookError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.');
+    }
     finally { setNotebookBusy(false); }
   }
 
