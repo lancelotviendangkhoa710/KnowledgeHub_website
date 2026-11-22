@@ -1,35 +1,75 @@
-type Stage = { title: string; description: string };
-type Template = { id: string; role: string; level: 'Beginner' | 'Intermediate' | 'Advanced'; duration: string; summary: string; stages: Stage[] };
+/**
+ * LRN-DATA-01: lộ trình mẫu dựng từ khóa học thật.
+ *
+ * Nguồn: database/seeders/engineering-career-courses.json (cùng track, cấp độ và thứ tự).
+ * Mỗi bước trỏ tới một bài đã xuất bản qua `courseSlug`, mở tại /courses/<slug>.
+ * Không còn số tuần hay giai đoạn tự đặt: khi seeder đổi, cập nhật file này theo.
+ */
+export type TemplateLevel = 'Foundation' | 'Intermediate' | 'Senior';
+type Stage = { title: string; description: string; courseSlug: string };
+type Template = { id: string; role: string; level: TemplateLevel; duration: string; summary: string; stages: Stage[] };
 
-const tracks = [
-  { slug: 'data-engineer', role: 'Data Engineer', stages: {
-    beginner: [['Nền tảng dữ liệu', 'Học SQL, kiểu dữ liệu và phân tích cơ bản.'], ['Lập trình', 'Viết các đoạn mã Python nhỏ để xử lý dữ liệu.'], ['Pipeline', 'Chuyển và làm sạch dữ liệu một cách đáng tin cậy.'], ['Thực hành', 'Ghi lại một dự án dữ liệu hoàn chỉnh từ đầu đến cuối.']],
-    intermediate: [['Mô hình hóa dữ liệu', 'Thiết kế tập dữ liệu phân tích dễ bảo trì.'], ['Điều phối', 'Lên lịch và theo dõi các luồng dữ liệu.'], ['Hệ thống đám mây', 'Dùng các công cụ lưu trữ và xử lý được quản lý sẵn.'], ['Độ tin cậy', 'Thêm kiểm thử, truy vết nguồn gốc dữ liệu và quy trình khôi phục.']],
-    advanced: [['Kiến trúc', 'So sánh mẫu xử lý theo lô và xử lý luồng.'], ['Mở rộng', 'Tối ưu chi phí lưu trữ, tính toán và truy vấn.'], ['Quản trị dữ liệu', 'Thiết kế ranh giới về quyền riêng tư và truy cập.'], ['Dẫn dắt', 'Rà soát thiết kế một nền tảng dữ liệu đang chạy thật.']],
+const tracks: { slug: string; role: string; levels: Record<TemplateLevel, Stage[]> }[] = [
+  { slug: 'data-engineer', role: 'Data Engineer', levels: {
+    Foundation: [
+      { courseSlug: 'de-foundation-python-du-lieu', title: 'Python xử lý dữ liệu', description: 'Kiểu dữ liệu, hàm, ngoại lệ, đọc và ghi CSV/JSON, quản lý môi trường và tổ chức mã nguồn.' },
+      { courseSlug: 'de-foundation-sql', title: 'SQL truy vấn và tổng hợp dữ liệu', description: 'SELECT, JOIN, GROUP BY, subquery, window function cơ bản và xử lý NULL trên PostgreSQL.' },
+      { courseSlug: 'de-foundation-mo-hinh-du-lieu', title: 'Mô hình dữ liệu quan hệ', description: 'Thực thể, khóa chính, khóa ngoại, chuẩn hóa, ràng buộc và cách lập sơ đồ quan hệ.' },
+      { courseSlug: 'de-foundation-thong-ke-chat-luong', title: 'Thống kê và chất lượng dữ liệu', description: 'Giá trị thiếu, bản ghi trùng, phân phối, giá trị ngoại lệ, trung vị và cách kiểm tra dữ liệu đầu vào.' },
+    ],
+    Intermediate: [
+      { courseSlug: 'de-intermediate-etl-elt', title: 'Thiết kế pipeline ETL và ELT', description: 'Thu thập, kiểm tra, biến đổi, nạp dữ liệu, phân chia batch và kiểm soát lần chạy lại.' },
+      { courseSlug: 'de-intermediate-kho-du-lieu', title: 'Kho dữ liệu và mô hình dimensional', description: 'Fact, dimension, grain, star schema, khóa thay thế và thay đổi thuộc tính theo thời gian.' },
+      { courseSlug: 'de-intermediate-pipeline-chat-luong', title: 'Kiểm thử và quan sát pipeline', description: 'Data contract, kiểm thử schema, freshness, completeness, cảnh báo và truy vết dữ liệu qua từng bước.' },
+      { courseSlug: 'de-intermediate-du-lieu-gia-tang', title: 'Xử lý dữ liệu gia tăng và CDC', description: 'Watermark, tải tăng dần, change data capture, sự kiện đến trễ và trùng lặp.' },
+    ],
+    Senior: [
+      { courseSlug: 'de-senior-kien-truc-streaming', title: 'Kiến trúc streaming và xử lý sự kiện', description: 'Phân vùng, thứ tự sự kiện, event time, cửa sổ xử lý, checkpoint và backpressure.' },
+      { courseSlug: 'de-senior-hieu-nang-chi-phi', title: 'Tối ưu truy vấn, lưu trữ và chi phí', description: 'Đọc kế hoạch truy vấn, chọn index, phân vùng, kích thước dữ liệu quét và đánh đổi giữa độ trễ và chi phí.' },
+      { courseSlug: 'de-senior-governance-bao-mat', title: 'Data governance, bảo mật và lineage', description: 'Quyền truy cập tối thiểu, phân loại dữ liệu, thông tin nhạy cảm, lưu vết nguồn gốc và chính sách lưu giữ.' },
+      { courseSlug: 'de-senior-do-tin-cay-phuc-hoi', title: 'Độ tin cậy và phục hồi nền tảng dữ liệu', description: 'SLO, backup, khôi phục, kiểm thử khôi phục, phân loại sự cố và đánh đổi RPO/RTO.' },
+    ],
   } },
-  { slug: 'frontend-developer', role: 'Frontend Developer', stages: {
-    beginner: [['Nền tảng web', 'Luyện HTML ngữ nghĩa và bố cục CSS.'], ['JavaScript', 'Xử lý trạng thái, sự kiện và dữ liệu bất đồng bộ.'], ['React', 'Xây thành phần tái sử dụng và các trang đơn giản.'], ['Thực hành', 'Xuất bản một dự án thích ứng mọi màn hình và dễ tiếp cận.']],
-    intermediate: [['Cấu trúc ứng dụng', 'Tổ chức các tuyến trang và thành phần dùng chung.'], ['Luồng dữ liệu', 'Xử lý trạng thái API, biểu mẫu và lỗi.'], ['Chất lượng', 'Kiểm thử tương tác và khả năng tiếp cận.'], ['Hiệu năng', 'Đo và cải thiện tốc độ tải trang.']],
-    advanced: [['Kiến trúc', 'Đặt ranh giới cho các ứng dụng frontend lớn.'], ['Hệ thống thiết kế', 'Xây các mẫu giao diện nhất quán, dùng lại được.'], ['Tối ưu', 'Đo và tối ưu việc hiển thị và phân phối.'], ['Dẫn dắt', 'Rà soát khả năng tiếp cận và các đánh đổi của nền tảng.']],
+  { slug: 'software-engineer', role: 'Software Engineer', levels: {
+    Foundation: [
+      { courseSlug: 'se-foundation-lap-trinh', title: 'Lập trình nền tảng và giải quyết vấn đề', description: 'Biến, điều kiện, vòng lặp, hàm, cấu trúc dữ liệu cơ bản và phân rã vấn đề.' },
+      { courseSlug: 'se-foundation-cau-truc-du-lieu', title: 'Cấu trúc dữ liệu và thuật toán', description: 'Mảng, danh sách, stack, queue, map, tìm kiếm, sắp xếp và độ phức tạp thời gian cơ bản.' },
+      { courseSlug: 'se-foundation-web-http', title: 'Web và HTTP cơ bản', description: 'Client/server, URL, request, response, HTTP method, mã trạng thái và JSON.' },
+      { courseSlug: 'se-foundation-git-testing', title: 'Git và kiểm thử phần mềm cơ bản', description: 'Commit, branch, diff, pull request, unit test, test case và kiểm tra kết quả mong đợi.' },
+    ],
+    Intermediate: [
+      { courseSlug: 'se-intermediate-api', title: 'Xây dựng API và hợp đồng dữ liệu', description: 'Thiết kế REST, validation, phân trang, quản lý lỗi, tương thích ngược và tài liệu hợp đồng API.' },
+      { courseSlug: 'se-intermediate-db-transactions', title: 'Database, giao dịch và đồng thời', description: 'Mô hình quan hệ, index, transaction, locking, race condition và thao tác idempotent.' },
+      { courseSlug: 'se-intermediate-clean-architecture', title: 'Tổ chức mã nguồn và ranh giới nghiệp vụ', description: 'Phân tách controller, service, model và policy; dependency injection; ranh giới module và kiểm thử hợp đồng.' },
+      { courseSlug: 'se-intermediate-bao-mat', title: 'Bảo mật ứng dụng web', description: 'Xác thực, phân quyền, quản lý phiên, validation, bảo vệ secrets và nguyên tắc quyền tối thiểu.' },
+    ],
+    Senior: [
+      { courseSlug: 'se-senior-system-design', title: 'Thiết kế hệ thống và đánh đổi kiến trúc', description: 'Yêu cầu phi chức năng, ranh giới dịch vụ, tính sẵn sàng, độ trễ, tính nhất quán và lựa chọn kiến trúc.' },
+      { courseSlug: 'se-senior-reliability', title: 'SRE: Vận hành và xử lý sự cố', description: 'SLI/SLO, logging, tracing, alert, phân loại sự cố, rollback và tổng kết không đổ lỗi.' },
+      { courseSlug: 'se-senior-distributed-systems', title: 'Hệ thống phân tán và độ tin cậy', description: 'Timeout, retry, exponential backoff, idempotency, hàng đợi, duplicate delivery và giới hạn phụ thuộc ngoài.' },
+      { courseSlug: 'se-senior-technical-leadership', title: 'Technical leadership và phát triển đội ngũ', description: 'Ra quyết định có bằng chứng, phân chia công việc, review thiết kế, hướng dẫn đồng đội và truyền đạt rủi ro.' },
+    ],
   } },
-  { slug: 'ai-engineer', role: 'AI Engineer', stages: {
-    beginner: [['Nền tảng Python', 'Làm việc với dữ liệu và hàm có kiểu.'], ['Cơ bản về ML', 'Hiểu cách đánh giá mô hình và chia tập huấn luyện, kiểm tra.'], ['API mô hình', 'Gọi mô hình với đầu vào và đầu ra an toàn.'], ['Thực hành', 'Xây và đánh giá một trợ lý nhỏ.']],
-    intermediate: [['Truy xuất', 'Dựa câu trả lời trên nguồn đáng tin cậy.'], ['Đánh giá', 'Đo chất lượng, lỗi và các kiểu thất bại.'], ['Triển khai', 'Triển khai một API suy luận đáng tin cậy.'], ['An toàn', 'Bảo vệ bí mật và dữ liệu người dùng.']],
-    advanced: [['Thiết kế hệ thống', 'Chọn mô hình và kiến trúc truy xuất.'], ['Quan sát hệ thống', 'Theo dõi độ trễ, chi phí và chất lượng.'], ['Độ bền vững', 'Kiểm thử đầu vào đối kháng và hiện tượng trôi dữ liệu.'], ['Dẫn dắt', 'Đặt quy trình phát hành và xử lý sự cố.']],
-  } },
-] as const;
+];
 
-const levels = [
-  { key: 'beginner', label: 'Beginner', duration: '8–12 weeks' },
-  { key: 'intermediate', label: 'Intermediate', duration: '10–16 weeks' },
-  { key: 'advanced', label: 'Advanced', duration: '12–20 weeks' },
-] as const;
+const LEVELS: TemplateLevel[] = ['Foundation', 'Intermediate', 'Senior'];
 
-export const roadmapTemplates: Template[] = tracks.flatMap((track) => levels.map((level) => ({
-  id: `${track.slug}-${level.key}`,
-  role: track.role,
-  level: level.label,
-  duration: level.duration,
-  summary: `Lộ trình tham khảo cho ${track.role} trình độ ${level.label}. Chỉnh theo mục tiêu của bạn với trợ lý AI.`,
-  stages: track.stages[level.key].map(([title, description]) => ({ title, description })),
-})));
+/** Trình độ lưu ở learning_roadmaps.level (LRN-DB-01) khi người dùng tạo lộ trình từ mẫu. */
+export const TEMPLATE_LEVEL_TO_ROADMAP_LEVEL: Record<TemplateLevel, 'beginner' | 'intermediate' | 'advanced'> = {
+  Foundation: 'beginner',
+  Intermediate: 'intermediate',
+  Senior: 'advanced',
+};
+
+export const roadmapTemplates: Template[] = tracks.flatMap((track) => LEVELS.map((level) => {
+  const stages = track.levels[level];
+  return {
+    id: `${track.slug}-${level.toLowerCase()}`,
+    role: track.role,
+    level,
+    // Không có số tuần thật cho mẫu; hiển thị số khóa học thay vì một khoảng thời gian tự đặt.
+    duration: `${stages.length} khóa học`,
+    summary: `Lộ trình ${track.role} cấp độ ${level}, gồm ${stages.length} khóa học đang có trên KnowledgeHub.`,
+    stages,
+  };
+}));
