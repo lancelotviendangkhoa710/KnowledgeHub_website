@@ -9,6 +9,7 @@ from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import BaseModel, Field
 from pypdf import PdfReader
+from .cv_rag import _embed as embed
 
 router = APIRouter(prefix='/v1/notebook', tags=['notebook'])
 MODEL='intfloat/multilingual-e5-small'; REVISION='fd1525a9fd15316a2d503bf26ab031a61d056e98'; DIMENSIONS=384
@@ -16,11 +17,6 @@ NO_ANSWER='Không tìm thấy thông tin trong tài liệu đã chọn.'
 
 def auth(token):
     if not (expected:=os.getenv('AI_SERVICE_TOKEN','')) or not token or not hmac.compare_digest(token, expected): raise HTTPException(401, {'code':'unauthorized'})
-def embed(texts):
-    from sentence_transformers import SentenceTransformer
-    values=SentenceTransformer(MODEL, revision=REVISION).encode(texts, normalize_embeddings=True, convert_to_numpy=True).tolist()
-    if any(len(v)!=DIMENSIONS for v in values): raise HTTPException(502, {'code':'invalid_embedding'})
-    return values
 def loader(content):
     if not content.startswith(b'%PDF-'): raise HTTPException(422, {'code':'invalid_pdf'})
     try:
