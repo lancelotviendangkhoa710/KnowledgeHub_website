@@ -6,7 +6,7 @@ import RoadmapActivity from './RoadmapActivity';
 import RoadmapSteps from './RoadmapSteps';
 import Tabs, { useTabParam } from './Tabs';
 import TopicBar from './TopicBar';
-import { completedCount, fullDateTime, itemsCount, lastActivity, progressPercent, relativeTime, STATUS_LABELS } from './roadmapMeta';
+import { completedCount, fullDateTime, itemsCount, lastActivity, formatHours, LEVEL_LABELS, progressPercent, relativeTime, STATUS_LABELS } from './roadmapMeta';
 import p from './profile.module.css';
 import s from './roadmapDetail.module.css';
 
@@ -18,6 +18,7 @@ export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadma
   const [tab, setTab] = useTabParam<DetailTab>(TAB_IDS, 'overview');
   const doneCount = roadmap.items.filter((item) => item.status === 'completed' && item.completed_at).length;
   const updated = lastActivity(roadmap);
+  const totalHours = roadmap.items.reduce((sum, item) => sum + (item.study_hours ?? 0), 0);
 
   return (
     <div className={s.wrap}>
@@ -31,13 +32,17 @@ export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadma
           <h1>{roadmap.title}</h1>
           <span className={`${p.badge} ${p[`st_${roadmap.status}`]}`}>{STATUS_LABELS[roadmap.status]}</span>
           {roadmap.origin === 'ai' && <span className={`${p.badge} ${p.ai}`}>AI tạo</span>}
+          {roadmap.level && <span className={`${p.badge} ${s.levelBadge}`}>{LEVEL_LABELS[roadmap.level]}</span>}
         </div>
         <p className={s.meta}>
           <span>{completedCount(roadmap)}/{itemsCount(roadmap)} bước · {progressPercent(roadmap)}%</span>
+          {roadmap.duration_weeks ? <span>Dự kiến {roadmap.duration_weeks} tuần</span> : null}
+          {totalHours > 0 && <span>{formatHours(totalHours)} giờ học</span>}
           {updated && <span title={fullDateTime(updated)}>Cập nhật {relativeTime(updated)}</span>}
           <span>Tạo ngày {new Date(roadmap.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh' })}</span>
         </p>
         <div className={s.actions}>
+          <Link className={`${p.btn} ${p.btnSm}`} href={`/learning/my-roadmaps/${encodeURIComponent(roadmap.id)}/edit`}>Chỉnh sửa</Link>
           <Link className={`${p.btn} ${p.btnGhost} ${p.btnSm}`} href={`/learning/my-roadmaps#${encodeURIComponent(roadmap.id)}`}>Cập nhật tiến độ</Link>
         </div>
       </header>

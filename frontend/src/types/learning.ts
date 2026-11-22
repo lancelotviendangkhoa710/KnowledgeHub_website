@@ -1,4 +1,6 @@
 export type RoadmapStatus = 'active' | 'completed' | 'archived' | 'paused';
+/** LRN-DB-01: trình độ lưu ở learning_roadmaps.level (không bắt buộc). */
+export type RoadmapLevel = 'beginner' | 'intermediate' | 'advanced';
 export type RoadmapItemStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
 
 export interface ExternalLearningResource {
@@ -57,6 +59,10 @@ export interface RoadmapItem {
   completed_at?: string | null;
   /** RMR-01: tên khóa học đã xuất bản được liên kết, nếu có. */
   article_title?: string | null;
+  /** LRN-DB-01: số giờ học dự kiến (0,5–999), mức độ quan trọng 0–100, chú thích riêng. */
+  study_hours?: number | null;
+  importance?: number | null;
+  note?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +83,11 @@ export interface LearningRoadmap {
   origin?: 'legacy' | 'ai';
   ai_summary?: string | null;
   coverage?: RoadmapCoverage | null;
+  /** LRN-DB-01 */
+  level?: RoadmapLevel | null;
+  duration_weeks?: number | null;
+  visibility?: 'private' | 'public';
+  source_template?: string | null;
   created_at: string;
   updated_at: string;
   items: RoadmapItem[];

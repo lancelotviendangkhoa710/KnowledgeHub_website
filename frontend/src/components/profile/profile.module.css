@@ -82,3 +82,17 @@
   .grid { grid-template-columns: minmax(0, 1fr); }
   .filter { flex: 1 1 140px; }
 }
+
+/* Màu danh mục cho thanh chủ đề: bảng 8 màu categorical tham chiếu của skill dataviz, đã chạy validator
+   (light trên #FFFFFF, dark trên #151821: lightness, chroma, CVD kề nhau ≥ 8.4, normal-vision ≥ 19.3).
+   Ở chế độ sáng 3 màu dưới 3:1 nên luôn có chú thích tên danh mục đi kèm. */
+/* Màu chủ đề lấy từ token --topic-N (globals.css), trộn với nền thẻ cho dịu như thanh Languages của GitHub */
+.c1 { background: color-mix(in oklab, var(--topic-1) var(--topic-mix), var(--surface)); }
+.c2 { background: color-mix(in oklab, var(--topic-2) var(--topic-mix), var(--surface)); }
+.c3 { background: color-mix(in oklab, var(--topic-3) var(--topic-mix), var(--surface)); }
+.c4 { background: color-mix(in oklab, var(--topic-4) var(--topic-mix), var(--surface)); }
+.c5 { background: color-mix(in oklab, var(--topic-5) var(--topic-mix), var(--surface)); }
+.c6 { background: color-mix(in oklab, var(--topic-6) var(--topic-mix), var(--surface)); }
+.c7 { background: color-mix(in oklab, var(--topic-7) var(--topic-mix), var(--surface)); }
+.c8 { background: color-mix(in oklab, var(--topic-8) var(--topic-mix), var(--surface)); }
+

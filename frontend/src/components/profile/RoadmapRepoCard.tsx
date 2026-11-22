@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { LearningRoadmap } from '@/types/learning';
 import TopicBar from './TopicBar';
-import { completedCount, fullDateTime, itemsCount, lastActivity, relativeTime, STATUS_LABELS, topicTone } from './roadmapMeta';
+import { completedCount, fullDateTime, itemsCount, lastActivity, relativeTime, STATUS_LABELS, topicSlot } from './roadmapMeta';
 import s from './profile.module.css';
 
 type Props = { roadmap: LearningRoadmap; headingLevel?: 'h3' | 'h4' };
@@ -32,7 +32,7 @@ export default function RoadmapRepoCard({ roadmap, headingLevel = 'h3' }: Props)
       <p className={s.repoMeta}>
         {main && (
           <span className={s.metaTopic}>
-            <i className={`${s.dot} ${s[`t_${topicTone(main)}`]}`} aria-hidden="true" />
+            <i className={`${s.dot} ${s[`c${topicSlot(main)}`]}`} aria-hidden="true" />
             {main.name}
           </span>
         )}

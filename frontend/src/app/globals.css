@@ -19,6 +19,8 @@
   --btn:#101214; --btn-ink:#FFFFFF;
   --ok:#168A5B; --danger:#C9372C;
   --c-sys:#3D5AFE; --c-prog:#FFCB3D; --c-data:#22B07D; --c-career:#FF7A59;
+  /* 8 màu chủ đề cho thanh lộ trình (bảng categorical của skill dataviz, đã kiểm tra tương phản) */
+  --topic-1:#2a78d6; --topic-2:#eb6834; --topic-3:#1baf7a; --topic-4:#eda100; --topic-5:#e87ba4; --topic-6:#008300; --topic-7:#6250d6; --topic-8:#e34948; --topic-mix:82%;
   --shadow:0 1px 2px rgba(16,18,20,.05),0 8px 24px rgba(23,42,156,.07);
   --display:var(--f-display,'Plus Jakarta Sans'),'Roboto',system-ui,sans-serif;
   --body:var(--f-body,'Roboto'),system-ui,-apple-system,'Segoe UI',sans-serif;
@@ -35,6 +37,7 @@
     --btn:#ECEEF5; --btn-ink:#101214;
     --ok:#4FD1A0; --danger:#FF8478;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+    --topic-1:#3987e5; --topic-2:#d95926; --topic-3:#199e70; --topic-4:#c98500; --topic-5:#d55181; --topic-6:#0ca30c; --topic-7:#9085e9; --topic-8:#e66767; --topic-mix:74%;
   }
 }
 :root[data-theme="dark"] {
@@ -45,6 +48,7 @@
   --btn:#ECEEF5; --btn-ink:#101214;
   --ok:#4FD1A0; --danger:#FF8478;
   --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  --topic-1:#3987e5; --topic-2:#d95926; --topic-3:#199e70; --topic-4:#c98500; --topic-5:#d55181; --topic-6:#0ca30c; --topic-7:#9085e9; --topic-8:#e66767; --topic-mix:74%;
 }
 
 :root {

@@ -9,16 +9,11 @@ export default function RoadmapTemplatesPage({ searchParams }: { searchParams?: 
   return (
     <div className={styles.wrap}>
       <header className={styles.head}>
-        <div className={styles.row}>
-          <div>
-            <h1>Lộ trình mẫu</h1>
-            <p>Các lộ trình tham khảo theo nghề và trình độ. Bạn có thể nhờ trợ lý AI chỉnh lại theo mục tiêu và thời gian của mình.</p>
-          </div>
-          <div className={styles.btns}>
-            <Link href="/ai/companion" className={styles.btn}>Tạo lộ trình bằng AI</Link>
-            <Link href="/learning/my-roadmaps" className={`${styles.btn} ${styles.btnGhost}`}>Lộ trình của tôi</Link>
-          </div>
+        <div className={styles.titleRow}>
+          <h1>Lộ trình mẫu</h1>
+          <Link href="/learning/my-roadmaps" className={styles.myLink}>Lộ trình của tôi →</Link>
         </div>
+        <p>Lộ trình theo nghề và cấp độ, dựng từ các khóa học đang có. Chọn một mẫu rồi chỉnh theo mục tiêu của bạn.</p>
       </header>
       <TemplateGrid />
     </div>

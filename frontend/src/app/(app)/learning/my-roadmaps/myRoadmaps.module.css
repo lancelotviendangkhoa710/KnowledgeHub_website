@@ -20,3 +20,5 @@
 
 @media (max-width: 980px) { .mine { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .wrap { padding: 0 16px 72px; } .btns { margin-left: 0; width: 100%; } }
+.emptyMain a { color: var(--brand); font-weight: 600; }
+.emptyMain a:hover { text-decoration: underline; }
