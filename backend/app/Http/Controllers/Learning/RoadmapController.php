@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Learning;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Learning\ListRoadmapsRequest;
 use App\Http\Requests\Learning\StoreRoadmapRequest;
 use App\Http\Requests\Learning\UpdateRoadmapRequest;
 use App\Models\LearningRoadmap;
@@ -18,20 +19,14 @@ class RoadmapController extends Controller
         private readonly RoadmapSummaryService $summaries,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ListRoadmapsRequest $request): JsonResponse
     {
-        $filters = $request->validate([
-            'mine' => ['sometimes', 'boolean'],
-            'origin' => ['sometimes', 'in:legacy,ai'],
-            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'level' => ['sometimes', 'in:beginner,intermediate,advanced'],
-            'sort' => ['sometimes', 'in:created,updated,title'],
-        ]);
+        $validated = $request->validated();
         $roadmaps = $this->roadmaps->list(
             $request->user(),
-            (bool) ($filters['mine'] ?? false),
-            $filters['origin'] ?? null,
-            ['q' => $filters['q'] ?? null, 'level' => $filters['level'] ?? null, 'sort' => $filters['sort'] ?? 'created'],
+            (bool) ($validated['mine'] ?? false),
+            $validated['origin'] ?? null,
+            $request->filters(),
         );
 
         return response()->json([

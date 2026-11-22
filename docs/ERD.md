@@ -230,10 +230,6 @@ erDiagram
         uuid generation_key "nullable unique"
         text ai_summary "nullable"
         jsonb coverage "nullable score snapshot"
-        string level "nullable beginner|intermediate|advanced"
-        smallint duration_weeks "nullable 1-104"
-        string visibility "private|public"
-        string source_template "nullable template slug"
         timestamptz created_at
         timestamptz updated_at
     }
@@ -246,9 +242,6 @@ erDiagram
         smallint position "unique per roadmap"
         string status "pending|in_progress|completed|skipped"
         jsonb ai_details "nullable stage and resources"
-        decimal study_hours "nullable"
-        smallint importance "nullable 0-100"
-        text note "nullable"
         timestamptz created_at
         timestamptz updated_at
     }
