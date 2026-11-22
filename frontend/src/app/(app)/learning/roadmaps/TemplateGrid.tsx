@@ -1,14 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import TopicBar from '@/components/profile/TopicBar';
 import { assignTopicSlots } from '@/components/profile/roadmapMeta';
 import p from '@/components/profile/profile.module.css';
 import { roadmapTemplates, templateTopics } from '@/data/roadmapTemplates';
 import styles from './templates.module.css';
 
-const ROLES = Array.from(new Set(roadmapTemplates.map((t) => t.role)));
 
 type Topic = { category_slug: string; name: string; count: number };
 
@@ -34,34 +33,37 @@ function TemplateTopics({ topics }: { topics: Topic[] }) {
   );
 }
 
-/** Tìm và lọc lộ trình mẫu theo nghề (ở phía trình duyệt), hiện mỗi mẫu một thẻ. */
+/** Tìm lộ trình mẫu (lọc ngay ở phía trình duyệt), hiện mỗi mẫu một thẻ. */
 export default function TemplateGrid() {
-  const [role, setRole] = useState<string>('all');
   const [query, setQuery] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
   const term = query.trim().toLowerCase();
   const shown = roadmapTemplates
-    .filter((t) => role === 'all' || t.role === role)
     .filter((t) => !term || [t.role, t.level, ...t.stages.map((stage) => stage.title)].join(' ').toLowerCase().includes(term));
 
   return (
     <>
-      {/* Thanh công cụ một hàng như trang Repositories của GitHub: tìm kiếm, lọc, rồi hành động chính ở bên phải. */}
+      {/* Thanh công cụ như trang Pull requests của GitHub: ô tìm kiếm rộng có nút xóa + nút kính lúp, hành động chính bên phải. */}
       <div className={styles.toolbar}>
-        <input
-          className={styles.searchInput}
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm theo nghề, cấp độ hoặc khóa học…"
-          aria-label="Tìm lộ trình mẫu"
-        />
-        <div className={styles.segmented} role="group" aria-label="Lọc theo nghề">
-          {['all', ...ROLES].map((r) => (
-            <button key={r} type="button" aria-pressed={role === r} onClick={() => setRole(r)}>
-              {r === 'all' ? 'Tất cả' : r}
+        <form role="search" className={styles.searchBox} onSubmit={(event) => { event.preventDefault(); inputRef.current?.focus(); }}>
+          <input
+            ref={inputRef}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => { if (event.key === 'Escape') setQuery(''); }}
+            placeholder="Tìm theo nghề, cấp độ hoặc khóa học…"
+            aria-label="Tìm lộ trình mẫu"
+          />
+          {query && (
+            <button type="button" className={styles.clearBtn} onClick={() => { setQuery(''); inputRef.current?.focus(); }} aria-label="Xóa từ khóa">
+              <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="currentColor" /><path d="M5.5 5.5l5 5m0-5l-5 5" stroke="var(--surface)" strokeWidth="1.6" strokeLinecap="round" /></svg>
             </button>
-          ))}
-        </div>
+          )}
+          <button type="submit" className={styles.searchBtn} aria-label="Tìm">
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><circle cx="7" cy="7" r="4.75" fill="none" stroke="currentColor" strokeWidth="1.5" /><path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+          </button>
+        </form>
         <div className={styles.actions}>
           <Link href="/ai/companion" className={`${styles.btn} ${styles.btnGhost}`}>Tạo bằng AI</Link>
           <Link href="/learning/my-roadmaps/new" className={styles.btn}>＋ Tạo lộ trình</Link>
