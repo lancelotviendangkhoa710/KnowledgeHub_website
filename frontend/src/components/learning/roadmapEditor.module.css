@@ -97,3 +97,33 @@
 .box > .tier { margin-right: 36px; }
 .box > .unit, .box > .imp, .box > textarea { flex-basis: 100%; }
 .box > label:only-of-type ~ .unit { margin-top: 0; }
+
+/* Hàng chi tiết gọn: giờ học và mức độ quan trọng chung một hàng, không tách khung */
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 24px; padding: 10px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); }
+.metaItem { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.metaItem > label { font-size: 13px; font-weight: 600; color: var(--ink-2); white-space: nowrap; }
+.metaGrow { flex: 1 1 320px; }
+.metaGrow input[type="range"] { flex: 1; min-width: 80px; accent-color: var(--brand); }
+.metaItem[data-empty] input[type="range"] { opacity: 0.45; }
+.meta .unit input { width: 64px; min-height: 36px; padding: 6px; }
+.noteBox { position: relative; }
+.noteBox textarea { width: 100%; min-height: 64px; padding: 10px 44px 10px 12px; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+.noteBox textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent; }
+.noteBox .x { position: absolute; top: 6px; right: 6px; }
+.linkBtn { align-self: flex-start; border: 0; background: none; padding: 4px 2px; font: inherit; font-size: 13px; font-weight: 600; color: var(--ink-3); cursor: pointer; border-radius: 4px; }
+.linkBtn:hover { color: var(--brand); }
+.linkBtn:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 640px) { .metaGrow { flex-basis: 100%; } }
+
+/* Hover kiểu GitHub: đổi nền rất nhẹ và viền rõ hơn, chuyển 120ms; tắt khi người dùng giảm chuyển động */
+.step, .course, .meta, .card, .btnSm, .btnDashed, .btnGhost, .btnPrimary, .icon, .x, .pickList button { transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease; }
+.step:hover { border-color: color-mix(in srgb, var(--line) 55%, var(--ink-3)); }
+.step:focus-within { border-color: var(--brand); box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 35%, transparent); }
+.courseOn:hover { background: color-mix(in srgb, var(--surface) 92%, var(--ink)); }
+.btnSm:hover:not(:disabled), .btnGhost:hover { background: var(--surface-2); }
+.btnDashed:hover:not(:disabled) { background: var(--surface); border-style: solid; }
+.btnPrimary:hover:not(:disabled) { filter: brightness(0.92); }
+.stepHead input:hover { background: var(--surface-2); }
+.pickList button:hover .used { border-color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .step, .course, .meta, .card, .btnSm, .btnDashed, .btnGhost, .btnPrimary, .icon, .x, .pickList button { transition: none; } }

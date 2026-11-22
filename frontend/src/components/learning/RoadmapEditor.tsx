@@ -24,7 +24,6 @@ type Step = {
   show: { hours: boolean; importance: boolean; note: boolean };
 };
 
-const FIELD_LABELS = { hours: 'Thời gian học', importance: 'Mức độ quan trọng', note: 'Chú thích' } as const;
 let keySeed = 0;
 const nextKey = () => `step-${++keySeed}`;
 
@@ -40,7 +39,8 @@ function toCourse(article: Article): Course {
 function blankStep(partial: Partial<Step> = {}): Step {
   return {
     key: nextKey(), articleId: null, title: '', description: '', hours: '', importance: null, note: '',
-    show: { hours: false, importance: false, note: false }, ...partial,
+    // Giờ học và mức độ quan trọng luôn hiện trên một hàng; chỉ chú thích là bật/tắt.
+    show: { hours: true, importance: true, note: false }, ...partial,
   };
 }
 
@@ -53,7 +53,7 @@ function fromRoadmap(roadmap: LearningRoadmap): Step[] {
     hours: item.study_hours == null ? '' : String(item.study_hours),
     importance: item.importance ?? null,
     note: item.note ?? '',
-    show: { hours: item.study_hours != null, importance: item.importance != null, note: Boolean(item.note) },
+    show: { hours: true, importance: true, note: Boolean(item.note) },
   }));
 }
 
@@ -94,7 +94,7 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
   const editing = Boolean(roadmap);
   const [courses, setCourses] = useState<Course[] | null>(null);
   const [courseError, setCourseError] = useState(false);
-  const [template, setTemplate] = useState<string>(roadmap ? '' : (templateId ?? ''));
+  const [template] = useState<string>(roadmap ? '' : (templateId ?? ''));
   const [title, setTitle] = useState(roadmap?.title ?? '');
   const [goal, setGoal] = useState(roadmap?.goal ?? '');
   const [level, setLevel] = useState<RoadmapLevel | ''>(roadmap?.level ?? '');
@@ -149,7 +149,6 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
     setSteps((current) => current.map((step) => (step.key !== key ? step : {
       ...step,
       show: { ...step.show, [field]: on },
-      ...(on && field === 'importance' && step.importance == null ? { importance: 50 } : {}),
     })));
   }
   function move(index: number, delta: number) {
@@ -235,16 +234,6 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
         <div className={s.main}>
           <section className={s.card} aria-labelledby="rm-info">
             <h2 id="rm-info">Thông tin chung</h2>
-            {!editing && (
-              <div className={s.field}>
-                <label htmlFor="rm-template">Bắt đầu từ mẫu</label>
-                <select id="rm-template" value={template} onChange={(event) => { appliedTemplate.current = null; setTemplate(event.target.value); }}>
-                  <option value="">Không dùng mẫu (lộ trình trống)</option>
-                  {roadmapTemplates.map((entry) => <option key={entry.id} value={entry.id}>{entry.role} — {entry.level}</option>)}
-                </select>
-                <small>Chọn mẫu sẽ chép sẵn các khóa học của mẫu. Bạn vẫn sửa, xóa hoặc thêm được.</small>
-              </div>
-            )}
             <div className={s.field}>
               <label htmlFor="rm-title">Tên lộ trình *</label>
               <input id="rm-title" value={title} maxLength={255} onChange={(event) => setTitle(event.target.value)} placeholder="vd: Backend Laravel trong 10 tuần" />
@@ -270,7 +259,7 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
 
           <section className={s.card} aria-labelledby="rm-steps">
             <h2 id="rm-steps">Các bước trong lộ trình</h2>
-            <p className={s.hint}>Mỗi bước có thể gắn một khóa học và thêm khung chi tiết: thời gian học, mức độ quan trọng (/100), chú thích.</p>
+            <p className={s.hint}>Mỗi bước gắn một khóa học (hoặc để tự do), đặt thời gian học, mức độ quan trọng (/100) và thêm chú thích nếu cần.</p>
             {courseError && <p className={s.warn} role="status">Không tải được danh sách khóa học. Bạn vẫn thêm được bước tự do.</p>}
             {steps.length === 0 && <p className={s.empty}>Chưa có bước nào. Thêm khóa học đầu tiên để bắt đầu.</p>}
             <ol className={s.steps}>
@@ -296,38 +285,33 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
                         <button type="button" className={s.btnSm} onClick={() => setPicker({ open: true, forKey: step.key })} disabled={courses === null}>{step.articleId ? 'Đổi' : 'Gắn khóa học'}</button>
                         {step.articleId && <button type="button" className={s.btnSm} onClick={() => patch(step.key, { articleId: null })}>Gỡ</button>}
                       </div>
-                      <div className={s.boxes}>
-                        {step.show.hours && (
-                          <div className={s.box}>
-                            <label htmlFor={`${step.key}-hours`}>Thời gian học</label>
-                            <button type="button" className={s.x} onClick={() => toggleField(step.key, 'hours', false)} aria-label={`Bỏ khung thời gian học của bước ${index + 1}`}>×</button>
-                            <span className={s.unit}><input id={`${step.key}-hours`} type="number" min={0.5} max={999} step={0.5} value={step.hours} onChange={(event) => patch(step.key, { hours: event.target.value })} />giờ</span>
-                          </div>
-                        )}
-                        {step.show.importance && (
-                          <div className={s.box}>
-                            <label htmlFor={`${step.key}-imp`}>Mức độ quan trọng</label>
-                            <span className={`${s.tier} ${s[`tier_${tier.tone}`]}`}>{tier.label}</span>
-                            <button type="button" className={s.x} onClick={() => toggleField(step.key, 'importance', false)} aria-label={`Bỏ khung mức độ quan trọng của bước ${index + 1}`}>×</button>
-                            <span className={s.imp}>
-                              <input type="range" min={0} max={100} step={5} value={step.importance ?? 0} onChange={(event) => patch(step.key, { importance: Number(event.target.value) })} aria-label={`Kéo để chỉnh mức độ quan trọng của bước ${index + 1}`} />
-                              <span className={s.unit}><input id={`${step.key}-imp`} type="number" min={0} max={100} value={step.importance ?? 0} onChange={(event) => patch(step.key, { importance: Math.max(0, Math.min(100, Number(event.target.value) || 0)) })} />/100</span>
-                            </span>
-                          </div>
-                        )}
-                        {step.show.note && (
-                          <div className={`${s.box} ${s.wide}`}>
-                            <label htmlFor={`${step.key}-note`}>Chú thích</label>
-                            <button type="button" className={s.x} onClick={() => toggleField(step.key, 'note', false)} aria-label={`Bỏ khung chú thích của bước ${index + 1}`}>×</button>
-                            <textarea id={`${step.key}-note`} value={step.note} maxLength={1000} rows={2} onChange={(event) => patch(step.key, { note: event.target.value })} placeholder="Ghi chú riêng cho bước này" />
-                          </div>
-                        )}
+                      <div className={s.meta}>
+                        <div className={s.metaItem}>
+                          <label htmlFor={`${step.key}-hours`}>Thời gian học</label>
+                          <span className={s.unit}>
+                            <input id={`${step.key}-hours`} type="number" min={0.5} max={999} step={0.5} placeholder="–" value={step.hours} onChange={(event) => patch(step.key, { hours: event.target.value })} />
+                            giờ
+                          </span>
+                        </div>
+                        <div className={`${s.metaItem} ${s.metaGrow}`} data-empty={step.importance == null || undefined}>
+                          <label htmlFor={`${step.key}-imp`}>Mức độ quan trọng</label>
+                          <input type="range" min={0} max={100} step={5} value={step.importance ?? 0} onChange={(event) => patch(step.key, { importance: Number(event.target.value) })} aria-label={`Kéo để chỉnh mức độ quan trọng của bước ${index + 1}`} />
+                          <span className={s.unit}>
+                            <input id={`${step.key}-imp`} type="number" min={0} max={100} placeholder="–" value={step.importance ?? ''} onChange={(event) => patch(step.key, { importance: event.target.value === '' ? null : Math.max(0, Math.min(100, Number(event.target.value) || 0)) })} />
+                            /100
+                          </span>
+                          {step.importance != null && <span className={`${s.tier} ${s[`tier_${tier.tone}`]}`}>{tier.label}</span>}
+                        </div>
                       </div>
-                      <div className={s.addRow}>
-                        {(Object.keys(FIELD_LABELS) as (keyof typeof FIELD_LABELS)[]).filter((field) => !step.show[field]).map((field) => (
-                          <button key={field} type="button" className={s.btnDashed} onClick={() => toggleField(step.key, field, true)}>＋ {FIELD_LABELS[field]}</button>
-                        ))}
-                      </div>
+                      {step.show.note ? (
+                        <div className={s.noteBox}>
+                          <label htmlFor={`${step.key}-note`} className={s.srOnly}>Chú thích của bước {index + 1}</label>
+                          <textarea id={`${step.key}-note`} value={step.note} maxLength={1000} rows={2} onChange={(event) => patch(step.key, { note: event.target.value })} placeholder="Chú thích riêng cho bước này" />
+                          <button type="button" className={s.x} onClick={() => toggleField(step.key, 'note', false)} aria-label={`Bỏ chú thích của bước ${index + 1}`}>×</button>
+                        </div>
+                      ) : (
+                        <button type="button" className={s.linkBtn} onClick={() => toggleField(step.key, 'note', true)}>＋ Thêm chú thích</button>
+                      )}
                     </div>
                   </li>
                 );
@@ -335,7 +319,7 @@ export default function RoadmapEditor({ roadmap, templateId }: { roadmap?: Learn
             </ol>
             <div className={s.addRow}>
               <button type="button" className={s.btnDashed} onClick={() => setPicker({ open: true, forKey: null })} disabled={courses === null}>＋ Thêm khóa học</button>
-              <button type="button" className={s.btnDashed} onClick={() => setSteps((current) => [...current, blankStep({ title: 'Bước mới', importance: 50, show: { hours: true, importance: true, note: false } })])}>＋ Thêm bước tự do</button>
+              <button type="button" className={s.btnDashed} onClick={() => setSteps((current) => [...current, blankStep({ title: 'Bước mới' })])}>＋ Thêm bước tự do</button>
             </div>
           </section>
 

@@ -65,3 +65,8 @@
 .tier_hi { background: var(--brand-soft); color: var(--brand); }
 .tier_md { background: var(--surface-2); color: var(--ink-2); }
 .tier_lo { border: 1px solid var(--line); color: var(--ink-3); }
+
+/* Hover kiểu danh sách tệp của GitHub */
+.file { transition: background-color 120ms ease; }
+.file:hover { background: color-mix(in srgb, var(--surface) 94%, var(--ink)); }
+@media (prefers-reduced-motion: reduce) { .file { transition: none; } }
