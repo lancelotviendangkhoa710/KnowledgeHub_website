@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { roadmapTemplates } from '@/data/roadmapTemplates';
+import TopicBar from '@/components/profile/TopicBar';
+import { roadmapTemplates, templateTopics } from '@/data/roadmapTemplates';
 import styles from './templates.module.css';
 
 const ROLES = Array.from(new Set(roadmapTemplates.map((t) => t.role)));
@@ -42,26 +43,21 @@ export default function TemplateGrid() {
               <span className={styles.pill}>{template.level}</span>
               <span className={styles.pill}>{template.duration}</span>
             </div>
-            <h3>{template.role}</h3>
+            <h3><Link href={`/learning/roadmaps/${encodeURIComponent(template.id)}`}>{template.role}</Link></h3>
             <p>{template.summary}</p>
-            <details>
-              <summary>Xem lộ trình</summary>
-              <ol>
-                {template.stages.map((stage) => (
-                  <li key={stage.courseSlug}>
-                    <Link href={`/courses/${encodeURIComponent(stage.courseSlug)}`}><strong>{stage.title}</strong></Link>
-                    <span>{stage.description}</span>
-                  </li>
-                ))}
-              </ol>
-            </details>
-            <Link className={styles.useTemplate} href={`/learning/my-roadmaps/new?template=${encodeURIComponent(template.id)}`}>
-              Dùng mẫu này
-            </Link>
+            <TopicBar topics={templateTopics(template)} legend className={styles.topics} />
+            <ol className={styles.steps} aria-label={`Các khóa học của ${template.role} ${template.level}`}>
+              {template.stages.map((stage) => <li key={stage.courseSlug}>{stage.title}</li>)}
+            </ol>
+            <div className={styles.cardFoot}>
+              <Link className={styles.more} href={`/learning/roadmaps/${encodeURIComponent(template.id)}`}>Xem chi tiết →</Link>
+              <Link className={styles.useTemplate} href={`/learning/my-roadmaps/new?template=${encodeURIComponent(template.id)}`}>
+                Dùng mẫu này
+              </Link>
+            </div>
           </article>
         ))}
       </div>
-      <p className={styles.notice}>Đây là lộ trình tham khảo, chưa được cá nhân hóa theo mục tiêu hay lịch học của bạn.</p>
     </>
   );
 }
