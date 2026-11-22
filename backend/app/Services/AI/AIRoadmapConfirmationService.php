@@ -27,6 +27,8 @@ class AIRoadmapConfirmationService
                 'title' => trim($data['title']),
                 'goal' => trim($data['goal']),
                 'status' => 'active',
+                'level' => $data['level'] ?? null,
+                'duration_weeks' => $data['weeks'] ?? null,
             ]);
             foreach ($data['items'] as $index => $item) {
                 $description = trim($item['description']);

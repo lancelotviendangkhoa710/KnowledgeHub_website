@@ -23,8 +23,16 @@ class RoadmapController extends Controller
         $filters = $request->validate([
             'mine' => ['sometimes', 'boolean'],
             'origin' => ['sometimes', 'in:legacy,ai'],
+            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'level' => ['sometimes', 'in:beginner,intermediate,advanced'],
+            'sort' => ['sometimes', 'in:created,updated,title'],
         ]);
-        $roadmaps = $this->roadmaps->list($request->user(), (bool) ($filters['mine'] ?? false), $filters['origin'] ?? null);
+        $roadmaps = $this->roadmaps->list(
+            $request->user(),
+            (bool) ($filters['mine'] ?? false),
+            $filters['origin'] ?? null,
+            ['q' => $filters['q'] ?? null, 'level' => $filters['level'] ?? null, 'sort' => $filters['sort'] ?? 'created'],
+        );
 
         return response()->json([
             'status' => 'success',

@@ -28,6 +28,9 @@ class ConfirmRoadmapRequest extends FormRequest
             'items.*.skills' => ['present', 'array', 'max:30'],
             'items.*.skills.*' => ['required', 'string', 'max:100'],
             'items.*.article_id' => ['prohibited'],
+            // LRN-BE-03: optional so older clients keep working; the preview form already asks for both.
+            'level' => ['sometimes', 'nullable', 'string', 'in:beginner,intermediate,advanced'],
+            'weeks' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:104'],
         ];
     }
 }

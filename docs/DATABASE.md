@@ -116,6 +116,16 @@ Sequential AI steps are linked through `roadmap_item_prerequisites`.
 The existing `roadmap_items.article_id` FK remains the sole internal course
 link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
 
+LRN-DB-01 (migration `2026_11_22_000001_add_roadmap_planning_fields`, **pending team
+approval**) adds planning columns. `learning_roadmaps`: nullable `level`
+(`beginner|intermediate|advanced`), nullable `duration_weeks` (1–104), `visibility`
+(`private|public`, default `private`; the API accepts only `private` until a sharing ADR)
+and nullable `source_template` (template slug the roadmap was copied from).
+`roadmap_items`: nullable `study_hours` (numeric(5,1), >0 and ≤999), nullable
+`importance` (0–100) and nullable `note` (≤1000 characters). Companion roadmaps copy
+`coverage->profile` level/weeks into the new columns during the migration. The author is
+still `learning_roadmaps.user_id`; no author name is duplicated.
+
 > **Status authority (2026-10-22):** `learning_progress.status` is authoritative. `roadmap_items.status` is a denormalized mirror updated in the same transaction by the progress service; item create/update endpoints reject `status`. The ADR `docs/decisions/2026-10-22-learning-progress-authority.md` is implemented but still **Proposed** pending Product/PM approval.
 
 ### E – Payment
@@ -208,6 +218,12 @@ link. Existing rows retain `origin=legacy`; no data is deleted or inferred.
 | user_memories.memory_type | preference, fact, goal, instruction |
 | user_memories.status | active, superseded, expired, deleted |
 | learning_roadmaps.status | active, completed, archived, paused |
+| learning_roadmaps.level | NULL, beginner, intermediate, advanced |
+| learning_roadmaps.duration_weeks | NULL or 1–104 |
+| learning_roadmaps.visibility | private, public |
+| roadmap_items.study_hours | NULL or > 0 and ≤ 999 |
+| roadmap_items.importance | NULL or 0–100 |
+| roadmap_items.note | NULL or ≤ 1000 characters |
 | roadmap_items.status | pending, in_progress, completed, skipped |
 | learning_progress.status | pending, in_progress, completed, skipped |
 | roadmap_item_prerequisites | roadmap_item_id != prerequisite_item_id |

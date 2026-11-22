@@ -24,6 +24,9 @@ class UpdateRoadmapItemRequest extends FormRequest
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'position' => ['sometimes', 'integer', 'min:0', 'max:65535'],
+            'study_hours' => ['sometimes', 'nullable', 'numeric', 'gt:0', 'max:999', 'decimal:0,1'],
+            'importance' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:100'],
+            'note' => ['sometimes', 'nullable', 'string', 'max:1000'],
             // Item status mirrors learning_progress.status. Only PATCH progress
             // may change it.
             'status' => ['prohibited'],
