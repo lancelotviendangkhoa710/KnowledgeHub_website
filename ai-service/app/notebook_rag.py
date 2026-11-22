@@ -50,9 +50,11 @@ async def ingest(file: UploadFile=File(...), auth_header: Annotated[str|None,Hea
     except Exception: meta={'title':file.filename or 'Document','summary':text[:500]}
     return {'model':MODEL,'revision':REVISION,'dimensions':DIMENSIONS,'title':str(meta.get('title') or file.filename or 'Document')[:255],'summary':str(meta.get('summary') or text[:500])[:5000], 'chunks':[{'position':i,'page':c.metadata['page'],'content':c.page_content[:2000],'embedding':v} for i,(c,v) in enumerate(zip(chunks,vectors))]}
 
-class AnswerInput(BaseModel): question:str=Field(min_length=3,max_length=500); chunks:list[dict]=Field(min_length=1,max_length=8)
+class AnswerInput(BaseModel): question:str=Field(min_length=3,max_length=500); chunks:list[dict]=Field(min_length=0,max_length=8)
 @router.post('/answer')
 async def answer(data:AnswerInput, auth_header:Annotated[str|None,Header(alias='X-Service-Token')]=None):
-    auth(auth_header); context='\n\n'.join(f"[{c['filename']} p.{c['page']}] {c['content']}" for c in data.chunks)
+    auth(auth_header)
+    if not data.chunks: return {'answer':NO_ANSWER}
+    context='\n\n'.join(f"[{c['filename']} p.{c['page']}] {c['content']}" for c in data.chunks)
     reply=await model().ainvoke([SystemMessage(content=f'Answer ONLY from retrieved chunks. Cite filename and page for every factual claim. If unsupported, say exactly: {NO_ANSWER}'),HumanMessage(content=f'Retrieved chunks:\n{context}\n\nQuestion: {data.question}')])
     return {'answer':reply.content.strip() or NO_ANSWER}
