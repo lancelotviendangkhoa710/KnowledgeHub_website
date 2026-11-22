@@ -159,3 +159,5 @@
 .meta > .metaItem:first-child:not([data-empty]):not(:has(.range)) { grid-column: 1; }
 .meta > .metaItem:has(.range) { grid-column: 2; }
 @media (max-width: 760px) { .meta { grid-template-columns: minmax(0, 1fr); } .meta > .metaItem:has(.range) { grid-column: 1; } }
+/* Nút, nhãn bật/tắt không bị bôi chữ khi bấm nhanh */
+.toggle, .toggles, .btnSm, .btnDashed, .btnGhost, .btnPrimary, .icon, .x, .tier, .num { user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
