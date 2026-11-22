@@ -29,6 +29,66 @@ const TONE_BY_CATEGORY: Record<string, TopicTone> = {
   'career-soft-skills': 'career',
 };
 
+/**
+ * Màu riêng cho từng danh mục (8 màu categorical đã kiểm bằng validator của skill dataviz, xem
+ * profile.module.css .c1–.c8). Màu theo danh mục, không theo thứ hạng và không ngẫu nhiên: cùng một
+ * danh mục luôn cùng màu ở mọi thẻ. Các danh mục hay đi cùng nhau trong lộ trình mẫu được xếp khác màu.
+ */
+const CATEGORY_SLOT: Record<string, number> = {
+  'system-design': 1,
+  programming: 2,
+  databases: 3,
+  python: 4,
+  statistics: 5,
+  'api-design': 7,
+  'data-science': 7,
+  'career-soft-skills': 8,
+  php: 5,
+  javascript: 7,
+  'machine-learning': 2,
+};
+export const TOPIC_SLOTS = 8;
+
+function hashSlot(slug: string): number {
+  let hash = 0;
+  for (const char of slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return (hash % TOPIC_SLOTS) + 1;
+}
+
+/** Ô màu gốc (1–8) của một danh mục. Danh mục mới chưa có trong bảng dùng hash cố định theo slug. */
+export function topicSlot(topic: Pick<RoadmapTopic, 'category_slug'>): number {
+  return CATEGORY_SLOT[topic.category_slug] ?? hashSlot(topic.category_slug);
+}
+
+/**
+ * Cặp ô màu đứng cạnh nhau được (1 = qua kiểm tra của validator dataviz ở cả 2 chế độ: phân biệt được
+ * với người mù màu đỏ–lục và với mắt thường). Hàng/cột theo thứ tự ô 1–8.
+ */
+const ADJACENT_OK = ['01111101', '10100010', '11010011', '10101010', '10010110', '10001011', '01111101', '10100110'];
+const canTouch = (a: number, b: number) => ADJACENT_OK[a - 1][b - 1] === '1';
+
+/**
+ * Gán màu cho các chủ đề của MỘT thanh, theo thứ tự hiển thị: ưu tiên màu gốc của danh mục; nếu màu đó
+ * đã dùng trong thanh hoặc khó phân biệt với đoạn đứng ngay trước thì lấy ô màu khác. Kết quả: trong
+ * một thanh không có 2 đoạn cùng màu và 2 đoạn kề nhau luôn phân biệt được.
+ */
+export function assignTopicSlots(topics: Pick<RoadmapTopic, 'category_slug'>[]): Map<string, number> {
+  const used = new Set<number>();
+  const result = new Map<string, number>();
+  let previous: number | null = null;
+  for (const topic of topics) {
+    const base = topicSlot(topic);
+    const candidates = [base, ...Array.from({ length: TOPIC_SLOTS }, (_, index) => ((base + index) % TOPIC_SLOTS) + 1)];
+    const slot = candidates.find((c) => !used.has(c) && (previous === null || canTouch(previous, c)))
+      ?? candidates.find((c) => !used.has(c))
+      ?? base;
+    used.add(slot);
+    result.set(topic.category_slug, slot);
+    previous = slot;
+  }
+  return result;
+}
+
 export function topicTone(topic: Pick<RoadmapTopic, 'category_slug' | 'name'>): TopicTone {
   const known = TONE_BY_CATEGORY[topic.category_slug];
   if (known) return known;

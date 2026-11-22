@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import TopicBar from '@/components/profile/TopicBar';
-import { topicTone } from '@/components/profile/roadmapMeta';
+import { assignTopicSlots } from '@/components/profile/roadmapMeta';
 import p from '@/components/profile/profile.module.css';
 import { roadmapTemplates, templateTopics } from '@/data/roadmapTemplates';
 import styles from './templates.module.css';
@@ -15,6 +15,7 @@ type Topic = { category_slug: string; name: string; count: number };
 /** Thanh chủ đề + chú thích một dòng (tối đa 2 chủ đề, phần còn lại gộp "+n") để mọi thẻ cao bằng nhau. */
 function TemplateTopics({ topics }: { topics: Topic[] }) {
   const total = topics.reduce((sum, topic) => sum + topic.count, 0);
+  const slots = assignTopicSlots(topics);
   const shown = topics.slice(0, 2);
   const rest = topics.length - shown.length;
   return (
@@ -23,7 +24,7 @@ function TemplateTopics({ topics }: { topics: Topic[] }) {
       <p className={styles.legendRow}>
         {shown.map((topic) => (
           <span key={topic.category_slug}>
-            <i className={`${p.dot} ${p[`t_${topicTone(topic)}`]}`} aria-hidden="true" />
+            <i className={`${p.dot} ${p[`c${slots.get(topic.category_slug) ?? 1}`]}`} aria-hidden="true" />
             {topic.name} <small>{Math.round((topic.count / total) * 100)}%</small>
           </span>
         ))}

@@ -1,5 +1,5 @@
 import type { RoadmapTopic } from '@/types/learning';
-import { topicTone } from './roadmapMeta';
+import { assignTopicSlots } from './roadmapMeta';
 import s from './profile.module.css';
 
 type Props = { topics: RoadmapTopic[]; legend?: boolean; className?: string };
@@ -10,7 +10,8 @@ type Props = { topics: RoadmapTopic[]; legend?: boolean; className?: string };
  */
 export default function TopicBar({ topics, legend = false, className }: Props) {
   const total = topics.reduce((sum, topic) => sum + topic.count, 0);
-  const parts = topics.map((topic) => ({ ...topic, tone: topicTone(topic), percent: total ? (topic.count / total) * 100 : 0 }));
+  const slots = assignTopicSlots(topics);
+  const parts = topics.map((topic) => ({ ...topic, slot: slots.get(topic.category_slug) ?? 1, percent: total ? (topic.count / total) * 100 : 0 }));
   const summary = total
     ? `Chủ đề: ${parts.map((part) => `${part.name} ${Math.round(part.percent)}%`).join(', ')}`
     : 'Chưa có bước nào gắn với khóa học có chủ đề';
@@ -23,7 +24,7 @@ export default function TopicBar({ topics, legend = false, className }: Props) {
           : parts.map((part) => (
             <span
               key={part.category_slug}
-              className={`${s.seg} ${s[`t_${part.tone}`]}`}
+              className={`${s.seg} ${s[`c${part.slot}`]}`}
               style={{ width: `${part.percent}%` }}
               title={`${part.name}: ${part.count} bước (${Math.round(part.percent)}%)`}
             />
@@ -33,7 +34,7 @@ export default function TopicBar({ topics, legend = false, className }: Props) {
         <ul className={s.legend} aria-hidden="true">
           {parts.map((part) => (
             <li key={part.category_slug}>
-              <i className={`${s.dot} ${s[`t_${part.tone}`]}`} />
+              <i className={`${s.dot} ${s[`c${part.slot}`]}`} />
               <b>{part.name}</b> {Math.round(part.percent)}%
             </li>
           ))}

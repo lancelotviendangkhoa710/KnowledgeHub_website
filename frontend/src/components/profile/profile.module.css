@@ -82,3 +82,33 @@
   .grid { grid-template-columns: minmax(0, 1fr); }
   .filter { flex: 1 1 140px; }
 }
+
+/* Màu danh mục cho thanh chủ đề: bảng 8 màu categorical tham chiếu của skill dataviz, đã chạy validator
+   (light trên #FFFFFF, dark trên #151821: lightness, chroma, CVD kề nhau ≥ 8.4, normal-vision ≥ 19.3).
+   Ở chế độ sáng 3 màu dưới 3:1 nên luôn có chú thích tên danh mục đi kèm. */
+.c1 { background: #2a78d6; }
+.c2 { background: #eb6834; }
+.c3 { background: #1baf7a; }
+.c4 { background: #eda100; }
+.c5 { background: #e87ba4; }
+.c6 { background: #008300; }
+.c7 { background: #6250d6; }
+.c8 { background: #e34948; }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) .c1 { background: #3987e5; }
+  :global(:root:not([data-theme="light"])) .c2 { background: #d95926; }
+  :global(:root:not([data-theme="light"])) .c3 { background: #199e70; }
+  :global(:root:not([data-theme="light"])) .c4 { background: #c98500; }
+  :global(:root:not([data-theme="light"])) .c5 { background: #d55181; }
+  :global(:root:not([data-theme="light"])) .c6 { background: #0ca30c; }
+  :global(:root:not([data-theme="light"])) .c7 { background: #9085e9; }
+  :global(:root:not([data-theme="light"])) .c8 { background: #e66767; }
+}
+:global(:root[data-theme="dark"]) .c1 { background: #3987e5; }
+:global(:root[data-theme="dark"]) .c2 { background: #d95926; }
+:global(:root[data-theme="dark"]) .c3 { background: #199e70; }
+:global(:root[data-theme="dark"]) .c4 { background: #c98500; }
+:global(:root[data-theme="dark"]) .c5 { background: #d55181; }
+:global(:root[data-theme="dark"]) .c6 { background: #0ca30c; }
+:global(:root[data-theme="dark"]) .c7 { background: #9085e9; }
+:global(:root[data-theme="dark"]) .c8 { background: #e66767; }
