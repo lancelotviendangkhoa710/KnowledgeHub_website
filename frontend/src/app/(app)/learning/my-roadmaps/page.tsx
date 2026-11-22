@@ -96,7 +96,8 @@ export default function MyRoadmapsPage() {
             <p>Tiếp tục kế hoạch học đã tạo và theo dõi từng bước.</p>
           </div>
           <div className={styles.btns}>
-            <Link className={styles.btn} href="/ai/companion">Tạo lộ trình bằng AI</Link>
+            <Link className={styles.btn} href="/learning/my-roadmaps/new">＋ Tạo lộ trình</Link>
+            <Link className={`${styles.btn} ${styles.btnGhost}`} href="/ai/companion">Tạo bằng AI</Link>
             <Link className={`${styles.btn} ${styles.btnGhost}`} href="/learning/roadmaps">Xem lộ trình mẫu</Link>
           </div>
         </div>
@@ -107,15 +108,20 @@ export default function MyRoadmapsPage() {
         <div className={styles.mine}>
           <section aria-label="Lộ trình do trợ lý AI tạo">
             {aiRoadmaps.length === 0
-              ? <p className={styles.emptyMain}>Chưa có lộ trình AI nào. Mở trợ lý AI và tạo kế hoạch đầu tiên của bạn.</p>
+              ? (
+                <p className={styles.emptyMain}>
+                  Chưa có lộ trình AI nào. <Link href="/learning/my-roadmaps/new">Tự tạo lộ trình</Link>,{' '}
+                  <Link href="/learning/roadmaps">dùng một lộ trình mẫu</Link> hoặc <Link href="/ai/companion">nhờ trợ lý AI</Link>.
+                </p>
+              )
               : renderList(aiRoadmaps)}
           </section>
           <aside className={styles.aside} aria-labelledby="previous-roadmaps-heading">
-            <h2 id="previous-roadmaps-heading">Đã lưu trước đây</h2>
+            <h2 id="previous-roadmaps-heading">Lộ trình tự tạo</h2>
             {previous.length === 0
-              ? <p className={styles.empty}>Chưa có lộ trình nào được lưu. Những lộ trình cũ không ghi rõ cách tạo sẽ hiện ở đây.</p>
+              ? <p className={styles.empty}>Chưa có lộ trình tự tạo. Bấm “＋ Tạo lộ trình” để bắt đầu từ trang trống hoặc từ một lộ trình mẫu.</p>
               : <>
-                  <p className={styles.hint}>Các lộ trình cũ được giữ lại vì không ghi rõ cách tạo.</p>
+                  <p className={styles.hint}>Lộ trình bạn tự tạo, kể cả những lộ trình lưu trước khi có trợ lý AI.</p>
                   {renderList(previous)}
                 </>}
           </aside>
