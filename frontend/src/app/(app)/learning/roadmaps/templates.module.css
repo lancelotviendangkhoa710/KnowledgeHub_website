@@ -91,3 +91,24 @@
 /* Bấm nhanh nhiều lần vào chip/nút không bôi xanh chữ (như GitHub); chữ nội dung vẫn chọn được */
 .chip, .btn, .useTemplate, .more, .pill { user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
 .filters { user-select: none; -webkit-user-select: none; }
+
+/* v4: đầu trang + thanh công cụ một hàng (kiểu trang Repositories của GitHub) */
+.head { padding: 40px 0 0; }
+.titleRow { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.myLink { color: var(--brand); font-weight: 600; font-size: 14px; white-space: nowrap; }
+.myLink:hover { text-decoration: underline; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.searchInput { flex: 1 1 260px; max-width: 420px; min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; }
+.searchInput:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; border-color: transparent; }
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); user-select: none; -webkit-user-select: none; }
+.segmented button { min-height: 38px; padding: 0 14px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color 120ms ease, color 120ms ease; }
+.segmented button:first-child { border-left: 0; }
+.segmented button:hover { background: var(--surface-2); color: var(--ink); }
+.segmented button[aria-pressed="true"] { background: var(--surface-2); color: var(--ink); font-weight: 700; box-shadow: inset 0 -2px 0 var(--brand); }
+.segmented button:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.actions { margin-left: auto; display: flex; gap: 8px; }
+.actions .btn { min-height: 40px; padding: 0 16px; }
+.count { margin: 14px 0 0; font-size: 13px; color: var(--ink-3); }
+.grid { padding-top: 12px; }
+@media (max-width: 760px) { .actions { margin-left: 0; width: 100%; } .actions .btn { flex: 1; justify-content: center; } .searchInput { max-width: none; } .segmented { overflow-x: auto; max-width: 100%; } }
+@media (prefers-reduced-motion: reduce) { .segmented button { transition: none; } }

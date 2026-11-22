@@ -34,7 +34,7 @@ function TemplateTopics({ topics }: { topics: Topic[] }) {
   );
 }
 
-/** Lọc lộ trình mẫu theo nghề (chỉ ở phía trình duyệt) và hiện từng mẫu; các giai đoạn mở ra bằng "Xem lộ trình". */
+/** Tìm và lọc lộ trình mẫu theo nghề (ở phía trình duyệt), hiện mỗi mẫu một thẻ. */
 export default function TemplateGrid() {
   const [role, setRole] = useState<string>('all');
   const [query, setQuery] = useState('');
@@ -45,22 +45,29 @@ export default function TemplateGrid() {
 
   return (
     <>
-      <div className={styles.search}>
+      {/* Thanh công cụ một hàng như trang Repositories của GitHub: tìm kiếm, lọc, rồi hành động chính ở bên phải. */}
+      <div className={styles.toolbar}>
         <input
+          className={styles.searchInput}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Tìm lộ trình theo nghề, cấp độ hoặc tên khóa học…"
+          placeholder="Tìm theo nghề, cấp độ hoặc khóa học…"
           aria-label="Tìm lộ trình mẫu"
         />
+        <div className={styles.segmented} role="group" aria-label="Lọc theo nghề">
+          {['all', ...ROLES].map((r) => (
+            <button key={r} type="button" aria-pressed={role === r} onClick={() => setRole(r)}>
+              {r === 'all' ? 'Tất cả' : r}
+            </button>
+          ))}
+        </div>
+        <div className={styles.actions}>
+          <Link href="/ai/companion" className={`${styles.btn} ${styles.btnGhost}`}>Tạo bằng AI</Link>
+          <Link href="/learning/my-roadmaps/new" className={styles.btn}>＋ Tạo lộ trình</Link>
+        </div>
       </div>
-      <div className={styles.filters} role="group" aria-label="Lọc theo nghề">
-        {['all', ...ROLES].map((r) => (
-          <button key={r} type="button" className={styles.chip} aria-pressed={role === r} onClick={() => setRole(r)}>
-            {r === 'all' ? 'Tất cả' : r}
-          </button>
-        ))}
-      </div>
+      <p className={styles.count} aria-live="polite">{shown.length} lộ trình mẫu</p>
       {shown.length === 0 && <p className={styles.empty}>Không tìm thấy lộ trình mẫu nào khớp với “{query.trim()}”.</p>}
       <div className={styles.grid}>
         {shown.map((template) => (
