@@ -8,9 +8,9 @@ use App\Http\Controllers\AI\RetentionPurgeController;
 use App\Http\Controllers\AI\RoadmapGenerationController;
 use App\Http\Controllers\AI\UserMemoryController;
 use App\Http\Controllers\AI\UserCvController;
+use App\Http\Controllers\AI\NotebookDocumentController;
 use App\Http\Controllers\AI\AgentCourseController;
 use App\Http\Controllers\AI\AdminAgentController;
-use App\Http\Controllers\AI\CvAssessmentController;
 use Illuminate\Support\Facades\Route;
 
 // Internal retention trigger for hosts without a scheduler. Protected by
@@ -27,10 +27,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ai/agents/courses', AgentCourseController::class)->middleware('throttle:3,1,agent-course');
     Route::post('/ai/agents/admin/plan', [AdminAgentController::class, 'plan'])->middleware('throttle:10,1,agent-admin-plan');
     Route::post('/ai/agents/admin/confirm', [AdminAgentController::class, 'confirm'])->middleware('throttle:10,1,agent-admin-confirm');
-    Route::post('/ai/cv/assessment/preview', [CvAssessmentController::class, 'preview'])->middleware('throttle:3,1,agent-cv-preview');
-    Route::post('/ai/cv/assessment/confirm', [CvAssessmentController::class, 'confirm'])->middleware('throttle:5,1,agent-cv-confirm');
-    Route::get('/ai/cv/assessment', [CvAssessmentController::class, 'show']);
-
     // AI-05 Roadmap Assistant - TEAM_MEMBER_C
     Route::post('/ai/roadmaps/preview', [RoadmapGenerationController::class, 'preview']);
     Route::post('/ai/roadmaps/confirm', [RoadmapGenerationController::class, 'confirm']);
@@ -49,6 +45,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ai/cv', [UserCvController::class, 'store']);
     Route::get('/ai/cv/download', [UserCvController::class, 'download']);
     Route::delete('/ai/cv', [UserCvController::class, 'destroy']);
+
+    Route::get('/ai/notebook/documents', [NotebookDocumentController::class, 'index']);
+    Route::post('/ai/notebook/documents', [NotebookDocumentController::class, 'store']);
+    Route::get('/ai/notebook/documents/{document}', [NotebookDocumentController::class, 'show'])->whereUuid('document');
+    Route::delete('/ai/notebook/documents/{document}', [NotebookDocumentController::class, 'destroy'])->whereUuid('document');
+    Route::post('/ai/notebook/query', [NotebookDocumentController::class, 'query']);
 
     // AI-01 Conversations
     Route::get('/ai/conversations', [ConversationController::class, 'index']);
