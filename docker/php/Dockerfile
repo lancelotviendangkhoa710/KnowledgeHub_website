@@ -23,6 +23,8 @@ RUN docker-php-ext-install \
     xml \
     zip
 
+RUN printf '%s\n' 'upload_max_filesize=15M' 'post_max_size=16M' > /usr/local/etc/php/conf.d/uploads.ini
+
 # Install Composer
 COPY --from=composer:2.7.9 /usr/bin/composer /usr/bin/composer
 
