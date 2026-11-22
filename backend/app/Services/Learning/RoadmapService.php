@@ -16,7 +16,10 @@ class RoadmapService
 {
     public function __construct(private readonly RoadmapPolicy $policy) {}
 
-    public function list(User $user, bool $mine = false, ?string $origin = null): mixed
+    /**
+     * @param  array{q?: ?string, level?: ?string, sort?: string}  $filters
+     */
+    public function list(User $user, bool $mine = false, ?string $origin = null, array $filters = []): mixed
     {
         $query = LearningRoadmap::query()->with('items');
         if ($mine || ! $this->policy->isAdmin($user)) {
@@ -27,7 +30,23 @@ class RoadmapService
             $query->where('origin', $origin);
         }
 
-        return $this->refreshCourseLinks($query->orderByDesc('created_at')->get());
+        $term = trim((string) ($filters['q'] ?? ''));
+        if ($term !== '') {
+            $like = '%'.addcslashes(mb_strtolower($term), '%_\\').'%';
+            $query->where(fn ($inner) => $inner->whereRaw('LOWER(title) LIKE ?', [$like])->orWhereRaw('LOWER(goal) LIKE ?', [$like]));
+        }
+
+        if (($filters['level'] ?? null) !== null) {
+            $query->where('level', $filters['level']);
+        }
+
+        match ($filters['sort'] ?? 'created') {
+            'title' => $query->orderBy('title')->orderBy('id'),
+            'updated' => $query->orderByDesc('updated_at')->orderByDesc('id'),
+            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+        };
+
+        return $this->refreshCourseLinks($query->get());
     }
 
     public function find(User $user, string $roadmapId): LearningRoadmap

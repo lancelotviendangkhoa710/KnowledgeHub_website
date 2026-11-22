@@ -12,11 +12,11 @@ class RoadmapItem extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['roadmap_id', 'article_id', 'title', 'description', 'position', 'ai_details'];
+    protected $fillable = ['roadmap_id', 'article_id', 'title', 'description', 'position', 'ai_details', 'study_hours', 'importance', 'note'];
 
     protected function casts(): array
     {
-        return ['ai_details' => 'array'];
+        return ['ai_details' => 'array', 'study_hours' => 'float', 'importance' => 'integer'];
     }
 
     public function roadmap(): BelongsTo

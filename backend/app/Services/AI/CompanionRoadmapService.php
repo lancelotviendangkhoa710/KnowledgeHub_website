@@ -196,6 +196,9 @@ class CompanionRoadmapService
                     'generation_key' => $generationKey,
                     'ai_summary' => $draft['summary'],
                     'coverage' => $draft['coverage'],
+                    // LRN-BE-03: keep the profile level/weeks in real columns, not only inside coverage.
+                    'level' => $draft['coverage']['profile']['level'] ?? null,
+                    'duration_weeks' => $draft['coverage']['profile']['weeks'] ?? null,
                 ]);
                 $previousItemId = null;
                 foreach ($draft['items'] as $item) {
