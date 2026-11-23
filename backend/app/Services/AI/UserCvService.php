@@ -67,7 +67,7 @@ class UserCvService
             ]);
         });
         try {
-            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text, &$uploaded): array {
+            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text, $assessment, &$uploaded): array {
                 $this->lockOwner($user);
                 $row = UserCv::query()->whereKey($cv->id)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
                 $stream = fopen($file->getRealPath(), 'rb');
