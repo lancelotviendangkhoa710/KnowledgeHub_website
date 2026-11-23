@@ -305,7 +305,8 @@ class MessageService
      */
     private function conversationContext(Conversation $conversation): array
     {
-        $limit = max(1, min((int) config('services.ai.chat_history_limit', 20), 19));
+        // Keep the request small for the demo: the current turn is appended by send().
+        $limit = max(1, min((int) config('services.ai.chat_history_limit', 6), 6));
 
         $query = Message::query()
             ->where('conversation_id', $conversation->id)
@@ -325,8 +326,7 @@ class MessageService
             ->reverse()
             ->map(static fn (Message $message): array => [
                 'role' => (string) $message->role,
-                // The AI service caps each message at 8000 characters.
-                'content' => mb_substr((string) $message->content, 0, 8000),
+                'content' => mb_substr((string) $message->content, 0, 500),
             ])
             ->values()
             ->all();

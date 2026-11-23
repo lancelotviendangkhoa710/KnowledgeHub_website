@@ -74,6 +74,7 @@ class MessageController extends Controller
             'data' => [
                 'user_message' => $result['user_message'],
                 'assistant_message' => $result['assistant_message'],
+                'conversation_title' => $conversationModel->fresh()->title,
             ],
         ], 201);
     }

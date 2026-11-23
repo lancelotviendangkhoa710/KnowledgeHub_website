@@ -61,20 +61,24 @@ class NotebookRagTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual({"answer": notebook_rag.NO_ANSWER}, result)
         model.assert_not_called()
 
-    async def test_answer_supplies_selected_document_metadata_to_model(self):
+    async def test_answer_hides_internal_retrieval_details_from_model(self):
         response = type("Reply", (), {"content": "Synthesis."})()
         with patch.object(notebook_rag, "model") as model:
             model.return_value.ainvoke = AsyncMock(return_value=response)
             result = await notebook_rag.answer(notebook_rag.AnswerInput(
                 question="Compare both documents", documents=[
-                    {"filename": "one.pdf", "title": "One", "chunk_count": 2},
-                    {"filename": "two.pdf", "title": "Two", "chunk_count": 3},
+                    {"filename": "one.pdf", "title": "One"},
+                    {"filename": "two.pdf", "title": "Two"},
                 ], chunks=[{"filename": "one.pdf", "page": 1, "content": "First source."}, {"filename": "two.pdf", "page": 1, "content": "Second source."}],
             ), "internal")
         self.assertEqual("Synthesis.", result["answer"])
         prompt = model.return_value.ainvoke.call_args.args[0][1].content
         self.assertIn('"one.pdf"', prompt)
         self.assertIn('"two.pdf"', prompt)
+        self.assertNotIn('chunk_count', prompt)
+        system_prompt = model.return_value.ainvoke.call_args.args[0][0].content
+        self.assertIn('Never mention internal technical terms', system_prompt)
+        self.assertIn('"chunk"', system_prompt)
 
 
 if __name__ == "__main__":

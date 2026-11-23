@@ -6,7 +6,6 @@ use App\Models\Conversation;
 use App\Models\NotebookDocument;
 use App\Models\NotebookDocumentChunk;
 use App\Models\User;
-use App\Services\AI\NotebookService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -116,16 +115,25 @@ class ConversationApiTest extends TestCase
             'http://ai-service:8000/v1/notebook/answer' => Http::response(['answer' => 'Grounded synthesis.']),
         ]);
 
-        $result = app(NotebookService::class)->query($owner, $notebook->id, 'Compare sources', [$first->id, $second->id]);
-
-        $this->assertSame('Grounded synthesis.', $result['answer']);
-        $this->assertCount(1, $result['citations']);
+        Sanctum::actingAs($owner);
+        $this->postJson('/api/ai/notebook/query', ['conversation_id' => $notebook->id, 'question' => 'Compare sources', 'document_ids' => [$first->id, $second->id]])
+            ->assertOk()
+            ->assertJsonPath('data.answer', 'Grounded synthesis.')
+            ->assertJsonCount(1, 'data.citations')
+            ->assertJsonCount(2, 'data.chat_history')
+            ->assertJsonPath('data.chat_history.0.role', 'user')
+            ->assertJsonPath('data.chat_history.1.role', 'assistant')
+            ->assertJsonPath('data.chat_history.1.metadata.citations.0.filename', 'copy.pdf');
+        $this->assertDatabaseHas('messages', ['conversation_id' => $notebook->id, 'role' => 'user', 'content' => 'Compare sources']);
+        $this->assertDatabaseHas('messages', ['conversation_id' => $notebook->id, 'role' => 'assistant', 'content' => 'Grounded synthesis.']);
         Http::assertSent(function ($request): bool {
             if (! str_ends_with($request->url(), '/v1/notebook/answer')) {
                 return false;
             }
             $body = $request->data();
-            return count($body['documents']) === 2 && count(array_unique(array_column($body['chunks'], 'content'))) === 2;
+            return count($body['documents']) === 2
+                && ! array_key_exists('chunk_count', $body['documents'][0])
+                && count(array_unique(array_column($body['chunks'], 'content'))) === 2;
         });
     }
 

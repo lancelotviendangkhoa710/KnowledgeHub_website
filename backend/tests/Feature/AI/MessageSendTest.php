@@ -83,7 +83,8 @@ class MessageSendTest extends TestCase
             ->assertJsonPath('data.user_message.metadata.client_message_id', $clientMessageId)
             ->assertJsonPath('data.assistant_message.role', 'assistant')
             ->assertJsonPath('data.assistant_message.content', 'Start with SQL basics.')
-            ->assertJsonPath('data.assistant_message.metadata.provider', 'deepseek');
+            ->assertJsonPath('data.assistant_message.metadata.provider', 'deepseek')
+            ->assertJsonPath('data.conversation_title', 'How do I start learning SQL?');
 
         $this->assertDatabaseCount('messages', 2);
         $rows = Message::query()->where('conversation_id', $conversation->id)->orderBy('created_at')->orderBy('id')->get();
@@ -113,6 +114,35 @@ class MessageSendTest extends TestCase
         $this->postJson($this->messagesUrl($conversation), ['content' => 'Recommend a next step'])->assertCreated();
 
         Http::assertSent(static fn (Request $request): bool => $request['memory'] === ['Prefers short answers']);
+    }
+
+    public function test_chat_forwards_only_the_six_latest_shortened_messages_as_context(): void
+    {
+        $this->configureAi(['services.ai.chat_history_limit' => 20]);
+        $this->fakeChatReply();
+        $user = $this->createUser();
+        Sanctum::actingAs($user);
+        $conversation = $this->createConversation($user);
+        foreach (range(1, 7) as $sequence) {
+            Message::query()->create([
+                'conversation_id' => $conversation->id,
+                'role' => $sequence % 2 ? 'user' : 'assistant',
+                'content' => "Message {$sequence} ".str_repeat('x', 600),
+                'sequence' => $sequence,
+                'created_at' => now()->addSeconds($sequence),
+            ]);
+        }
+
+        $this->postJson($this->messagesUrl($conversation), ['content' => 'Newest question'])->assertCreated();
+
+        Http::assertSent(static function (Request $request): bool {
+            $messages = $request['messages'];
+
+            return count($messages) === 7
+                && $messages[0]['content'] === mb_substr('Message 2 '.str_repeat('x', 600), 0, 500)
+                && $messages[5]['content'] === mb_substr('Message 7 '.str_repeat('x', 600), 0, 500)
+                && $messages[6] === ['role' => 'user', 'content' => 'Newest question'];
+        });
     }
 
     public function test_provider_failure_returns_502_without_persisting_rows(): void
