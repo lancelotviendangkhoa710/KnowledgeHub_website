@@ -68,6 +68,21 @@ Do NOT introduce technologies outside this list without an approved ADR.
 
 ---
 
+## Execution Protocol: Confirm-Before-Act & Conciseness
+
+1. **Default Mode (Plan & Clarify First):** For any task NOT prefixed with `[FAST]` or backed by an explicit execution plan, operate in Read-Only mode first:
+   - Inspect only the relevant files (`Targeted Read`). Do NOT edit files or run state-changing commands yet.
+   - Restate your understanding of the goal and constraints in max 3 short bullet points.
+   - If any requirement or architecture choice is ambiguous, ask 2–3 multiple-choice questions (`A`, `B`, `C`), each with concise **Pros**, **Cons**, and a marked `(Recommended)` default.
+   - Propose a concrete file-by-file execution plan and **STOP**, waiting for explicit user approval (`"Approved"` / `"Proceed"`) before writing code.
+2. **Fast / Pre-Planned Bypass:** If the user prompt starts with `[FAST]` OR provides an explicit step-by-step Handoff Spec (Target Files, Changes, Non-Goals, Verification), skip clarification questions and execute directly according to the spec.
+3. **Code Comments Discipline (No Fluff, No Rationalization):**
+   - Keep code comments strictly minimal and concise (1 short line max).
+   - **NEVER** write comments that narrate *what* obvious code is doing (e.g., `// increment counter`, `// fetch user data`).
+   - Comment **ONLY** non-obvious *why* (business constraints, race-condition guards, or workarounds).
+   - **NEVER** use comments or verbose explanations to justify hacks, partial fixes, or bypassed errors. If an approach fails, report the root cause plainly and stop/re-plan—do not rationalize workarounds.
+4. **Non-Goals Enforcement:** Never refactor unrelated code or touch files outside the agreed plan.
+
 ## 5. Execution, Debugging & Anti-Loop Protocol
 
 ### Standard Flow
