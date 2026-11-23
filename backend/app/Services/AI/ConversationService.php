@@ -18,10 +18,11 @@ class ConversationService
 {
     private const PER_PAGE = 20;
 
-    public function list(User $user): LengthAwarePaginator
+    public function list(User $user, string $mode = 'chat'): LengthAwarePaginator
     {
         return Conversation::query()
             ->where('user_id', $user->id)
+            ->where('mode', $mode)
             ->withCount('messages')
             ->orderByDesc('created_at')
             ->paginate(self::PER_PAGE);
@@ -41,6 +42,7 @@ class ConversationService
         $conversation = Conversation::query()->create([
             'user_id' => $user->id,
             'title' => $attributes['title'] ?? null,
+            'mode' => $attributes['mode'] ?? 'chat',
         ]);
 
         // Re-read with the aggregate so messages_count is part of the original

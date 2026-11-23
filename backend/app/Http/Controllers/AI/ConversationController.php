@@ -18,7 +18,8 @@ class ConversationController extends Controller
     {
         $this->authorize('viewAny', Conversation::class);
 
-        $page = $this->conversations->list($request->user());
+        $mode = $request->validate(['mode' => ['nullable', 'in:chat,notebook']])['mode'] ?? 'chat';
+        $page = $this->conversations->list($request->user(), $mode);
 
         return response()->json([
             'status' => 'success',

@@ -3,10 +3,16 @@
 namespace Tests\Feature\AI;
 
 use App\Models\Conversation;
+use App\Models\NotebookDocument;
+use App\Models\NotebookDocumentChunk;
 use App\Models\User;
+use App\Services\AI\NotebookService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -64,6 +70,63 @@ class ConversationApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('meta.current_page', 2);
+    }
+
+    public function test_list_filters_chat_and_notebook_modes(): void
+    {
+        $owner = $this->createUser();
+        $chat = $this->conversationFor($owner, 'Chat', 'chat');
+        $notebook = $this->conversationFor($owner, 'Notebook', 'notebook');
+        Sanctum::actingAs($owner);
+
+        $this->getJson('/api/ai/conversations')->assertOk()->assertJsonPath('data.0.id', $chat->id)->assertJsonPath('data.0.mode', 'chat');
+        $this->getJson('/api/ai/conversations?mode=notebook')->assertOk()->assertJsonPath('data.0.id', $notebook->id)->assertJsonPath('data.0.mode', 'notebook');
+        $this->getJson('/api/ai/conversations?mode=invalid')->assertUnprocessable()->assertJsonValidationErrors('mode');
+    }
+
+    public function test_first_notebook_document_sets_notebook_title(): void
+    {
+        config()->set('services.ai.url', 'http://ai-service:8000');
+        config()->set('services.ai.token', 'test-token');
+        Storage::fake('notebook');
+        Http::fake(['http://ai-service:8000/v1/notebook/ingest' => Http::response(['dimensions' => 384, 'title' => 'Kiến thức PostgreSQL', 'summary' => 'Summary', 'chunks' => [['position' => 0, 'page' => 1, 'content' => 'PostgreSQL basics.', 'embedding' => array_fill(0, 384, 0.1)]]])]);
+        $owner = $this->createUser();
+        $notebook = $this->conversationFor($owner, null, 'notebook');
+        Sanctum::actingAs($owner);
+
+        $this->post('/api/ai/notebook/documents', ['conversation_id' => $notebook->id, 'documents' => [UploadedFile::fake()->create('postgres.pdf', 10, 'application/pdf')]])
+            ->assertCreated()
+            ->assertJsonPath('data.0.conversation_id', $notebook->id)
+            ->assertJsonPath('data.0.notebook_title', 'Kiến thức PostgreSQL');
+
+        $this->assertDatabaseHas('conversations', ['id' => $notebook->id, 'mode' => 'notebook', 'title' => 'Kiến thức PostgreSQL']);
+    }
+
+    public function test_notebook_query_balances_two_documents_and_deduplicates_citations(): void
+    {
+        config()->set('services.ai.url', 'http://ai-service:8000');
+        config()->set('services.ai.token', 'test-token');
+        $owner = $this->createUser();
+        $notebook = $this->conversationFor($owner, 'Sources', 'notebook');
+        $vector = array_fill(0, 384, 0.1);
+        $first = $this->readyDocument($owner, $notebook, 'copy.pdf', 'First source', $vector);
+        $second = $this->readyDocument($owner, $notebook, 'copy.pdf', 'Second source', $vector);
+        Http::fake([
+            'http://ai-service:8000/v1/cv-rag/embed-query' => Http::response(['embedding' => $vector]),
+            'http://ai-service:8000/v1/notebook/answer' => Http::response(['answer' => 'Grounded synthesis.']),
+        ]);
+
+        $result = app(NotebookService::class)->query($owner, $notebook->id, 'Compare sources', [$first->id, $second->id]);
+
+        $this->assertSame('Grounded synthesis.', $result['answer']);
+        $this->assertCount(1, $result['citations']);
+        Http::assertSent(function ($request): bool {
+            if (! str_ends_with($request->url(), '/v1/notebook/answer')) {
+                return false;
+            }
+            $body = $request->data();
+            return count($body['documents']) === 2 && count(array_unique(array_column($body['chunks'], 'content'))) === 2;
+        });
     }
 
     public function test_list_orders_conversations_newest_first(): void
@@ -285,11 +348,12 @@ class ConversationApiTest extends TestCase
         ]);
     }
 
-    private function conversationFor(User $user, string $title = 'Conversation'): Conversation
+    private function conversationFor(User $user, ?string $title = 'Conversation', string $mode = 'chat'): Conversation
     {
         return Conversation::query()->create([
             'user_id' => $user->id,
             'title' => $title,
+            'mode' => $mode,
         ]);
     }
 
@@ -305,6 +369,13 @@ class ConversationApiTest extends TestCase
         ]);
 
         return $id;
+    }
+
+    private function readyDocument(User $user, Conversation $notebook, string $filename, string $content, array $vector): NotebookDocument
+    {
+        $document = NotebookDocument::query()->create(['user_id' => $user->id, 'conversation_id' => $notebook->id, 'original_filename' => $filename, 'storage_path' => 'notebook/'.Str::uuid().'.pdf', 'size_bytes' => 1, 'status' => 'ready', 'chunk_count' => 1]);
+        NotebookDocumentChunk::query()->create(['document_id' => $document->id, 'position' => 0, 'page' => 1, 'content_hash' => hash('sha256', $content), 'content' => $content, 'embedding' => '['.implode(',', $vector).']']);
+        return $document;
     }
 
     private function assignRole(User $user, string $name): void
