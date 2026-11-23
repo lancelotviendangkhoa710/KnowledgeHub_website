@@ -6,6 +6,8 @@ use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * AI-01 conversation persistence.
@@ -57,11 +59,18 @@ class ConversationService
         return $this->findWithMessageCount((string) $conversation->getKey());
     }
 
-    /**
-     * Hard delete; the messages FK cascades from the conversations row.
-     */
     public function delete(Conversation $conversation): void
     {
+        $documents = $conversation->notebookDocuments()->get(['id', 'storage_path']);
+        foreach ($documents as $document) {
+            try {
+                if (! Storage::disk('notebook')->delete($document->storage_path)) {
+                    throw new RuntimeException('Không thể xóa tệp Notebook.');
+                }
+            } catch (\Throwable) {
+                throw new RuntimeException('Không thể xóa tệp Notebook.');
+            }
+        }
         DB::transaction(fn () => $conversation->delete());
     }
 

@@ -168,12 +168,18 @@ export default function AICompanionPage() {
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notebookRequestVersionRef = useRef(0);
+  const conversationRequestVersionRef = useRef(0);
+  const notebookModeRef = useRef(false);
   const notebookSelectionInitializedRef = useRef(false);
   const restoredNotebookIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeIdRef.current = activeId;
   }, [activeId]);
+
+  useEffect(() => {
+    notebookModeRef.current = notebookMode;
+  }, [notebookMode]);
 
   useEffect(() => {
     if (roadmapMode) roadmapPaneRef.current?.scrollTo({ top: 0 });
@@ -202,6 +208,7 @@ export default function AICompanionPage() {
     const initialMode: ConversationMode = new URLSearchParams(window.location.search).get('mode') === 'notebook'
       ? 'notebook' : 'chat';
     restoredNotebookIdRef.current = window.sessionStorage.getItem(NOTEBOOK_SESSION_KEY);
+    notebookModeRef.current = initialMode === 'notebook';
     if (initialMode === 'notebook') setNotebookMode(true);
     void loadConversations(initialMode);
     // Ẩn chân trang ở màn này (quy tắc body[data-screen] trong globals.css).
@@ -295,10 +302,12 @@ export default function AICompanionPage() {
   }
 
   async function loadConversations(mode: ConversationMode, isRetry = false): Promise<void> {
+    const requestVersion = conversationRequestVersionRef.current + 1;
+    conversationRequestVersionRef.current = requestVersion;
     if (!isRetry) setBooting(true);
     try {
       const response = await aiRoadmapClient.listConversations(mode);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || requestVersion !== conversationRequestVersionRef.current || notebookModeRef.current !== (mode === 'notebook')) return;
       const nextConversations = response.data as CompanionConversation[];
       setConversations(nextConversations);
       const preferredId = mode === 'notebook' ? restoredNotebookIdRef.current : activeIdRef.current;
@@ -309,7 +318,7 @@ export default function AICompanionPage() {
       setActiveId(nextId);
       if (mode === 'notebook' && nextId) void refreshNotebook(nextId);
     } catch (caught) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || requestVersion !== conversationRequestVersionRef.current || notebookModeRef.current !== (mode === 'notebook')) return;
       const apiError = toApiError(caught);
       if (apiError.status === 401) {
         router.replace(LOGIN_REDIRECT);
@@ -330,9 +339,11 @@ export default function AICompanionPage() {
 
   async function refreshConversations(): Promise<void> {
     const mode: ConversationMode = notebookMode ? 'notebook' : 'chat';
+    const requestVersion = conversationRequestVersionRef.current + 1;
+    conversationRequestVersionRef.current = requestVersion;
     try {
       const response = await aiRoadmapClient.listConversations(mode);
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || requestVersion !== conversationRequestVersionRef.current || notebookModeRef.current !== (mode === 'notebook')) return;
       const nextConversations = response.data as CompanionConversation[];
       setConversations(nextConversations);
       const current = activeIdRef.current;
@@ -345,7 +356,7 @@ export default function AICompanionPage() {
         setFailedSend(null);
       }
     } catch (caught) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || requestVersion !== conversationRequestVersionRef.current || notebookModeRef.current !== (mode === 'notebook')) return;
       const apiError = toApiError(caught);
       if (apiError.status === 401) {
         router.replace(LOGIN_REDIRECT);
@@ -397,9 +408,11 @@ export default function AICompanionPage() {
     creatingRef.current = true;
     setCreating(true);
     setError(null);
+    const modeVersion = conversationRequestVersionRef.current;
     try {
       const response = await aiRoadmapClient.createConversation({ mode, title: null });
       const conversation = response.data as CompanionConversation;
+      if (!mountedRef.current || modeVersion !== conversationRequestVersionRef.current || notebookModeRef.current !== (mode === 'notebook')) return null;
       setConversations((current) => [
         conversation,
         ...current.filter((entry) => entry.id !== conversation.id),
@@ -444,7 +457,13 @@ export default function AICompanionPage() {
     if (notebookMode) {
       notebookRequestVersionRef.current += 1;
       notebookSelectionInitializedRef.current = false;
-      void refreshNotebook(conversation.id);
+      setNotebookDocuments([]);
+      setSelectedNotebookDocumentIds([]);
+      setNotebookBusy(true);
+      const requestVersion = notebookRequestVersionRef.current;
+      void refreshNotebook(conversation.id).finally(() => {
+        if (mountedRef.current && requestVersion === notebookRequestVersionRef.current) setNotebookBusy(false);
+      });
     }
   }
 
@@ -502,6 +521,19 @@ export default function AICompanionPage() {
         setNextBeforeId(null);
         setFailedSend(null);
         setRetryNotice(null);
+        if (notebookMode) {
+          notebookRequestVersionRef.current += 1;
+          notebookSelectionInitializedRef.current = false;
+          setNotebookDocuments([]);
+          setSelectedNotebookDocumentIds([]);
+          if (next?.mode === 'notebook') {
+            setNotebookBusy(true);
+            const requestVersion = notebookRequestVersionRef.current;
+            void refreshNotebook(next.id).finally(() => {
+              if (mountedRef.current && requestVersion === notebookRequestVersionRef.current) setNotebookBusy(false);
+            });
+          }
+        }
       }
     } catch (caught) {
       const apiError = toApiError(caught);
@@ -604,20 +636,22 @@ export default function AICompanionPage() {
       try {
         const response = await aiRoadmapClient.queryNotebook(conversationId, content, selectedNotebookDocumentIds);
         if (mountedRef.current) {
-          setMessages((current) => [
-            ...current.filter((message) => message.id !== optimisticId && !response.data.chat_history.some((serverMessage) => serverMessage.id === message.id)),
-            ...response.data.chat_history,
-          ]);
+          if (activeIdRef.current === conversationId) {
+            setMessages((current) => [
+              ...current.filter((message) => message.id !== optimisticId && !response.data.chat_history.some((serverMessage) => serverMessage.id === message.id)),
+              ...response.data.chat_history,
+            ]);
+            setDraft('');
+          }
           setConversations((current) => current.map((conversation) => conversation.id === conversationId ? {
             ...conversation,
             title: response.data.conversation_title ?? conversation.title,
             messages_count: (conversation.messages_count ?? messages.length) + response.data.chat_history.length,
             updated_at: new Date().toISOString(),
           } : conversation));
-          setDraft('');
         }
       } catch (caught) {
-        if (mountedRef.current) {
+        if (mountedRef.current && activeIdRef.current === conversationId) {
           setMessages((current) => current.filter((message) => message.id !== optimisticId));
           setDraft((current) => current || content);
         }
@@ -777,6 +811,7 @@ export default function AICompanionPage() {
       conversationId = notebook.id;
     }
     notebookRequestVersionRef.current += 1;
+    const requestVersion = notebookRequestVersionRef.current;
     const temporary = validFiles.map((file, index) => ({
       id: `upload-${Date.now()}-${index}`,
       original_filename: file.name,
@@ -793,6 +828,7 @@ export default function AICompanionPage() {
     setNotebookBusy(true); setNotebookError(null);
     try {
       const response = await aiRoadmapClient.uploadNotebookDocuments(conversationId, validFiles);
+      if (!mountedRef.current || requestVersion !== notebookRequestVersionRef.current || activeIdRef.current !== conversationId) return;
       setNotebookFiles((current) => ({ ...current, ...Object.fromEntries(response.data.map((document, index) => [document.id, validFiles[index]])) }));
       setNotebookDocuments((current) => [...response.data, ...current.filter((document) => !temporary.some((item) => item.id === document.id))]);
       setSelectedNotebookDocumentIds((current) => [...new Set([...current, ...response.data.filter((document) => document.status === 'ready').map((document) => document.id)])]);
@@ -802,12 +838,15 @@ export default function AICompanionPage() {
       }
       notebookSelectionInitializedRef.current = true;
     } catch {
+      if (!mountedRef.current || requestVersion !== notebookRequestVersionRef.current || activeIdRef.current !== conversationId) return;
       setNotebookDocuments((current) => current.map((document) => temporary.some((item) => item.id === document.id)
         ? { ...document, status: 'failed', error_message: 'Không thể tải lên tài liệu.' }
         : document));
       setNotebookError('Không lưu được PDF Notebook. Kiểm tra tệp PDF và thử lại.');
     }
-    finally { setNotebookBusy(false); }
+    finally {
+      if (mountedRef.current && requestVersion === notebookRequestVersionRef.current && activeIdRef.current === conversationId) setNotebookBusy(false);
+    }
   }
 
   async function deleteNotebookDocument(document: NotebookDocument): Promise<void> {
@@ -818,6 +857,7 @@ export default function AICompanionPage() {
     }
     try {
       await aiRoadmapClient.deleteNotebookDocument(document.id);
+      notebookRequestVersionRef.current += 1;
       setNotebookDocuments((current) => current.filter((item) => item.id !== document.id));
       setSelectedNotebookDocumentIds((current) => current.filter((id) => id !== document.id));
     } catch (caught) {
@@ -838,6 +878,8 @@ export default function AICompanionPage() {
   function selectNotebookMode(nextNotebookMode: boolean): void {
     if (nextNotebookMode === notebookMode) return;
     setNotebookMode(nextNotebookMode);
+    notebookModeRef.current = nextNotebookMode;
+    conversationRequestVersionRef.current += 1;
     notebookRequestVersionRef.current += 1;
     notebookSelectionInitializedRef.current = false;
     setActiveId(null);
@@ -865,7 +907,7 @@ export default function AICompanionPage() {
     );
   }
 
-  const composerDisabled = sending || creating || chatDisabled;
+  const composerDisabled = sending || creating || chatDisabled || (notebookMode && notebookBusy);
   const canSend = !composerDisabled && draft.trim().length > 0 && (!notebookMode || selectedNotebookDocumentIds.length > 0);
   const composerPlaceholder = chatDisabled
     ? 'Trò chuyện với AI chưa được bật.'

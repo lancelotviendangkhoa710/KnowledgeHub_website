@@ -4,6 +4,8 @@ import hashlib
 import hmac
 import json
 import os
+from asyncio import to_thread
+from functools import lru_cache
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
@@ -11,6 +13,7 @@ from langchain_core.documents import Document
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from openai import APITimeoutError
 from pydantic import BaseModel, Field
 
 MODEL = "intfloat/multilingual-e5-small"
@@ -28,6 +31,7 @@ def _authorize(token: str | None) -> None:
         raise HTTPException(401, {"code": "unauthorized"})
 
 
+@lru_cache(maxsize=1)
 def _embedding_model():
     try:
         from sentence_transformers import SentenceTransformer
@@ -100,8 +104,8 @@ def _chat_model() -> ChatOpenAI:
 @router.post("/index")
 async def index(data: IndexInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None):
     _authorize(auth_header)
-    chunks = _chunks(data.pages)
-    vectors = _embed(["passage: " + str(chunk["content"]) for chunk in chunks])
+    chunks = await to_thread(_chunks, data.pages)
+    vectors = await to_thread(_embed, ["passage: " + str(chunk["content"]) for chunk in chunks])
     source = "\f".join(page.text for page in data.pages)
     return {"model": MODEL, "revision": REVISION, "dimensions": DIMENSIONS,
             "content_hash": hashlib.sha256(source.encode()).hexdigest(),
@@ -111,7 +115,8 @@ async def index(data: IndexInput, auth_header: Annotated[str | None, Header(alia
 @router.post("/embed-query")
 async def embed_query(data: QueryInput, auth_header: Annotated[str | None, Header(alias="X-Service-Token")] = None):
     _authorize(auth_header)
-    return {"model": MODEL, "revision": REVISION, "embedding": _embed(["query: " + data.query])[0]}
+    vector = await to_thread(_embed, ["query: " + data.query])
+    return {"model": MODEL, "revision": REVISION, "embedding": vector[0]}
 
 
 @router.post("/summarize")
@@ -128,7 +133,7 @@ async def summarize(data: SummaryInput, auth_header: Annotated[str | None, Heade
         result = SummaryOutput.model_validate(json.loads(raw))
     except HTTPException:
         raise
-    except TimeoutError:
+    except (APITimeoutError, TimeoutError):
         raise HTTPException(504, {"code": "timeout"}) from None
     except Exception:
         raise HTTPException(502, {"code": "provider_unavailable"}) from None
@@ -147,7 +152,7 @@ async def answer(data: AnswerInput, auth_header: Annotated[str | None, Header(al
         ])
     except HTTPException:
         raise
-    except TimeoutError:
+    except (APITimeoutError, TimeoutError):
         raise HTTPException(504, {"code": "timeout"}) from None
     except Exception:
         raise HTTPException(502, {"code": "provider_unavailable"}) from None

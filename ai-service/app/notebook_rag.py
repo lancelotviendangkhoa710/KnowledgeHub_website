@@ -1,5 +1,8 @@
 """LangChain Mini-RAG: PDF loader -> splitter -> 384-dim embedding -> answer."""
-import hashlib, hmac, json, os
+import asyncio
+import hmac
+import json
+import os
 from io import BytesIO
 from typing import Annotated
 from fastapi import APIRouter, File, Header, HTTPException, UploadFile
@@ -35,11 +38,15 @@ def model():
     if not key: raise HTTPException(503, {'code':'provider_configuration'})
     return ChatOpenAI(model=os.getenv('AI_MODEL','deepseek-flash'), api_key=key, base_url='https://api.deepseek.com', temperature=0, max_retries=0, timeout=35)
 
+def index_document(content):
+    chunks = splitter(loader(content))
+    return chunks, embed(['passage: '+chunk.page_content for chunk in chunks])
+
 @router.post('/ingest')
 async def ingest(file: UploadFile=File(...), auth_header: Annotated[str|None,Header(alias='X-Service-Token')]=None):
     auth(auth_header); content=await file.read(15*1024*1024+1); await file.close()
     if len(content)>15*1024*1024: raise HTTPException(413, {'code':'document_too_large'})
-    chunks=splitter(loader(content)); vectors=embed(['passage: '+c.page_content for c in chunks])
+    chunks, vectors = await asyncio.to_thread(index_document, content)
     text='\n'.join(c.page_content for c in chunks)
     reply=await model().ainvoke([SystemMessage(content='Return only JSON with a concise grounded title and summary.'),HumanMessage(content=text[:12000])])
     try: meta=json.loads(reply.content)

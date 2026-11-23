@@ -27,7 +27,8 @@ app = FastAPI(title="KnowledgeHub AI service", docs_url=None, redoc_url=None)
 app.include_router(agent_router)
 app.include_router(cv_rag_router)
 app.include_router(notebook_rag_router)
-app.mount("/rag-lite", rag_lite_app)
+if os.getenv("RAG_LITE_ENABLED", "").lower() == "true":
+    app.mount("/rag-lite", rag_lite_app)
 
 
 def _parse_cv_worker(content: bytes, output) -> None:

@@ -116,14 +116,15 @@ class ConversationApiTest extends TestCase
         ]);
 
         Sanctum::actingAs($owner);
-        $this->postJson('/api/ai/notebook/query', ['conversation_id' => $notebook->id, 'question' => 'Compare sources', 'document_ids' => [$first->id, $second->id]])
+        $response = $this->postJson('/api/ai/notebook/query', ['conversation_id' => $notebook->id, 'question' => 'Compare sources', 'document_ids' => [$first->id, $second->id]])
             ->assertOk()
             ->assertJsonPath('data.answer', 'Grounded synthesis.')
-            ->assertJsonCount(1, 'data.citations')
+            ->assertJsonCount(2, 'data.citations')
             ->assertJsonCount(2, 'data.chat_history')
             ->assertJsonPath('data.chat_history.0.role', 'user')
             ->assertJsonPath('data.chat_history.1.role', 'assistant')
             ->assertJsonPath('data.chat_history.1.metadata.citations.0.filename', 'copy.pdf');
+        $this->assertEqualsCanonicalizing([$first->id, $second->id], array_column($response->json('data.citations'), 'document_id'));
         $this->assertDatabaseHas('messages', ['conversation_id' => $notebook->id, 'role' => 'user', 'content' => 'Compare sources']);
         $this->assertDatabaseHas('messages', ['conversation_id' => $notebook->id, 'role' => 'assistant', 'content' => 'Grounded synthesis.']);
         Http::assertSent(function ($request): bool {
@@ -263,6 +264,21 @@ class ConversationApiTest extends TestCase
         $this->deleteJson("/api/ai/conversations/{$foreign->id}")->assertNotFound();
         $this->assertDatabaseHas('conversations', ['id' => $foreign->id]);
         $this->assertDatabaseHas('messages', ['id' => $foreignMessage]);
+    }
+
+    public function test_owner_delete_removes_notebook_storage_before_document_cascade(): void
+    {
+        Storage::fake('notebook');
+        $owner = $this->createUser();
+        $notebook = $this->conversationFor($owner, 'Notebook', 'notebook');
+        $document = $this->readyDocument($owner, $notebook, 'source.pdf', 'Source', array_fill(0, 384, 0.1));
+        Storage::disk('notebook')->put($document->storage_path, 'pdf');
+        Sanctum::actingAs($owner);
+
+        $this->deleteJson("/api/ai/conversations/{$notebook->id}")->assertOk();
+
+        Storage::disk('notebook')->assertMissing($document->storage_path);
+        $this->assertDatabaseMissing('notebook_documents', ['id' => $document->id]);
     }
 
     public function test_validation_rejects_invalid_titles(): void
