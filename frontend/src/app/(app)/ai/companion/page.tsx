@@ -585,15 +585,30 @@ export default function AICompanionPage() {
         setError('Chọn ít nhất một tài liệu sẵn sàng trước khi hỏi.');
         return;
       }
+      const conversationId = activeIdRef.current;
+      if (!conversationId || active?.mode !== 'notebook') return;
+      const optimisticId = `pending-${createClientMessageId()}`;
+      const optimistic: AIMessage = {
+        id: optimisticId,
+        conversation_id: conversationId,
+        role: 'user',
+        content,
+        metadata: null,
+        created_at: new Date().toISOString(),
+      };
       sendingRef.current = true;
       setSending(true);
       setError(null);
+      setDraft('');
+      setMessages((current) => [...current, optimistic]);
       try {
-        if (!activeIdRef.current || active?.mode !== 'notebook') return;
-        const response = await aiRoadmapClient.queryNotebook(activeIdRef.current, content, selectedNotebookDocumentIds);
+        const response = await aiRoadmapClient.queryNotebook(conversationId, content, selectedNotebookDocumentIds);
         if (mountedRef.current) {
-          setMessages((current) => [...current, ...response.data.chat_history.filter((message) => !current.some((existing) => existing.id === message.id))]);
-          setConversations((current) => current.map((conversation) => conversation.id === activeIdRef.current ? {
+          setMessages((current) => [
+            ...current.filter((message) => message.id !== optimisticId && !response.data.chat_history.some((serverMessage) => serverMessage.id === message.id)),
+            ...response.data.chat_history,
+          ]);
+          setConversations((current) => current.map((conversation) => conversation.id === conversationId ? {
             ...conversation,
             title: response.data.conversation_title ?? conversation.title,
             messages_count: (conversation.messages_count ?? messages.length) + response.data.chat_history.length,
@@ -602,6 +617,10 @@ export default function AICompanionPage() {
           setDraft('');
         }
       } catch (caught) {
+        if (mountedRef.current) {
+          setMessages((current) => current.filter((message) => message.id !== optimisticId));
+          setDraft((current) => current || content);
+        }
         handleApiError(caught, 'Không thể hỏi Notebook. Vui lòng thử lại.');
       } finally {
         sendingRef.current = false;
