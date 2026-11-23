@@ -13,6 +13,8 @@ export default function MyRoadmapsPage() {
   const router = useRouter();
   const [roadmaps, setRoadmaps] = useState<LearningRoadmap[]>([]);
   const [loading, setLoading] = useState(true);
+  // Chỉ báo "chưa có lộ trình" sau khi đã tải thành công ít nhất một lần.
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [query, setQuery] = useState('');
@@ -36,6 +38,7 @@ export default function MyRoadmapsPage() {
         return;
       }
       setRoadmaps(result.data);
+      setLoaded(true);
     } catch (caught) {
       if ((caught as { status?: number }).status === 401) {
         setRoadmaps([]);
@@ -77,7 +80,7 @@ export default function MyRoadmapsPage() {
   // lộ trình AI được đánh dấu bằng nhãn AI ở góc phải thẻ (RoadmapCard).
   const term = query.trim().toLowerCase();
   const sorted = [...roadmaps].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-  const shown = sorted.filter((roadmap) => !term || `${roadmap.title} ${roadmap.goal}`.toLowerCase().includes(term));
+  const shown = sorted.filter((roadmap) => !term || roadmap.title.toLowerCase().includes(term) || roadmap.goal.toLowerCase().includes(term));
   const aiCount = roadmaps.filter((roadmap) => roadmap.origin === 'ai').length;
 
   function renderList(entries: LearningRoadmap[]) {
@@ -116,7 +119,7 @@ export default function MyRoadmapsPage() {
       {error && <div className={styles.error} role="alert"><span>{error}</span><button type="button" onClick={() => void load()}>Thử lại</button></div>}
       {loading ? <p role="status" className={styles.state}>Đang tải lộ trình của bạn…</p> : (
         <section aria-label="Danh sách lộ trình của tôi">
-          {roadmaps.length === 0 ? (
+          {!loaded ? null : roadmaps.length === 0 ? (
             <p className={styles.emptyMain}>
               Chưa có lộ trình nào. <Link href="/learning/my-roadmaps/new">Tự tạo lộ trình</Link>,{' '}
               <Link href="/learning/roadmaps">dùng một lộ trình mẫu</Link> hoặc <Link href="/ai/companion">nhờ trợ lý AI</Link>.

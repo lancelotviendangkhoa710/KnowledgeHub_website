@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/lib/auth';
 import { learningProgressClient } from '@/lib/learningProgressClient';
-import { locallyCompletedArticles } from '@/lib/roadmapCourseSync';
+import { ignoredSyncItems, ignoreSyncItems, locallyCompletedArticles } from '@/lib/roadmapCourseSync';
+import CourseSyncPanel from './CourseSyncPanel';
 import type { LearningRoadmap, RoadmapItem, RoadmapItemStatus } from '@/types/learning';
 import RoadmapActivity from './RoadmapActivity';
 import RoadmapSteps from './RoadmapSteps';
@@ -15,6 +16,16 @@ import p from './profile.module.css';
 import s from './roadmapDetail.module.css';
 
 const TAB_IDS = ['overview', 'steps', 'activity'] as const;
+
+/** Thay danh sách bước và tính lại số đếm tổng hợp (completed_count được ưu tiên khi hiển thị). */
+function withItems(roadmap: LearningRoadmap, items: RoadmapItem[]): LearningRoadmap {
+  return {
+    ...roadmap,
+    items,
+    items_count: items.length,
+    completed_count: items.filter((item) => item.status === 'completed').length,
+  };
+}
 type DetailTab = (typeof TAB_IDS)[number];
 
 /**
@@ -27,31 +38,41 @@ export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: Lear
   const [progressError, setProgressError] = useState<string | null>(null);
   const isOwner = Boolean(onChange) && roadmap.user_id === getCurrentUser()?.id;
   const coverage = roadmap.origin === 'ai' ? roadmap.coverage : null;
-  // Bước gắn khóa học đã được đánh dấu hoàn thành ở trang bài học (trước khi có đồng bộ) nhưng tiến độ chưa đổi.
+  // Bước gắn khóa học đã được đánh dấu hoàn thành ở trang bài học nhưng tiến độ chưa đổi (trừ bước đã bỏ qua gợi ý).
   const [pendingSync, setPendingSync] = useState<RoadmapItem[]>([]);
+  const [ignoredVersion, setIgnoredVersion] = useState(0);
   useEffect(() => {
     if (!isOwner) { setPendingSync([]); return; }
     const done = locallyCompletedArticles();
-    setPendingSync(roadmap.items.filter((item) => item.article_id && done.has(item.article_id) && item.status !== 'completed' && item.status !== 'skipped'));
-  }, [isOwner, roadmap.items]);
+    const ignored = ignoredSyncItems();
+    setPendingSync(roadmap.items.filter((item) => item.article_id && done.has(item.article_id) && !ignored.has(item.id)
+      && item.status !== 'completed' && item.status !== 'skipped'));
+  }, [isOwner, roadmap.items, ignoredVersion]);
 
-  async function syncFromCourses() {
+  /** Đánh dấu các bước đã chọn là "Đã xong"; chỉ tính các bước ghi thành công, bước lỗi vẫn ở lại để thử lại. */
+  async function confirmSync(ids: string[]) {
     if (busyId || !onChange) return;
     setBusyId('sync');
     setProgressError(null);
     let items = roadmap.items;
-    try {
-      for (const item of pendingSync) {
-        await learningProgressClient.update(item.id, 'completed');
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await learningProgressClient.update(id, 'completed');
         const at = new Date().toISOString();
-        items = items.map((entry) => (entry.id === item.id ? { ...entry, status: 'completed', completed_at: at } : entry));
+        items = items.map((entry) => (entry.id === id ? { ...entry, status: 'completed' as const, completed_at: at } : entry));
+      } catch {
+        failed += 1;
       }
-    } catch {
-      setProgressError('Không cập nhật được tiến độ. Vui lòng thử lại.');
-    } finally {
-      onChange({ ...roadmap, items });
-      setBusyId(null);
     }
+    if (failed > 0) setProgressError(`Chưa cập nhật được ${failed} bước. Bạn có thể thử lại.`);
+    onChange(withItems(roadmap, items));
+    setBusyId(null);
+  }
+
+  function ignoreSync(ids: string[]) {
+    ignoreSyncItems(ids);
+    setIgnoredVersion((value) => value + 1);
   }
 
   async function changeProgress(item: RoadmapItem, next: RoadmapItemStatus) {
@@ -62,7 +83,7 @@ export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: Lear
       const result = await learningProgressClient.update(item.id, next);
       const status = result.data?.status ?? next;
       const completedAt = status === 'completed' ? (item.completed_at ?? new Date().toISOString()) : null;
-      onChange({ ...roadmap, items: roadmap.items.map((entry) => (entry.id === item.id ? { ...entry, status, completed_at: completedAt } : entry)) });
+      onChange(withItems(roadmap, roadmap.items.map((entry) => (entry.id === item.id ? { ...entry, status, completed_at: completedAt } : entry))));
     } catch {
       setProgressError('Không cập nhật được tiến độ. Vui lòng thử lại.');
     } finally {
@@ -101,13 +122,10 @@ export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: Lear
       </header>
 
       {pendingSync.length > 0 && (
-        <div className={s.syncNote} role="status">
-          <span>Bạn đã đánh dấu hoàn thành {pendingSync.length} khóa học trong lộ trình này ở trang bài học, nhưng bước tương ứng chưa được cập nhật.</span>
-          <button type="button" className={`${p.btn} ${p.btnSm}`} disabled={busyId !== null} onClick={() => void syncFromCourses()}>
-            {busyId === 'sync' ? 'Đang cập nhật…' : `Đánh dấu ${pendingSync.length} bước đã xong`}
-          </button>
-        </div>
+        <CourseSyncPanel items={pendingSync} busy={busyId !== null} onConfirm={(ids) => void confirmSync(ids)} onIgnore={ignoreSync} />
       )}
+      {/* Đặt ngoài các tab để lỗi luôn hiện, kể cả khi đang ở tab khác. */}
+      {progressError && <p role="alert" className={s.alert}>{progressError}</p>}
 
       <Tabs<DetailTab>
         label="Nội dung lộ trình"
@@ -159,7 +177,6 @@ export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: Lear
         </article>
       </div>
       <div role="tabpanel" id="roadmap-panel-steps" aria-labelledby="roadmap-tab-steps" tabIndex={0} hidden={tab !== 'steps'} className={p.panel}>
-        {progressError && <p role="alert" className={s.alert}>{progressError}</p>}
         <RoadmapSteps roadmap={roadmap} onProgress={isOwner ? (item, next) => void changeProgress(item, next) : undefined} busyId={busyId} />
       </div>
       <div role="tabpanel" id="roadmap-panel-activity" aria-labelledby="roadmap-tab-activity" tabIndex={0} hidden={tab !== 'activity'} className={p.panel}>

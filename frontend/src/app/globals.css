@@ -27,6 +27,9 @@
   --mono:var(--f-mono,'JetBrains Mono'),ui-monospace,Consolas,monospace;
   --code-bg:#12141C; --code-ink:#DDE2F0; --code-mute:#8E97AE; --code-line:#262A38; --code-ok:#6FD9AE; /* khối code luôn tối ở cả hai chế độ, như màn bài học */
   --r-card:10px; --r-pill:999px; --head:64px;
+  /* Thang khoảng cách và cỡ chữ nhỏ dùng chung (không đổi theo giao diện sáng/tối) */
+  --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px;
+  --fs-xs:12px; --fs-sm:13px; --fs-md:14px; --r-ctl:8px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
