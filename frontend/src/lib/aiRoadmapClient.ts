@@ -1,5 +1,5 @@
 import { api, sessionFetch } from '@/lib/api';
-import type { AIConversation, PaginatedEnvelope } from '@/types/ai';
+import type { AIConversation, AIMessage, PaginatedEnvelope } from '@/types/ai';
 import type { CVAnalysis, ExternalLearningResource, RoadmapCoverage, LearningRoadmap } from '@/types/learning';
 
 export interface CompanionRoadmapDraftItem {
@@ -84,6 +84,8 @@ export interface NotebookDocument {
 export interface NotebookQueryResult {
   answer: string;
   citations: Array<{ document_id: string; filename: string; page: number }>;
+  chat_history: AIMessage[];
+  conversation_title: string | null;
 }
 
 type NotebookEnvelope<T> = { status: 'success'; data: T };

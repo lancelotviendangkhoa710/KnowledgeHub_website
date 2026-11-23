@@ -10,13 +10,14 @@ import { LogoMark } from '@/components/layout/Logo';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
 import { aiRoadmapClient } from '@/lib/aiRoadmapClient';
-import type { ConversationMode, NotebookDocument, NotebookQueryResult } from '@/lib/aiRoadmapClient';
+import type { ConversationMode, NotebookDocument } from '@/lib/aiRoadmapClient';
 import type { AIConversation, AIMessage, SendMessageResult } from '@/types/ai';
 import styles from './companion.module.css';
 
 const MOBILE_QUERY = '(max-width: 980px)';
 const LOGIN_REDIRECT = '/login?redirect=%2Fai%2Fcompanion';
 const MAX_MESSAGE_LENGTH = 8000;
+const NOTEBOOK_SESSION_KEY = 'knowledgehub:active-notebook';
 const STALE_CONVERSATION_MESSAGE = 'Cuộc trò chuyện này không còn tồn tại, có thể đã bị xóa.';
 const ASSISTANT_STARTING_MESSAGE = 'Trợ lý đang khởi động, vui lòng thử lại sau ít phút.';
 
@@ -106,6 +107,20 @@ function messagesLabel(count: number): string {
   return `${count} tin nhắn`;
 }
 
+function conversationLabel(conversation: CompanionConversation | null): string {
+  if (!conversation?.title) return conversation?.mode === 'notebook' ? 'Notebook mới' : 'Cuộc trò chuyện mới';
+  return conversation.title;
+}
+
+function citationsFor(message: AIMessage): Array<{ filename: string; page: number }> {
+  const citations = message.metadata?.citations;
+  if (!Array.isArray(citations)) return [];
+  return citations.filter((citation): citation is { filename: string; page: number } => (
+    typeof citation === 'object' && citation !== null
+    && typeof citation.filename === 'string' && typeof citation.page === 'number'
+  )).filter((citation, index, all) => all.findIndex((entry) => entry.filename === citation.filename && entry.page === citation.page) === index);
+}
+
 export default function AICompanionPage() {
   const router = useRouter();
 
@@ -128,7 +143,6 @@ export default function AICompanionPage() {
   const [notebookMode, setNotebookMode] = useState(false);
   const [notebookDocuments, setNotebookDocuments] = useState<NotebookDocument[]>([]);
   const [selectedNotebookDocumentIds, setSelectedNotebookDocumentIds] = useState<string[]>([]);
-  const [notebookAnswer, setNotebookAnswer] = useState<(NotebookQueryResult & { question: string }) | null>(null);
   const [notebookFiles, setNotebookFiles] = useState<Record<string, File>>({});
   const [notebookBusy, setNotebookBusy] = useState(false);
   const [notebookSourcesOpen, setNotebookSourcesOpen] = useState(false);
@@ -155,6 +169,7 @@ export default function AICompanionPage() {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notebookRequestVersionRef = useRef(0);
   const notebookSelectionInitializedRef = useRef(false);
+  const restoredNotebookIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -186,6 +201,7 @@ export default function AICompanionPage() {
     }
     const initialMode: ConversationMode = new URLSearchParams(window.location.search).get('mode') === 'notebook'
       ? 'notebook' : 'chat';
+    restoredNotebookIdRef.current = window.sessionStorage.getItem(NOTEBOOK_SESSION_KEY);
     if (initialMode === 'notebook') setNotebookMode(true);
     void loadConversations(initialMode);
     // Ẩn chân trang ở màn này (quy tắc body[data-screen] trong globals.css).
@@ -204,7 +220,7 @@ export default function AICompanionPage() {
   useEffect(() => {
     setFailedSend(null);
     setRetryNotice(null);
-    if (!activeId || notebookMode) {
+    if (!activeId) {
       messageRequestRef.current += 1;
       setMessages([]);
       setHasMore(false);
@@ -285,12 +301,12 @@ export default function AICompanionPage() {
       if (!mountedRef.current) return;
       const nextConversations = response.data as CompanionConversation[];
       setConversations(nextConversations);
-      setActiveId((current) => {
-        if (current && nextConversations.some((conversation) => conversation.id === current)) return current;
-        return isRetry ? current : (nextConversations[0]?.id ?? null);
-      });
-      const nextId = activeIdRef.current && nextConversations.some((conversation) => conversation.id === activeIdRef.current)
-        ? activeIdRef.current : (isRetry ? null : nextConversations[0]?.id ?? null);
+      const preferredId = mode === 'notebook' ? restoredNotebookIdRef.current : activeIdRef.current;
+      const nextId = preferredId && nextConversations.some((conversation) => conversation.id === preferredId)
+        ? preferredId
+        : (mode === 'notebook' || isRetry ? null : nextConversations[0]?.id ?? null);
+      activeIdRef.current = nextId;
+      setActiveId(nextId);
       if (mode === 'notebook' && nextId) void refreshNotebook(nextId);
     } catch (caught) {
       if (!mountedRef.current) return;
@@ -382,7 +398,7 @@ export default function AICompanionPage() {
     setCreating(true);
     setError(null);
     try {
-      const response = await aiRoadmapClient.createConversation({ mode, ...(mode === 'notebook' ? { title: null } : {}) });
+      const response = await aiRoadmapClient.createConversation({ mode, title: null });
       const conversation = response.data as CompanionConversation;
       setConversations((current) => [
         conversation,
@@ -390,6 +406,7 @@ export default function AICompanionPage() {
       ]);
       skipMessagesLoadRef.current = conversation.id;
       activeIdRef.current = conversation.id;
+      if (mode === 'notebook') window.sessionStorage.setItem(NOTEBOOK_SESSION_KEY, conversation.id);
       setActiveId(conversation.id);
       setMessages([]);
       setHasMore(false);
@@ -401,7 +418,6 @@ export default function AICompanionPage() {
         notebookSelectionInitializedRef.current = false;
         setNotebookDocuments([]);
         setSelectedNotebookDocumentIds([]);
-        setNotebookAnswer(null);
       }
       setSidebarOpen(false);
       return conversation;
@@ -421,13 +437,13 @@ export default function AICompanionPage() {
       setNextBeforeId(null);
     }
     activeIdRef.current = conversation.id;
+    if (notebookMode) window.sessionStorage.setItem(NOTEBOOK_SESSION_KEY, conversation.id);
     setActiveId(conversation.id);
     setSidebarOpen(false);
     setError(null);
     if (notebookMode) {
       notebookRequestVersionRef.current += 1;
       notebookSelectionInitializedRef.current = false;
-      setNotebookAnswer(null);
       void refreshNotebook(conversation.id);
     }
   }
@@ -468,7 +484,7 @@ export default function AICompanionPage() {
   }
 
   async function deleteConversation(conversation: CompanionConversation): Promise<void> {
-    if (!window.confirm(`Xóa cuộc trò chuyện "${conversation.title ?? 'Chưa đặt tên'}" cùng các tin nhắn của nó?`)) {
+    if (!window.confirm(`Xóa cuộc trò chuyện "${conversationLabel(conversation)}" cùng các tin nhắn của nó?`)) {
       return;
     }
     setError(null);
@@ -477,6 +493,7 @@ export default function AICompanionPage() {
       const remaining = conversations.filter((entry) => entry.id !== conversation.id);
       setConversations(remaining);
       if (activeIdRef.current === conversation.id) {
+        if (conversation.mode === 'notebook') window.sessionStorage.removeItem(NOTEBOOK_SESSION_KEY);
         const next = remaining[0] ?? null;
         activeIdRef.current = next?.id ?? null;
         setActiveId(next?.id ?? null);
@@ -544,7 +561,7 @@ export default function AICompanionPage() {
       conversation.id === conversationId
         ? {
             ...conversation,
-            title: conversation.title ?? content.slice(0, 80),
+            title: (result as SendMessageResult & { conversation_title?: string | null }).conversation_title ?? conversation.title ?? content.slice(0, 80),
             messages_count: (conversation.messages_count ?? 0) + 2,
             updated_at: new Date().toISOString(),
           }
@@ -572,13 +589,16 @@ export default function AICompanionPage() {
       setSending(true);
       setError(null);
       try {
-        if (!activeIdRef.current || active?.mode !== 'notebook') {
-          setError('Chọn một Notebook trước khi hỏi.');
-          return;
-        }
+        if (!activeIdRef.current || active?.mode !== 'notebook') return;
         const response = await aiRoadmapClient.queryNotebook(activeIdRef.current, content, selectedNotebookDocumentIds);
         if (mountedRef.current) {
-          setNotebookAnswer({ question: content, ...response.data });
+          setMessages((current) => [...current, ...response.data.chat_history.filter((message) => !current.some((existing) => existing.id === message.id))]);
+          setConversations((current) => current.map((conversation) => conversation.id === activeIdRef.current ? {
+            ...conversation,
+            title: response.data.conversation_title ?? conversation.title,
+            messages_count: (conversation.messages_count ?? messages.length) + response.data.chat_history.length,
+            updated_at: new Date().toISOString(),
+          } : conversation));
           setDraft('');
         }
       } catch (caught) {
@@ -803,10 +823,10 @@ export default function AICompanionPage() {
     notebookSelectionInitializedRef.current = false;
     setActiveId(null);
     activeIdRef.current = null;
+    if (nextNotebookMode) window.sessionStorage.removeItem(NOTEBOOK_SESSION_KEY);
     setMessages([]);
     setNotebookDocuments([]);
     setSelectedNotebookDocumentIds([]);
-    setNotebookAnswer(null);
     if (!nextNotebookMode) {
       setNotebookSourcesOpen(false);
     }
@@ -827,19 +847,15 @@ export default function AICompanionPage() {
   }
 
   const composerDisabled = sending || creating || chatDisabled;
-  const canSend = !composerDisabled && draft.trim().length > 0;
+  const canSend = !composerDisabled && draft.trim().length > 0 && (!notebookMode || selectedNotebookDocumentIds.length > 0);
   const composerPlaceholder = chatDisabled
     ? 'Trò chuyện với AI chưa được bật.'
     : notebookMode ? 'Hỏi Notebook về tài liệu PDF của bạn' : 'Hỏi về bài học hoặc lộ trình';
   const showRetryAction = Boolean(failedSend && failedSend.conversationId === activeId);
   const readyNotebookDocuments = notebookDocuments.filter((document) => document.status === 'ready');
   const overviewDocument = readyNotebookDocuments[0] ?? null;
-  const selectedChunkCount = readyNotebookDocuments
-    .filter((document) => selectedNotebookDocumentIds.includes(document.id))
-    .reduce((total, document) => total + document.chunk_count, 0);
-  const notebookCitations = notebookAnswer?.citations.filter((citation, index, citations) => (
-    citations.findIndex((entry) => entry.filename === citation.filename && entry.page === citation.page) === index
-  )) ?? [];
+  const selectedNotebookSourceCount = readyNotebookDocuments.filter((document) => selectedNotebookDocumentIds.includes(document.id)).length;
+  const notebookSourceLabel = notebookDocuments.length ? `${selectedNotebookSourceCount}/${notebookDocuments.length} nguồn` : 'Thêm nguồn';
   const openRoadmapForm = () => {
     roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null;
     setRoadmapMode(true);
@@ -878,6 +894,11 @@ export default function AICompanionPage() {
             </button>
           </div>
 
+          <div className={`${styles.modeToggle} ${styles.drawerModeToggle}`} role="group" aria-label="Chế độ trò chuyện">
+            <button type="button" className={!notebookMode ? styles.modeToggleActive : undefined} aria-pressed={!notebookMode} onClick={() => selectNotebookMode(false)}>Trò chuyện</button>
+            <button type="button" className={notebookMode ? styles.modeToggleActive : undefined} aria-pressed={notebookMode} onClick={() => selectNotebookMode(true)}>Notebook</button>
+          </div>
+
           <button
             type="button"
             className={styles.btn}
@@ -898,7 +919,7 @@ export default function AICompanionPage() {
               <ul className={styles.convList}>
                 {conversations.map((conversation) => {
                   const isActive = activeId === conversation.id;
-                  const title = conversation.title ?? 'Chưa đặt tên';
+                  const title = conversationLabel(conversation);
                   return (
                     <li key={conversation.id} className={`${styles.convItem} ${isActive ? styles.convItemActive : ''}`}>
                       {renamingId === conversation.id ? (
@@ -975,8 +996,10 @@ export default function AICompanionPage() {
             >
               <Icon size={18}><path d="M3 6h18M3 12h18M3 18h18" /></Icon>
             </button>
+            <div className={styles.chatHeadSpacer} />
+            <div className={styles.conversationHead}>
             <div className={styles.chatHeading}>
-              <h1>{active ? (active.title ?? 'Chưa đặt tên') : 'Trợ lý AI'}</h1>
+              <h1>{active ? conversationLabel(active) : 'Trợ lý AI'}</h1>
               <small>
                 {active
                   ? `${messagesLabel(active.messages_count ?? messages.length)}, cập nhật ${formatRelativeTime(active.updated_at ?? active.created_at)}`
@@ -997,6 +1020,7 @@ export default function AICompanionPage() {
                   <path d="M19 6l-1 14H6L5 6" />
                 </Icon>
               </button>
+            </div>
             </div>
           </div>
 
@@ -1046,12 +1070,12 @@ export default function AICompanionPage() {
               tabIndex={0}
             >
               <div className={styles.threadIn}>
-                {notebookMode ? <>
+                {notebookMode && <>
                   {overviewDocument ? (
                     <section className={styles.notebookOverview} aria-label="Tổng quan Notebook">
                       <p>Tổng quan</p>
                       <h2>{overviewDocument.title || overviewDocument.original_filename}</h2>
-                      <small>{readyNotebookDocuments.length} nguồn · {selectedChunkCount} đoạn đã chọn</small>
+                      <small>{notebookSourceLabel}</small>
                       <div>{overviewDocument.summary || 'Tài liệu đã sẵn sàng để hỏi đáp.'}</div>
                     </section>
                   ) : (
@@ -1060,14 +1084,7 @@ export default function AICompanionPage() {
                       <p>Mở Nguồn để tải một hoặc nhiều tệp PDF, rồi chọn tài liệu dùng khi hỏi.</p>
                     </div>
                   )}
-                  {notebookAnswer && (
-                    <section className={styles.notebookAnswer} aria-label="Câu trả lời Notebook">
-                      <div className={styles.me}>{notebookAnswer.question}</div>
-                      <div className={styles.botTxt}><AssistantMarkdown content={notebookAnswer.answer} /></div>
-                      {notebookCitations.length > 0 && <div className={styles.citations}><strong>Nguồn</strong>{notebookCitations.map((citation) => <span key={`${citation.filename}-${citation.page}`}>{citation.filename} · trang {citation.page}</span>)}</div>}
-                    </section>
-                  )}
-                </> : <>
+                </>}
                 {active && hasMore && (
                   <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm} ${styles.loadEarlier}`} onClick={() => void loadMessages(active.id, nextBeforeId)} disabled={loadingMessages}>
                     {loadingMessages ? 'Đang tải...' : 'Tải tin nhắn cũ hơn'}
@@ -1105,12 +1122,12 @@ export default function AICompanionPage() {
                         <span className={styles.botAv} aria-hidden="true"><LogoMark size={22} /></span>
                         <div className={styles.botTxt}>
                           <AssistantMarkdown content={message.content} />
+                          {citationsFor(message).length > 0 && <div className={styles.citations}><strong>Nguồn</strong>{citationsFor(message).map((citation) => <span key={`${citation.filename}-${citation.page}`}>{citation.filename} · trang {citation.page}</span>)}</div>}
                         </div>
                       </div>
                     );
                   })
                 )}
-                </>}
 
                 {sending && (
                   <div className={styles.bot} role="status" aria-label="Trợ lý đang trả lời">
@@ -1127,30 +1144,15 @@ export default function AICompanionPage() {
                   <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
                   <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
                 </div>}
-                <div className={styles.modeToggle} role="group" aria-label="Chế độ trò chuyện">
-                  <button
-                    type="button"
-                    className={!notebookMode ? styles.modeToggleActive : undefined}
-                    aria-pressed={!notebookMode}
-                    onClick={() => selectNotebookMode(false)}
-                  >
-                    Trò chuyện
-                  </button>
-                  <button
-                    type="button"
-                    className={notebookMode ? styles.modeToggleActive : undefined}
-                    aria-pressed={notebookMode}
-                    onClick={() => selectNotebookMode(true)}
-                  >
-                    Notebook
-                  </button>
-                </div>
                 {notebookMode && (
                   <button type="button" className={styles.sourceChip} onClick={() => setNotebookSourcesOpen(true)} aria-haspopup="dialog">
                     <Icon size={15}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
-                    <span>{notebookDocuments.length ? `${notebookDocuments.length} nguồn` : 'Thêm nguồn'}</span>
+                    <span>{notebookSourceLabel}</span>
                     {notebookBusy ? <i className={styles.spinnerSmall} aria-label="Đang tải lên" /> : <b aria-label="Mở nguồn">+</b>}
                   </button>
+                )}
+                {notebookMode && selectedNotebookDocumentIds.length === 0 && (
+                  <p className={styles.sourceRequired} role="alert">Vui lòng chọn ít nhất 1 nguồn tài liệu để Notebook có thể trả lời. <button type="button" onClick={() => setNotebookSourcesOpen(true)}>Mở Nguồn</button></p>
                 )}
                 <form className={styles.box} onSubmit={handleSend}>
                   <label className={styles.srOnly} htmlFor="ai-companion-message">Tin nhắn</label>
@@ -1215,7 +1217,7 @@ export default function AICompanionPage() {
                     />
                     <Icon size={18}><path d="M6 2h9l4 4v16H6zM15 2v5h4M9 13h6M9 17h6" /></Icon>
                     <span>{document.original_filename}</span>
-                    {document.status === 'processing' ? <><i className={styles.spinnerSmall} aria-label="Đang xử lý" /><small>Đang xử lý</small></> : document.status === 'failed' ? <><b className={styles.sourceWarn} aria-label="Lỗi">!</b><small>{document.error_message || 'Không thể xử lý'}</small></> : <><b className={styles.sourceReady} aria-label="Sẵn sàng">✓</b><small>{document.chunk_count} đoạn</small></>}
+                    {document.status === 'processing' ? <><i className={styles.spinnerSmall} aria-label="Đang xử lý" /><small>Đang xử lý</small></> : document.status === 'failed' ? <><b className={styles.sourceWarn} aria-label="Lỗi">!</b><small>{document.error_message || 'Không thể xử lý'}</small></> : <><b className={styles.sourceReady} aria-label="Sẵn sàng">✓</b><small>Sẵn sàng</small></>}
                     <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void deleteNotebookDocument(document)}>Xóa</button>
                     {document.status === 'failed' && <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void retryNotebookDocument(document)}>Thử lại</button>}
                   </div>
