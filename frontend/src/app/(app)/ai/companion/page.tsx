@@ -7,13 +7,11 @@ import Link from 'next/link';
 import { aiCompanionClient } from '@/lib/aiCompanionClient';
 import RoadmapForm from '@/components/learning/RoadmapForm';
 import { LogoMark } from '@/components/layout/Logo';
-import DatePicker from '@/components/ui/DatePicker';
-import Select from '@/components/ui/Select';
 import AssistantMarkdown from '@/components/ai/AssistantMarkdown';
 import { getAccessToken } from '@/lib/authToken';
 import { aiRoadmapClient } from '@/lib/aiRoadmapClient';
-import type { NotebookDocument, NotebookQueryResult } from '@/lib/aiRoadmapClient';
-import type { AIConversation, AIMessage, MemoryType, SendMessageResult, UserMemory } from '@/types/ai';
+import type { ConversationMode, NotebookDocument, NotebookQueryResult } from '@/lib/aiRoadmapClient';
+import type { AIConversation, AIMessage, SendMessageResult } from '@/types/ai';
 import styles from './companion.module.css';
 
 const MOBILE_QUERY = '(max-width: 980px)';
@@ -36,18 +34,7 @@ type FailedSend = {
   clientMessageId: string;
   mode: 'chat' | 'cv';
 };
-
-const memoryTypeLabels: Record<MemoryType, string> = {
-  preference: 'Sở thích',
-  fact: 'Thông tin',
-  goal: 'Mục tiêu',
-};
-
-const STARTER_PROMPTS: string[] = [
-  'ETL và ELT khác nhau thế nào?',
-  'Gợi ý khóa học tiếp theo cho mình',
-  'Giải thích Raft bằng ví dụ đời thường',
-];
+type CompanionConversation = AIConversation & { mode: ConversationMode };
 
 function Icon({ children, size = 16 }: { children: ReactNode; size?: number }) {
   return (
@@ -115,13 +102,6 @@ function formatMessageTime(value: string | null): string {
     : date.toLocaleString('vi-VN', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-function formatExpiryDate(value: string | null): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('vi-VN', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
 function messagesLabel(count: number): string {
   return `${count} tin nhắn`;
 }
@@ -130,7 +110,7 @@ export default function AICompanionPage() {
   const router = useRouter();
 
   const [booting, setBooting] = useState(true);
-  const [conversations, setConversations] = useState<AIConversation[]>([]);
+  const [conversations, setConversations] = useState<CompanionConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -158,17 +138,6 @@ export default function AICompanionPage() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
 
-  const [memoryOpen, setMemoryOpen] = useState(false);
-  const [memories, setMemories] = useState<UserMemory[]>([]);
-  const [memoriesLoaded, setMemoriesLoaded] = useState(false);
-  const [memoryLoading, setMemoryLoading] = useState(false);
-  const [memoryError, setMemoryError] = useState<string | null>(null);
-  const [memoryLoadFailed, setMemoryLoadFailed] = useState(false);
-  const [memoryType, setMemoryType] = useState<MemoryType>('preference');
-  const [memoryContent, setMemoryContent] = useState('');
-  const [memoryExpires, setMemoryExpires] = useState('');
-  const [savingMemory, setSavingMemory] = useState(false);
-
   const active = conversations.find((conversation) => conversation.id === activeId) ?? null;
 
   const activeIdRef = useRef<string | null>(null);
@@ -182,8 +151,6 @@ export default function AICompanionPage() {
   const roadmapPaneRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const aiRef = useRef<HTMLDivElement | null>(null);
-  const memoryCloseRef = useRef<HTMLButtonElement | null>(null);
-  const memoryToggleRef = useRef<HTMLButtonElement | null>(null);
   const mountedRef = useRef(true);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const notebookRequestVersionRef = useRef(0);
@@ -217,7 +184,10 @@ export default function AICompanionPage() {
       router.replace(LOGIN_REDIRECT);
       return;
     }
-    void loadConversations();
+    const initialMode: ConversationMode = new URLSearchParams(window.location.search).get('mode') === 'notebook'
+      ? 'notebook' : 'chat';
+    if (initialMode === 'notebook') setNotebookMode(true);
+    void loadConversations(initialMode);
     // Ẩn chân trang ở màn này (quy tắc body[data-screen] trong globals.css).
     document.body.dataset.screen = 'tro-ly';
     return () => {
@@ -234,7 +204,7 @@ export default function AICompanionPage() {
   useEffect(() => {
     setFailedSend(null);
     setRetryNotice(null);
-    if (!activeId) {
+    if (!activeId || notebookMode) {
       messageRequestRef.current += 1;
       setMessages([]);
       setHasMore(false);
@@ -248,7 +218,7 @@ export default function AICompanionPage() {
     }
     void loadMessages(activeId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId]);
+  }, [activeId, notebookMode]);
 
   useEffect(() => {
     const thread = threadRef.current;
@@ -271,63 +241,24 @@ export default function AICompanionPage() {
   }, [draft]);
 
   useEffect(() => {
-    const overlayOpen = sidebarOpen || memoryOpen;
+    const overlayOpen = sidebarOpen;
     if (!overlayOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [memoryOpen, sidebarOpen]);
+  }, [sidebarOpen]);
 
   useEffect(() => {
-    if (!memoryOpen && !sidebarOpen) return;
+    if (!sidebarOpen) return;
     function onKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Escape') return;
-      if (memoryOpen) {
-        setMemoryOpen(false);
-        return;
-      }
       setSidebarOpen(false);
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [memoryOpen, sidebarOpen]);
-
-  useEffect(() => {
-    if (memoryOpen) memoryCloseRef.current?.focus();
-  }, [memoryOpen]);
-
-  // Bảng ghi nhớ là drawer: giữ focus trong bảng, vô hiệu hóa phần phía sau, đóng thì trả focus về nút "Ghi nhớ".
-  useEffect(() => {
-    if (!memoryOpen) return;
-    const behind = Array.from(aiRef.current?.querySelectorAll<HTMLElement>(':scope > aside:not(#memory-panel), :scope > section') ?? []);
-    const toggle = memoryToggleRef.current;
-    behind.forEach((element) => element.setAttribute('inert', ''));
-    function trapTab(event: globalThis.KeyboardEvent) {
-      if (event.key !== 'Tab') return;
-      const focusable = Array.from(document.querySelectorAll<HTMLElement>(
-        '#memory-panel button:not([disabled]), #memory-panel input:not([disabled]), #memory-panel textarea:not([disabled]), #memory-panel [href], #memory-panel [tabindex]:not([tabindex="-1"])',
-      ));
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const current = document.activeElement;
-      if (event.shiftKey && (current === first || !focusable.includes(current as HTMLElement))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && current === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-    document.addEventListener('keydown', trapTab);
-    return () => {
-      document.removeEventListener('keydown', trapTab);
-      behind.forEach((element) => element.removeAttribute('inert'));
-      toggle?.focus();
-    };
-  }, [memoryOpen]);
+  }, [sidebarOpen]);
 
   function handleApiError(caught: unknown, fallback: string): void {
     const apiError = toApiError(caught);
@@ -347,16 +278,20 @@ export default function AICompanionPage() {
     setError(fallback);
   }
 
-  async function loadConversations(isRetry = false): Promise<void> {
+  async function loadConversations(mode: ConversationMode, isRetry = false): Promise<void> {
     if (!isRetry) setBooting(true);
     try {
-      const response = await aiCompanionClient.listConversations();
+      const response = await aiRoadmapClient.listConversations(mode);
       if (!mountedRef.current) return;
-      setConversations(response.data);
+      const nextConversations = response.data as CompanionConversation[];
+      setConversations(nextConversations);
       setActiveId((current) => {
-        if (current && response.data.some((conversation) => conversation.id === current)) return current;
-        return isRetry ? current : (response.data[0]?.id ?? null);
+        if (current && nextConversations.some((conversation) => conversation.id === current)) return current;
+        return isRetry ? current : (nextConversations[0]?.id ?? null);
       });
+      const nextId = activeIdRef.current && nextConversations.some((conversation) => conversation.id === activeIdRef.current)
+        ? activeIdRef.current : (isRetry ? null : nextConversations[0]?.id ?? null);
+      if (mode === 'notebook' && nextId) void refreshNotebook(nextId);
     } catch (caught) {
       if (!mountedRef.current) return;
       const apiError = toApiError(caught);
@@ -367,7 +302,7 @@ export default function AICompanionPage() {
       if (isNotFoundError(apiError)) {
         setStaleNotice(true);
         if (!isRetry) {
-          await loadConversations(true);
+          await loadConversations(mode, true);
         }
         return;
       }
@@ -378,12 +313,14 @@ export default function AICompanionPage() {
   }
 
   async function refreshConversations(): Promise<void> {
+    const mode: ConversationMode = notebookMode ? 'notebook' : 'chat';
     try {
-      const response = await aiCompanionClient.listConversations();
+      const response = await aiRoadmapClient.listConversations(mode);
       if (!mountedRef.current) return;
-      setConversations(response.data);
+      const nextConversations = response.data as CompanionConversation[];
+      setConversations(nextConversations);
       const current = activeIdRef.current;
-      if (current && !response.data.some((conversation) => conversation.id === current)) {
+      if (current && !nextConversations.some((conversation) => conversation.id === current)) {
         activeIdRef.current = null;
         setActiveId(null);
         setMessages([]);
@@ -439,36 +376,14 @@ export default function AICompanionPage() {
     }
   }
 
-  async function loadMemories(): Promise<void> {
-    setMemoryLoading(true);
-    setMemoryError(null);
-    setMemoryLoadFailed(false);
-    try {
-      const response = await aiCompanionClient.listMemories();
-      if (!mountedRef.current) return;
-      setMemories(response.data);
-      setMemoriesLoaded(true);
-    } catch (caught) {
-      const apiError = toApiError(caught);
-      if (apiError.status === 401) {
-        router.replace(LOGIN_REDIRECT);
-        return;
-      }
-      setMemoryError('Không tải được ghi nhớ. Vui lòng thử lại.');
-      setMemoryLoadFailed(true);
-    } finally {
-      if (mountedRef.current) setMemoryLoading(false);
-    }
-  }
-
-  async function createConversation(): Promise<AIConversation | null> {
+  async function createConversation(mode: ConversationMode = notebookMode ? 'notebook' : 'chat'): Promise<CompanionConversation | null> {
     if (creatingRef.current) return null;
     creatingRef.current = true;
     setCreating(true);
     setError(null);
     try {
-      const response = await aiCompanionClient.createConversation();
-      const conversation = response.data;
+      const response = await aiRoadmapClient.createConversation({ mode, ...(mode === 'notebook' ? { title: null } : {}) });
+      const conversation = response.data as CompanionConversation;
       setConversations((current) => [
         conversation,
         ...current.filter((entry) => entry.id !== conversation.id),
@@ -481,6 +396,13 @@ export default function AICompanionPage() {
       setNextBeforeId(null);
       setFailedSend(null);
       setRetryNotice(null);
+      if (mode === 'notebook') {
+        notebookRequestVersionRef.current += 1;
+        notebookSelectionInitializedRef.current = false;
+        setNotebookDocuments([]);
+        setSelectedNotebookDocumentIds([]);
+        setNotebookAnswer(null);
+      }
       setSidebarOpen(false);
       return conversation;
     } catch (caught) {
@@ -492,7 +414,7 @@ export default function AICompanionPage() {
     }
   }
 
-  function selectConversation(conversation: AIConversation): void {
+  function selectConversation(conversation: CompanionConversation): void {
     if (activeIdRef.current !== conversation.id) {
       setMessages([]);
       setHasMore(false);
@@ -502,9 +424,15 @@ export default function AICompanionPage() {
     setActiveId(conversation.id);
     setSidebarOpen(false);
     setError(null);
+    if (notebookMode) {
+      notebookRequestVersionRef.current += 1;
+      notebookSelectionInitializedRef.current = false;
+      setNotebookAnswer(null);
+      void refreshNotebook(conversation.id);
+    }
   }
 
-  function startRename(conversation: AIConversation): void {
+  function startRename(conversation: CompanionConversation): void {
     setRenamingId(conversation.id);
     setRenameValue(conversation.title ?? '');
     if (window.matchMedia(MOBILE_QUERY).matches) {
@@ -539,7 +467,7 @@ export default function AICompanionPage() {
     }
   }
 
-  async function deleteConversation(conversation: AIConversation): Promise<void> {
+  async function deleteConversation(conversation: CompanionConversation): Promise<void> {
     if (!window.confirm(`Xóa cuộc trò chuyện "${conversation.title ?? 'Chưa đặt tên'}" cùng các tin nhắn của nó?`)) {
       return;
     }
@@ -644,7 +572,11 @@ export default function AICompanionPage() {
       setSending(true);
       setError(null);
       try {
-        const response = await aiRoadmapClient.queryNotebook(content, selectedNotebookDocumentIds);
+        if (!activeIdRef.current || active?.mode !== 'notebook') {
+          setError('Chọn một Notebook trước khi hỏi.');
+          return;
+        }
+        const response = await aiRoadmapClient.queryNotebook(activeIdRef.current, content, selectedNotebookDocumentIds);
         if (mountedRef.current) {
           setNotebookAnswer({ question: content, ...response.data });
           setDraft('');
@@ -770,10 +702,11 @@ export default function AICompanionPage() {
     void submitMessage(content, { conversationId, clientMessageId, mode });
   }
 
-  async function refreshNotebook(): Promise<NotebookDocument[] | null> {
+  async function refreshNotebook(conversationId = activeIdRef.current): Promise<NotebookDocument[] | null> {
+    if (!conversationId) return null;
     const requestVersion = notebookRequestVersionRef.current;
     try {
-      const documents = (await aiRoadmapClient.listNotebookDocuments()).data;
+      const documents = (await aiRoadmapClient.listNotebookDocuments(conversationId)).data;
       if (!mountedRef.current || requestVersion !== notebookRequestVersionRef.current) return null;
       setNotebookDocuments(documents);
       setSelectedNotebookDocumentIds((current) => {
@@ -798,6 +731,12 @@ export default function AICompanionPage() {
       setNotebookError('Chỉ hỗ trợ tệp PDF.');
       return;
     }
+    let conversationId = activeIdRef.current;
+    if (!conversationId || active?.mode !== 'notebook') {
+      const notebook = await createConversation('notebook');
+      if (!notebook) return;
+      conversationId = notebook.id;
+    }
     notebookRequestVersionRef.current += 1;
     const temporary = validFiles.map((file, index) => ({
       id: `upload-${Date.now()}-${index}`,
@@ -814,10 +753,14 @@ export default function AICompanionPage() {
     setNotebookDocuments((current) => [...temporary, ...current]);
     setNotebookBusy(true); setNotebookError(null);
     try {
-      const response = await aiRoadmapClient.uploadNotebookDocuments(validFiles);
+      const response = await aiRoadmapClient.uploadNotebookDocuments(conversationId, validFiles);
       setNotebookFiles((current) => ({ ...current, ...Object.fromEntries(response.data.map((document, index) => [document.id, validFiles[index]])) }));
       setNotebookDocuments((current) => [...response.data, ...current.filter((document) => !temporary.some((item) => item.id === document.id))]);
       setSelectedNotebookDocumentIds((current) => [...new Set([...current, ...response.data.filter((document) => document.status === 'ready').map((document) => document.id)])]);
+      const title = response.data.find((document) => document.notebook_title)?.notebook_title;
+      if (title) {
+        setConversations((current) => current.map((conversation) => conversation.id === conversationId ? { ...conversation, title } : conversation));
+      }
       notebookSelectionInitializedRef.current = true;
     } catch {
       setNotebookDocuments((current) => current.map((document) => temporary.some((item) => item.id === document.id)
@@ -854,80 +797,20 @@ export default function AICompanionPage() {
   }
 
   function selectNotebookMode(nextNotebookMode: boolean): void {
+    if (nextNotebookMode === notebookMode) return;
     setNotebookMode(nextNotebookMode);
+    notebookRequestVersionRef.current += 1;
+    notebookSelectionInitializedRef.current = false;
+    setActiveId(null);
+    activeIdRef.current = null;
+    setMessages([]);
+    setNotebookDocuments([]);
+    setSelectedNotebookDocumentIds([]);
+    setNotebookAnswer(null);
     if (!nextNotebookMode) {
       setNotebookSourcesOpen(false);
-      return;
     }
-    void refreshNotebook().then((documents) => {
-      if (!documents?.length) setNotebookSourcesOpen(true);
-    });
-  }
-
-  function fillComposer(prompt: string): void {
-    setDraft(prompt);
-    setError(null);
-    textareaRef.current?.focus();
-  }
-
-  async function addMemory(event: FormEvent): Promise<void> {
-    event.preventDefault();
-    const content = memoryContent.trim();
-    if (!content || savingMemory) return;
-    setSavingMemory(true);
-    setMemoryError(null);
-    try {
-      const response = await aiCompanionClient.createMemory({
-        memory_type: memoryType,
-        content,
-        expires_at: memoryExpires ? new Date(`${memoryExpires}T23:59:59Z`).toISOString() : null,
-      });
-      setMemories((current) => [response.data, ...current]);
-      setMemoriesLoaded(true);
-      setMemoryContent('');
-      setMemoryExpires('');
-    } catch (caught) {
-      const apiError = toApiError(caught);
-      if (apiError.status === 401) {
-        router.replace(LOGIN_REDIRECT);
-        return;
-      }
-      setMemoryError('Không lưu được ghi nhớ. Vui lòng thử lại.');
-    } finally {
-      setSavingMemory(false);
-    }
-  }
-
-  async function removeMemory(memory: UserMemory): Promise<void> {
-    if (!window.confirm('Xóa ghi nhớ này? Trợ lý sẽ không dùng nó nữa.')) return;
-    setMemoryError(null);
-    try {
-      await aiCompanionClient.deleteMemory(memory.id);
-      setMemories((current) => current.filter((entry) => entry.id !== memory.id));
-    } catch (caught) {
-      const apiError = toApiError(caught);
-      if (apiError.status === 401) {
-        router.replace(LOGIN_REDIRECT);
-        return;
-      }
-      if (isNotFoundError(apiError)) {
-        setMemories((current) => current.filter((entry) => entry.id !== memory.id));
-        setMemoryError('Ghi nhớ này không còn tồn tại, có thể đã bị xóa.');
-        return;
-      }
-      setMemoryError('Không xóa được ghi nhớ. Vui lòng thử lại.');
-    }
-  }
-
-  function toggleMemoryPanel(): void {
-    const nextOpen = !memoryOpen;
-    setMemoryOpen(nextOpen);
-    if (nextOpen) {
-      setSidebarOpen(false);
-      if (!memoriesLoaded && !memoryLoading) {
-        void loadMemories();
-      }
-    }
+    void loadConversations(nextNotebookMode ? 'notebook' : 'chat');
   }
 
   if (booting) {
@@ -954,6 +837,9 @@ export default function AICompanionPage() {
   const selectedChunkCount = readyNotebookDocuments
     .filter((document) => selectedNotebookDocumentIds.includes(document.id))
     .reduce((total, document) => total + document.chunk_count, 0);
+  const notebookCitations = notebookAnswer?.citations.filter((citation, index, citations) => (
+    citations.findIndex((entry) => entry.filename === citation.filename && entry.page === citation.page) === index
+  )) ?? [];
   const openRoadmapForm = () => {
     roadmapReturnScrollRef.current = threadRef.current?.scrollTop ?? null;
     setRoadmapMode(true);
@@ -967,10 +853,10 @@ export default function AICompanionPage() {
   return (
     <div className={styles.page}>
       <div ref={aiRef} className={styles.ai}>
-        {(sidebarOpen || memoryOpen) && (
+        {sidebarOpen && (
           <div
-            className={`${styles.overlay} ${sidebarOpen ? '' : styles.overlayMem}`}
-            onClick={() => { setSidebarOpen(false); setMemoryOpen(false); }}
+            className={styles.overlay}
+            onClick={() => setSidebarOpen(false)}
             aria-hidden="true"
           />
         )}
@@ -981,7 +867,7 @@ export default function AICompanionPage() {
           aria-label="Cuộc trò chuyện"
         >
           <div className={styles.listHead}>
-            <h2>Trợ lý AI</h2>
+            <h2>{notebookMode ? 'Notebook' : 'Trợ lý AI'}</h2>
             <button
               type="button"
               className={styles.iconButton}
@@ -995,11 +881,11 @@ export default function AICompanionPage() {
           <button
             type="button"
             className={styles.btn}
-            onClick={() => void createConversation()}
+            onClick={() => void createConversation(notebookMode ? 'notebook' : 'chat')}
             disabled={creating}
           >
             <Icon size={16}><path d="M12 5v14M5 12h14" /></Icon>
-            {creating ? 'Đang tạo...' : 'Cuộc trò chuyện mới'}
+            {creating ? 'Đang tạo...' : notebookMode ? 'Notebook mới' : 'Cuộc trò chuyện mới'}
           </button>
 
           <div className={styles.convs}>
@@ -1098,20 +984,6 @@ export default function AICompanionPage() {
               </small>
             </div>
             <div className={styles.acts}>
-              <button
-                type="button"
-                className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`}
-                ref={memoryToggleRef}
-                onClick={toggleMemoryPanel}
-                aria-pressed={memoryOpen}
-                aria-controls="memory-panel"
-              >
-                <Icon size={15}>
-                  <path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" />
-                </Icon>
-                Ghi nhớ
-                {memories.length > 0 && <span className={styles.count}>{memories.length}</span>}
-              </button>
               <button type="button" className={styles.iconButton} onClick={() => { if (active) startRename(active); }} disabled={!active} aria-label="Đổi tên cuộc trò chuyện">
                 <Icon size={16}>
                   <path d="M12 20h9" />
@@ -1192,7 +1064,7 @@ export default function AICompanionPage() {
                     <section className={styles.notebookAnswer} aria-label="Câu trả lời Notebook">
                       <div className={styles.me}>{notebookAnswer.question}</div>
                       <div className={styles.botTxt}><AssistantMarkdown content={notebookAnswer.answer} /></div>
-                      {notebookAnswer.citations.length > 0 && <div className={styles.citations}><strong>Nguồn</strong>{notebookAnswer.citations.map((citation, index) => <span key={`${citation.document_id}-${citation.page}-${index}`}>{citation.filename} · trang {citation.page}</span>)}</div>}
+                      {notebookCitations.length > 0 && <div className={styles.citations}><strong>Nguồn</strong>{notebookCitations.map((citation) => <span key={`${citation.filename}-${citation.page}`}>{citation.filename} · trang {citation.page}</span>)}</div>}
                     </section>
                   )}
                 </> : <>
@@ -1251,10 +1123,7 @@ export default function AICompanionPage() {
 
             <div className={styles.compose}>
               <div className={styles.composeIn}>
-                {!notebookMode && <div className={styles.sugg} role="group" aria-label="Gợi ý câu hỏi">
-                  {STARTER_PROMPTS.map((suggestion) => (
-                    <button key={suggestion} type="button" onClick={() => fillComposer(suggestion)}>{suggestion}</button>
-                  ))}
+                {!notebookMode && <div className={styles.sugg} role="group" aria-label="Công cụ lộ trình">
                   <button type="button" className={styles.suggAction} onClick={openRoadmapForm}>Tạo lộ trình bằng AI</button>
                   <Link className={styles.suggAction} href="/learning/my-roadmaps">Lộ trình AI của tôi</Link>
                 </div>}
@@ -1325,6 +1194,16 @@ export default function AICompanionPage() {
               </div>
 
               <div className={styles.sourceList}>
+                {readyNotebookDocuments.length > 0 && <label className={styles.sourceSelectAll}>
+                  <input
+                    type="checkbox"
+                    checked={readyNotebookDocuments.every((document) => selectedNotebookDocumentIds.includes(document.id))}
+                    onChange={(event) => setSelectedNotebookDocumentIds((current) => event.target.checked
+                      ? [...new Set([...current, ...readyNotebookDocuments.map((document) => document.id)])]
+                      : current.filter((id) => !readyNotebookDocuments.some((document) => document.id === id)))}
+                  />
+                  Chọn tất cả nguồn sẵn sàng
+                </label>}
                 {notebookDocuments.map((document) => (
                   <div key={document.id} className={styles.sourceItem}>
                     <input
@@ -1371,85 +1250,6 @@ export default function AICompanionPage() {
           </div>
         )}
 
-        <aside
-          id="memory-panel"
-          className={`${styles.mem} ${memoryOpen ? styles.memOpen : ''}`}
-          aria-label="Ghi nhớ"
-          aria-hidden={!memoryOpen}
-        >
-            <div className={styles.memHead}>
-              <div><p>Nguồn ngữ cảnh</p><h2><Icon size={18}><path d="M5 4h14v12l-4 4H5zM15 20v-4h4M9 9h6M9 13h3" /></Icon>Ghi nhớ</h2></div>
-              <button type="button" ref={memoryCloseRef} className={styles.iconButton} onClick={() => setMemoryOpen(false)} aria-label="Đóng bảng ghi nhớ">
-                <Icon size={16}><path d="M18 6 6 18M6 6l12 12" /></Icon>
-              </button>
-            </div>
-            <p className={styles.memIntro}>Những điều trợ lý nhớ về bạn để trả lời sát hơn. Chỉ các ghi nhớ bạn tự thêm mới được lưu, bạn xóa được bất cứ lúc nào.</p>
-
-            {memoryError && (
-              <div className={styles.memError} role="alert">
-                <span>{memoryError}</span>
-                {memoryLoadFailed && (
-                  <button type="button" className={`${styles.btn} ${styles.btnGhost} ${styles.btnSm}`} onClick={() => void loadMemories()} disabled={memoryLoading}>
-                    Thử lại
-                  </button>
-                )}
-              </div>
-            )}
-
-            {memoryLoading ? (
-              <div className={styles.memLoading} role="status">
-                <span className={styles.spinner} aria-hidden="true" />
-                <span>Đang tải ghi nhớ...</span>
-              </div>
-            ) : memories.length === 0 ? (
-              <div className={styles.memEmpty}>
-                <strong>Chưa có ghi nhớ</strong>
-                <p>Thêm một sở thích, thông tin hoặc mục tiêu bên dưới.</p>
-              </div>
-            ) : (
-              <ul className={styles.memList}>
-                {memories.map((memory) => (
-                  <li key={memory.id} className={styles.memItem}>
-                    <div className={styles.memItemBody}>
-                      <small className={styles.memType}>{memoryTypeLabels[memory.memory_type]}</small>
-                      <p>{memory.content}</p>
-                      {memory.expires_at && <small className={styles.memExpiry}>Hết hạn {formatExpiryDate(memory.expires_at)}</small>}
-                    </div>
-                    <button type="button" className={styles.memDel} onClick={() => void removeMemory(memory)} aria-label={`Xóa ghi nhớ: ${memory.content.slice(0, 60)}`}>
-                      <Icon size={15}><path d="M18 6 6 18M6 6l12 12" /></Icon>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-
-            <form className={styles.memForm} onSubmit={(event) => void addMemory(event)}>
-              <strong>Thêm ghi nhớ</strong>
-              <label className={styles.srOnly} htmlFor="memory-content">Thêm điều cần nhớ</label>
-              <textarea
-                id="memory-content"
-                required
-                maxLength={1000}
-                rows={1}
-                value={memoryContent}
-                onChange={(event) => setMemoryContent(event.target.value)}
-                placeholder="Thêm điều cần nhớ"
-              />
-              <div className={styles.memRow}>
-                <div className={styles.memField}>
-                  Loại
-                  <Select className={styles.memSelect} compact ariaLabel="Loại ghi nhớ" value={memoryType} onChange={(value) => setMemoryType(value as MemoryType)} options={(Object.keys(memoryTypeLabels) as MemoryType[]).map((type) => ({ value: type, label: memoryTypeLabels[type] }))} />
-                </div>
-                <div className={styles.memField}>
-                  Hết hạn (tùy chọn)
-                  <div className={styles.memDate}><DatePicker ariaLabel="Ngày hết hạn" value={memoryExpires} onChange={setMemoryExpires} /></div>
-                </div>
-              </div>
-              <button type="submit" className={`${styles.btn} ${styles.btnSm}`} disabled={savingMemory || !memoryContent.trim()}>
-                {savingMemory ? 'Đang lưu...' : 'Thêm ghi nhớ'}
-              </button>
-            </form>
-        </aside>
       </div>
     </div>
   );

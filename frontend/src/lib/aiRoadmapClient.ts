@@ -1,4 +1,5 @@
 import { api, sessionFetch } from '@/lib/api';
+import type { AIConversation, PaginatedEnvelope } from '@/types/ai';
 import type { CVAnalysis, ExternalLearningResource, RoadmapCoverage, LearningRoadmap } from '@/types/learning';
 
 export interface CompanionRoadmapDraftItem {
@@ -76,6 +77,8 @@ export interface NotebookDocument {
   chunk_count: number;
   created_at: string | null;
   updated_at: string | null;
+  conversation_id?: string;
+  notebook_title?: string | null;
 }
 
 export interface NotebookQueryResult {
@@ -84,6 +87,7 @@ export interface NotebookQueryResult {
 }
 
 type NotebookEnvelope<T> = { status: 'success'; data: T };
+export type ConversationMode = 'chat' | 'notebook';
 
 const apiBase = (process.env.NEXT_PUBLIC_API_URL || '/api').replace(/\/$/, '');
 
@@ -108,16 +112,24 @@ export const aiRoadmapClient = {
     }
     return response.blob();
   },
-  listNotebookDocuments: () => api.get<NotebookEnvelope<NotebookDocument[]>>('/ai/notebook/documents'),
+  listConversations: (mode: ConversationMode) =>
+    api.get<PaginatedEnvelope<AIConversation>>(`/ai/conversations?mode=${mode}`),
+  createConversation: (input: { mode: ConversationMode; title?: string | null }) =>
+    api.post<NotebookEnvelope<AIConversation>>('/ai/conversations', input),
+  listNotebookDocuments: (conversationId: string) =>
+    api.get<NotebookEnvelope<NotebookDocument[]>>(`/ai/notebook/documents?conversation_id=${encodeURIComponent(conversationId)}`),
   getNotebookDocument: (id: string) => api.get<NotebookEnvelope<NotebookDocument>>(`/ai/notebook/documents/${encodeURIComponent(id)}`),
-  uploadNotebookDocuments: (files: File[]) => {
+  uploadNotebookDocuments: (conversationId: string, files: File[]) => {
     const form = new FormData();
+    form.append('conversation_id', conversationId);
     files.forEach((file) => form.append('documents[]', file));
     return api.post<NotebookEnvelope<NotebookDocument[]>>('/ai/notebook/documents', form);
   },
   deleteNotebookDocument: (id: string) => api.delete<NotebookEnvelope<null>>(`/ai/notebook/documents/${encodeURIComponent(id)}`),
-  queryNotebook: (question: string, documentIds: string[]) =>
-    api.post<NotebookEnvelope<NotebookQueryResult>>('/ai/notebook/query', { question, document_ids: documentIds }),
+  queryNotebook: (conversationId: string, question: string, documentIds: string[]) =>
+    api.post<NotebookEnvelope<NotebookQueryResult>>('/ai/notebook/query', {
+      conversation_id: conversationId, question, document_ids: documentIds,
+    }),
   previewForm: (form: FormData) =>
     api.post<{ status: 'success'; data: Extract<CompanionPreviewResult, { state: 'ready' }> }>('/ai/roadmaps/form-preview', form),
   confirmForm: (previewToken: string) =>
