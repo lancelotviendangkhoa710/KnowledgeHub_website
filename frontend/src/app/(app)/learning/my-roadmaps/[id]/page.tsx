@@ -55,7 +55,17 @@ export default function RoadmapDetailPage() {
     return () => { active = false; };
   }, [id, attempt]);
 
-  if (state.kind === 'ready') return <RoadmapDetailView roadmap={state.roadmap} />;
+  if (state.kind === 'ready') {
+    // Chỉ nhận cập nhật khi vẫn cùng phiên đăng nhập và cùng lộ trình: thao tác cũ kết thúc sau khi đăng xuất,
+    // đổi tài khoản hoặc đổi trang không được đưa dữ liệu cũ trở lại màn hình.
+    const session = getAccessToken();
+    const roadmapId = state.roadmap.id;
+    const accept = (roadmap: LearningRoadmap) => {
+      if (!session || getAccessToken() !== session || roadmap.id !== roadmapId) return;
+      setState((current) => (current.kind === 'ready' && current.roadmap.id === roadmapId ? { kind: 'ready', roadmap } : current));
+    };
+    return <RoadmapDetailView roadmap={state.roadmap} onChange={accept} />;
+  }
 
   if (state.kind === 'signed-out') {
     return (

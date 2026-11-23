@@ -14,6 +14,7 @@ import { extractYouTubeVideoId } from '@/lib/videoUtils';
 import { courseLevel, splitCourseTitle } from '@/lib/courseDisplay';
 import { coverTheme, type CoverTheme } from '@/lib/courseCover';
 import { highlightCode } from '@/lib/highlightCode';
+import { syncCourseCompletion } from '@/lib/roadmapCourseSync';
 import s from './lesson.module.css';
 
 const THEME_COLOR: Record<CoverTheme, string> = {
@@ -181,6 +182,8 @@ export default function CourseDetailPage() {
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const latestCompletedRef = useRef<boolean | null>(null);
+  const [roadmapSync, setRoadmapSync] = useState<{ updated: number; failed: number } | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
   const [mounted, setMounted] = useState(false); // the signed-in marker is browser-only: read it after mount
   useEffect(() => setMounted(true), []);
@@ -423,6 +426,7 @@ export default function CourseDetailPage() {
   const handleToggleCompleted = () => {
     if (!article?.id) return;
     const nextCompleted = !isCompleted;
+    latestCompletedRef.current = nextCompleted;
     setIsCompleted(nextCompleted);
     try {
       const completedList: string[] = JSON.parse(localStorage.getItem('kh_completed_articles') || '[]');
@@ -436,6 +440,13 @@ export default function CourseDetailPage() {
     } catch {
       // Ignore
     }
+    // Đồng bộ sang các bước gắn khóa học này trong lộ trình của người dùng (tiến độ lưu trên server).
+    // Lần bấm sau cùng quyết định kết quả; chỉ hiện thông báo của lần đó.
+    setRoadmapSync(null);
+    const clickedFor = nextCompleted;
+    void syncCourseCompletion(article.id, nextCompleted).then((result) => {
+      if (latestCompletedRef.current === clickedFor) setRoadmapSync(result);
+    });
   };
 
   const handleShare = () => {
@@ -908,6 +919,12 @@ export default function CourseDetailPage() {
                   {isCompleted
                     ? 'Bạn đã hoàn thành bài này trên trình duyệt này. Tiến độ chỉ được lưu cục bộ trên thiết bị.'
                     : 'Đánh dấu hoàn thành để lưu lịch sử học trên trình duyệt này.'}
+                  {roadmapSync && roadmapSync.updated > 0 && (
+                    <span role="status"> Đã cập nhật {roadmapSync.updated} bước trong <Link href="/learning/my-roadmaps">lộ trình của bạn</Link>.</span>
+                  )}
+                  {roadmapSync && roadmapSync.failed > 0 && (
+                    <span role="alert" className={s.syncWarn}> Chưa cập nhật được tiến độ trong lộ trình; mở <Link href="/learning/my-roadmaps">lộ trình của bạn</Link> để cập nhật lại.</span>
+                  )}
                 </p>
               </div>
               <button

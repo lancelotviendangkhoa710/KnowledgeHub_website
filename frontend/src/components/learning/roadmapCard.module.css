@@ -48,3 +48,23 @@
 .add { display: grid; gap: 12px; margin-top: 24px; }
 
 @media (max-width: 640px) { .panel { padding: 18px; } }
+
+/* LRN-FE-04: cột phải của thẻ — nhãn AI ở góc trên, nút bên dưới */
+.panel { transition: border-color 120ms ease; }
+.panel:hover { border-color: var(--ink-3); }
+.top { align-items: stretch; }
+/* Mọi thẻ: nút nằm đáy cột phải; thẻ AI thêm nhãn ở góc trên, nên vị trí nút giống nhau giữa các thẻ */
+.side { display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: var(--sp-3); }
+.side > .aiBadge { margin-bottom: auto; }
+.aiBadge { display: inline-flex; align-items: center; gap: var(--sp-1); padding: 3px 9px; border-radius: var(--r-pill); background: var(--brand-soft); color: var(--brand); border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .02em; line-height: 1.4; user-select: none; -webkit-user-select: none; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.titleLink { color: var(--ink); }
+.titleLink:hover { color: var(--brand); text-decoration: underline; }
+.titleLink:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+/* Màn nhỏ: cột phải xuống dưới, nhãn AI vẫn nằm góc trên bên phải thẻ */
+@media (max-width: 640px) {
+  .panel { position: relative; }
+  .side { width: 100%; align-items: flex-start; }
+  .side > .aiBadge { position: absolute; top: 20px; right: 20px; margin: 0; }
+  .panel:has(.aiBadge) .info { padding-right: 56px; }
+}

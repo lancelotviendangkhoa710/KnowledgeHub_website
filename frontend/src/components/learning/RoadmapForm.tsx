@@ -270,7 +270,7 @@ export default function RoadmapForm({ onBack }: Props) {
       <p>Lộ trình dành riêng cho bạn đã sẵn sàng để xem lại và theo dõi tiến độ.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
       {cvSaveFailed && cvFile && <button className="btn btn-secondary" type="button" onClick={() => void saveSelectedCv()} disabled={!saveCvConsent || cvAction !== null}>{cvAction === 'save' ? 'Đang lưu CV...' : 'Lưu lại CV'}</button>}
-      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps#${encodeURIComponent(savedId)}`}>Xem lộ trình AI của tôi</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); setCvSaveFailed(false); setSaveCvConsent(false); }}>Tạo lộ trình khác</button><button className="btn btn-secondary" type="button" onClick={onBack}>Quay lại trò chuyện</button></div>
+      <div className={styles.actions}><Link className="btn btn-primary" href={`/learning/my-roadmaps/${encodeURIComponent(savedId)}`}>Xem lộ trình AI của tôi</Link><button className="btn btn-secondary" type="button" onClick={() => { setSavedId(null); setPreview(null); setError(null); setCvSaveFailed(false); setSaveCvConsent(false); }}>Tạo lộ trình khác</button><button className="btn btn-secondary" type="button" onClick={onBack}>Quay lại trò chuyện</button></div>
     </div>;
   }
 

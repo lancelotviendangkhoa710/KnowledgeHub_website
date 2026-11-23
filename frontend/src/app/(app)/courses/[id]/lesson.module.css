@@ -118,3 +118,4 @@
   .wrap { padding: 0 16px; }
   .acts { margin-left: 0; width: 100%; }
 }
+.syncWarn { color: var(--danger); }

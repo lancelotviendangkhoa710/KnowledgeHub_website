@@ -1,7 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import type { LearningRoadmap } from '@/types/learning';
+import { useEffect, useState } from 'react';
+import { getCurrentUser } from '@/lib/auth';
+import { learningProgressClient } from '@/lib/learningProgressClient';
+import { ignoredSyncItems, ignoreSyncItems, locallyCompletedArticles } from '@/lib/roadmapCourseSync';
+import CourseSyncPanel from './CourseSyncPanel';
+import type { LearningRoadmap, RoadmapItem, RoadmapItemStatus } from '@/types/learning';
 import RoadmapActivity from './RoadmapActivity';
 import RoadmapSteps from './RoadmapSteps';
 import Tabs, { useTabParam } from './Tabs';
@@ -11,11 +16,80 @@ import p from './profile.module.css';
 import s from './roadmapDetail.module.css';
 
 const TAB_IDS = ['overview', 'steps', 'activity'] as const;
+
+/** Thay danh sách bước và tính lại số đếm tổng hợp (completed_count được ưu tiên khi hiển thị). */
+function withItems(roadmap: LearningRoadmap, items: RoadmapItem[]): LearningRoadmap {
+  return {
+    ...roadmap,
+    items,
+    items_count: items.length,
+    completed_count: items.filter((item) => item.status === 'completed').length,
+  };
+}
 type DetailTab = (typeof TAB_IDS)[number];
 
-/** RMR-06: trang chi tiết lộ trình kiểu trang repo. Chỉ đọc; cập nhật tiến độ vẫn ở trang Lộ trình của tôi. */
-export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadmap }) {
+/**
+ * RMR-06: trang chi tiết lộ trình kiểu trang repo. Nút "Mở lộ trình" ở trang Lộ trình của tôi dẫn tới đây;
+ * chủ lộ trình cập nhật tiến độ từng bước trong tab "Các bước" (`onChange` trả lộ trình đã cập nhật).
+ */
+export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: LearningRoadmap; onChange?: (roadmap: LearningRoadmap) => void }) {
   const [tab, setTab] = useTabParam<DetailTab>(TAB_IDS, 'overview');
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [progressError, setProgressError] = useState<string | null>(null);
+  const isOwner = Boolean(onChange) && roadmap.user_id === getCurrentUser()?.id;
+  const coverage = roadmap.origin === 'ai' ? roadmap.coverage : null;
+  // Bước gắn khóa học đã được đánh dấu hoàn thành ở trang bài học nhưng tiến độ chưa đổi (trừ bước đã bỏ qua gợi ý).
+  const [pendingSync, setPendingSync] = useState<RoadmapItem[]>([]);
+  const [ignoredVersion, setIgnoredVersion] = useState(0);
+  useEffect(() => {
+    if (!isOwner) { setPendingSync([]); return; }
+    const done = locallyCompletedArticles();
+    const ignored = ignoredSyncItems();
+    setPendingSync(roadmap.items.filter((item) => item.article_id && done.has(item.article_id) && !ignored.has(item.id)
+      && item.status !== 'completed' && item.status !== 'skipped'));
+  }, [isOwner, roadmap.items, ignoredVersion]);
+
+  /** Đánh dấu các bước đã chọn là "Đã xong"; chỉ tính các bước ghi thành công, bước lỗi vẫn ở lại để thử lại. */
+  async function confirmSync(ids: string[]) {
+    if (busyId || !onChange) return;
+    setBusyId('sync');
+    setProgressError(null);
+    let items = roadmap.items;
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await learningProgressClient.update(id, 'completed');
+        const at = new Date().toISOString();
+        items = items.map((entry) => (entry.id === id ? { ...entry, status: 'completed' as const, completed_at: at } : entry));
+      } catch {
+        failed += 1;
+      }
+    }
+    if (failed > 0) setProgressError(`Chưa cập nhật được ${failed} bước. Bạn có thể thử lại.`);
+    onChange(withItems(roadmap, items));
+    setBusyId(null);
+  }
+
+  function ignoreSync(ids: string[]) {
+    ignoreSyncItems(ids);
+    setIgnoredVersion((value) => value + 1);
+  }
+
+  async function changeProgress(item: RoadmapItem, next: RoadmapItemStatus) {
+    if (busyId || next === item.status || !onChange) return;
+    setBusyId(item.id);
+    setProgressError(null);
+    try {
+      const result = await learningProgressClient.update(item.id, next);
+      const status = result.data?.status ?? next;
+      const completedAt = status === 'completed' ? (item.completed_at ?? new Date().toISOString()) : null;
+      onChange(withItems(roadmap, roadmap.items.map((entry) => (entry.id === item.id ? { ...entry, status, completed_at: completedAt } : entry))));
+    } catch {
+      setProgressError('Không cập nhật được tiến độ. Vui lòng thử lại.');
+    } finally {
+      setBusyId(null);
+    }
+  }
   const doneCount = roadmap.items.filter((item) => item.status === 'completed' && item.completed_at).length;
   const updated = lastActivity(roadmap);
   const totalHours = roadmap.items.reduce((sum, item) => sum + (item.study_hours ?? 0), 0);
@@ -43,9 +117,15 @@ export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadma
         </p>
         <div className={s.actions}>
           <Link className={`${p.btn} ${p.btnSm}`} href={`/learning/my-roadmaps/${encodeURIComponent(roadmap.id)}/edit`}>Chỉnh sửa</Link>
-          <Link className={`${p.btn} ${p.btnGhost} ${p.btnSm}`} href={`/learning/my-roadmaps#${encodeURIComponent(roadmap.id)}`}>Cập nhật tiến độ</Link>
+          {isOwner && <button type="button" className={`${p.btn} ${p.btnGhost} ${p.btnSm}`} onClick={() => setTab('steps')}>Cập nhật tiến độ</button>}
         </div>
       </header>
+
+      {pendingSync.length > 0 && (
+        <CourseSyncPanel items={pendingSync} busy={busyId !== null} onConfirm={(ids) => void confirmSync(ids)} onIgnore={ignoreSync} />
+      )}
+      {/* Đặt ngoài các tab để lỗi luôn hiện, kể cả khi đang ở tab khác. */}
+      {progressError && <p role="alert" className={s.alert}>{progressError}</p>}
 
       <Tabs<DetailTab>
         label="Nội dung lộ trình"
@@ -69,6 +149,25 @@ export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadma
               <p className={s.prose}>{roadmap.ai_summary}</p>
             </>
           )}
+          {coverage && (
+            <>
+              <h2>Độ phủ tài nguyên khi tạo</h2>
+              <p className={s.prose}>
+                Độ phù hợp {Math.round(coverage.overall_percent)}% · Khóa học trong hệ thống {Math.round(coverage.internal_percent)}% · Tài nguyên bên ngoài {Math.round(coverage.external_percent)}%.
+                {' '}Đây là ảnh chụp lúc tạo lộ trình, không phải thước đo mức thành thạo.
+              </p>
+              {coverage.gaps.length > 0 && <p className={s.note}>Kỹ năng còn thiếu: {coverage.gaps.join(', ')}</p>}
+              {coverage.cv_analysis && (
+                <>
+                  <h2>Phân tích CV</h2>
+                  {coverage.cv_analysis.cv_match_percent !== null && <p className={s.prose}>Độ khớp với vai trò mục tiêu: {Math.round(coverage.cv_analysis.cv_match_percent)}%</p>}
+                  {coverage.cv_analysis.strengths.length > 0 && <p className={s.note}>Điểm mạnh: {coverage.cv_analysis.strengths.map((entry) => `${entry.skill} (${entry.evidence})`).join('; ')}</p>}
+                  {coverage.cv_analysis.gaps.length > 0 && <p className={s.note}>Kỹ năng cần phát triển: {coverage.cv_analysis.gaps.join(', ')}</p>}
+                  {coverage.cv_analysis.recommendations.length > 0 && <p className={s.note}>Gợi ý: {coverage.cv_analysis.recommendations.join('; ')}</p>}
+                </>
+              )}
+            </>
+          )}
           <h2>Chủ đề</h2>
           <TopicBar topics={roadmap.topics ?? []} legend />
           {(roadmap.topics ?? []).length === 0 && <p className={s.note}>Các bước chưa gắn với khóa học nào nên chưa xác định được chủ đề.</p>}
@@ -78,7 +177,7 @@ export default function RoadmapDetailView({ roadmap }: { roadmap: LearningRoadma
         </article>
       </div>
       <div role="tabpanel" id="roadmap-panel-steps" aria-labelledby="roadmap-tab-steps" tabIndex={0} hidden={tab !== 'steps'} className={p.panel}>
-        <RoadmapSteps roadmap={roadmap} />
+        <RoadmapSteps roadmap={roadmap} onProgress={isOwner ? (item, next) => void changeProgress(item, next) : undefined} busyId={busyId} />
       </div>
       <div role="tabpanel" id="roadmap-panel-activity" aria-labelledby="roadmap-tab-activity" tabIndex={0} hidden={tab !== 'activity'} className={p.panel}>
         <RoadmapActivity roadmap={roadmap} />
