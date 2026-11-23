@@ -68,6 +68,8 @@ return [
         // Product/operator approval recorded 2026-11-08; enabled by default from this
         // release. Set AI_CHAT_ENABLED=false to disable it again (e.g. staging/incident).
         'chat_enabled' => (bool) env('AI_CHAT_ENABLED', true),
+        'cv_rag_enabled' => filter_var(env('AI_CV_RAG_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
+        'cv_rag_similarity_threshold' => (float) env('AI_CV_RAG_SIMILARITY_THRESHOLD', 0.72),
         'chat_timeout' => (int) env('AI_CHAT_TIMEOUT', 75),
         // After migration 2026_11_08_000001 has run everywhere, set AI_MESSAGES_M1=true
         // to skip two information_schema probes per chat request. Null = auto-detect.

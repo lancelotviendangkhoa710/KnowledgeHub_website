@@ -11,7 +11,7 @@ class Conversation extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['user_id', 'title'];
+    protected $fillable = ['user_id', 'title', 'mode'];
 
     /**
      * Aggregated by ConversationService (withCount) so list/detail responses
@@ -37,5 +37,10 @@ class Conversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    public function notebookDocuments(): HasMany
+    {
+        return $this->hasMany(NotebookDocument::class);
     }
 }

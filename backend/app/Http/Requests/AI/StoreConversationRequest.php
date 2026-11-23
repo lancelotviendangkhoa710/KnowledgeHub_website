@@ -37,6 +37,7 @@ class StoreConversationRequest extends FormRequest
     {
         return [
             'title' => ['nullable', 'string', 'max:120'],
+            'mode' => ['nullable', 'in:chat,notebook'],
         ];
     }
 }

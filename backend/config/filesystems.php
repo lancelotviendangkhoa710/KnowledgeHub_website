@@ -68,6 +68,22 @@ return [
             'report' => false,
         ],
 
+        'notebook' => [
+            'driver' => env('NOTEBOOK_STORAGE_DRIVER', 's3'),
+            'key' => env('NOTEBOOK_STORAGE_KEY', env('CV_STORAGE_KEY')),
+            'secret' => env('NOTEBOOK_STORAGE_SECRET', env('CV_STORAGE_SECRET')),
+            'region' => env('NOTEBOOK_STORAGE_REGION', env('CV_STORAGE_REGION')),
+            'bucket' => env('NOTEBOOK_STORAGE_BUCKET', 'notebook-docs'),
+            'endpoint' => env('NOTEBOOK_STORAGE_ENDPOINT', env('CV_STORAGE_ENDPOINT')),
+            'use_path_style_endpoint' => true,
+            'http' => ['connect_timeout' => 5, 'timeout' => 30],
+            'retries' => 0,
+            'options' => ['before_upload' => App\Services\AI\CvStorageUploadOptions::class.'::removeAcl'],
+            'visibility' => 'private',
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

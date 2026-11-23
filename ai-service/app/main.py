@@ -17,11 +17,18 @@ from pypdf import PdfReader
 
 from .resources import search_resources
 from .agent_workflows import router as agent_router
+from .rag_lite import app as rag_lite_app
+from .cv_rag import router as cv_rag_router
+from .notebook_rag import router as notebook_rag_router
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("knowledgehub.ai")
 app = FastAPI(title="KnowledgeHub AI service", docs_url=None, redoc_url=None)
 app.include_router(agent_router)
+app.include_router(cv_rag_router)
+app.include_router(notebook_rag_router)
+if os.getenv("RAG_LITE_ENABLED", "").lower() == "true":
+    app.mount("/rag-lite", rag_lite_app)
 
 
 def _parse_cv_worker(content: bytes, output) -> None:
@@ -42,7 +49,7 @@ def _parse_cv_worker(content: bytes, output) -> None:
                 remaining -= min(len(cleaned), remaining)
             if remaining == 0:
                 break
-        output.send(("ok", ("\n".join(chunks).strip()[:MAX_CV_TEXT_CHARS], len(reader.pages))))
+        output.send(("ok", ("\f".join(chunks).strip()[:MAX_CV_TEXT_CHARS], len(reader.pages))))
     except Exception:
         output.send(("invalid", None))
     finally:

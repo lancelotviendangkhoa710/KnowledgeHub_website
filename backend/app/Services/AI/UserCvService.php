@@ -4,8 +4,10 @@ namespace App\Services\AI;
 
 use App\Models\User;
 use App\Models\UserCv;
+use App\Models\UserCvIndex;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -15,7 +17,10 @@ class UserCvService
 {
     public const STAGING_GRACE_MINUTES = 5;
 
-    public function __construct(private readonly CompanionRoadmapAiClient $extractor) {}
+    public function __construct(
+        private readonly CompanionRoadmapAiClient $extractor,
+        private readonly CvRagService $cvRag,
+    ) {}
 
     public function current(User $user): ?UserCv
     {
@@ -44,22 +49,25 @@ class UserCvService
     public function save(User $user, UploadedFile $file, ?array $assessment = null): UserCv
     {
         $text = $this->extractor->extractPdf($file);
+        $uploaded = false;
         // Persist the cleanup marker before attempting the non-transactional upload.
         $cv = DB::transaction(function () use ($user, $file): UserCv {
             $this->lockOwner($user);
             return UserCv::create([
                 'user_id' => $user->id,
                 'object_key' => 'cvs/'.Str::uuid().'.pdf',
-                'filename' => 'cv.pdf',
+                'filename' => $file->getClientOriginalName() ?: 'document.pdf',
                 'size_bytes' => $file->getSize(),
                 'consented_at' => now(),
                 'status' => 'pending_delete',
                 'extracted_text' => null,
                 'assessment' => null,
+                'title' => null,
+                'summary' => null,
             ]);
         });
         try {
-            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text, $assessment): array {
+            [$saved, $replacedIds] = DB::transaction(function () use ($user, $file, $cv, $text, &$uploaded): array {
                 $this->lockOwner($user);
                 $row = UserCv::query()->whereKey($cv->id)->where('user_id', $user->id)->lockForUpdate()->firstOrFail();
                 $stream = fopen($file->getRealPath(), 'rb');
@@ -70,6 +78,7 @@ class UserCvService
                     if (! Storage::disk('cv')->put($row->object_key, $stream) || ! Storage::disk('cv')->exists($row->object_key)) {
                         throw new RuntimeException('CV storage is temporarily unavailable.');
                     }
+                    $uploaded = true;
                 } finally {
                     fclose($stream);
                 }
@@ -79,13 +88,38 @@ class UserCvService
                 $row->update(['status' => 'active', 'extracted_text' => $text, 'assessment' => $assessment]);
                 return [$row, $replacedIds];
             });
-            if ($replacedIds !== []) {
-                $this->cleanupPending($user, false, null, $replacedIds);
-            }
         } catch (Throwable $exception) {
+            if ($uploaded) {
+                $this->deleteUploadedObject($cv->object_key);
+            }
             throw new RuntimeException('CV storage or cleanup is temporarily unavailable. Please retry.', 503, $exception);
         }
-        return $saved;
+        if ($replacedIds !== []) {
+            try {
+                $this->cleanupPending($user, false, null, $replacedIds);
+            } catch (Throwable $exception) {
+                throw new RuntimeException('CV storage or cleanup is temporarily unavailable. Please retry.', 503, $exception);
+            }
+        }
+        try {
+            $this->cvRag->index($saved);
+            $this->cvRag->summarize($saved);
+        } catch (Throwable) {
+            // The file remains safely stored, while the persisted index state tells the client that processing failed.
+            DB::transaction(function () use ($saved): void {
+                $index = UserCvIndex::query()->firstOrCreate(['user_cv_id' => $saved->id], [
+                    'status' => 'failed',
+                    'embedding_model' => CvRagService::MODEL,
+                    'embedding_revision' => CvRagService::REVISION,
+                    'embedding_dimensions' => 384,
+                    'content_hash' => hash('sha256', (string) $saved->extracted_text),
+                    'indexed_at' => null,
+                ]);
+                $index->chunks()->delete();
+                $index->update(['status' => 'failed', 'indexed_at' => null]);
+            });
+        }
+        return $saved->fresh();
     }
 
     public function markAllPendingForUser(User $user): void
@@ -93,7 +127,7 @@ class UserCvService
         DB::transaction(function () use ($user): void {
             $this->lockOwner($user);
             UserCv::query()->where('user_id', $user->id)->where('status', 'active')
-                ->update(['status' => 'pending_delete', 'extracted_text' => null, 'assessment' => null, 'updated_at' => now()]);
+                ->update(['status' => 'pending_delete', 'extracted_text' => null, 'assessment' => null, 'title' => null, 'summary' => null, 'updated_at' => now()]);
         });
     }
 
@@ -144,5 +178,16 @@ class UserCvService
             $query->withTrashed();
         }
         $query->whereKey($user->id)->lockForUpdate()->firstOrFail();
+    }
+
+    private function deleteUploadedObject(string $objectKey): void
+    {
+        try {
+            if (! Storage::disk('cv')->delete($objectKey) || Storage::disk('cv')->exists($objectKey)) {
+                Log::warning('ai.cv_upload_rollback_failed', ['category' => 'storage']);
+            }
+        } catch (Throwable) {
+            Log::warning('ai.cv_upload_rollback_failed', ['category' => 'storage']);
+        }
     }
 }

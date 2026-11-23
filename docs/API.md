@@ -817,6 +817,7 @@ tokens; configure an API key with available balance before enabling production t
 | POST | `/api/ai/conversations/{uuid}/messages` | `content` 1–8000, `client_message_id?` UUID | 201, `data {user_message, assistant_message}` | 401, 404, 422, 429 (20/min/user), 503 `chat_disabled`/provider unavailable, 502, 504 |
 
 - Sync V1, no streaming. The pair is persisted in one transaction **only after** the AI call succeeds; provider failures leave no partial rows.
+- `mode` is optional and defaults to `chat`. `mode=cv` is separately feature-gated and uses only the authenticated actor's active CV with a `ready` matching-model index. No active CV or ready index returns `409`; cross-owner conversations remain `404`. Assistant metadata stores only application-generated CV citation fields (`cv_id`, CV version hash, page, bounded excerpt, chunk id, embedding model/revision, similarity), never an embedding or provider prompt.
 - Context sent to the AI service: last ≤19 messages (oldest first) + active explicit memories (≤10). Message/memory content is treated as untrusted data; logs never include content.
 - Idempotency: M1 (`2026_11_08_000001`) adds `messages.client_message_id` + unique
   `(conversation_id, client_message_id)` for user messages; retries replay the stored pair. The
@@ -861,11 +862,14 @@ The authenticated CV endpoints are owner-only for User, Contributor, and Admin. 
 | Method | Path | Request | Success | Main errors |
 |---|---|---|---|---|
 | GET | `/api/ai/cv` | — | 200, success envelope with CV metadata; `data:null` when none | 401 |
-| POST | `/api/ai/cv` | multipart `cv_file` (PDF), `consent=1` | 201, `{status:success, message, data:{id, filename, size_bytes, consented_at, created_at}}`; replacement uses the same operation | 401, 422 invalid/unsupported/encrypted/textless/oversized PDF or missing consent, 503 cleanup incomplete |
+| GET | `/api/ai/cv/rag-status` | — | 200, `data {cv,index}`; both expose document index `status` and `chunk_count`, while `cv` also includes `filename`, `uploaded_at`, `updated_at`, persisted `title`, and `summary` | 401 |
+| POST | `/api/ai/cv` | multipart `cv_file` (PDF), `consent=1` | 201 after synchronous extraction, chunking, embedding, and summary; `data:{id,filename,size_bytes,consented_at,uploaded_at,updated_at,title,summary,status,chunk_count,created_at}`. `status` is `ready` or `failed`; replacement uses the same operation | 401, 422 invalid/unsupported/encrypted/textless/oversized PDF or missing consent, 503 cleanup incomplete |
 | GET | `/api/ai/cv/download` | — | 200 PDF attachment served through Laravel | 401, 404 no active CV, 503 Storage unavailable |
 | DELETE | `/api/ai/cv` | — | 200 success envelope with `data:null` after cleanup | 401, 503 cleanup incomplete |
 
 CV responses never include extracted text, object keys, Storage URLs, or credentials. `cv_file` is limited to the approved 2 MiB PDF policy. Replacement stages a new opaque object key and removes/invalidates the previous CV; pending cleanup data is unavailable for retrieval. Failed cleanup returns a safe error and is retried by the hourly `ai:cleanup-pending-cvs` task; the host must run Laravel `schedule:run`. DELETE is idempotent and returns 200 when no active CV exists. Account deletion must complete CV source cleanup before reporting success; if object removal cannot be verified, return a safe error and leave the account undeleted. This integration is owned by Auth and must be covered by an Auth feature test.
+
+The RAG status endpoint is owner-scoped through Sanctum and returns `cv:null,index:null` when the owner has no active CV. It never returns extracted text, chunks, embeddings, similarity results, prompts, or Storage details.
 
 The implementation tests must cover guest rejection; owner-only behavior for User, Contributor and Admin; cross-user denial including Admin; metadata without extracted text/object key; required consent and PDF validation; upload and download; replacement; delete; simulated Storage/database partial failures and cleanup retry; account deletion blocked on storage failure; and confirmation that the existing preview remains non-persistent. Never run tests against shared Supabase.
 

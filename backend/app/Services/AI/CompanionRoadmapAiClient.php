@@ -32,7 +32,7 @@ class CompanionRoadmapAiClient
             }
             rewind($stream);
             $response = Http::withHeader('X-Service-Token', $token)->timeout(30)
-                ->attach('file', $stream, 'cv.pdf', ['Content-Type' => 'application/pdf'])
+                ->attach('file', $stream, $file->getClientOriginalName() ?: 'document.pdf', ['Content-Type' => 'application/pdf'])
                 ->post(rtrim($url, '/').'/v1/roadmaps/cv/extract');
         } catch (ConnectionException $exception) {
             Log::warning('ai.cv_extract_failed', ['category' => 'connection']);

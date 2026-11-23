@@ -28,6 +28,7 @@ class MessageService
     public function __construct(
         private readonly AIChatService $chat,
         private readonly UserMemoryService $memories,
+        private readonly CvRagService $cvRag,
     ) {}
 
     /**
@@ -113,6 +114,7 @@ class MessageService
             return $replay;
         }
 
+        $mode = $data['mode'] ?? 'chat';
         $messages = $this->conversationContext($conversation);
         $messages[] = ['role' => 'user', 'content' => $content];
         // Memory is owner-scoped and active-only; capped to the AI service contract limits.
@@ -121,7 +123,9 @@ class MessageService
             static fn (string $entry): string => mb_substr($entry, 0, 500),
             $this->memories->activeForPrompt($user, $memoryLimit),
         );
-        $reply = $this->chat->reply($messages, $memory);
+        $reply = $mode === 'cv'
+            ? $this->cvRag->answer($user, $content, $messages)
+            : $this->chat->reply($messages, $memory);
 
         // No partial rows: both messages are written only after the AI call succeeded.
         $m1 = $this->supportsM1();
@@ -301,7 +305,8 @@ class MessageService
      */
     private function conversationContext(Conversation $conversation): array
     {
-        $limit = max(1, min((int) config('services.ai.chat_history_limit', 20), 19));
+        // Keep the request small for the demo: the current turn is appended by send().
+        $limit = max(1, min((int) config('services.ai.chat_history_limit', 6), 6));
 
         $query = Message::query()
             ->where('conversation_id', $conversation->id)
@@ -321,8 +326,7 @@ class MessageService
             ->reverse()
             ->map(static fn (Message $message): array => [
                 'role' => (string) $message->role,
-                // The AI service caps each message at 8000 characters.
-                'content' => mb_substr((string) $message->content, 0, 8000),
+                'content' => mb_substr((string) $message->content, 0, 500),
             ])
             ->values()
             ->all();

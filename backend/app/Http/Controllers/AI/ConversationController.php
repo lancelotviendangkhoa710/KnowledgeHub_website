@@ -4,6 +4,7 @@ namespace App\Http\Controllers\AI;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AI\StoreConversationRequest;
+use App\Http\Requests\AI\ListConversationRequest;
 use App\Http\Requests\AI\UpdateConversationRequest;
 use App\Models\Conversation;
 use App\Services\AI\ConversationService;
@@ -14,11 +15,12 @@ class ConversationController extends Controller
 {
     public function __construct(private readonly ConversationService $conversations) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ListConversationRequest $request): JsonResponse
     {
         $this->authorize('viewAny', Conversation::class);
 
-        $page = $this->conversations->list($request->user());
+        $mode = $request->validated('mode', 'chat');
+        $page = $this->conversations->list($request->user(), $mode);
 
         return response()->json([
             'status' => 'success',
