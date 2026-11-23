@@ -55,7 +55,7 @@ export default function RoadmapDetailPage() {
     return () => { active = false; };
   }, [id, attempt]);
 
-  if (state.kind === 'ready') return <RoadmapDetailView roadmap={state.roadmap} />;
+  if (state.kind === 'ready') return <RoadmapDetailView roadmap={state.roadmap} onChange={(roadmap) => setState({ kind: 'ready', roadmap })} />;
 
   if (state.kind === 'signed-out') {
     return (

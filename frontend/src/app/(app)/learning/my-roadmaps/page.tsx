@@ -85,7 +85,6 @@ export default function MyRoadmapsPage() {
       <RoadmapCard
         key={roadmap.id}
         roadmap={roadmap}
-        onChange={(updated) => setRoadmaps((current) => current.map((entry) => entry.id === updated.id ? updated : entry))}
         onDelete={() => void remove(roadmap)}
         deleting={deletingIds.includes(roadmap.id)}
       />

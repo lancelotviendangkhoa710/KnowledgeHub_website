@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Select from '@/components/ui/Select';
 import type { LearningRoadmap, RoadmapItem, RoadmapItemStatus } from '@/types/learning';
 import { fullDateTime, importanceTier, relativeTime } from './roadmapMeta';
 import s from './roadmapDetail.module.css';
@@ -30,8 +31,17 @@ function StatusIcon({ status }: { status: RoadmapItemStatus }) {
   );
 }
 
-/** RMR-06, tab "Các bước": danh sách như danh sách tệp của repo. */
-export default function RoadmapSteps({ roadmap }: { roadmap: LearningRoadmap }) {
+const PROGRESS_OPTIONS = (Object.keys(ITEM_LABELS) as RoadmapItemStatus[]).map((value) => ({ value, label: ITEM_LABELS[value] }));
+
+type Props = {
+  roadmap: LearningRoadmap;
+  /** Có giá trị khi người xem là chủ lộ trình: hiện ô chọn tiến độ cho từng bước. */
+  onProgress?: (item: RoadmapItem, next: RoadmapItemStatus) => void;
+  busyId?: string | null;
+};
+
+/** RMR-06, tab "Các bước": danh sách như danh sách tệp của repo; chủ lộ trình cập nhật tiến độ ngay tại đây. */
+export default function RoadmapSteps({ roadmap, onProgress, busyId = null }: Props) {
   const items = [...roadmap.items].sort((a, b) => a.position - b.position);
   if (items.length === 0) return <p className={s.empty}>Lộ trình này chưa có bước nào.</p>;
 
@@ -58,9 +68,22 @@ export default function RoadmapSteps({ roadmap }: { roadmap: LearningRoadmap }) 
               )}
             </div>
             <span className={s.fileWhen}>
+              {onProgress ? (
+                <Select
+                  portal
+                  compact
+                  small
+                  className={s.progressSelect}
+                  ariaLabel={`Tiến độ của ${item.title}`}
+                  value={item.status}
+                  disabled={busyId !== null}
+                  onChange={(value) => onProgress(item, value as RoadmapItemStatus)}
+                  options={PROGRESS_OPTIONS}
+                />
+              ) : null}
               {item.status === 'completed' && item.completed_at
                 ? <time dateTime={item.completed_at} title={fullDateTime(item.completed_at)}>Hoàn thành {relativeTime(item.completed_at)}</time>
-                : ITEM_LABELS[item.status]}
+                : !onProgress && ITEM_LABELS[item.status]}
             </span>
           </li>
         );
