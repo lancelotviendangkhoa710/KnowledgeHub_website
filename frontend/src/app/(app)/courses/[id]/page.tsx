@@ -14,6 +14,7 @@ import { extractYouTubeVideoId } from '@/lib/videoUtils';
 import { courseLevel, splitCourseTitle } from '@/lib/courseDisplay';
 import { coverTheme, type CoverTheme } from '@/lib/courseCover';
 import { highlightCode } from '@/lib/highlightCode';
+import { syncCourseCompletion } from '@/lib/roadmapCourseSync';
 import s from './lesson.module.css';
 
 const THEME_COLOR: Record<CoverTheme, string> = {
@@ -181,6 +182,7 @@ export default function CourseDetailPage() {
   const [activeHeadingId, setActiveHeadingId] = useState<string>('');
   const [readingProgress, setReadingProgress] = useState<number>(0);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [roadmapSynced, setRoadmapSynced] = useState<number>(0);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(getCurrentUser);
   const [mounted, setMounted] = useState(false); // the signed-in marker is browser-only: read it after mount
   useEffect(() => setMounted(true), []);
@@ -436,6 +438,9 @@ export default function CourseDetailPage() {
     } catch {
       // Ignore
     }
+    // Đồng bộ sang các bước gắn khóa học này trong lộ trình của người dùng (tiến độ lưu trên server).
+    setRoadmapSynced(0);
+    void syncCourseCompletion(article.id, nextCompleted).then(setRoadmapSynced);
   };
 
   const handleShare = () => {
@@ -908,6 +913,9 @@ export default function CourseDetailPage() {
                   {isCompleted
                     ? 'Bạn đã hoàn thành bài này trên trình duyệt này. Tiến độ chỉ được lưu cục bộ trên thiết bị.'
                     : 'Đánh dấu hoàn thành để lưu lịch sử học trên trình duyệt này.'}
+                  {roadmapSynced > 0 && (
+                    <span role="status"> Đã cập nhật {roadmapSynced} bước trong <Link href="/learning/my-roadmaps">lộ trình của bạn</Link>.</span>
+                  )}
                 </p>
               </div>
               <button

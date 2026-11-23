@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/lib/auth';
 import { learningProgressClient } from '@/lib/learningProgressClient';
+import { locallyCompletedArticles } from '@/lib/roadmapCourseSync';
 import type { LearningRoadmap, RoadmapItem, RoadmapItemStatus } from '@/types/learning';
 import RoadmapActivity from './RoadmapActivity';
 import RoadmapSteps from './RoadmapSteps';
@@ -26,6 +27,32 @@ export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: Lear
   const [progressError, setProgressError] = useState<string | null>(null);
   const isOwner = Boolean(onChange) && roadmap.user_id === getCurrentUser()?.id;
   const coverage = roadmap.origin === 'ai' ? roadmap.coverage : null;
+  // Bước gắn khóa học đã được đánh dấu hoàn thành ở trang bài học (trước khi có đồng bộ) nhưng tiến độ chưa đổi.
+  const [pendingSync, setPendingSync] = useState<RoadmapItem[]>([]);
+  useEffect(() => {
+    if (!isOwner) { setPendingSync([]); return; }
+    const done = locallyCompletedArticles();
+    setPendingSync(roadmap.items.filter((item) => item.article_id && done.has(item.article_id) && item.status !== 'completed' && item.status !== 'skipped'));
+  }, [isOwner, roadmap.items]);
+
+  async function syncFromCourses() {
+    if (busyId || !onChange) return;
+    setBusyId('sync');
+    setProgressError(null);
+    let items = roadmap.items;
+    try {
+      for (const item of pendingSync) {
+        await learningProgressClient.update(item.id, 'completed');
+        const at = new Date().toISOString();
+        items = items.map((entry) => (entry.id === item.id ? { ...entry, status: 'completed', completed_at: at } : entry));
+      }
+    } catch {
+      setProgressError('Không cập nhật được tiến độ. Vui lòng thử lại.');
+    } finally {
+      onChange({ ...roadmap, items });
+      setBusyId(null);
+    }
+  }
 
   async function changeProgress(item: RoadmapItem, next: RoadmapItemStatus) {
     if (busyId || next === item.status || !onChange) return;
@@ -72,6 +99,15 @@ export default function RoadmapDetailView({ roadmap, onChange }: { roadmap: Lear
           {isOwner && <button type="button" className={`${p.btn} ${p.btnGhost} ${p.btnSm}`} onClick={() => setTab('steps')}>Cập nhật tiến độ</button>}
         </div>
       </header>
+
+      {pendingSync.length > 0 && (
+        <div className={s.syncNote} role="status">
+          <span>Bạn đã đánh dấu hoàn thành {pendingSync.length} khóa học trong lộ trình này ở trang bài học, nhưng bước tương ứng chưa được cập nhật.</span>
+          <button type="button" className={`${p.btn} ${p.btnSm}`} disabled={busyId !== null} onClick={() => void syncFromCourses()}>
+            {busyId === 'sync' ? 'Đang cập nhật…' : `Đánh dấu ${pendingSync.length} bước đã xong`}
+          </button>
+        </div>
+      )}
 
       <Tabs<DetailTab>
         label="Nội dung lộ trình"
