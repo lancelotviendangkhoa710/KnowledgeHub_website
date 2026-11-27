@@ -1,0 +1,53 @@
+/* CV-UI-01: kết quả đánh giá chia 2 cột — PDF bên trái, nhận xét bên phải */
+.wide { max-width: 1280px; }
+.narrow { max-width: 880px; margin: 0 auto; }
+
+.split { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: var(--sp-6); align-items: start; margin-top: var(--sp-6); }
+
+/* Cột trái: trình xem PDF dính theo khi cuộn phần nhận xét */
+.viewer { position: sticky; top: calc(var(--head) + var(--sp-4)); height: calc(100vh - var(--head) - var(--sp-6) * 2); min-height: 480px; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); overflow: hidden; }
+.viewerBar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--line); font-size: var(--fs-sm); color: var(--ink-2); }
+.fileName { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--ink); }
+.openLink { flex: none; color: var(--brand); font-weight: 600; }
+.openLink:hover { text-decoration: underline; }
+.frame { flex: 1; width: 100%; border: 0; background: var(--surface-2); }
+.viewerEmpty { flex: 1; display: grid; place-items: center; padding: var(--sp-6); color: var(--ink-3); font-size: var(--fs-md); text-align: center; }
+
+/* Cột phải: báo cáo */
+.report { display: grid; gap: var(--sp-4); }
+.reportHead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.reportHead h2 { margin: 0; font-size: 22px; font-weight: 800; }
+.pill { display: inline-flex; align-items: center; gap: var(--sp-1); padding: 3px var(--sp-3); border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 700; border: 1px solid var(--line); color: var(--ink-2); background: var(--surface-2); }
+.pillSaved { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.expires { font-size: var(--fs-sm); color: var(--ink-3); }
+
+.block { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--surface); padding: var(--sp-4) var(--sp-5); }
+.block h3 { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); font-size: 16px; font-weight: 700; }
+.count { min-width: 22px; padding: 1px 7px; border-radius: var(--r-pill); background: var(--surface-2); color: var(--ink-2); font-size: var(--fs-xs); font-weight: 700; text-align: center; }
+.summary { margin: 0; font-size: 15px; line-height: 1.65; color: var(--ink); }
+.icon { width: 18px; height: 18px; flex: none; }
+.iconOk { color: var(--ok); }
+.iconWarn { color: var(--mark); }
+.iconTip { color: var(--brand); }
+
+.items { list-style: none; margin: 0; padding: 0; display: grid; }
+.items > li { padding: var(--sp-3) 0; border-top: 1px solid var(--line); }
+.items > li:first-child { border-top: 0; padding-top: 0; }
+.items > li:last-child { padding-bottom: 0; }
+.skill { display: block; font-weight: 700; font-size: var(--fs-md); color: var(--ink); }
+.evidence { margin: var(--sp-1) 0 0; padding-left: var(--sp-3); border-left: 2px solid color-mix(in srgb, var(--ok) 50%, var(--line)); font-size: var(--fs-md); line-height: 1.55; color: var(--ink-2); }
+.evidence::before { content: "Trích CV: "; color: var(--ink-3); font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
+.gap { display: flex; gap: var(--sp-3); font-size: var(--fs-md); line-height: 1.55; color: var(--ink); }
+.gap::before { content: ""; width: 8px; height: 8px; margin-top: 7px; flex: none; border-radius: 50%; background: var(--mark); }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); counter-reset: tip; }
+.steps > li { counter-increment: tip; display: flex; gap: var(--sp-3); font-size: var(--fs-md); line-height: 1.55; color: var(--ink); }
+.steps > li::before { content: counter(tip); width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-size: var(--fs-xs); font-weight: 800; }
+.empty { margin: 0; font-size: var(--fs-md); color: var(--ink-3); }
+
+.confirm { display: grid; gap: var(--sp-3); }
+
+@media (max-width: 1023px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .viewer { position: static; height: 70vh; min-height: 360px; }
+}
+@media (max-width: 640px) { .block { padding: var(--sp-4); } .viewer { height: 60vh; } }
