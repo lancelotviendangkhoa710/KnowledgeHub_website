@@ -54,13 +54,18 @@ function Assessment({ data }: { data: CvAssessment }) {
 }
 
 /** Trình xem PDF bên trái (dùng trình xem PDF có sẵn của trình duyệt). */
-function PdfViewer({ url, name }: { url: string | null; name: string }) {
+function PdfViewer({ url, name, failed = false, onRetry }: { url: string | null; name: string; failed?: boolean; onRetry?: () => void }) {
   return <div className={s.viewer}>
     <div className={s.viewerBar}>
       <span className={s.fileName} title={name}>{name}</span>
       {url && <a className={s.openLink} href={url} target="_blank" rel="noopener noreferrer">Mở tab mới ↗</a>}
     </div>
-    {url ? <iframe className={s.frame} src={url} title={`Xem CV ${name}`} /> : <div className={s.viewerEmpty}>Đang tải tệp PDF…</div>}
+    {url ? <iframe className={s.frame} src={url} title={`Xem CV ${name}`} />
+      : failed ? <div className={s.viewerEmpty} role="alert">
+        <p>Không tải được tệp PDF.</p>
+        {onRetry && <button className="btn btn-secondary" type="button" onClick={onRetry}>Thử lại</button>}
+      </div>
+      : <div className={s.viewerEmpty} role="status">Đang tải tệp PDF…</div>}
   </div>;
 }
 
@@ -95,15 +100,19 @@ export default function CvAssessmentPage() {
   const visibleSaved = savedUserId === user?.id ? saved : null;
   // PDF hiển thị bên trái: tệp vừa chọn cho bản xem trước, hoặc CV đã lưu tải về từ server.
   const [savedBlob, setSavedBlob] = useState<Blob | null>(null);
+  const [savedPdfFailed, setSavedPdfFailed] = useState(false);
+  const [savedPdfAttempt, setSavedPdfAttempt] = useState(0);
   const previewUrl = useObjectUrl(visiblePreview ? file : null);
   const savedUrl = useObjectUrl(visibleSaved && !visiblePreview ? savedBlob : null);
   const savedCvKey = visibleSaved && !visiblePreview ? `${savedUserId}:${visibleSaved.cv.filename}` : null;
   useEffect(() => {
-    if (!savedCvKey) { setSavedBlob(null); return; }
+    setSavedBlob(null);
+    setSavedPdfFailed(false);
+    if (!savedCvKey) return;
     let active = true;
-    aiRoadmapClient.downloadCv().then((blob) => { if (active) setSavedBlob(blob); }).catch(() => { if (active) setSavedBlob(null); });
+    aiRoadmapClient.downloadCv().then((blob) => { if (active) setSavedBlob(blob); }).catch(() => { if (active) setSavedPdfFailed(true); });
     return () => { active = false; };
-  }, [savedCvKey]);
+  }, [savedCvKey, savedPdfAttempt]);
   const hasResult = Boolean(visiblePreview || visibleSaved);
   // Any save or delete supersedes an older listing request, so a slow initial
   // load can never bring back a CV the user just replaced or removed.
@@ -240,7 +249,7 @@ export default function CvAssessmentPage() {
       </section>
       </div>}
       {visibleSaved && !visiblePreview && <div className={s.split}>
-        <PdfViewer url={savedUrl} name={visibleSaved.cv.filename} />
+        <PdfViewer url={savedUrl} name={visibleSaved.cv.filename} failed={savedPdfFailed} onRetry={() => setSavedPdfAttempt((attempt) => attempt + 1)} />
         <section className={s.report} aria-label="CV và bản đánh giá đã lưu">
         <div className={s.reportHead}>
           <h2>CV và đánh giá đã lưu</h2>
