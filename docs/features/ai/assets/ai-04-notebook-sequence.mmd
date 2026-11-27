@@ -1,0 +1,53 @@
+sequenceDiagram
+    autonumber
+    actor User as Người dùng
+    participant UI as Next.js Notebook
+    participant API as Laravel API
+    participant Store as Object Storage
+    participant AI as FastAPI AI Service
+    participant DB as PostgreSQL / pgvector
+    participant LLM as DeepSeek
+
+    rect rgb(235, 245, 255)
+        Note over User,LLM: Pha 1 — Upload và lập chỉ mục
+        User->>UI: Chọn PDF
+        UI->>API: POST /api/ai/notebook/documents
+        API->>API: Xác thực user, conversation và mode=notebook
+        API->>DB: Tạo document với status=processing
+        API->>Store: Lưu source.pdf
+        API->>AI: POST /v1/notebook/ingest + service token
+        AI->>AI: Đọc PDF → Document theo từng trang
+        AI->>AI: Split chunk 900 / overlap 120
+        AI->>AI: Embed passage thành vector 384 chiều
+        AI->>LLM: Sinh title và summary có căn cứ
+        LLM-->>AI: Title + summary
+        AI-->>API: Chunks + page + embedding + metadata
+        API->>DB: Transaction lưu chunks và vectors
+        API->>DB: Chuyển status=ready
+        API-->>UI: Metadata tài liệu
+        UI-->>User: Tài liệu sẵn sàng để hỏi
+    end
+
+    rect rgb(240, 250, 240)
+        Note over User,LLM: Pha 2 — Hỏi đáp có grounding
+        User->>UI: Nhập câu hỏi
+        UI->>API: POST /api/ai/notebook/query
+        API->>DB: Lọc conversation và tài liệu ready thuộc user
+        API->>AI: POST /v1/cv-rag/embed-query
+        AI->>AI: Embed query thành vector 384 chiều
+        AI-->>API: Query vector
+        API->>DB: Cosine search, lấy tối đa 5 chunk
+        DB-->>API: Chunk + page + similarity
+        alt Có context phù hợp
+            API->>AI: POST /v1/notebook/answer
+            Note right of API: question + metadata + selected chunks
+            AI->>LLM: Grounded prompt
+            LLM-->>AI: Câu trả lời dựa trên nguồn
+            AI-->>API: Answer
+        else Không có context
+            API->>API: Dùng fallback cố định, không gọi model
+        end
+        API->>DB: Lưu user message, assistant message và citation
+        API-->>UI: Answer + filename + page + history
+        UI-->>User: Hiển thị câu trả lời và nguồn
+    end
